@@ -1,0 +1,4 @@
+Item_ID,Item_Name,Category,Unit,Purchase_Price,Sale_Price,Current_Stock
+ITM-001,1.5mm Single Cable,Cables,Coil,4050.0,4500.0,0.0
+ITM-FIBER,Fiber Optic Cable (4 Core),Cables,Meters,33.0,40.0,0.0
+ITM-GEN-01,General Electrical Material,General,Lot,40000.0,0.0,0.0

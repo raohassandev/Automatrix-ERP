@@ -1,0 +1,17 @@
+ROLE / USER,RESPONSIBILITY,ACCESS & RESTRICTIONS
+CEO (Israr),Full Financial Oversight,"Full access to Salaries, Net Profit, and Personal expenses."
+Owner (Shazia),Admin & Home Oversight,Access to Employee Balances and Home/Food tracking.
+Sales (Abdul Khaliq),Payment Recovery,Access to Project Balances & Clients. Cannot see internal costs.
+Procurement (Ibrar),Stock Management,Responsible for Catalog and Purchase Price accuracy.
+Engineering (Field Team),Site Execution,Logs material usage/returns. Cannot see Contract Values.
+Daughter & Wife,App Interface Trainees,Simplified views for tracking household income and simple project logs.
+,,
+,
+,,
+,,
+,,
+,
+,,
+,,
+,,
+,,
