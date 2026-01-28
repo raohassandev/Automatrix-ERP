@@ -1,0 +1,14 @@
+EXPENSE CATEGORIES,PAYMENT SOURCES,MILESTONES,ROLES,Type,PROJECT STAGES
+Material (Stock/Inventory),Personal Pocket (Claim),Advance/Mobilization,CEO,Cash Advance,Project Locked
+Material (Project Direct),My Advance Wallet,Material Delivery,Owner,Home/Personal,Advance Payment Received
+Fuel,Company Account/Direct,Installation,Engineering,Direct Vendor Payment,Preparing Material
+Vehicle Maintenance,,Commissioning/Handover,Sales,Expense (Employee Paid),Material Dispatched
+Tools & Assets,Cash Advance,Retention Release,Procurement,,Site Execution
+Food,,,Admin,,Testing
+Office Utilities,,,,,Hold
+Travel,,,,,Observation
+Salary/Wages,,,,,Final Payment Awaited
+Marketing,,,,,Complete Payment Received
+Repairs,,,,,Project Closed
+Other,,,,,After Sales Support
+Israr Personal

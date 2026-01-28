@@ -1,0 +1,332 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ApprovalType {
+  EXPENSE
+  INCOME
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PARTIALLY_APPROVED
+}
+
+enum ExpenseStatus {
+  PENDING
+  PENDING_L1
+  PENDING_L2
+  PENDING_L3
+  APPROVED
+  REJECTED
+  PARTIALLY_APPROVED
+}
+
+enum IncomeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LedgerType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  TRANSFER
+  RETURN
+  PROJECT_ALLOCATION
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum WalletType {
+  CREDIT
+  DEBIT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  roleId        String?
+  passwordHash String?
+  role          Role?     @relation(fields: [roleId], references: [id])
+
+  expenses        Expense[] @relation("ExpenseSubmittedBy")
+  expenseApprovals Expense[] @relation("ExpenseApprovedBy")
+  incomes         Income[]  @relation("IncomeAddedBy")
+  incomeApprovals  Income[] @relation("IncomeApprovedBy")
+  approvals       Approval[] @relation("ApprovalBy")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  id            String      @id @default(cuid())
+  roleId        String
+  permissionId  String
+  role          Role        @relation(fields: [roleId], references: [id])
+  permission    Permission  @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model Expense {
+  id              String        @id @default(cuid())
+  date            DateTime
+  description     String
+  category        String
+  amount          Decimal       @db.Decimal(12, 2)
+  paymentMode     String
+  project         String?
+  status          ExpenseStatus @default(PENDING)
+  approvalLevel   String?
+  approvedAmount  Decimal?      @db.Decimal(12, 2)
+  submittedById   String
+  approvedById    String?
+  receiptUrl      String?
+  receiptFileId   String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  submittedBy     User          @relation("ExpenseSubmittedBy", fields: [submittedById], references: [id])
+  approvedBy      User?         @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+  approvals       Approval[]
+}
+
+model Income {
+  id              String        @id @default(cuid())
+  date            DateTime
+  source          String
+  category        String
+  amount          Decimal       @db.Decimal(12, 2)
+  paymentMode     String
+  project         String?
+  status          IncomeStatus  @default(PENDING)
+  approvalLevel   String?
+  approvedById    String?
+  receiptUrl      String?
+  receiptFileId   String?
+  invoiceId       String?
+  addedById       String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  addedBy         User          @relation("IncomeAddedBy", fields: [addedById], references: [id])
+  approvedBy      User?         @relation("IncomeApprovedBy", fields: [approvedById], references: [id])
+  approvals       Approval[]
+}
+
+model Approval {
+  id             String         @id @default(cuid())
+  type           ApprovalType
+  status         ApprovalStatus @default(PENDING)
+  amount         Decimal        @db.Decimal(12, 2)
+  approvedAmount Decimal?       @db.Decimal(12, 2)
+  reason         String?
+  expenseId      String?
+  incomeId       String?
+  submittedById  String?
+  approvedById   String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  expense        Expense?       @relation(fields: [expenseId], references: [id])
+  income         Income?        @relation(fields: [incomeId], references: [id])
+  approvedBy     User?          @relation("ApprovalBy", fields: [approvedById], references: [id])
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  projectId      String   @unique
+  name           String
+  client         String
+  startDate      DateTime
+  endDate        DateTime?
+  status         String
+  contractValue  Decimal  @db.Decimal(12, 2)
+  invoicedAmount Decimal  @db.Decimal(12, 2)
+  receivedAmount Decimal  @db.Decimal(12, 2)
+  pendingRecovery Decimal @db.Decimal(12, 2)
+  costToDate     Decimal  @db.Decimal(12, 2)
+  grossMargin    Decimal  @db.Decimal(12, 2)
+  marginPercent  Decimal  @db.Decimal(5, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model InventoryItem {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  category       String
+  quantity       Decimal  @db.Decimal(12, 2)
+  unit           String
+  unitCost       Decimal  @db.Decimal(12, 2)
+  totalValue     Decimal  @db.Decimal(12, 2)
+  minStock       Decimal  @db.Decimal(12, 2) @default(0)
+  reorderQty     Decimal  @db.Decimal(12, 2) @default(0)
+  reservedQty    Decimal  @db.Decimal(12, 2) @default(0)
+  availableQty   Decimal  @db.Decimal(12, 2) @default(0)
+  lastPurchaseDate DateTime?
+  avgUsage30Days Decimal  @db.Decimal(12, 2) @default(0)
+  lastUpdated    DateTime
+  ledger         InventoryLedger[]
+  createdAt      DateTime @default(now())
+}
+
+model InventoryLedger {
+  id            String     @id @default(cuid())
+  date          DateTime
+  itemId        String
+  type          LedgerType
+  quantity      Decimal    @db.Decimal(12, 2)
+  unitCost      Decimal    @db.Decimal(12, 2)
+  total         Decimal    @db.Decimal(12, 2)
+  reference     String?
+  project       String?
+  userId        String?
+  runningBalance Decimal   @db.Decimal(12, 2)
+
+  item          InventoryItem @relation(fields: [itemId], references: [id])
+}
+
+model Employee {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  phone         String?
+  role          String
+  walletBalance Decimal        @db.Decimal(12, 2) @default(0)
+  status        EmployeeStatus @default(ACTIVE)
+  wallets       WalletLedger[]
+}
+
+model WalletLedger {
+  id         String     @id @default(cuid())
+  date       DateTime
+  employeeId String
+  type       WalletType
+  amount     Decimal    @db.Decimal(12, 2)
+  reference  String?
+  balance    Decimal    @db.Decimal(12, 2)
+
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  invoiceNo  String        @unique
+  projectId  String
+  date       DateTime
+  amount     Decimal       @db.Decimal(12, 2)
+  dueDate    DateTime
+  status     InvoiceStatus @default(DRAFT)
+  paymentDate DateTime?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  type      String
+  recordId  String
+  fileName  String
+  fileUrl   String
+  fileId    String?
+  size      Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  type      String
+  message   String
+  status    String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  reason    String?
+  userId    String?
+  createdAt DateTime @default(now())
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

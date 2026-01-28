@@ -1,0 +1,22 @@
+# Node
+node_modules/
+.env*
+.pnpm-debug.log*
+# Next.js
+.next/
+out/
+# Prisma
+prisma/dev.db
+# Playwright
+playwright/.auth/
+playwright/test-results/
+# Logs
+logs/
+*.log
+# OS
+.DS_Store
+# IDE
+.vscode/
+.idea/
+# Generated
+pnpm-lock.yaml
