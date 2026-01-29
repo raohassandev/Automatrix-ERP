@@ -37,11 +37,21 @@ async function checkDuplicateExpense(input: {
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
+
+  const { searchParams } = new URL(request.url);
+  const page = Number(searchParams.get('page') || 1);
+  const take = 25;
+  const skip = (page - 1) * take;
+  const search = searchParams.get('search') || undefined;
+  const from = searchParams.get('from') || undefined;
+  const to = searchParams.get('to') || undefined;
+  const sort = searchParams.get('sort') || undefined;
+  const [sortBy, order] = sort?.split(':') || ['createdAt', 'desc'];
 
   const canViewAll = await requirePermission(session.user.id, "expenses.view_all");
   const canViewOwn = await requirePermission(session.user.id, "expenses.view_own");
@@ -49,13 +59,37 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
-  const data = await prisma.expense.findMany({
-    where: canViewAll ? {} : { submittedById: session.user.id },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const where = {
+    ...(canViewAll ? {} : canViewOwn ? { submittedById: session.user.id } : { id: "__none__" }),
+    AND: [
+      {
+        OR: search
+          ? [
+              { description: { contains: search, mode: "insensitive" } },
+              { category: { contains: search, mode: "insensitive" } },
+            ]
+          : undefined,
+      },
+      {
+        date: {
+          gte: from ? new Date(from) : undefined,
+          lte: to ? new Date(to) : undefined,
+        },
+      },
+    ],
+  };
 
-  return NextResponse.json({ success: true, data });
+  const [data, total] = await prisma.$transaction([
+    prisma.expense.findMany({
+      where,
+      orderBy: { [sortBy]: order },
+      take,
+      skip,
+    }),
+    prisma.expense.count({ where }),
+  ]);
+
+  return NextResponse.json({ success: true, data, total });
 }
 
 export async function POST(req: Request) {

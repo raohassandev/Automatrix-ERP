@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { hasPermission, type RoleName } from "@/lib/permissions";
+import { logAudit } from "@/lib/audit";
 
 const ROUTE_RULES: Array<{ pattern: RegExp; any: string[] }> = [
   { pattern: /^\/dashboard/, any: ["dashboard.view"] },
@@ -21,6 +22,21 @@ const ROUTE_RULES: Array<{ pattern: RegExp; any: string[] }> = [
   { pattern: /^\/settings/, any: ["settings.view"] },
 ];
 
+async function logApiRequest(request: NextRequest, userId: string) {
+  if (
+    request.method === "POST" ||
+    request.method === "PUT" ||
+    request.method === "DELETE"
+  ) {
+    await logAudit({
+      action: `API_${request.method}`,
+      entity: "API_REQUEST",
+      entityId: request.nextUrl.pathname,
+      userId,
+    });
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const url = new URL(request.url);
   const { pathname } = url;
@@ -39,6 +55,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (pathname.startsWith("/api/")) {
+    await logApiRequest(request, session.user.id as string);
+  }
+
   const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
   const rule = ROUTE_RULES.find((entry) => entry.pattern.test(pathname));
   if (rule && !rule.any.some((perm) => hasPermission(roleName, perm))) {
@@ -52,6 +72,7 @@ export async function middleware(request: NextRequest) {
   addSecurityHeaders(response);
   return response;
 }
+
 
 /**
  * Add security headers to all responses

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
 import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/rbac";
+import ReportExporter from "@/components/ReportExporter";
 
 export default async function ReportsPage() {
   const session = await auth();
@@ -52,14 +53,17 @@ export default async function ReportsPage() {
             <h1 className="text-2xl font-semibold">Reports</h1>
             <p className="mt-2 text-gray-600">High-level summary report.</p>
           </div>
-          {canExport ? (
-            <a
-              href="/api/reports/export"
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Export CSV
-            </a>
-          ) : null}
+          <div className="flex gap-2">
+            {canExport ? (
+              <a
+                href="/api/reports/export"
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Export CSV
+              </a>
+            ) : null}
+            {canExport ? <ReportExporter /> : null}
+          </div>
         </div>
       </div>
 

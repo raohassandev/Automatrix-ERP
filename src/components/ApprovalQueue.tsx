@@ -4,6 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import ApprovalActions from "./ApprovalActions";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Approval {
   id: string;
@@ -15,6 +18,7 @@ interface Approval {
   submittedBy: { id: string; email: string; name?: string };
   currentWalletBalance: any;
   requiredApprovalLevel: string;
+  status: string;
 }
 
 interface HistoryItem {
@@ -69,70 +73,78 @@ export default function ApprovalQueue({
 
     if (!confirmed) return;
 
-    try {
-      const res = await fetch("/api/approvals", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          expenseIds: Array.from(selectedIds),
-          action: "APPROVE",
-        }),
-      });
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/approvals", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expenseIds: Array.from(selectedIds),
+            action: "APPROVE",
+          }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to bulk approve");
-      }
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to bulk approve");
+        }
 
-      alert(
-        `✅ Bulk approval complete!\n\nSuccessful: ${data.results.successful.length}\nFailed: ${data.results.failed.length}`
-      );
-      setSelectedIds(new Set());
-      startTransition(() => {
+        toast.success(
+          "Bulk approval complete!",
+          {
+            description: `Successful: ${data.results.successful.length}, Failed: ${data.results.failed.length}`,
+          }
+        );
+        setSelectedIds(new Set());
         router.refresh();
-      });
-    } catch (err) {
-      alert("❌ " + (err instanceof Error ? err.message : "An error occurred"));
-    }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "An error occurred";
+        toast.error(message);
+      }
+    });
   };
 
   const handleBulkReject = async () => {
     if (selectedIds.size === 0) return;
     if (!bulkRejectReason.trim()) {
-      alert("Please provide a reason for rejection");
+      toast.error("Please provide a reason for rejection");
       return;
     }
 
-    try {
-      const res = await fetch("/api/approvals", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          expenseIds: Array.from(selectedIds),
-          action: "REJECT",
-          reason: bulkRejectReason,
-        }),
-      });
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/approvals", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expenseIds: Array.from(selectedIds),
+            action: "REJECT",
+            reason: bulkRejectReason,
+          }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to bulk reject");
-      }
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to bulk reject");
+        }
 
-      alert(
-        `✅ Bulk rejection complete!\n\nSuccessful: ${data.results.successful.length}\nFailed: ${data.results.failed.length}`
-      );
-      setSelectedIds(new Set());
-      setShowBulkReject(false);
-      setBulkRejectReason("");
-      startTransition(() => {
+        toast.success(
+          "Bulk rejection complete!",
+          {
+            description: `Successful: ${data.results.successful.length}, Failed: ${data.results.failed.length}`,
+          }
+        );
+        setSelectedIds(new Set());
+        setShowBulkReject(false);
+        setBulkRejectReason("");
         router.refresh();
-      });
-    } catch (err) {
-      alert("❌ " + (err instanceof Error ? err.message : "An error occurred"));
-    }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "An error occurred";
+        toast.error(message);
+      }
+    });
   };
 
   if (approvals.length === 0) {
@@ -160,12 +172,12 @@ export default function ApprovalQueue({
           </p>
           
           {history.length > 0 && (
-            <button
+            <Button
               onClick={() => setShowHistory(!showHistory)}
-              className="mt-4 text-sm text-blue-600 hover:text-blue-800"
+              variant="link"
             >
               View Recent Approval History
-            </button>
+            </Button>
           )}
         </div>
 
@@ -183,26 +195,26 @@ export default function ApprovalQueue({
             {selectedIds.size} expense(s) selected
           </div>
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={handleBulkApprove}
               disabled={pending}
-              className="rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50"
             >
+              {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {pending ? "Processing..." : "Approve Selected"}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setShowBulkReject(true)}
               disabled={pending}
-              className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+              variant="destructive"
             >
               Reject Selected
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setSelectedIds(new Set())}
-              className="rounded border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              variant="ghost"
             >
               Clear Selection
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -338,6 +350,7 @@ export default function ApprovalQueue({
                       employeeName={expense.submittedBy.name || expense.submittedBy.email}
                       currentBalance={currentBalance}
                       afterBalance={afterBalance}
+                      status={expense.status}
                     />
                   </td>
                 </tr>
@@ -350,12 +363,12 @@ export default function ApprovalQueue({
       {/* Approval History Toggle */}
       {history.length > 0 && (
         <div className="mb-4">
-          <button
+          <Button
             onClick={() => setShowHistory(!showHistory)}
-            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+            variant="link"
           >
             {showHistory ? "Hide" : "Show"} Recent Approval History ({history.length})
-          </button>
+          </Button>
         </div>
       )}
 
@@ -380,23 +393,24 @@ export default function ApprovalQueue({
               disabled={pending}
             />
             <div className="flex justify-end gap-2">
-              <button
+              <Button
                 onClick={() => {
                   setShowBulkReject(false);
                   setBulkRejectReason("");
                 }}
                 disabled={pending}
-                className="rounded border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+                variant="ghost"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleBulkReject}
                 disabled={pending || !bulkRejectReason.trim()}
-                className="rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                variant="destructive"
               >
+                {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {pending ? "Rejecting..." : "Confirm Reject All"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
