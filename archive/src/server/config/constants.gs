@@ -270,7 +270,7 @@ const SYSTEM_SETTINGS = {
   APP_NAME: 'AutoMatrix ERP',
   VERSION: '6.0',
   DATE_FORMAT: 'yyyy-MM-dd',
-  CURRENCY: 'PKR',
+  CURRENCY: 'PKR ',
   TIMEZONE: 'Asia/Kolkata',
   ITEMS_PER_PAGE: 50,
   MAX_SEARCH_RESULTS: 100,

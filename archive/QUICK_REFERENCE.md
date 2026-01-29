@@ -123,7 +123,7 @@ getRecentActivity(limit)     // Recent actions
 ### Utilities
 
 ```javascript
-formatCurrency(amount); // PKR1,234.56
+formatCurrency(amount); // PKR 1,234.56
 formatDate(date); // 2026-01-27
 formatStatus(status); // With icon/color
 ```
@@ -235,11 +235,11 @@ function approveExpense(rowNum) {
 
 ## 📋 Approval Thresholds
 
-| Amount               | Approver        |
-| -------------------- | --------------- |
-| ≤ PKR5,000           | Manager         |
-| PKR5,001 - PKR50,000 | Finance Manager |
-| > PKR50,000          | CEO             |
+| Amount                 | Approver        |
+| ---------------------- | --------------- |
+| ≤ PKR 5,000            | Manager         |
+| PKR 5,001 - PKR 50,000 | Finance Manager |
+| > PKR 50,000           | CEO             |
 
 ## 🔧 Troubleshooting
 

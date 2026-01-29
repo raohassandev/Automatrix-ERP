@@ -181,11 +181,11 @@ The system follows a clean, layered architecture:
 
 ### Approval Thresholds
 
-| Amount Range         | Required Approver |
-| -------------------- | ----------------- |
-| PKR0 - PKR5,000      | Manager           |
-| PKR5,001 - PKR50,000 | Finance Manager   |
-| > PKR50,000          | CEO               |
+| Amount Range           | Required Approver |
+| ---------------------- | ----------------- |
+| PKR 0 - PKR 5,000      | Manager           |
+| PKR 5,001 - PKR 50,000 | Finance Manager   |
+| > PKR 50,000           | CEO               |
 
 ### Security Features
 
