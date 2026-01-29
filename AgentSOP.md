@@ -117,6 +117,7 @@ pnpm prisma studio
 - TypeScript everywhere.
 - No direct DB writes from the client.
 - All side-effects go through service functions.
+- Document every reusable component via inline JSDoc comments and pair it with `docs/API_DOCS_TEMPLATE.md`.
 
 ### 4.2 Validation
 - Use schema validation (Zod or similar) at API boundaries.
@@ -143,6 +144,7 @@ pnpm prisma studio
 - Audit log entry created on mutation
 - UI and API aligned with schema
 - Tests updated
+- Components used across multiple pages must be reusable, documented, and referenced in `PROJECT_BOARD.md` so future agents can wire them without duplication.
 
 ---
 

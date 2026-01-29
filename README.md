@@ -6,6 +6,13 @@ Full working scaffold for AutoMatrix ERP with Google auth, Postgres, and Tailwin
 - Node.js LTS
 - Postgres
 
+
+## Early Security Steps
+- Copy `.env.example` before running the app and populate `NEXTAUTH_SECRET`, OAuth credentials, and `DATABASE_URL`.
+- Run `pnpm security:check` to verify critical secrets are present.
+- Track execution-ready work in `PROJECT_BOARD.md` and `MASTER_PLAN_EXECUTION_READY.md`.
+- Document every new endpoint via `docs/API_DOCS_TEMPLATE.md`.
+
 ## Setup
 ```bash
 pnpm install

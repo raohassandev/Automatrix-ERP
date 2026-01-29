@@ -1,60 +1,110 @@
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import ApprovalsTable from "@/components/ApprovalsTable";
-import { getUserRoleName } from "@/lib/rbac";
 import { redirect } from "next/navigation";
-import { canApproveExpense, canApproveIncome, isPendingExpenseStatus, isPendingIncomeStatus } from "@/lib/approvals";
+import { requirePermission } from "@/lib/rbac";
+import { formatMoney } from "@/lib/format";
+import { getPendingApprovalsForUser } from "@/lib/approval-engine";
+import { prisma } from "@/lib/prisma";
+import ApprovalQueue from "@/components/ApprovalQueue";
 
 export default async function ApprovalsPage() {
   const session = await auth();
-  const userId = session?.user?.id;
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
 
-  if (!userId) {
-      return (
-      redirect("/login")
-      );
-    }
+  // Check if user can view approvals
+  await requirePermission(session, "expenses.approve");
 
-  const role = await getUserRoleName(userId);
+  // Fetch pending approvals for this user using our approval engine
+  const pendingApprovals = await getPendingApprovalsForUser(session.user.id);
 
-  const [pendingExpenses, pendingIncome] = await Promise.all([
-    prisma.expense.findMany({
-      where: { status: { in: ["PENDING", "PENDING_L1", "PENDING_L2", "PENDING_L3"] } },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.income.findMany({
-      where: { status: "PENDING" },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+  // Fetch employee wallet balances for each expense
+  const approvalsWithWalletInfo = await Promise.all(
+    pendingApprovals.map(async (expense: any) => {
+      const employee = await prisma.employee.findUnique({
+        where: { email: expense.submittedBy.email },
+        select: { walletBalance: true },
+      });
 
-  const expenseList = pendingExpenses
-    .filter((expense) => isPendingExpenseStatus(expense.status) && canApproveExpense(role, Number(expense.amount)))
-    .map((expense) => ({
-      id: expense.id,
-      date: expense.date,
-      description: expense.description,
-      amount: Number(expense.amount),
-      approvalLevel: expense.approvalLevel,
-    }));
+      return {
+        ...expense,
+        currentWalletBalance: employee?.walletBalance || 0,
+      };
+    })
+  );
 
-  const incomeList = pendingIncome
-    .filter((entry) => isPendingIncomeStatus(entry.status) && canApproveIncome(role, Number(entry.amount)))
-    .map((entry) => ({
-      id: entry.id,
-      date: entry.date,
-      source: entry.source,
-      amount: Number(entry.amount),
-      approvalLevel: entry.approvalLevel,
-    }));
+  // Fetch recent approval history (last 10 approved/rejected)
+  const recentHistory = await prisma.expense.findMany({
+    where: {
+      status: { in: ['APPROVED', 'REJECTED'] },
+      approvedById: session.user.id,
+    },
+    include: {
+      submittedBy: { select: { id: true, email: true, name: true } },
+      approvedBy: { select: { id: true, email: true, name: true } },
+    },
+    orderBy: { updatedAt: 'desc' },
+    take: 10,
+  });
 
   return (
-    <div className="grid gap-6">
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Approvals</h1>
-        <p className="mt-2 text-gray-600">Pending items awaiting your action.</p>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="mx-auto max-w-7xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Pending Approvals</h1>
+          <p className="mt-2 text-gray-600">
+            Review and approve expenses that require your authorization
+          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="mb-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-lg bg-white p-4 shadow">
+            <div className="text-sm font-medium text-gray-500">Total Pending</div>
+            <div className="mt-2 text-3xl font-bold text-gray-900">
+              {approvalsWithWalletInfo.length}
+            </div>
+          </div>
+          <div className="rounded-lg bg-white p-4 shadow">
+            <div className="text-sm font-medium text-gray-500">Total Amount</div>
+            <div className="mt-2 text-2xl font-bold text-gray-900">
+              {formatMoney(
+                approvalsWithWalletInfo.reduce(
+                  (sum: number, exp: any) => sum + parseFloat(exp.amount.toString()),
+                  0
+                )
+              )}
+            </div>
+          </div>
+          <div className="rounded-lg bg-white p-4 shadow">
+            <div className="text-sm font-medium text-gray-500">Requires Manager</div>
+            <div className="mt-2 text-3xl font-bold text-blue-600">
+              {
+                approvalsWithWalletInfo.filter(
+                  (exp: any) => exp.requiredApprovalLevel === "MANAGER"
+                ).length
+              }
+            </div>
+          </div>
+          <div className="rounded-lg bg-white p-4 shadow">
+            <div className="text-sm font-medium text-gray-500">Requires CEO</div>
+            <div className="mt-2 text-3xl font-bold text-red-600">
+              {
+                approvalsWithWalletInfo.filter(
+                  (exp: any) => exp.requiredApprovalLevel === "CEO"
+                ).length
+              }
+            </div>
+          </div>
+        </div>
+
+        {/* Approval Queue with Bulk Operations */}
+        <ApprovalQueue 
+          approvals={approvalsWithWalletInfo}
+          history={recentHistory}
+        />
       </div>
-      <ApprovalsTable expenses={expenseList} income={incomeList} />
     </div>
   );
 }

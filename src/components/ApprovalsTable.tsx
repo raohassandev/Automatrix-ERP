@@ -3,6 +3,8 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
+import ApprovalActions from "@/components/ApprovalActions";
+import ApprovalTableSection from "@/components/ApprovalTableSection";
 
 type ExpenseRow = {
   id: string;
@@ -63,102 +65,48 @@ export default function ApprovalsTable({
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Pending Expenses</h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="py-2">Date</th>
-                <th className="py-2">Description</th>
-                <th className="py-2">Amount</th>
-                <th className="py-2">Level</th>
-                <th className="py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map((expense) => (
-                <tr key={expense.id} className="border-b">
-                  <td className="py-2">{new Date(expense.date).toLocaleDateString()}</td>
-                  <td className="py-2">{expense.description}</td>
-                  <td className="py-2">{formatMoney(expense.amount)}</td>
-                  <td className="py-2">{expense.approvalLevel || "-"}</td>
-                  <td className="py-2">
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        className="rounded-md bg-black px-3 py-1 text-white"
-                        disabled={pending}
-                        onClick={() => startTransition(() => submitApproval("EXPENSE", expense.id, "APPROVE"))}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        className="rounded-md border px-3 py-1"
-                        disabled={pending}
-                        onClick={() => handleReject("EXPENSE", expense.id)}
-                      >
-                        Reject
-                      </button>
-                      <button
-                        className="rounded-md border px-3 py-1"
-                        disabled={pending}
-                        onClick={() => handlePartial(expense.id)}
-                      >
-                        Partial
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ApprovalTableSection
+        title="Pending Expenses"
+        columns={["Date", "Description", "Amount", "Level", "Actions"]}
+        rows={expenses}
+        renderRow={(expense) => (
+          <tr key={expense.id} className="border-b">
+            <td className="py-2">{new Date(expense.date).toLocaleDateString()}</td>
+            <td className="py-2">{expense.description}</td>
+            <td className="py-2">{formatMoney(expense.amount)}</td>
+            <td className="py-2">{expense.approvalLevel || "-"}</td>
+            <td className="py-2">
+              <ApprovalActions
+                pending={pending}
+                onApprove={() => submitApproval("EXPENSE", expense.id, "APPROVE")}
+                onReject={() => handleReject("EXPENSE", expense.id)}
+                onPartial={() => handlePartial(expense.id)}
+              />
+            </td>
+          </tr>
+        )}
+      />
 
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Pending Income</h2>
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="py-2">Date</th>
-                <th className="py-2">Source</th>
-                <th className="py-2">Amount</th>
-                <th className="py-2">Level</th>
-                <th className="py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {income.map((entry) => (
-                <tr key={entry.id} className="border-b">
-                  <td className="py-2">{new Date(entry.date).toLocaleDateString()}</td>
-                  <td className="py-2">{entry.source}</td>
-                  <td className="py-2">{formatMoney(entry.amount)}</td>
-                  <td className="py-2">{entry.approvalLevel || "-"}</td>
-                  <td className="py-2">
-                    <div className="flex gap-2">
-                      <button
-                        className="rounded-md bg-black px-3 py-1 text-white"
-                        disabled={pending}
-                        onClick={() => startTransition(() => submitApproval("INCOME", entry.id, "APPROVE"))}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        className="rounded-md border px-3 py-1"
-                        disabled={pending}
-                        onClick={() => handleReject("INCOME", entry.id)}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ApprovalTableSection
+        title="Pending Income"
+        columns={["Date", "Source", "Amount", "Level", "Actions"]}
+        rows={income}
+        renderRow={(entry) => (
+          <tr key={entry.id} className="border-b">
+            <td className="py-2">{new Date(entry.date).toLocaleDateString()}</td>
+            <td className="py-2">{entry.source}</td>
+            <td className="py-2">{formatMoney(entry.amount)}</td>
+            <td className="py-2">{entry.approvalLevel || "-"}</td>
+            <td className="py-2">
+              <ApprovalActions
+                pending={pending}
+                onApprove={() => submitApproval("INCOME", entry.id, "APPROVE")}
+                onReject={() => handleReject("INCOME", entry.id)}
+              />
+            </td>
+          </tr>
+        )}
+      />
     </div>
   );
 }

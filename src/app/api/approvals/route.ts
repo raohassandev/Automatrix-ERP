@@ -1,196 +1,229 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { approvalSchema } from "@/lib/validation";
-import { logAudit } from "@/lib/audit";
-import { getUserRoleName, requirePermission } from "@/lib/rbac";
+import { hasPermission, type RoleName } from "@/lib/permissions";
 import {
-  canApproveExpense,
-  canApproveIncome,
-  isPendingExpenseStatus,
-  isPendingIncomeStatus,
-} from "@/lib/approvals";
-import { createNotification } from "@/lib/notifications";
-import { applyWalletTransactionByEmail } from "@/lib/wallet";
-import { recalculateProjectFinancials } from "@/lib/projects";
-import { Prisma } from "@prisma/client";
+  getPendingApprovalsForUser,
+  approveExpense,
+  rejectExpense,
+  getApprovalStats,
+} from "@/lib/approval-engine";
+import { ZodError } from "zod";
+import { approvalSchema } from "@/lib/validation-schemas";
 
-export async function POST(req: Request) {
+/**
+ * GET /api/approvals - Get pending approvals for current user
+ */
+export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const canApproveAny =
-    (await requirePermission(session.user.id, "approvals.approve_high")) ||
-    (await requirePermission(session.user.id, "approvals.approve_low")) ||
-    (await requirePermission(session.user.id, "approvals.view_all"));
+  const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
+  
+  try {
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get("type"); // 'pending' or 'stats'
 
-  if (!canApproveAny) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-  }
+    if (type === "stats") {
+      // Get approval statistics
+      const stats = await getApprovalStats();
+      return NextResponse.json(stats);
+    }
 
-  const body = await req.json();
-  const parsed = approvalSchema.safeParse(body);
-  if (!parsed.success) {
+    // Get pending approvals for user
+    const pendingApprovals = await getPendingApprovalsForUser(session.user.id);
+
+    return NextResponse.json({
+      data: pendingApprovals,
+      count: pendingApprovals.length,
+    });
+  } catch (error) {
+    console.error("Error fetching approvals:", error);
     return NextResponse.json(
-      { success: false, error: "Validation failed", details: parsed.error.flatten() },
-      { status: 400 }
+      { error: "Internal server error" },
+      { status: 500 }
     );
   }
+}
 
-  const { type, action, id, reason, approvedAmount } = parsed.data;
-  const role = await getUserRoleName(session.user.id);
+/**
+ * POST /api/approvals - Approve or reject an expense
+ */
+export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  if (type === "EXPENSE") {
-    const expense = await prisma.expense.findUnique({
-      where: { id },
-      include: { submittedBy: true },
-    });
-    if (!expense) {
-      return NextResponse.json({ success: false, error: "Expense not found" }, { status: 404 });
-    }
+  const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
+  
+  // Check if user has approval permissions
+  if (!hasPermission(roleName, "expenses.approve")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-    if (!isPendingExpenseStatus(expense.status)) {
-      return NextResponse.json({ success: false, error: "Expense already processed" }, { status: 400 });
-    }
+  try {
+    const body = await request.json();
+    
+    // Validate input
+    const validated = approvalSchema.parse(body);
 
-    if (!canApproveExpense(role, Number(expense.amount))) {
-      return NextResponse.json({ success: false, error: "Insufficient approval authority" }, { status: 403 });
-    }
+    if (validated.expenseId) {
+      // Handle expense approval/rejection
+      if (validated.action === "APPROVE" || validated.action === "PARTIAL_APPROVE") {
+        const result = await approveExpense({
+          expenseId: validated.expenseId,
+          approverId: session.user.id,
+          reason: validated.reason,
+          approvedAmount: validated.approvedAmount,
+        });
 
-    if (action === "PARTIAL" && !approvedAmount) {
-      return NextResponse.json({ success: false, error: "Approved amount required" }, { status: 400 });
-    }
+        return NextResponse.json({
+          success: true,
+          message: "Expense approved successfully",
+          data: result,
+        });
+      } else if (validated.action === "REJECT") {
+        if (!validated.reason) {
+          return NextResponse.json(
+            { error: "Reason is required for rejection" },
+            { status: 400 }
+          );
+        }
 
-    if (approvedAmount && approvedAmount > Number(expense.amount)) {
-      return NextResponse.json({ success: false, error: "Approved amount cannot exceed expense amount" }, { status: 400 });
-    }
+        const result = await rejectExpense({
+          expenseId: validated.expenseId,
+          approverId: session.user.id,
+          reason: validated.reason,
+        });
 
-    const isPartial = action === "PARTIAL" && approvedAmount && approvedAmount < Number(expense.amount);
-    const status = action === "REJECT" ? "REJECTED" : isPartial ? "PARTIALLY_APPROVED" : "APPROVED";
-
-    const approvedValue = isPartial && approvedAmount ? approvedAmount : Number(expense.amount);
-
-    const updated = await prisma.expense.update({
-      where: { id },
-      data: {
-        status,
-        approvedById: session.user.id,
-        approvedAmount: new Prisma.Decimal(approvedValue),
-      },
-    });
-
-    await prisma.approval.create({
-      data: {
-        type: "EXPENSE",
-        status: status === "REJECTED" ? "REJECTED" : status === "PARTIALLY_APPROVED" ? "PARTIALLY_APPROVED" : "APPROVED",
-        amount: expense.amount,
-        approvedAmount: new Prisma.Decimal(approvedValue),
-        reason,
-        expenseId: expense.id,
-        approvedById: session.user.id,
-      },
-    });
-
-    if (status !== "REJECTED" && expense.submittedBy?.email) {
-      const walletResult = await applyWalletTransactionByEmail({
-        email: expense.submittedBy.email,
-        type: "DEBIT",
-        amount: approvedValue,
-        reference: `Expense ${expense.id} approved`,
-      });
-
-      if (walletResult.applied) {
-        await logAudit({
-          action: "WALLET_TRANSACTION",
-          entity: "Employee",
-          entityId: walletResult.updated.id,
-          newValue: JSON.stringify({ amount: approvedValue, reference: expense.id }),
-          userId: session.user.id,
+        return NextResponse.json({
+          success: true,
+          message: "Expense rejected successfully",
+          data: result,
         });
       }
     }
 
-    await logAudit({
-      action: status === "REJECTED" ? "REJECT_EXPENSE" : "APPROVE_EXPENSE",
-      entity: "Expense",
-      entityId: expense.id,
-      newValue: JSON.stringify({ status, approvedAmount, reason }),
-      userId: session.user.id,
-    });
-
-    if (expense.submittedById) {
-      await createNotification({
-        userId: expense.submittedById,
-        type: "EXPENSE_APPROVAL",
-        message: `Expense ${expense.description} was ${status.toLowerCase()}.`,
-      });
+    // Handle income approval (TODO: implement similar to expense)
+    if (validated.incomeId) {
+      return NextResponse.json(
+        { error: "Income approval not yet implemented" },
+        { status: 501 }
+      );
     }
 
-    if (status !== "REJECTED" && expense.project) {
-      await recalculateProjectFinancials(expense.project);
+    return NextResponse.json(
+      { error: "Invalid request" },
+      { status: 400 }
+    );
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { error: "Validation failed", details: error.errors },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json({ success: true, data: updated });
+    // Handle business logic errors
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+
+    console.error("Error processing approval:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT /api/approvals - Bulk approve/reject expenses
+ */
+export async function PUT(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const income = await prisma.income.findUnique({
-    where: { id },
-    include: { addedBy: true },
-  });
-  if (!income) {
-    return NextResponse.json({ success: false, error: "Income not found" }, { status: 404 });
+  const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
+  
+  if (!hasPermission(roleName, "expenses.approve")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (!isPendingIncomeStatus(income.status)) {
-    return NextResponse.json({ success: false, error: "Income already processed" }, { status: 400 });
-  }
+  try {
+    const body = await request.json();
+    const { expenseIds, action, reason } = body;
 
-  if (!canApproveIncome(role, Number(income.amount))) {
-    return NextResponse.json({ success: false, error: "Insufficient approval authority" }, { status: 403 });
-  }
+    if (!expenseIds || !Array.isArray(expenseIds) || expenseIds.length === 0) {
+      return NextResponse.json(
+        { error: "expenseIds array is required" },
+        { status: 400 }
+      );
+    }
 
-  const status = action === "REJECT" ? "REJECTED" : "APPROVED";
-  const updated = await prisma.income.update({
-    where: { id },
-    data: {
-      status,
-      approvedById: session.user.id,
-    },
-  });
+    if (!["APPROVE", "REJECT"].includes(action)) {
+      return NextResponse.json(
+        { error: "Invalid action. Use APPROVE or REJECT" },
+        { status: 400 }
+      );
+    }
 
-  await prisma.approval.create({
-    data: {
-      type: "INCOME",
-      status: status === "REJECTED" ? "REJECTED" : "APPROVED",
-      amount: income.amount,
-      approvedAmount: income.amount,
-      reason,
-      incomeId: income.id,
-      approvedById: session.user.id,
-    },
-  });
+    const results = {
+      successful: [] as string[],
+      failed: [] as { id: string; error: string }[],
+    };
 
-  await logAudit({
-    action: status === "REJECTED" ? "REJECT_INCOME" : "APPROVE_INCOME",
-    entity: "Income",
-    entityId: income.id,
-    newValue: JSON.stringify({ status, reason }),
-    userId: session.user.id,
-  });
+    // Process each expense
+    for (const expenseId of expenseIds) {
+      try {
+        if (action === "APPROVE") {
+          await approveExpense({
+            expenseId,
+            approverId: session.user.id,
+            reason,
+          });
+          results.successful.push(expenseId);
+        } else if (action === "REJECT") {
+          if (!reason) {
+            results.failed.push({
+              id: expenseId,
+              error: "Reason required for rejection",
+            });
+            continue;
+          }
 
-  if (income.addedById) {
-    await createNotification({
-      userId: income.addedById,
-      type: "INCOME_APPROVAL",
-      message: `Income ${income.source} was ${status.toLowerCase()}.`,
+          await rejectExpense({
+            expenseId,
+            approverId: session.user.id,
+            reason,
+          });
+          results.successful.push(expenseId);
+        }
+      } catch (error) {
+        results.failed.push({
+          id: expenseId,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Processed ${expenseIds.length} expenses`,
+      results,
     });
+  } catch (error) {
+    console.error("Error processing bulk approval:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
-
-  if (status !== "REJECTED" && income.project) {
-    await recalculateProjectFinancials(income.project);
-  }
-
-  return NextResponse.json({ success: true, data: updated });
 }
