@@ -266,7 +266,7 @@ automatrix-erp/
 
 - [ ] Create activity feed showing last 10 actions:
   - "Expense #1234 submitted by John Doe"
-  - "Approved by CEO - Amount: PKR50,000"
+  - "Approved by CEO - Amount: PKR 50,000"
   - "Stock adjusted: Item X (-10 units)"
   - "Invoice #INV-001 generated"
 - [ ] Real-time updates (refresh on page load)
@@ -302,7 +302,7 @@ automatrix-erp/
 #### 3.2 Partial Approvals
 
 - [ ] Allow approver to modify amount
-- [ ] Split functionality: Approve PKRX, return PKRY to employee
+- [ ] Split functionality: Approve PKR X, return PKR Y to employee
 - [ ] Reason field for partial approval
 - [ ] Notification to submitter with details
 
@@ -356,7 +356,7 @@ automatrix-erp/
 #### 4.4 Attachment Audit
 
 - [ ] Flag expenses without receipts
-- [ ] Mandatory receipt for amounts > PKR5,000
+- [ ] Mandatory receipt for amounts > PKR 5,000
 - [ ] Waiver system: Reason + approver override
 
 ---

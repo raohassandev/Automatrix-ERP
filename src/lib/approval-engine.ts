@@ -8,10 +8,10 @@ import { createAuditLog } from './audit';
 
 // Approval thresholds in PKR
 export const APPROVAL_THRESHOLDS = {
-  AUTO_APPROVE: 0,        // < 10,000: Auto-approve or Manager
-  MANAGER: 10000,         // 10,000-50,000: Manager approval required
+  AUTO_APPROVE: 0, // < 10,000: Auto-approve or Manager
+  MANAGER: 10000, // 10,000-50,000: Manager approval required
   FINANCE_MANAGER: 50000, // 50,000-200,000: Finance Manager approval
-  CEO: 200000,            // > 200,000: CEO/Owner approval required
+  CEO: 200000, // > 200,000: CEO/Owner approval required
 } as const;
 
 export type ApprovalLevel = 'AUTO' | 'MANAGER' | 'FINANCE_MANAGER' | 'CEO';
@@ -56,7 +56,7 @@ export function getRequiredRoleForLevel(level: ApprovalLevel): string[] {
  */
 export async function canUserApprove(
   userId: string,
-  amount: number
+  amount: number,
 ): Promise<{ canApprove: boolean; reason?: string }> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -111,7 +111,7 @@ export async function approveExpense(params: {
   const finalAmount = approvedAmount || parseFloat(expense.amount.toString());
   const { canApprove, reason: approvalReason } = await canUserApprove(
     approverId,
-    finalAmount
+    finalAmount,
   );
 
   if (!canApprove) {
@@ -131,7 +131,7 @@ export async function approveExpense(params: {
   const currentBalance = parseFloat(employee.walletBalance.toString());
   if (currentBalance < finalAmount) {
     throw new Error(
-      `Insufficient wallet balance. Available: ${currentBalance}, Required: ${finalAmount}`
+      `Insufficient wallet balance. Available: ${currentBalance}, Required: ${finalAmount}`,
     );
   }
 
@@ -184,7 +184,7 @@ export async function approveExpense(params: {
       data: {
         userId: expense.submittedById,
         type: 'SUCCESS',
-        message: `Your expense of PKR ${finalAmount} has been approved and deducted from your wallet.`,
+        message: `Your expense of PKR  ${finalAmount} has been approved and deducted from your wallet.`,
         status: 'UNREAD',
       },
     });
@@ -253,7 +253,7 @@ export async function rejectExpense(params: {
       data: {
         userId: expense.submittedById,
         type: 'ERROR',
-        message: `Your expense of PKR ${amount} has been rejected. Reason: ${reason}`,
+        message: `Your expense of PKR  ${amount} has been rejected. Reason: ${reason}`,
         status: 'UNREAD',
       },
     });
@@ -297,7 +297,7 @@ export async function getPendingApprovalsForUser(userId: string) {
   return approvableExpenses.map((expense) => ({
     ...expense,
     requiredApprovalLevel: getRequiredApprovalLevel(
-      parseFloat(expense.amount.toString())
+      parseFloat(expense.amount.toString()),
     ),
   }));
 }

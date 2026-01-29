@@ -20,21 +20,21 @@ This document provides a complete, prioritized, execution-ready roadmap to trans
 
 ### Overall Completion: **35%**
 
-| Category | Status | Completion |
-|----------|--------|------------|
-| **Infrastructure** | ✅ Done | 95% |
-| **Authentication** | ✅ Done | 90% |
-| **Database Schema** | ✅ Done | 85% |
-| **Data Migration** | ✅ Done | 100% |
-| **Basic CRUD APIs** | ✅ Done | 80% |
-| **Basic UI Pages** | ✅ Done | 40% |
-| **Business Logic** | 🔲 Todo | 20% |
-| **Approval Workflows** | 🔲 Todo | 10% |
-| **Reporting** | 🔲 Todo | 5% |
-| **Notifications** | 🔲 Todo | 0% |
-| **Security Hardening** | 🔲 Todo | 30% |
-| **Testing** | 🔲 Todo | 5% |
-| **Documentation** | 🔲 Todo | 20% |
+| Category               | Status  | Completion |
+| ---------------------- | ------- | ---------- |
+| **Infrastructure**     | ✅ Done | 95%        |
+| **Authentication**     | ✅ Done | 90%        |
+| **Database Schema**    | ✅ Done | 85%        |
+| **Data Migration**     | ✅ Done | 100%       |
+| **Basic CRUD APIs**    | ✅ Done | 80%        |
+| **Basic UI Pages**     | ✅ Done | 40%        |
+| **Business Logic**     | 🔲 Todo | 20%        |
+| **Approval Workflows** | 🔲 Todo | 10%        |
+| **Reporting**          | 🔲 Todo | 5%         |
+| **Notifications**      | 🔲 Todo | 0%         |
+| **Security Hardening** | 🔲 Todo | 30%        |
+| **Testing**            | 🔲 Todo | 5%         |
+| **Documentation**      | 🔲 Todo | 20%        |
 
 ---
 
@@ -43,6 +43,7 @@ This document provides a complete, prioritized, execution-ready roadmap to trans
 ### ✅ **COMPLETED (What's Working)**
 
 #### Core Infrastructure
+
 - ✅ Next.js 16.1.5 App Router
 - ✅ TypeScript with strict mode
 - ✅ Tailwind CSS v4
@@ -52,6 +53,7 @@ This document provides a complete, prioritized, execution-ready roadmap to trans
 - ✅ Build successful (36 routes)
 
 #### Authentication & RBAC
+
 - ✅ NextAuth v5 beta 30
 - ✅ JWT session strategy
 - ✅ Credentials provider (email/password)
@@ -64,6 +66,7 @@ This document provides a complete, prioritized, execution-ready roadmap to trans
 - ✅ Middleware route protection
 
 #### Database & Models
+
 - ✅ User, Role models
 - ✅ Employee model with wallet balance
 - ✅ Project model (supports client + internal)
@@ -78,6 +81,7 @@ This document provides a complete, prioritized, execution-ready roadmap to trans
 - ✅ AuditLog model
 
 #### Real Data Imported
+
 - ✅ 13 users with accounts
 - ✅ 13 employees
 - ✅ 5 projects (2 client, 3 internal)
@@ -88,6 +92,7 @@ This document provides a complete, prioritized, execution-ready roadmap to trans
 - ✅ Net profit: PKR 661,870
 
 #### API Routes (27 endpoints)
+
 - ✅ `/api/register` - User registration
 - ✅ `/api/auth/[...nextauth]` - Authentication
 - ✅ `/api/expenses` + `/api/expenses/[id]` - Full CRUD
@@ -109,6 +114,7 @@ This document provides a complete, prioritized, execution-ready roadmap to trans
 - ✅ `/api/users/role` - Role assignment
 
 #### UI Pages (15 pages)
+
 - ✅ `/login` - Authentication page
 - ✅ `/dashboard` - Main dashboard (basic)
 - ✅ `/expenses` - Expenses list
@@ -126,13 +132,13 @@ This document provides a complete, prioritized, execution-ready roadmap to trans
 - ✅ Home redirect to dashboard
 
 #### Supporting Infrastructure
+
 - ✅ Migration script for Excel data
 - ✅ Seed script for initial data
 - ✅ Comprehensive documentation (3 docs)
 - ✅ Git repository with proper structure
 
 ---
-
 
 ## 🎯 EXECUTION ROADMAP - PHASED APPROACH
 
@@ -146,18 +152,20 @@ This document provides a complete, prioritized, execution-ready roadmap to trans
 
 This sprint advances security, approvals, reporting, documentation, and tests in one cohesive pass.
 
-
 ---
 
 ## 🔴 **PHASE 1: CRITICAL FIXES & SECURITY (Week 1-2)**
+
 **Priority:** CRITICAL | **Duration:** 1-2 weeks | **Effort:** 40 hours
 
 ### Goal: Make system secure and fix critical issues
 
 ### 1.1 Security Hardening
+
 **Status:** 🔲 TODO | **Priority:** 🔴 CRITICAL
 
 #### Tasks:
+
 - [ ] **SEC-001:** Replace NEXTAUTH_SECRET with secure random value
   - File: `.env.local`
   - Generate: `openssl rand -base64 32`
@@ -194,9 +202,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Security headers present in response
 
 ### 1.2 Critical Bug Fixes
+
 **Status:** 🔲 TODO | **Priority:** 🔴 CRITICAL
 
 #### Tasks:
+
 - [ ] **BUG-001:** Fix Approval table missing
   - Check if Approval model exists in schema
   - Create migration if needed
@@ -222,9 +232,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Files can be uploaded and retrieved
 
 ### 1.3 Data Validation
+
 **Status:** 🔲 TODO | **Priority:** 🔴 HIGH
 
 #### Tasks:
+
 - [ ] **VAL-001:** Add Zod validation schemas
   - Create schema for each model
   - Validate at API boundary
@@ -245,14 +257,17 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 ---
 
 ## 🟡 **PHASE 2: APPROVAL WORKFLOW (Week 3-4)**
+
 **Priority:** HIGH | **Duration:** 2 weeks | **Effort:** 60 hours
 
 ### Goal: Implement complete multi-level approval system
 
 ### 2.1 Approval Engine
+
 **Status:** 🔲 TODO | **Priority:** 🔴 HIGH
 
 #### Tasks:
+
 - [ ] **APR-001:** Create Approval workflow engine
   - File: `src/lib/approval-engine.ts`
   - Implement threshold-based routing
@@ -282,9 +297,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** SLA metrics visible in dashboard
 
 ### 2.2 Wallet Automation
+
 **Status:** 🔲 TODO | **Priority:** 🔴 HIGH
 
 #### Tasks:
+
 - [ ] **WAL-001:** Auto-deduct wallet on expense approval
   - When expense approved, deduct from employee wallet
   - Create WalletLedger entry (DEBIT)
@@ -308,9 +325,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Cannot create expense if wallet insufficient
 
 ### 2.3 Approval UI
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **APR-UI-001:** Build approval queue page
   - Show pending approvals for current user
   - Filter by type (Expense, Income)
@@ -336,14 +355,17 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 ---
 
 ## 🟡 **PHASE 3: DASHBOARD & REPORTING (Week 5-6)**
+
 **Priority:** HIGH | **Duration:** 2 weeks | **Effort:** 50 hours
 
 ### Goal: Build comprehensive dashboard with real-time KPIs
 
 ### 3.1 Dashboard KPIs
+
 **Status:** 🔲 TODO | **Priority:** 🟡 HIGH
 
 #### Tasks:
+
 - [ ] **DASH-001:** Implement financial summary
   - Total income (current month)
   - Total expenses (current month)
@@ -377,9 +399,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Approval counts shown
 
 ### 3.2 Dashboard Charts
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **DASH-CHART-001:** Install chart library
   - Options: Chart.js, Recharts, or ApexCharts
   - Install and configure
@@ -406,9 +430,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Wallet trend shown
 
 ### 3.3 Reports Module
+
 **Status:** 🔲 TODO | **Priority:** 🟡 HIGH
 
 #### Tasks:
+
 - [ ] **REP-001:** Financial reports
   - Profit & Loss statement
   - Income statement
@@ -449,14 +475,17 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 ---
 
 ## 🟢 **PHASE 4: UI/UX ENHANCEMENTS (Week 7-8)**
+
 **Priority:** MEDIUM | **Duration:** 2 weeks | **Effort:** 50 hours
 
 ### Goal: Make UI professional, intuitive, and feature-rich
 
 ### 4.1 Global UI Improvements
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **UI-001:** Add component library
   - Options: shadcn/ui, HeadlessUI, or Radix
   - Install and configure
@@ -492,9 +521,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Dark mode works throughout app
 
 ### 4.2 Table Enhancements
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **TABLE-001:** Add pagination
   - Client-side or server-side pagination
   - Page size selector (10, 25, 50, 100)
@@ -523,9 +554,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Data exportable from tables
 
 ### 4.3 Form Enhancements
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **FORM-001:** Add form validation library
   - Install: React Hook Form + Zod
   - Implement on all forms
@@ -555,16 +588,18 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 
 ---
 
-
 ## 🟢 **PHASE 5: NOTIFICATIONS & INTEGRATIONS (Week 9-10)**
+
 **Priority:** MEDIUM | **Duration:** 2 weeks | **Effort:** 40 hours
 
 ### Goal: Implement notification system and key integrations
 
 ### 5.1 Notification System
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **NOTIF-001:** Build notification service
   - File: `src/lib/notification-service.ts`
   - Create notification on events
@@ -588,9 +623,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Notifications appear without refresh
 
 ### 5.2 Email Notifications
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **EMAIL-001:** Integrate email service
   - Options: SendGrid, AWS SES, Resend
   - Configure API keys
@@ -616,9 +653,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Reminders sent automatically
 
 ### 5.3 File Storage Integration
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **STORAGE-001:** Integrate AWS S3 or similar
   - Options: AWS S3, Cloudflare R2, DigitalOcean Spaces
   - Configure credentials
@@ -645,14 +684,17 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 ---
 
 ## 🟢 **PHASE 6: TESTING & QUALITY (Week 11-12)**
+
 **Priority:** MEDIUM | **Duration:** 2 weeks | **Effort:** 40 hours
 
 ### Goal: Ensure system quality through comprehensive testing
 
 ### 6.1 Unit Tests
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **TEST-001:** Set up testing framework
   - Install: Vitest or Jest
   - Configure for Next.js
@@ -671,9 +713,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Critical logic tested
 
 ### 6.2 Integration Tests
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **TEST-INT-001:** Test API endpoints
   - Test all CRUD operations
   - Test authentication required
@@ -691,9 +735,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** DB operations tested
 
 ### 6.3 E2E Tests
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **TEST-E2E-001:** Expand Playwright tests
   - Already started in `playwright/tests/auth.spec.ts`
   - Add more test cases
@@ -713,14 +759,17 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 ---
 
 ## 🟢 **PHASE 7: PERFORMANCE & OPTIMIZATION (Week 13-14)**
+
 **Priority:** LOW | **Duration:** 2 weeks | **Effort:** 30 hours
 
 ### Goal: Optimize for speed and scalability
 
 ### 7.1 Performance Optimization
+
 **Status:** 🔲 TODO | **Priority:** 🟢 LOW
 
 #### Tasks:
+
 - [ ] **PERF-001:** Implement caching
   - Cache dashboard KPIs (5 min TTL)
   - Cache user roles and permissions
@@ -750,9 +799,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** Static assets load fast
 
 ### 7.2 Monitoring & Logging
+
 **Status:** 🔲 TODO | **Priority:** 🟢 LOW
 
 #### Tasks:
+
 - [ ] **MON-001:** Integrate error tracking
   - Options: Sentry, LogRocket, Rollbar
   - Track client and server errors
@@ -773,14 +824,17 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 ---
 
 ## 🟢 **PHASE 8: DOCUMENTATION & DEPLOYMENT (Week 15-16)**
+
 **Priority:** LOW | **Duration:** 2 weeks | **Effort:** 30 hours
 
 ### Goal: Complete documentation and prepare for production
 
 ### 8.1 Documentation
+
 **Status:** 🔲 TODO | **Priority:** 🟢 LOW
 
 #### Tasks:
+
 - [ ] **DOC-001:** API documentation
   - Use Swagger/OpenAPI
   - Document all endpoints
@@ -808,9 +862,11 @@ This sprint advances security, approvals, reporting, documentation, and tests in
   - **AC:** New devs can onboard
 
 ### 8.2 Deployment Preparation
+
 **Status:** 🔲 TODO | **Priority:** 🟡 MEDIUM
 
 #### Tasks:
+
 - [ ] **DEPLOY-001:** Set up CI/CD pipeline
   - GitHub Actions or similar
   - Run tests on PR
@@ -847,6 +903,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 ## 📋 **FEATURE CHECKLIST BY MODULE**
 
 ### Authentication Module
+
 - ✅ Email/password login
 - ✅ Google OAuth (configured, needs credentials)
 - ✅ User registration
@@ -859,6 +916,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Account lockout after failed attempts
 
 ### Dashboard Module
+
 - ✅ Basic page structure
 - 🔲 Financial KPIs (income, expense, profit)
 - 🔲 Wallet summary
@@ -871,6 +929,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Comparison with previous period
 
 ### Expenses Module
+
 - ✅ List all expenses
 - ✅ Create expense
 - ✅ Edit expense
@@ -890,6 +949,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Project dropdown
 
 ### Income Module
+
 - ✅ List all income
 - ✅ Create income
 - ✅ Edit income
@@ -905,6 +965,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Approval workflow for large amounts
 
 ### Projects Module
+
 - ✅ List all projects
 - ✅ Create project
 - ✅ Edit project
@@ -922,6 +983,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Project closing
 
 ### Employees Module
+
 - ✅ List all employees
 - ✅ Create employee
 - ✅ Edit employee
@@ -937,6 +999,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Employment status management
 
 ### Inventory Module
+
 - ✅ List all items
 - ✅ Create item
 - ✅ Edit item
@@ -954,6 +1017,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Stock adjustment workflow
 
 ### Invoices Module
+
 - ✅ List all invoices
 - ✅ Create invoice
 - ✅ Edit invoice
@@ -968,6 +1032,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Multi-currency support
 
 ### Approvals Module
+
 - ✅ Basic approval endpoint
 - ✅ List pending approvals
 - 🔲 Approval workflow engine
@@ -981,6 +1046,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Approval history view
 
 ### Attachments Module
+
 - ✅ Basic CRUD API
 - ✅ List attachments
 - 🔲 File upload with S3
@@ -993,6 +1059,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Virus scanning
 
 ### Notifications Module
+
 - ✅ Basic CRUD API
 - ✅ List notifications
 - 🔲 Notification service
@@ -1005,6 +1072,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Notification categories
 
 ### Audit Log Module
+
 - ✅ Basic audit log model
 - ✅ List audit logs
 - 🔲 Automatic audit logging middleware
@@ -1016,6 +1084,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Compliance reporting
 
 ### Reports Module
+
 - ✅ Basic page structure
 - ✅ Export endpoint
 - 🔲 Profit & Loss statement
@@ -1030,6 +1099,7 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 - 🔲 Custom date ranges
 
 ### Settings Module
+
 - ✅ Role assignment
 - 🔲 User profile management
 - 🔲 Password change
@@ -1043,12 +1113,12 @@ This sprint advances security, approvals, reporting, documentation, and tests in
 
 ---
 
-
 ## 🎯 **QUICK WIN TASKS (Can Start Immediately)**
 
 These tasks can be done independently and deliver immediate value:
 
 ### Quick Wins - Week 1
+
 1. **QW-001:** Replace NEXTAUTH_SECRET (15 min)
 2. **QW-002:** Add Google OAuth credentials (30 min)
 3. **QW-003:** Add loading spinners to all buttons (2 hrs)
@@ -1059,6 +1129,7 @@ These tasks can be done independently and deliver immediate value:
 8. **QW-008:** Add date range filter to expenses (3 hrs)
 
 ### Quick Wins - Week 2
+
 9. **QW-009:** Implement automatic audit logging (6 hrs)
 10. **QW-010:** Add expense approval UI (4 hrs)
 11. **QW-011:** Add wallet auto-deduction on approval (4 hrs)
@@ -1073,44 +1144,48 @@ These tasks can be done independently and deliver immediate value:
 ## 📊 **EFFORT ESTIMATION SUMMARY**
 
 ### By Phase
-| Phase | Duration | Effort | Priority |
-|-------|----------|--------|----------|
-| Phase 1: Security & Fixes | 1-2 weeks | 40 hrs | 🔴 Critical |
-| Phase 2: Approval Workflow | 2 weeks | 60 hrs | 🔴 High |
-| Phase 3: Dashboard & Reports | 2 weeks | 50 hrs | 🟡 High |
-| Phase 4: UI/UX Enhancements | 2 weeks | 50 hrs | 🟡 Medium |
-| Phase 5: Notifications | 2 weeks | 40 hrs | 🟡 Medium |
-| Phase 6: Testing | 2 weeks | 40 hrs | 🟡 Medium |
-| Phase 7: Performance | 2 weeks | 30 hrs | 🟢 Low |
-| Phase 8: Documentation | 2 weeks | 30 hrs | 🟢 Low |
-| **TOTAL** | **16 weeks** | **340 hrs** | |
+
+| Phase                        | Duration     | Effort      | Priority    |
+| ---------------------------- | ------------ | ----------- | ----------- |
+| Phase 1: Security & Fixes    | 1-2 weeks    | 40 hrs      | 🔴 Critical |
+| Phase 2: Approval Workflow   | 2 weeks      | 60 hrs      | 🔴 High     |
+| Phase 3: Dashboard & Reports | 2 weeks      | 50 hrs      | 🟡 High     |
+| Phase 4: UI/UX Enhancements  | 2 weeks      | 50 hrs      | 🟡 Medium   |
+| Phase 5: Notifications       | 2 weeks      | 40 hrs      | 🟡 Medium   |
+| Phase 6: Testing             | 2 weeks      | 40 hrs      | 🟡 Medium   |
+| Phase 7: Performance         | 2 weeks      | 30 hrs      | 🟢 Low      |
+| Phase 8: Documentation       | 2 weeks      | 30 hrs      | 🟢 Low      |
+| **TOTAL**                    | **16 weeks** | **340 hrs** |             |
 
 ### By Category
-| Category | Tasks | Effort | Priority |
-|----------|-------|--------|----------|
-| Security | 15 | 30 hrs | 🔴 Critical |
-| Business Logic | 40 | 80 hrs | 🔴 High |
-| UI/UX | 50 | 100 hrs | 🟡 Medium |
-| Testing | 20 | 40 hrs | 🟡 Medium |
-| Infrastructure | 25 | 50 hrs | 🟡 Medium |
-| Documentation | 15 | 40 hrs | 🟢 Low |
-| **TOTAL** | **165** | **340 hrs** | |
+
+| Category       | Tasks   | Effort      | Priority    |
+| -------------- | ------- | ----------- | ----------- |
+| Security       | 15      | 30 hrs      | 🔴 Critical |
+| Business Logic | 40      | 80 hrs      | 🔴 High     |
+| UI/UX          | 50      | 100 hrs     | 🟡 Medium   |
+| Testing        | 20      | 40 hrs      | 🟡 Medium   |
+| Infrastructure | 25      | 50 hrs      | 🟡 Medium   |
+| Documentation  | 15      | 40 hrs      | 🟢 Low      |
+| **TOTAL**      | **165** | **340 hrs** |             |
 
 ---
 
 ## 🚀 **RECOMMENDED EXECUTION STRATEGY**
 
 ### For Single Developer (Full-Time)
+
 - **Timeline:** 16 weeks (4 months)
 - **Velocity:** ~20-25 hrs/week of focused development
 - **Approach:** Sequential phases, complete Phase 1-3 first
-- **Milestones:** 
+- **Milestones:**
   - Month 1: Phases 1-2 complete (Security + Approvals)
   - Month 2: Phase 3 complete (Dashboard + Reports)
   - Month 3: Phases 4-5 complete (UI/UX + Notifications)
   - Month 4: Phases 6-8 complete (Testing + Deployment)
 
 ### For Team of 2 Developers
+
 - **Timeline:** 10 weeks (2.5 months)
 - **Velocity:** ~40 hrs/week combined
 - **Approach:** Parallel work on different modules
@@ -1119,6 +1194,7 @@ These tasks can be done independently and deliver immediate value:
   - Developer 2: Frontend (UI/UX, Dashboard, Reports)
 
 ### For Rapid MVP (Minimum Viable Product)
+
 - **Focus:** Phases 1-3 only
 - **Timeline:** 6 weeks
 - **Effort:** 150 hrs
@@ -1130,6 +1206,7 @@ These tasks can be done independently and deliver immediate value:
 ## 📈 **SUCCESS METRICS & KPIs**
 
 ### Technical Metrics
+
 - ✅ 0 critical bugs in production
 - ✅ 90%+ test coverage on critical paths
 - ✅ < 100ms average API response time
@@ -1137,6 +1214,7 @@ These tasks can be done independently and deliver immediate value:
 - ✅ 99.9% uptime
 
 ### Business Metrics
+
 - ✅ 100% of expenses require approval
 - ✅ < 24 hrs average approval time
 - ✅ 100% of transactions have audit trail
@@ -1144,6 +1222,7 @@ These tasks can be done independently and deliver immediate value:
 - ✅ Daily automated backups
 
 ### User Experience Metrics
+
 - ✅ < 5 clicks to submit expense
 - ✅ < 3 clicks to approve expense
 - ✅ Mobile-friendly (responsive)
@@ -1155,26 +1234,31 @@ These tasks can be done independently and deliver immediate value:
 ## ⚠️ **RISKS & MITIGATION**
 
 ### Risk 1: Approval Workflow Complexity
+
 - **Impact:** High
 - **Probability:** Medium
 - **Mitigation:** Start with simple threshold-based routing, add complexity incrementally
 
 ### Risk 2: Performance Issues with Large Datasets
+
 - **Impact:** Medium
 - **Probability:** Medium
 - **Mitigation:** Implement pagination early, add database indexes
 
 ### Risk 3: Email Delivery Issues
+
 - **Impact:** Medium
 - **Probability:** Low
 - **Mitigation:** Use reputable email service (SendGrid/SES), implement retry logic
 
 ### Risk 4: File Storage Costs
+
 - **Impact:** Low
 - **Probability:** Medium
 - **Mitigation:** Implement file size limits, compress images, use lifecycle policies
 
 ### Risk 5: Security Vulnerabilities
+
 - **Impact:** Critical
 - **Probability:** Low
 - **Mitigation:** Regular security audits, keep dependencies updated, input validation
@@ -1184,6 +1268,7 @@ These tasks can be done independently and deliver immediate value:
 ## 🔧 **TECHNICAL DEBT TO ADDRESS**
 
 ### Current Technical Debt
+
 1. **No comprehensive error handling** - Add try-catch blocks and error boundaries
 2. **No input validation on all endpoints** - Add Zod schemas everywhere
 3. **No database indexes** - Add indexes on frequently queried columns
@@ -1194,6 +1279,7 @@ These tasks can be done independently and deliver immediate value:
 8. **Minimal testing** - Only 1 E2E test file exists
 
 ### Prioritized Fixes
+
 1. 🔴 Add error handling and validation (Phase 1)
 2. 🔴 Implement comprehensive testing (Phase 6)
 3. 🟡 Add caching and indexes (Phase 7)
@@ -1205,45 +1291,47 @@ These tasks can be done independently and deliver immediate value:
 ## 📚 **DEPENDENCIES & LIBRARIES TO ADD**
 
 ### Critical Dependencies (Phase 1-3)
+
 ```json
 {
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
     "react-hook-form": "^7.49.3",
-    "zod": "^3.22.4",  // Already installed
-    "recharts": "^2.10.4",  // For charts
-    "date-fns": "^3.0.6",  // Date manipulation
-    "react-datepicker": "^4.25.0",  // Date picker
-    "react-hot-toast": "^2.4.1",  // Toast notifications
-    "@tanstack/react-table": "^8.11.3",  // Advanced tables
-    "jspdf": "^2.5.1",  // PDF generation
-    "jspdf-autotable": "^3.8.2",  // PDF tables
-    "xlsx": "^0.18.5",  // Already installed
-    "@aws-sdk/client-s3": "^3.490.0",  // S3 uploads
+    "zod": "^3.22.4", // Already installed
+    "recharts": "^2.10.4", // For charts
+    "date-fns": "^3.0.6", // Date manipulation
+    "react-datepicker": "^4.25.0", // Date picker
+    "react-hot-toast": "^2.4.1", // Toast notifications
+    "@tanstack/react-table": "^8.11.3", // Advanced tables
+    "jspdf": "^2.5.1", // PDF generation
+    "jspdf-autotable": "^3.8.2", // PDF tables
+    "xlsx": "^0.18.5", // Already installed
+    "@aws-sdk/client-s3": "^3.490.0", // S3 uploads
     "@aws-sdk/s3-request-presigner": "^3.490.0"
   },
   "devDependencies": {
-    "vitest": "^1.1.3",  // Testing
+    "vitest": "^1.1.3", // Testing
     "@testing-library/react": "^14.1.2",
     "@testing-library/jest-dom": "^6.1.5",
-    "@playwright/test": "^1.40.1"  // Already installed
+    "@playwright/test": "^1.40.1" // Already installed
   }
 }
 ```
 
 ### Optional Dependencies (Phase 4-5)
+
 ```json
 {
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.0.5",  // Component library
+    "@radix-ui/react-dialog": "^1.0.5", // Component library
     "@radix-ui/react-dropdown-menu": "^2.0.6",
     "@radix-ui/react-select": "^2.0.0",
-    "class-variance-authority": "^0.7.0",  // For component variants
+    "class-variance-authority": "^0.7.0", // For component variants
     "clsx": "^2.1.0",
     "tailwind-merge": "^2.2.0",
-    "lucide-react": "^0.303.0",  // Icons
-    "@sendgrid/mail": "^8.1.0",  // Email service
-    "ioredis": "^5.3.2"  // Redis client for caching
+    "lucide-react": "^0.303.0", // Icons
+    "@sendgrid/mail": "^8.1.0", // Email service
+    "ioredis": "^5.3.2" // Redis client for caching
   }
 }
 ```
@@ -1253,23 +1341,28 @@ These tasks can be done independently and deliver immediate value:
 ## 🎓 **LEARNING RESOURCES FOR CODEX**
 
 ### Next.js & React
+
 - [Next.js App Router Docs](https://nextjs.org/docs/app)
 - [React Hook Form](https://react-hook-form.com/)
 - [Zod Validation](https://zod.dev/)
 
 ### Database & ORM
+
 - [Prisma Best Practices](https://www.prisma.io/docs/guides/performance-and-optimization)
 - [PostgreSQL Indexes](https://www.postgresql.org/docs/current/indexes.html)
 
 ### Authentication
+
 - [NextAuth v5 Docs](https://authjs.dev/)
 - [JWT Best Practices](https://tools.ietf.org/html/rfc8725)
 
 ### Testing
+
 - [Vitest Guide](https://vitest.dev/guide/)
 - [Playwright Testing](https://playwright.dev/)
 
 ### Charts & Visualization
+
 - [Recharts Documentation](https://recharts.org/)
 
 ---
@@ -1277,6 +1370,7 @@ These tasks can be done independently and deliver immediate value:
 ## 📝 **TASK TRACKING FORMAT**
 
 Each task should be tracked with:
+
 - **Task ID:** Unique identifier (e.g., SEC-001)
 - **Title:** Brief description
 - **Status:** 🔲 TODO, 🔄 IN PROGRESS, ✅ DONE, ❌ BLOCKED
@@ -1287,6 +1381,7 @@ Each task should be tracked with:
 - **Acceptance Criteria:** How to verify completion
 
 ### Example Task Card
+
 ```
 Task: SEC-001
 Title: Replace NEXTAUTH_SECRET
@@ -1312,6 +1407,7 @@ Acceptance Criteria:
 ## 🎯 **NEXT IMMEDIATE ACTIONS FOR CODEX**
 
 ### Start Here (Priority Order):
+
 1. **SEC-001:** Replace NEXTAUTH_SECRET (15 min)
 2. **SEC-002:** Add Google OAuth credentials (30 min)
 3. **VAL-001:** Add Zod validation to expense API (2 hrs)
@@ -1321,6 +1417,7 @@ Acceptance Criteria:
 7. **TEST-001:** Set up Vitest testing framework (2 hrs)
 
 ### Daily Development Routine:
+
 1. Pick highest priority task from current phase
 2. Create feature branch
 3. Implement with tests
@@ -1334,6 +1431,7 @@ Acceptance Criteria:
 ## ✅ **DEFINITION OF DONE**
 
 A feature is considered DONE when:
+
 - ✅ Code is written and follows TypeScript standards
 - ✅ All acceptance criteria met
 - ✅ Unit tests written (for business logic)
@@ -1358,6 +1456,7 @@ A feature is considered DONE when:
 This execution plan transforms AutoMatrix ERP from a **functional prototype (35% complete)** to a **professional mini ERP (100% complete)** in **16 weeks** with **340 hours** of focused development.
 
 **Key Success Factors:**
+
 1. ✅ Start with security fixes (Phase 1)
 2. ✅ Build approval workflow early (Phase 2)
 3. ✅ Make dashboard useful (Phase 3)
@@ -1367,6 +1466,7 @@ This execution plan transforms AutoMatrix ERP from a **functional prototype (35%
 7. ✅ Document everything (Phase 8)
 
 **Remember:**
+
 - 🎯 Quality over speed - Do it right the first time
 - 🧪 Test early and often
 - 📝 Document as you go
@@ -1378,18 +1478,17 @@ This execution plan transforms AutoMatrix ERP from a **functional prototype (35%
 
 ---
 
-*Last updated: January 29, 2026*  
-*Plan version: 2.0*  
-*Status: Ready for execution*
-
+_Last updated: January 29, 2026_  
+_Plan version: 2.0_  
+_Status: Ready for execution_
 
 ---
 
 ## 📝 UPDATE LOG
 
 ### January 29, 2026 - Currency Update
+
 - **Changed:** Currency format from ₹ (INR) to PKR
 - **File:** `src/lib/format.ts`
 - **Impact:** All money displays throughout application
 - **Reason:** AutoMatrix ERP is for Pakistani market
-
