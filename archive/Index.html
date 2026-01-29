@@ -1,920 +1,1016 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <style>
-    :root { 
-      --primary: #1a237e;
-      --primary-dark: #0d1642;
-      --primary-light: #534bae;
-      --accent: #3f51b5;
-      --success: #4caf50;
-      --danger: #f44336;
-      --warning: #ff9800;
-      --info: #2196f3;
-      --bg: #f5f7fa;
-      --card-bg: #ffffff;
-      --text-primary: #263238;
-      --text-secondary: #546e7a;
-      --border: #e0e0e0;
-      --shadow: 0 2px 4px rgba(0,0,0,0.08);
-      --shadow-lg: 0 4px 12px rgba(0,0,0,0.12);
-    }
-    
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: var(--bg);
-      padding-bottom: 80px;
-      color: var(--text-primary);
-      line-height: 1.6;
-    }
-    
-    .header { 
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-      padding: 16px 20px;
-      text-align: center; 
-      font-weight: 600;
-      color: white;
-      border-bottom: 4px solid var(--accent);
-      position: sticky; 
-      top: 0; 
-      z-index: 100;
-      box-shadow: var(--shadow-lg);
-      letter-spacing: 0.5px;
-    }
-    
-    .header .version {
-      font-size: 10px;
-      color: rgba(255,255,255,0.8);
-      font-weight: 400;
-      margin-top: 2px;
-    }
-    
-    .sidebar {
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 260px;
-      height: 100vh;
-      background: white;
-      border-right: 1px solid var(--border);
-      padding-top: 64px;
-      overflow-y: auto;
-      z-index: 90;
-      box-shadow: 2px 0 8px rgba(0,0,0,0.05);
-      transition: transform 0.3s ease;
-      display: none;
-    }
-    
-    .sidebar-item {
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border-left: 3px solid transparent;
-      font-weight: 500;
-      font-size: 14px;
-    }
-    
-    .sidebar-item:hover {
-      background: var(--bg);
-      color: var(--text-primary);
-    }
-    
-    .sidebar-item.active {
-      background: rgba(26, 35, 126, 0.08);
-      color: var(--primary);
-      border-left-color: var(--primary);
-    }
-    
-    .sidebar-item i {
-      width: 24px;
-      margin-right: 12px;
-      font-size: 18px;
-    }
-    
-    .sidebar-divider {
-      height: 1px;
-      background: var(--border);
-      margin: 12px 16px;
-    }
-    
-    .sidebar-header {
-      padding: 12px 20px;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .container { 
-      padding: 15px;
-      max-width: 600px;
-      margin: auto;
-      transition: margin-left 0.3s ease;
-    }
-    
-    /* Desktop: Show sidebar, hide bottom nav */
-    @media (min-width: 768px) {
+  <head>
+    <base target="_top" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary: #1a237e;
+        --primary-dark: #0d1642;
+        --primary-light: #534bae;
+        --accent: #3f51b5;
+        --success: #4caf50;
+        --danger: #f44336;
+        --warning: #ff9800;
+        --info: #2196f3;
+        --bg: #f5f7fa;
+        --card-bg: #ffffff;
+        --text-primary: #263238;
+        --text-secondary: #546e7a;
+        --border: #e0e0e0;
+        --shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+          'Helvetica Neue', Arial, sans-serif;
+        background: var(--bg);
+        padding-bottom: 80px;
+        color: var(--text-primary);
+        line-height: 1.6;
+      }
+
+      .header {
+        background: linear-gradient(
+          135deg,
+          var(--primary) 0%,
+          var(--primary-light) 100%
+        );
+        padding: 16px 20px;
+        text-align: center;
+        font-weight: 600;
+        color: white;
+        border-bottom: 4px solid var(--accent);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        box-shadow: var(--shadow-lg);
+        letter-spacing: 0.5px;
+      }
+
+      .header .version {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.8);
+        font-weight: 400;
+        margin-top: 2px;
+      }
+
       .sidebar {
-        display: block;
-      }
-      
-      .container {
-        margin-left: 260px;
-        max-width: none;
-        padding: 20px 40px;
-      }
-      
-      .nav-bar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 260px;
+        height: 100vh;
+        background: white;
+        border-right: 1px solid var(--border);
+        padding-top: 64px;
+        overflow-y: auto;
+        z-index: 90;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
         display: none;
       }
-      
-      body {
-        padding-bottom: 0;
+
+      .sidebar-item {
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-left: 3px solid transparent;
+        font-weight: 500;
+        font-size: 14px;
       }
-    }
-    
-    .card { 
-      background: var(--card-bg);
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      transition: all 0.3s ease;
-    }
-    
-    .card:hover {
-      box-shadow: var(--shadow-lg);
-      transform: translateY(-2px);
-    }
-    
-    .card:active {
-      transform: translateY(0);
-    }
-    
-    .page { 
-      display: none; 
-    }
-    
-    .page.active { 
-      display: block; 
-      animation: fadeIn 0.3s;
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .stat-row { 
-      display: flex; 
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border);
-      padding: 14px 0;
-    }
-    
-    .stat-row:last-child {
-      border-bottom: none;
-    }
-    
-    .stat-row span:first-child {
-      font-size: 14px;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-    
-    .stat-val { 
-      font-weight: 700;
-      font-size: 16px;
-      color: var(--primary);
-      letter-spacing: -0.3px;
-    }
-    
-    .val-red { 
-      color: var(--danger);
-      font-weight: 700;
-      font-size: 16px;
-    }
-    
-    .val-green {
-      color: var(--success);
-      font-weight: 700;
-      font-size: 16px;
-    }
-    
-    input, select, textarea { 
-      width: 100%; 
-      padding: 12px; 
-      margin: 8px 0; 
-      border: 1px solid #ddd; 
-      border-radius: 8px; 
-      box-sizing: border-box; 
-      font-size: 16px;
-      font-family: inherit;
-    }
-    
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
-    }
-    
-    label {
-      display: block;
-      margin-top: 10px;
-      margin-bottom: 5px;
-      font-weight: 600;
-      color: #333;
-      font-size: 14px;
-    }
-    
-    .btn-submit { 
-      background: var(--primary);
-      color: white; 
-      border: none; 
-      padding: 14px 20px;
-      border-radius: 6px;
-      width: 100%; 
-      font-weight: 600;
-      font-size: 15px;
-      margin-top: 15px; 
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      letter-spacing: 0.3px;
-    }
-    
-    .btn-submit:hover {
-      background: var(--primary-dark);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-      transform: translateY(-1px);
-    }
-    
-    .btn-submit:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .btn-submit:disabled {
-      background: #bdbdbd;
-      cursor: not-allowed;
-      opacity: 0.6;
-      box-shadow: none;
-    }
-    
-    .btn-success {
-      background: var(--success);
-    }
-    
-    .btn-success:hover {
-      background: #45a049;
-    }
-    
-    .btn-danger {
-      background: var(--danger);
-    }
-    
-    .btn-danger:hover {
-      background: #e53935;
-    }
-    
-    .nav-bar { 
-      position: fixed; 
-      bottom: 0; 
-      left: 0;
-      right: 0;
-      width: 100%; 
-      background: white;
-      display: flex; 
-      justify-content: space-around; 
-      padding: 8px 0 max(8px, env(safe-area-inset-bottom));
-      box-shadow: 0 -3px 12px rgba(0,0,0,0.15);
-      z-index: 99;
-      border-top: 1px solid var(--border);
-    }
-    
-    .nav-btn { 
-      color: var(--text-secondary);
-      text-align: center; 
-      font-size: 10px;
-      font-weight: 500;
-      cursor: pointer; 
-      flex: 1;
-      padding: 6px 4px;
-      transition: all 0.2s ease;
-      border-radius: 8px;
-      margin: 0 2px;
-    }
-    
-    .nav-btn i { 
-      font-size: 22px; 
-      display: block; 
-      margin-bottom: 4px;
-      transition: all 0.2s ease;
-    }
-    
-    .nav-btn.active { 
-      color: var(--primary);
-      background: rgba(26, 35, 126, 0.08);
-    }
-    
-    .nav-btn.active i {
-      transform: translateY(-2px);
-    }
-    
-    .nav-btn:active {
-      transform: scale(0.95);
-    }
-    
-    .loading { 
-      text-align: center; 
-      padding: 40px 20px; 
-      color: var(--primary); 
-      font-weight: bold; 
-    }
-    
-    .spinner {
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid var(--primary);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 20px auto;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    .alert {
-      padding: 12px 15px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      animation: slideDown 0.3s;
-    }
-    
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .alert-success {
-      background: #d4edda;
-      color: #155724;
-      border-left: 4px solid var(--success);
-    }
-    
-    .alert-error {
-      background: #f8d7da;
-      color: #721c24;
-      border-left: 4px solid var(--danger);
-    }
-    
-    .alert-warning {
-      background: #fff3cd;
-      color: #856404;
-      border-left: 4px solid var(--warning);
-    }
-    
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-      line-height: 1.2;
-    }
-    
-    .badge-danger {
-      background: #ffebee;
-      color: var(--danger);
-      border: 1px solid rgba(244, 67, 54, 0.2);
-    }
-    
-    .badge-warning {
-      background: #fff3e0;
-      color: #e65100;
-      border: 1px solid rgba(255, 152, 0, 0.2);
-    }
-    
-    .badge-success {
-      background: #e8f5e9;
-      color: #2e7d32;
-      border: 1px solid rgba(76, 175, 80, 0.2);
-    }
-    
-    h3 {
-      margin-bottom: 16px;
-      color: var(--text-primary);
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: -0.3px;
-    }
-    
-    h4 {
-      color: var(--text-primary);
-      font-size: 16px;
-      font-weight: 600;
-    }
-    
-    .btn-group {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    
-    .btn-group button {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    
-    .empty-state {
-      text-align: center;
-      padding: 40px 20px;
-      color: #999;
-    }
-    
-    .empty-state i {
-      font-size: 48px;
-      margin-bottom: 15px;
-      opacity: 0.3;
-    }
-    
-    .transaction-status {
-      font-size: 12px;
-      padding: 3px 8px;
-      border-radius: 4px;
-      display: inline-block;
-    }
-    
-    .status-pending {
-      background: #fff3cd;
-      color: #856404;
-    }
-    
-    .status-approved {
-      background: #d4edda;
-      color: #155724;
-    }
-    
-    .status-rejected {
-      background: #f8d7da;
-      color: #721c24;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    AUTOMATRIX ERP
-    <div class="version">v5.0 Enhanced</div>
-  </div>
-  
-  <!-- SIDEBAR (Desktop only) -->
-  <aside class="sidebar">
-    <div class="sidebar-header">Main Menu</div>
-    <div class="sidebar-item active" onclick="switchPage('dash', this)">
-      <i class="fas fa-home"></i>
-      <span>Dashboard</span>
-    </div>
-    
-    <div class="sidebar-divider"></div>
-    
-    <div class="sidebar-header">Transactions</div>
-    <div class="sidebar-item" onclick="switchPage('expense', this)">
-      <i class="fas fa-plus-circle"></i>
-      <span>Log Expense</span>
-    </div>
-    <div class="sidebar-item" onclick="switchPage('income', this)" id="sidebar-income">
-      <i class="fas fa-dollar-sign"></i>
-      <span>Log Income</span>
-    </div>
-    <div class="sidebar-item" onclick="switchPage('expenses', this)">
-      <i class="fas fa-receipt"></i>
-      <span>View Expenses</span>
-    </div>
-    
-    <div class="sidebar-divider"></div>
-    
-    <div class="sidebar-header">Management</div>
-    <div class="sidebar-item" onclick="switchPage('projects', this)">
-      <i class="fas fa-project-diagram"></i>
-      <span>Projects</span>
-    </div>
-    <div class="sidebar-item" onclick="switchPage('sales', this)">
-      <i class="fas fa-money-bill-wave"></i>
-      <span>Sales & Recovery</span>
-    </div>
-    <div class="sidebar-item" onclick="switchPage('inventory', this)">
-      <i class="fas fa-boxes"></i>
-      <span>Inventory</span>
-    </div>
-    
-    <div class="sidebar-divider"></div>
-    
-    <div class="sidebar-header">Reports</div>
-    <div class="sidebar-item" onclick="switchPage('summary', this)">
-      <i class="fas fa-chart-pie"></i>
-      <span>Summary</span>
-    </div>
-    
-    <div class="sidebar-divider"></div>
-    
-    <div class="sidebar-header" id="sidebar-approvals-header" style="display:none;">Approvals</div>
-    <div class="sidebar-item" onclick="switchPage('approvals', this)" id="sidebar-approvals" style="display:none;">
-      <i class="fas fa-check-double"></i>
-      <span>Pending Approvals</span>
-      <span class="badge badge-warning" id="sidebar-pending-count" style="margin-left:auto; font-size:10px;">0</span>
-    </div>
-  </aside>
-  
-  <div class="container" id="main-content">
-    <div class="loading" id="loader">
-      <div class="spinner"></div>
-      Initializing ERP System...
-    </div>
-    
-    <div id="alert-container"></div>
-    
-    <!-- DASHBOARD PAGE -->
-    <div id="page-dash" class="page">
-      <div class="card">
-        <h3 style="margin-top:0"><i class="fas fa-chart-line"></i> Business Summary</h3>
-        <div class="stat-row">
-          <span>Company Net Profit</span>
-          <span class="stat-val" id="dash-profit">...</span>
-        </div>
-        <div class="stat-row">
-          <span>Total Pending Recovery</span>
-          <span class="stat-val val-red" id="dash-recovery">...</span>
-        </div>
-      </div>
-      
-      <div class="card">
-        <h3 style="margin-top:0"><i class="fas fa-wallet"></i> Account Details</h3>
-        <div class="stat-row">
-          <span>Your Wallet</span>
-          <span class="stat-val val-green" id="dash-wallet">...</span>
-        </div>
-        <div id="user-info" style="font-size:12px; color:#999; margin-top:10px;"></div>
-      </div>
-      
-      <!-- Pending Approvals (CEO/Owner only) -->
-      <div id="pending-approvals-card" class="card" style="display:none;">
-        <h3 style="margin-top:0">
-          <i class="fas fa-clock"></i> Pending Approvals 
-          <span class="badge badge-warning" id="pending-count">0</span>
-        </h3>
-        <button class="btn-submit" onclick="switchPage('approvals', event.target)">
-          View Pending Approvals
-        </button>
-      </div>
-      
-      <!-- Low Stock Alerts -->
-      <div id="low-stock-card" class="card" style="display:none;">
-        <h3 style="margin-top:0">
-          <i class="fas fa-exclamation-triangle"></i> Low Stock Alerts 
-          <span class="badge badge-danger" id="lowstock-count">0</span>
-        </h3>
-        <button class="btn-submit btn-danger" onclick="switchPage('inventory', event.target)">
-          View Inventory
-        </button>
-      </div>
-    </div>
 
-    <!-- LOG EXPENSE PAGE -->
-    <div id="page-expense" class="page">
-      <div class="card">
-        <h3><i class="fas fa-plus-circle"></i> Log Site Expense</h3>
-        <form id="expense-form" onsubmit="submitExpense(event)">
-          <label>Project Name *</label>
-          <select id="f-project" required>
-            <option value="">Select Project</option>
-          </select>
-          
-          <label>Category *</label>
-          <select id="f-cat" required>
-            <option value="">Select Category</option>
-          </select>
-          
-          <label>Amount (PKR) *</label>
-          <input type="number" id="f-amt" placeholder="Enter amount" required min="1" step="0.01">
-          
-          <label>Date *</label>
-          <input type="date" id="f-date" required>
-          
-          <label>Payment Method *</label>
-          <select id="f-payment" required>
-            <option value="Cash">Cash</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="Cheque">Cheque</option>
-            <option value="Other">Other</option>
-          </select>
-          
-          <label>Description *</label>
-          <textarea id="f-desc" placeholder="Describe the expense..." required rows="3"></textarea>
-          
-          <button type="submit" class="btn-submit">
-            <i class="fas fa-paper-plane"></i> Submit Transaction
-          </button>
-        </form>
-      </div>
-    </div>
-
-    <!-- LOG INCOME PAGE (NEW!) -->
-    <div id="page-income" class="page">
-      <div class="card">
-        <h3><i class="fas fa-dollar-sign"></i> Log Income / Payment Received</h3>
-        <form id="income-form" onsubmit="submitIncome(event)">
-          <label>Project Name *</label>
-          <select id="f-income-project" required>
-            <option value="">Select Project</option>
-          </select>
-          
-          <label>Milestone / Description *</label>
-          <input type="text" id="f-income-milestone" placeholder="e.g., Advance Payment, Final Payment" required>
-          
-          <label>Amount Received (PKR) *</label>
-          <input type="number" id="f-income-amount" placeholder="Enter amount received" required min="1" step="0.01">
-          
-          <label>Payment Mode *</label>
-          <select id="f-income-mode" required>
-            <option value="Cash">Cash</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="Cheque">Cheque</option>
-            <option value="UPI">UPI</option>
-            <option value="Other">Other</option>
-          </select>
-          
-          <label>Invoice Number (Optional)</label>
-          <input type="text" id="f-income-invoice" placeholder="Invoice #">
-          
-          <label>Date *</label>
-          <input type="date" id="f-income-date" required>
-          
-          <label>Notes (Optional)</label>
-          <textarea id="f-income-notes" placeholder="Any additional notes..." rows="2"></textarea>
-          
-          <button type="submit" class="btn-submit btn-success">
-            <i class="fas fa-check-circle"></i> Record Income
-          </button>
-        </form>
-      </div>
-      
-      <!-- Recent Income List -->
-      <div class="card">
-        <h3>Recent Income</h3>
-        <div id="recent-income-list">Loading...</div>
-      </div>
-    </div>
-
-    <!-- SALES / RECOVERY PAGE -->
-    <div id="page-sales" class="page">
-      <h3><i class="fas fa-money-bill-wave"></i> Active Recoveries (Unpaid)</h3>
-      <div id="recovery-list"></div>
-    </div>
-
-    <!-- PROJECTS PAGE -->
-    <div id="page-projects" class="page">
-      <h3><i class="fas fa-project-diagram"></i> Projects</h3>
-      <div id="project-list"></div>
-    </div>
-
-    <!-- INVENTORY PAGE -->
-    <div id="page-inventory" class="page">
-      <h3><i class="fas fa-boxes"></i> Inventory</h3>
-      <div id="inventory-list"></div>
-    </div>
-
-    <!-- EXPENSES PAGE -->
-    <div id="page-expenses" class="page">
-      <h3><i class="fas fa-wallet"></i> All Expenses</h3>
-      <div id="expenses-list"></div>
-    </div>
-
-    <!-- SUMMARY PAGE -->
-    <div id="page-summary" class="page">
-      <h3><i class="fas fa-chart-pie"></i> Project Summary</h3>
-      <div id="summary-list"></div>
-    </div>
-    
-    <!-- APPROVALS PAGE (NEW - CEO/Owner only) -->
-    <div id="page-approvals" class="page">
-      <h3><i class="fas fa-check-double"></i> Pending Approvals</h3>
-      <div id="approvals-list"></div>
-    </div>
-  </div>
-
-  <!-- BOTTOM NAVIGATION -->
-  <div class="nav-bar">
-    <div class="nav-btn active" onclick="switchPage('dash', this)">
-      <i class="fas fa-home"></i>Home
-    </div>
-    <div class="nav-btn" onclick="switchPage('expense', this)">
-      <i class="fas fa-plus-circle"></i>Expense
-    </div>
-    <div class="nav-btn" onclick="switchPage('income', this)" id="nav-income">
-      <i class="fas fa-dollar-sign"></i>Income
-    </div>
-    <div class="nav-btn" onclick="switchPage('sales', this)">
-      <i class="fas fa-money-bill-wave"></i>Sales
-    </div>
-    <div class="nav-btn" onclick="switchPage('projects', this)">
-      <i class="fas fa-project-diagram"></i>Projects
-    </div>
-    <div class="nav-btn" onclick="switchPage('inventory', this)">
-      <i class="fas fa-boxes"></i>Inventory
-    </div>
-    <div class="nav-btn" onclick="switchPage('expenses', this)">
-      <i class="fas fa-receipt"></i>Expenses
-    </div>
-    <div class="nav-btn" onclick="switchPage('summary', this)">
-      <i class="fas fa-chart-pie"></i>Summary
-    </div>
-  </div>
-
-  <script>
-    // ========================================================================
-    // GLOBAL VARIABLES
-    // ========================================================================
-    let currentUser = null;
-    let currentRole = null;
-    let allProjects = [];
-
-    // ========================================================================
-    // UTILITY FUNCTIONS
-    // ========================================================================
-    
-    function showAlert(message, type = 'success') {
-      const container = document.getElementById('alert-container');
-      const alert = document.createElement('div');
-      alert.className = `alert alert-${type}`;
-      alert.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
-      container.appendChild(alert);
-      
-      setTimeout(() => {
-        alert.style.opacity = '0';
-        setTimeout(() => alert.remove(), 300);
-      }, 4000);
-    }
-    
-    function showLoading() {
-      document.getElementById('loader').style.display = 'block';
-    }
-    
-    function hideLoading() {
-      document.getElementById('loader').style.display = 'none';
-    }
-    
-    function switchPage(id, element) {
-      // Hide all pages
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      
-      // Remove active from bottom nav
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      
-      // Remove active from sidebar
-      document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
-      
-      // Show selected page
-      const page = document.getElementById('page-' + id);
-      if (page) {
-        page.classList.add('active');
+      .sidebar-item:hover {
+        background: var(--bg);
+        color: var(--text-primary);
       }
-      
-      // Set active on clicked element
-      if (element && element.classList) {
-        element.classList.add('active');
-      } else if (element) {
-        element.closest('.nav-btn').classList.add('active');
+
+      .sidebar-item.active {
+        background: rgba(26, 35, 126, 0.08);
+        color: var(--primary);
+        border-left-color: var(--primary);
       }
-      
-      // Sync sidebar and bottom nav
-      syncNavigation(id);
-      
-      // Load page-specific data
-      loadPageData(id);
-    }
-    
-    function syncNavigation(pageId) {
-      // Find and activate corresponding items in both navs
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        const onclick = btn.getAttribute('onclick');
-        if (onclick && onclick.includes("'" + pageId + "'")) {
-          btn.classList.add('active');
+
+      .sidebar-item i {
+        width: 24px;
+        margin-right: 12px;
+        font-size: 18px;
+      }
+
+      .sidebar-divider {
+        height: 1px;
+        background: var(--border);
+        margin: 12px 16px;
+      }
+
+      .sidebar-header {
+        padding: 12px 20px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .container {
+        padding: 15px;
+        max-width: 600px;
+        margin: auto;
+        transition: margin-left 0.3s ease;
+      }
+
+      /* Desktop: Show sidebar, hide bottom nav */
+      @media (min-width: 768px) {
+        .sidebar {
+          display: block;
         }
-      });
-      
-      document.querySelectorAll('.sidebar-item').forEach(item => {
-        const onclick = item.getAttribute('onclick');
-        if (onclick && onclick.includes("'" + pageId + "'")) {
-          item.classList.add('active');
-        }
-      });
-    }
-    
-    function loadPageData(pageId) {
-      switch(pageId) {
-        case 'income':
-          loadRecentIncome();
-          break;
-        case 'approvals':
-          loadPendingApprovals();
-          break;
-      }
-    }
 
-    // ========================================================================
-    // INITIALIZATION
-    // ========================================================================
-    
-    window.onload = () => {
-      showLoading();
-      
-      // Set today's date as default
-      document.getElementById('f-date').valueAsDate = new Date();
-      document.getElementById('f-income-date').valueAsDate = new Date();
-      
-      // Load all data
-      google.script.run
-        .withSuccessHandler(initializeApp)
-        .withFailureHandler(handleError)
-        .getERPData();
-      
-      google.script.run
-        .withSuccessHandler(loadProjects)
-        .getProjects();
-      
-      google.script.run
-        .withSuccessHandler(loadInventory)
-        .getInventory();
-      
-      google.script.run
-        .withSuccessHandler(loadExpenses)
-        .getExpenses();
-      
-      google.script.run
-        .withSuccessHandler(loadSummary)
-        .getSummary();
-    };
-    
-    function initializeApp(data) {
-      if (data.error) {
-        showAlert(data.error, 'error');
+        .container {
+          margin-left: 260px;
+          max-width: none;
+          padding: 20px 40px;
+        }
+
+        .nav-bar {
+          display: none;
+        }
+
+        body {
+          padding-bottom: 0;
+        }
+      }
+
+      .card {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+        transition: all 0.3s ease;
+      }
+
+      .card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+      }
+
+      .card:active {
+        transform: translateY(0);
+      }
+
+      .page {
+        display: none;
+      }
+
+      .page.active {
+        display: block;
+        animation: fadeIn 0.3s;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        padding: 14px 0;
+      }
+
+      .stat-row:last-child {
+        border-bottom: none;
+      }
+
+      .stat-row span:first-child {
+        font-size: 14px;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      .stat-val {
+        font-weight: 700;
+        font-size: 16px;
+        color: var(--primary);
+        letter-spacing: -0.3px;
+      }
+
+      .val-red {
+        color: var(--danger);
+        font-weight: 700;
+        font-size: 16px;
+      }
+
+      .val-green {
+        color: var(--success);
+        font-weight: 700;
+        font-size: 16px;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 16px;
+        font-family: inherit;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.1);
+      }
+
+      label {
+        display: block;
+        margin-top: 10px;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #333;
+        font-size: 14px;
+      }
+
+      .btn-submit {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 14px 20px;
+        border-radius: 6px;
+        width: 100%;
+        font-weight: 600;
+        font-size: 15px;
+        margin-top: 15px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        letter-spacing: 0.3px;
+      }
+
+      .btn-submit:hover {
+        background: var(--primary-dark);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
+      }
+
+      .btn-submit:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .btn-submit:disabled {
+        background: #bdbdbd;
+        cursor: not-allowed;
+        opacity: 0.6;
+        box-shadow: none;
+      }
+
+      .btn-success {
+        background: var(--success);
+      }
+
+      .btn-success:hover {
+        background: #45a049;
+      }
+
+      .btn-danger {
+        background: var(--danger);
+      }
+
+      .btn-danger:hover {
+        background: #e53935;
+      }
+
+      .nav-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        background: white;
+        display: flex;
+        justify-content: space-around;
+        padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+        box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.15);
+        z-index: 99;
+        border-top: 1px solid var(--border);
+      }
+
+      .nav-btn {
+        color: var(--text-secondary);
+        text-align: center;
+        font-size: 10px;
+        font-weight: 500;
+        cursor: pointer;
+        flex: 1;
+        padding: 6px 4px;
+        transition: all 0.2s ease;
+        border-radius: 8px;
+        margin: 0 2px;
+      }
+
+      .nav-btn i {
+        font-size: 22px;
+        display: block;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+      }
+
+      .nav-btn.active {
+        color: var(--primary);
+        background: rgba(26, 35, 126, 0.08);
+      }
+
+      .nav-btn.active i {
+        transform: translateY(-2px);
+      }
+
+      .nav-btn:active {
+        transform: scale(0.95);
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--primary);
+        font-weight: bold;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid var(--primary);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .alert {
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        animation: slideDown 0.3s;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border-left: 4px solid var(--success);
+      }
+
+      .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid var(--danger);
+      }
+
+      .alert-warning {
+        background: #fff3cd;
+        color: #856404;
+        border-left: 4px solid var(--warning);
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 16px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        line-height: 1.2;
+      }
+
+      .badge-danger {
+        background: #ffebee;
+        color: var(--danger);
+        border: 1px solid rgba(244, 67, 54, 0.2);
+      }
+
+      .badge-warning {
+        background: #fff3e0;
+        color: #e65100;
+        border: 1px solid rgba(255, 152, 0, 0.2);
+      }
+
+      .badge-success {
+        background: #e8f5e9;
+        color: #2e7d32;
+        border: 1px solid rgba(76, 175, 80, 0.2);
+      }
+
+      h3 {
+        margin-bottom: 16px;
+        color: var(--text-primary);
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: -0.3px;
+      }
+
+      h4 {
+        color: var(--text-primary);
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .btn-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .btn-group button {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #999;
+      }
+
+      .empty-state i {
+        font-size: 48px;
+        margin-bottom: 15px;
+        opacity: 0.3;
+      }
+
+      .transaction-status {
+        font-size: 12px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+
+      .status-pending {
+        background: #fff3cd;
+        color: #856404;
+      }
+
+      .status-approved {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status-rejected {
+        background: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      AUTOMATRIX ERP
+      <div class="version">v5.0 Enhanced</div>
+    </div>
+
+    <!-- SIDEBAR (Desktop only) -->
+    <aside class="sidebar">
+      <div class="sidebar-header">Main Menu</div>
+      <div class="sidebar-item active" onclick="switchPage('dash', this)">
+        <i class="fas fa-home"></i>
+        <span>Dashboard</span>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-header">Transactions</div>
+      <div class="sidebar-item" onclick="switchPage('expense', this)">
+        <i class="fas fa-plus-circle"></i>
+        <span>Log Expense</span>
+      </div>
+      <div
+        class="sidebar-item"
+        onclick="switchPage('income', this)"
+        id="sidebar-income"
+      >
+        <i class="fas fa-dollar-sign"></i>
+        <span>Log Income</span>
+      </div>
+      <div class="sidebar-item" onclick="switchPage('expenses', this)">
+        <i class="fas fa-receipt"></i>
+        <span>View Expenses</span>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-header">Management</div>
+      <div class="sidebar-item" onclick="switchPage('projects', this)">
+        <i class="fas fa-project-diagram"></i>
+        <span>Projects</span>
+      </div>
+      <div class="sidebar-item" onclick="switchPage('sales', this)">
+        <i class="fas fa-money-bill-wave"></i>
+        <span>Sales & Recovery</span>
+      </div>
+      <div class="sidebar-item" onclick="switchPage('inventory', this)">
+        <i class="fas fa-boxes"></i>
+        <span>Inventory</span>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-header">Reports</div>
+      <div class="sidebar-item" onclick="switchPage('summary', this)">
+        <i class="fas fa-chart-pie"></i>
+        <span>Summary</span>
+      </div>
+
+      <div class="sidebar-divider"></div>
+
+      <div
+        class="sidebar-header"
+        id="sidebar-approvals-header"
+        style="display: none"
+      >
+        Approvals
+      </div>
+      <div
+        class="sidebar-item"
+        onclick="switchPage('approvals', this)"
+        id="sidebar-approvals"
+        style="display: none"
+      >
+        <i class="fas fa-check-double"></i>
+        <span>Pending Approvals</span>
+        <span
+          class="badge badge-warning"
+          id="sidebar-pending-count"
+          style="margin-left: auto; font-size: 10px"
+          >0</span
+        >
+      </div>
+    </aside>
+
+    <div class="container" id="main-content">
+      <div class="loading" id="loader">
+        <div class="spinner"></div>
+        Initializing ERP System...
+      </div>
+
+      <div id="alert-container"></div>
+
+      <!-- DASHBOARD PAGE -->
+      <div id="page-dash" class="page">
+        <div class="card">
+          <h3 style="margin-top: 0">
+            <i class="fas fa-chart-line"></i> Business Summary
+          </h3>
+          <div class="stat-row">
+            <span>Company Net Profit</span>
+            <span class="stat-val" id="dash-profit">...</span>
+          </div>
+          <div class="stat-row">
+            <span>Total Pending Recovery</span>
+            <span class="stat-val val-red" id="dash-recovery">...</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top: 0">
+            <i class="fas fa-wallet"></i> Account Details
+          </h3>
+          <div class="stat-row">
+            <span>Your Wallet</span>
+            <span class="stat-val val-green" id="dash-wallet">...</span>
+          </div>
+          <div
+            id="user-info"
+            style="font-size: 12px; color: #999; margin-top: 10px"
+          ></div>
+        </div>
+
+        <!-- Pending Approvals (CEO/Owner only) -->
+        <div id="pending-approvals-card" class="card" style="display: none">
+          <h3 style="margin-top: 0">
+            <i class="fas fa-clock"></i> Pending Approvals
+            <span class="badge badge-warning" id="pending-count">0</span>
+          </h3>
+          <button
+            class="btn-submit"
+            onclick="switchPage('approvals', event.target)"
+          >
+            View Pending Approvals
+          </button>
+        </div>
+
+        <!-- Low Stock Alerts -->
+        <div id="low-stock-card" class="card" style="display: none">
+          <h3 style="margin-top: 0">
+            <i class="fas fa-exclamation-triangle"></i> Low Stock Alerts
+            <span class="badge badge-danger" id="lowstock-count">0</span>
+          </h3>
+          <button
+            class="btn-submit btn-danger"
+            onclick="switchPage('inventory', event.target)"
+          >
+            View Inventory
+          </button>
+        </div>
+      </div>
+
+      <!-- LOG EXPENSE PAGE -->
+      <div id="page-expense" class="page">
+        <div class="card">
+          <h3><i class="fas fa-plus-circle"></i> Log Site Expense</h3>
+          <form id="expense-form" onsubmit="submitExpense(event)">
+            <label>Project Name *</label>
+            <select id="f-project" required>
+              <option value="">Select Project</option>
+            </select>
+
+            <label>Category *</label>
+            <select id="f-cat" required>
+              <option value="">Select Category</option>
+            </select>
+
+            <label>Amount (PKR) *</label>
+            <input
+              type="number"
+              id="f-amt"
+              placeholder="Enter amount"
+              required
+              min="1"
+              step="0.01"
+            />
+
+            <label>Date *</label>
+            <input type="date" id="f-date" required />
+
+            <label>Payment Method *</label>
+            <select id="f-payment" required>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Cheque">Cheque</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <label>Description *</label>
+            <textarea
+              id="f-desc"
+              placeholder="Describe the expense..."
+              required
+              rows="3"
+            ></textarea>
+
+            <button type="submit" class="btn-submit">
+              <i class="fas fa-paper-plane"></i> Submit Transaction
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- LOG INCOME PAGE (NEW!) -->
+      <div id="page-income" class="page">
+        <div class="card">
+          <h3>
+            <i class="fas fa-dollar-sign"></i> Log Income / Payment Received
+          </h3>
+          <form id="income-form" onsubmit="submitIncome(event)">
+            <label>Project Name *</label>
+            <select id="f-income-project" required>
+              <option value="">Select Project</option>
+            </select>
+
+            <label>Milestone / Description *</label>
+            <input
+              type="text"
+              id="f-income-milestone"
+              placeholder="e.g., Advance Payment, Final Payment"
+              required
+            />
+
+            <label>Amount Received (PKR) *</label>
+            <input
+              type="number"
+              id="f-income-amount"
+              placeholder="Enter amount received"
+              required
+              min="1"
+              step="0.01"
+            />
+
+            <label>Payment Mode *</label>
+            <select id="f-income-mode" required>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Cheque">Cheque</option>
+              <option value="UPI">UPI</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <label>Invoice Number (Optional)</label>
+            <input type="text" id="f-income-invoice" placeholder="Invoice #" />
+
+            <label>Date *</label>
+            <input type="date" id="f-income-date" required />
+
+            <label>Notes (Optional)</label>
+            <textarea
+              id="f-income-notes"
+              placeholder="Any additional notes..."
+              rows="2"
+            ></textarea>
+
+            <button type="submit" class="btn-submit btn-success">
+              <i class="fas fa-check-circle"></i> Record Income
+            </button>
+          </form>
+        </div>
+
+        <!-- Recent Income List -->
+        <div class="card">
+          <h3>Recent Income</h3>
+          <div id="recent-income-list">Loading...</div>
+        </div>
+      </div>
+
+      <!-- SALES / RECOVERY PAGE -->
+      <div id="page-sales" class="page">
+        <h3>
+          <i class="fas fa-money-bill-wave"></i> Active Recoveries (Unpaid)
+        </h3>
+        <div id="recovery-list"></div>
+      </div>
+
+      <!-- PROJECTS PAGE -->
+      <div id="page-projects" class="page">
+        <h3><i class="fas fa-project-diagram"></i> Projects</h3>
+        <div id="project-list"></div>
+      </div>
+
+      <!-- INVENTORY PAGE -->
+      <div id="page-inventory" class="page">
+        <h3><i class="fas fa-boxes"></i> Inventory</h3>
+        <div id="inventory-list"></div>
+      </div>
+
+      <!-- EXPENSES PAGE -->
+      <div id="page-expenses" class="page">
+        <h3><i class="fas fa-wallet"></i> All Expenses</h3>
+        <div id="expenses-list"></div>
+      </div>
+
+      <!-- SUMMARY PAGE -->
+      <div id="page-summary" class="page">
+        <h3><i class="fas fa-chart-pie"></i> Project Summary</h3>
+        <div id="summary-list"></div>
+      </div>
+
+      <!-- APPROVALS PAGE (NEW - CEO/Owner only) -->
+      <div id="page-approvals" class="page">
+        <h3><i class="fas fa-check-double"></i> Pending Approvals</h3>
+        <div id="approvals-list"></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <div class="nav-bar">
+      <div class="nav-btn active" onclick="switchPage('dash', this)">
+        <i class="fas fa-home"></i>Home
+      </div>
+      <div class="nav-btn" onclick="switchPage('expense', this)">
+        <i class="fas fa-plus-circle"></i>Expense
+      </div>
+      <div class="nav-btn" onclick="switchPage('income', this)" id="nav-income">
+        <i class="fas fa-dollar-sign"></i>Income
+      </div>
+      <div class="nav-btn" onclick="switchPage('sales', this)">
+        <i class="fas fa-money-bill-wave"></i>Sales
+      </div>
+      <div class="nav-btn" onclick="switchPage('projects', this)">
+        <i class="fas fa-project-diagram"></i>Projects
+      </div>
+      <div class="nav-btn" onclick="switchPage('inventory', this)">
+        <i class="fas fa-boxes"></i>Inventory
+      </div>
+      <div class="nav-btn" onclick="switchPage('expenses', this)">
+        <i class="fas fa-receipt"></i>Expenses
+      </div>
+      <div class="nav-btn" onclick="switchPage('summary', this)">
+        <i class="fas fa-chart-pie"></i>Summary
+      </div>
+    </div>
+
+    <script>
+      // ========================================================================
+      // GLOBAL VARIABLES
+      // ========================================================================
+      let currentUser = null;
+      let currentRole = null;
+      let allProjects = [];
+
+      // ========================================================================
+      // UTILITY FUNCTIONS
+      // ========================================================================
+
+      function showAlert(message, type = 'success') {
+        const container = document.getElementById('alert-container');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+        container.appendChild(alert);
+
+        setTimeout(() => {
+          alert.style.opacity = '0';
+          setTimeout(() => alert.remove(), 300);
+        }, 4000);
+      }
+
+      function showLoading() {
+        document.getElementById('loader').style.display = 'block';
+      }
+
+      function hideLoading() {
+        document.getElementById('loader').style.display = 'none';
+      }
+
+      function switchPage(id, element) {
+        // Hide all pages
+        document
+          .querySelectorAll('.page')
+          .forEach((p) => p.classList.remove('active'));
+
+        // Remove active from bottom nav
+        document
+          .querySelectorAll('.nav-btn')
+          .forEach((b) => b.classList.remove('active'));
+
+        // Remove active from sidebar
+        document
+          .querySelectorAll('.sidebar-item')
+          .forEach((s) => s.classList.remove('active'));
+
+        // Show selected page
+        const page = document.getElementById('page-' + id);
+        if (page) {
+          page.classList.add('active');
+        }
+
+        // Set active on clicked element
+        if (element && element.classList) {
+          element.classList.add('active');
+        } else if (element) {
+          element.closest('.nav-btn').classList.add('active');
+        }
+
+        // Sync sidebar and bottom nav
+        syncNavigation(id);
+
+        // Load page-specific data
+        loadPageData(id);
+      }
+
+      function syncNavigation(pageId) {
+        // Find and activate corresponding items in both navs
+        document.querySelectorAll('.nav-btn').forEach((btn) => {
+          const onclick = btn.getAttribute('onclick');
+          if (onclick && onclick.includes("'" + pageId + "'")) {
+            btn.classList.add('active');
+          }
+        });
+
+        document.querySelectorAll('.sidebar-item').forEach((item) => {
+          const onclick = item.getAttribute('onclick');
+          if (onclick && onclick.includes("'" + pageId + "'")) {
+            item.classList.add('active');
+          }
+        });
+      }
+
+      function loadPageData(pageId) {
+        switch (pageId) {
+          case 'income':
+            loadRecentIncome();
+            break;
+          case 'approvals':
+            loadPendingApprovals();
+            break;
+        }
+      }
+
+      // ========================================================================
+      // INITIALIZATION
+      // ========================================================================
+
+      window.onload = () => {
+        showLoading();
+
+        // Set today's date as default
+        document.getElementById('f-date').valueAsDate = new Date();
+        document.getElementById('f-income-date').valueAsDate = new Date();
+
+        // Load all data
+        google.script.run
+          .withSuccessHandler(initializeApp)
+          .withFailureHandler(handleError)
+          .getERPData();
+
+        google.script.run.withSuccessHandler(loadProjects).getProjects();
+
+        google.script.run.withSuccessHandler(loadInventory).getInventory();
+
+        google.script.run.withSuccessHandler(loadExpenses).getExpenses();
+
+        google.script.run.withSuccessHandler(loadSummary).getSummary();
+      };
+
+      function initializeApp(data) {
+        if (data.error) {
+          showAlert(data.error, 'error');
+          hideLoading();
+          return;
+        }
+
         hideLoading();
-        return;
-      }
-      
-      hideLoading();
-      document.getElementById('page-dash').classList.add('active');
-      
-      currentUser = data.email;
-      currentRole = data.role;
-      
-      // Update dashboard
-      document.getElementById('dash-profit').innerText = data.profit;
-      document.getElementById('dash-recovery').innerText = "Rs. " + data.totalRecovery;
-      document.getElementById('dash-wallet').innerText = "Rs. " + data.wallet;
-      document.getElementById('user-info').innerHTML = 
-        `<i class="fas fa-user"></i> ${data.email}<br><i class="fas fa-id-badge"></i> Role: ${data.role}`;
-      
-      // Populate dropdowns
-      const projectSelect = document.getElementById('f-project');
-      const incomeProjectSelect = document.getElementById('f-income-project');
-      
-      data.projects.forEach(p => {
-        projectSelect.add(new Option(p, p));
-        incomeProjectSelect.add(new Option(p, p));
-      });
-      
-      data.categories.forEach(c => {
-        document.getElementById('f-cat').add(new Option(c, c));
-      });
-      
-      // Recovery list
-      const recoveryHtml = data.recoveryList.length > 0 
-        ? data.recoveryList.map(r => `
+        document.getElementById('page-dash').classList.add('active');
+
+        currentUser = data.email;
+        currentRole = data.role;
+
+        // Update dashboard
+        document.getElementById('dash-profit').innerText = data.profit;
+        document.getElementById('dash-recovery').innerText =
+          'Rs. ' + data.totalRecovery;
+        document.getElementById('dash-wallet').innerText = 'Rs. ' + data.wallet;
+        document.getElementById('user-info').innerHTML =
+          `<i class="fas fa-user"></i> ${data.email}<br><i class="fas fa-id-badge"></i> Role: ${data.role}`;
+
+        // Populate dropdowns
+        const projectSelect = document.getElementById('f-project');
+        const incomeProjectSelect = document.getElementById('f-income-project');
+
+        data.projects.forEach((p) => {
+          projectSelect.add(new Option(p, p));
+          incomeProjectSelect.add(new Option(p, p));
+        });
+
+        data.categories.forEach((c) => {
+          document.getElementById('f-cat').add(new Option(c, c));
+        });
+
+        // Recovery list
+        const recoveryHtml =
+          data.recoveryList.length > 0
+            ? data.recoveryList
+                .map(
+                  (r) => `
             <div class="card">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
@@ -924,90 +1020,104 @@
                 <span class="val-red">Rs. ${r.pending}</span>
               </div>
             </div>
-          `).join('')
-        : '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No pending recoveries!</p></div>';
-      
-      document.getElementById('recovery-list').innerHTML = recoveryHtml;
-      
-      // Show pending approvals (CEO/Owner only)
-      if ((data.role === 'CEO' || data.role === 'Owner') && data.pendingApprovals > 0) {
-        document.getElementById('pending-approvals-card').style.display = 'block';
-        document.getElementById('pending-count').textContent = data.pendingApprovals;
-      }
-      
-      // Show low stock alerts
-      if (data.lowStockAlerts > 0) {
-        document.getElementById('low-stock-card').style.display = 'block';
-        document.getElementById('lowstock-count').textContent = data.lowStockAlerts;
-      }
-      
-      // Hide income nav for non-CEO/Owner (optional - you may want to show it to all)
-      // if (data.role !== 'CEO' && data.role !== 'Owner') {
-      //   document.getElementById('nav-income').style.display = 'none';
-      // }
-    }
-    
-    function handleError(error) {
-      hideLoading();
-      showAlert('Error: ' + error.message, 'error');
-      console.error('Error:', error);
-    }
+          `,
+                )
+                .join('')
+            : '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No pending recoveries!</p></div>';
 
-    // ========================================================================
-    // EXPENSE FUNCTIONS
-    // ========================================================================
-    
-    function submitExpense(event) {
-      event.preventDefault();
-      
-      const form = document.getElementById('expense-form');
-      const submitBtn = form.querySelector('button[type="submit"]');
-      
-      const data = {
-        proj: document.getElementById('f-project').value,
-        cat: document.getElementById('f-cat').value,
-        amt: document.getElementById('f-amt').value,
-        date: document.getElementById('f-date').value,
-        payment: document.getElementById('f-payment').value,
-        desc: document.getElementById('f-desc').value
-      };
-      
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
-      
-      google.script.run
-        .withSuccessHandler(function(result) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Transaction';
-          
-          if (result.error) {
-            showAlert(result.error, 'error');
-          } else {
-            showAlert('Transaction submitted successfully!', 'success');
-            form.reset();
-            document.getElementById('f-date').valueAsDate = new Date();
-            
-            // Refresh expenses list
-            google.script.run.withSuccessHandler(loadExpenses).getExpenses();
-          }
-        })
-        .withFailureHandler(function(error) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Transaction';
-          showAlert('Error: ' + error.message, 'error');
-        })
-        .submitERPTransaction(data);
-    }
-    
-    function loadExpenses(expenses) {
-      if (expenses.error) {
-        document.getElementById('expenses-list').innerHTML = 
-          '<div class="alert alert-error">' + expenses.error + '</div>';
-        return;
+        document.getElementById('recovery-list').innerHTML = recoveryHtml;
+
+        // Show pending approvals (CEO/Owner only)
+        if (
+          (data.role === 'CEO' || data.role === 'Owner') &&
+          data.pendingApprovals > 0
+        ) {
+          document.getElementById('pending-approvals-card').style.display =
+            'block';
+          document.getElementById('pending-count').textContent =
+            data.pendingApprovals;
+        }
+
+        // Show low stock alerts
+        if (data.lowStockAlerts > 0) {
+          document.getElementById('low-stock-card').style.display = 'block';
+          document.getElementById('lowstock-count').textContent =
+            data.lowStockAlerts;
+        }
+
+        // Hide income nav for non-CEO/Owner (optional - you may want to show it to all)
+        // if (data.role !== 'CEO' && data.role !== 'Owner') {
+        //   document.getElementById('nav-income').style.display = 'none';
+        // }
       }
-      
-      const html = expenses.length > 0
-        ? expenses.map(e => `
+
+      function handleError(error) {
+        hideLoading();
+        showAlert('Error: ' + error.message, 'error');
+        console.error('Error:', error);
+      }
+
+      // ========================================================================
+      // EXPENSE FUNCTIONS
+      // ========================================================================
+
+      function submitExpense(event) {
+        event.preventDefault();
+
+        const form = document.getElementById('expense-form');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        const data = {
+          proj: document.getElementById('f-project').value,
+          cat: document.getElementById('f-cat').value,
+          amt: document.getElementById('f-amt').value,
+          date: document.getElementById('f-date').value,
+          payment: document.getElementById('f-payment').value,
+          desc: document.getElementById('f-desc').value,
+        };
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+        google.script.run
+          .withSuccessHandler(function (result) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML =
+              '<i class="fas fa-paper-plane"></i> Submit Transaction';
+
+            if (result.error) {
+              showAlert(result.error, 'error');
+            } else {
+              showAlert('Transaction submitted successfully!', 'success');
+              form.reset();
+              document.getElementById('f-date').valueAsDate = new Date();
+
+              // Refresh expenses list
+              google.script.run.withSuccessHandler(loadExpenses).getExpenses();
+            }
+          })
+          .withFailureHandler(function (error) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML =
+              '<i class="fas fa-paper-plane"></i> Submit Transaction';
+            showAlert('Error: ' + error.message, 'error');
+          })
+          .submitERPTransaction(data);
+      }
+
+      function loadExpenses(expenses) {
+        if (expenses.error) {
+          document.getElementById('expenses-list').innerHTML =
+            '<div class="alert alert-error">' + expenses.error + '</div>';
+          return;
+        }
+
+        const html =
+          expenses.length > 0
+            ? expenses
+                .map(
+                  (e) => `
             <div class="card">
               <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                 <strong>${e.project}</strong>
@@ -1021,71 +1131,80 @@
               </div>
               <div style="font-size:13px; margin-top:5px;">${e.description}</div>
             </div>
-          `).join('')
-        : '<div class="empty-state"><i class="fas fa-inbox"></i><p>No expenses recorded yet</p></div>';
-      
-      document.getElementById('expenses-list').innerHTML = html;
-    }
+          `,
+                )
+                .join('')
+            : '<div class="empty-state"><i class="fas fa-inbox"></i><p>No expenses recorded yet</p></div>';
 
-    // ========================================================================
-    // INCOME FUNCTIONS (NEW!)
-    // ========================================================================
-    
-    function submitIncome(event) {
-      event.preventDefault();
-      
-      const form = document.getElementById('income-form');
-      const submitBtn = form.querySelector('button[type="submit"]');
-      
-      const data = {
-        project: document.getElementById('f-income-project').value,
-        milestone: document.getElementById('f-income-milestone').value,
-        amount: document.getElementById('f-income-amount').value,
-        paymentMode: document.getElementById('f-income-mode').value,
-        invoiceNumber: document.getElementById('f-income-invoice').value,
-        date: document.getElementById('f-income-date').value,
-        notes: document.getElementById('f-income-notes').value
-      };
-      
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recording...';
-      
-      google.script.run
-        .withSuccessHandler(function(result) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Record Income';
-          
-          if (result.error) {
-            showAlert(result.error, 'error');
-          } else {
-            showAlert('Income recorded successfully! 💰', 'success');
-            form.reset();
-            document.getElementById('f-income-date').valueAsDate = new Date();
-            
-            // Refresh income list and summary
-            loadRecentIncome();
-            google.script.run.withSuccessHandler(loadSummary).getSummary();
-          }
-        })
-        .withFailureHandler(function(error) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Record Income';
-          showAlert('Error: ' + error.message, 'error');
-        })
-        .submitIncome(data);
-    }
-    
-    function loadRecentIncome() {
-      google.script.run
-        .withSuccessHandler(function(incomeList) {
-          if (incomeList.error) {
-            document.getElementById('recent-income-list').innerHTML = 
-              '<p style="color:#999;">Error loading income</p>';
-            return;
-          }
-          
-          const html = incomeList.length > 0
-            ? incomeList.slice(0, 10).map(i => `
+        document.getElementById('expenses-list').innerHTML = html;
+      }
+
+      // ========================================================================
+      // INCOME FUNCTIONS (NEW!)
+      // ========================================================================
+
+      function submitIncome(event) {
+        event.preventDefault();
+
+        const form = document.getElementById('income-form');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        const data = {
+          project: document.getElementById('f-income-project').value,
+          milestone: document.getElementById('f-income-milestone').value,
+          amount: document.getElementById('f-income-amount').value,
+          paymentMode: document.getElementById('f-income-mode').value,
+          invoiceNumber: document.getElementById('f-income-invoice').value,
+          date: document.getElementById('f-income-date').value,
+          notes: document.getElementById('f-income-notes').value,
+        };
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Recording...';
+
+        google.script.run
+          .withSuccessHandler(function (result) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML =
+              '<i class="fas fa-check-circle"></i> Record Income';
+
+            if (result.error) {
+              showAlert(result.error, 'error');
+            } else {
+              showAlert('Income recorded successfully! 💰', 'success');
+              form.reset();
+              document.getElementById('f-income-date').valueAsDate = new Date();
+
+              // Refresh income list and summary
+              loadRecentIncome();
+              google.script.run.withSuccessHandler(loadSummary).getSummary();
+            }
+          })
+          .withFailureHandler(function (error) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML =
+              '<i class="fas fa-check-circle"></i> Record Income';
+            showAlert('Error: ' + error.message, 'error');
+          })
+          .submitIncome(data);
+      }
+
+      function loadRecentIncome() {
+        google.script.run
+          .withSuccessHandler(function (incomeList) {
+            if (incomeList.error) {
+              document.getElementById('recent-income-list').innerHTML =
+                '<p style="color:#999;">Error loading income</p>';
+              return;
+            }
+
+            const html =
+              incomeList.length > 0
+                ? incomeList
+                    .slice(0, 10)
+                    .map(
+                      (i) => `
                 <div class="card" style="padding:10px; margin-bottom:8px;">
                   <div style="display:flex; justify-content:space-between;">
                     <div>
@@ -1095,31 +1214,39 @@
                     <span class="val-green">Rs. ${i.amount.toLocaleString()}</span>
                   </div>
                 </div>
-              `).join('')
-            : '<p style="color:#999;">No income recorded yet</p>';
-          
-          document.getElementById('recent-income-list').innerHTML = html;
-        })
-        .getIncome();
-    }
+              `,
+                    )
+                    .join('')
+                : '<p style="color:#999;">No income recorded yet</p>';
 
-    // ========================================================================
-    // APPROVAL FUNCTIONS (NEW!)
-    // ========================================================================
-    
-    function loadPendingApprovals() {
-      const list = document.getElementById('approvals-list');
-      list.innerHTML = '<div class="spinner"></div>';
-      
-      google.script.run
-        .withSuccessHandler(function(transactions) {
-          if (transactions.error) {
-            list.innerHTML = '<div class="alert alert-error">' + transactions.error + '</div>';
-            return;
-          }
-          
-          const html = transactions.length > 0
-            ? transactions.map(t => `
+            document.getElementById('recent-income-list').innerHTML = html;
+          })
+          .getIncome();
+      }
+
+      // ========================================================================
+      // APPROVAL FUNCTIONS (NEW!)
+      // ========================================================================
+
+      function loadPendingApprovals() {
+        const list = document.getElementById('approvals-list');
+        list.innerHTML = '<div class="spinner"></div>';
+
+        google.script.run
+          .withSuccessHandler(function (transactions) {
+            if (transactions.error) {
+              list.innerHTML =
+                '<div class="alert alert-error">' +
+                transactions.error +
+                '</div>';
+              return;
+            }
+
+            const html =
+              transactions.length > 0
+                ? transactions
+                    .map(
+                      (t) => `
                 <div class="card">
                   <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
                     <div style="flex:1;">
@@ -1132,7 +1259,7 @@
                     </div>
                     <div style="text-align:right;">
                       <div style="font-size:20px; font-weight:700; color:var(--danger);">
-                        ₹${t.amount.toLocaleString()}
+                        PKR${t.amount.toLocaleString()}
                       </div>
                       <div style="font-size:11px; color:var(--text-secondary); margin-top:2px;">
                         ${t.payment || 'Cash'}
@@ -1160,70 +1287,75 @@
                     </button>
                   </div>
                 </div>
-              `).join('')
-            : '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No pending approvals</p></div>';
-          
-          list.innerHTML = html;
-        })
-        .withFailureHandler(handleError)
-        .getPendingTransactions();
-    }
-    
-    function approveTransaction(txnId) {
-      if (!confirm('Approve this transaction?')) return;
-      
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.error) {
-            showAlert(result.error, 'error');
-          } else {
-            showAlert('Transaction approved!', 'success');
-            loadPendingApprovals();
-            
-            // Refresh expenses and dashboard
-            google.script.run.withSuccessHandler(loadExpenses).getExpenses();
-            google.script.run.withSuccessHandler(initializeApp).getERPData();
-          }
-        })
-        .withFailureHandler(handleError)
-        .approveTransaction(txnId);
-    }
-    
-    function rejectTransaction(txnId) {
-      const reason = prompt('Reason for rejection:');
-      if (!reason) return;
-      
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.error) {
-            showAlert(result.error, 'error');
-          } else {
-            showAlert('Transaction rejected', 'success');
-            loadPendingApprovals();
-            
-            // Refresh expenses
-            google.script.run.withSuccessHandler(loadExpenses).getExpenses();
-          }
-        })
-        .withFailureHandler(handleError)
-        .rejectTransaction(txnId, reason);
-    }
+              `,
+                    )
+                    .join('')
+                : '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No pending approvals</p></div>';
 
-    // ========================================================================
-    // OTHER LIST FUNCTIONS
-    // ========================================================================
-    
-    function loadProjects(projects) {
-      if (projects.error) {
-        document.getElementById('project-list').innerHTML = 
-          '<div class="alert alert-error">' + projects.error + '</div>';
-        return;
+            list.innerHTML = html;
+          })
+          .withFailureHandler(handleError)
+          .getPendingTransactions();
       }
-      
-      allProjects = projects;
-      
-      const html = projects.length > 0
-        ? projects.map(p => `
+
+      function approveTransaction(txnId) {
+        if (!confirm('Approve this transaction?')) return;
+
+        google.script.run
+          .withSuccessHandler(function (result) {
+            if (result.error) {
+              showAlert(result.error, 'error');
+            } else {
+              showAlert('Transaction approved!', 'success');
+              loadPendingApprovals();
+
+              // Refresh expenses and dashboard
+              google.script.run.withSuccessHandler(loadExpenses).getExpenses();
+              google.script.run.withSuccessHandler(initializeApp).getERPData();
+            }
+          })
+          .withFailureHandler(handleError)
+          .approveTransaction(txnId);
+      }
+
+      function rejectTransaction(txnId) {
+        const reason = prompt('Reason for rejection:');
+        if (!reason) return;
+
+        google.script.run
+          .withSuccessHandler(function (result) {
+            if (result.error) {
+              showAlert(result.error, 'error');
+            } else {
+              showAlert('Transaction rejected', 'success');
+              loadPendingApprovals();
+
+              // Refresh expenses
+              google.script.run.withSuccessHandler(loadExpenses).getExpenses();
+            }
+          })
+          .withFailureHandler(handleError)
+          .rejectTransaction(txnId, reason);
+      }
+
+      // ========================================================================
+      // OTHER LIST FUNCTIONS
+      // ========================================================================
+
+      function loadProjects(projects) {
+        if (projects.error) {
+          document.getElementById('project-list').innerHTML =
+            '<div class="alert alert-error">' + projects.error + '</div>';
+          return;
+        }
+
+        allProjects = projects;
+
+        const html =
+          projects.length > 0
+            ? projects
+                .map(
+                  (p) => `
             <div class="card">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div>
@@ -1235,21 +1367,26 @@
                 </span>
               </div>
             </div>
-          `).join('')
-        : '<div class="empty-state"><i class="fas fa-folder-open"></i><p>No projects found</p></div>';
-      
-      document.getElementById('project-list').innerHTML = html;
-    }
-    
-    function loadInventory(inventory) {
-      if (inventory.error) {
-        document.getElementById('inventory-list').innerHTML = 
-          '<div class="alert alert-error">' + inventory.error + '</div>';
-        return;
+          `,
+                )
+                .join('')
+            : '<div class="empty-state"><i class="fas fa-folder-open"></i><p>No projects found</p></div>';
+
+        document.getElementById('project-list').innerHTML = html;
       }
-      
-      const html = inventory.length > 0
-        ? inventory.map(i => `
+
+      function loadInventory(inventory) {
+        if (inventory.error) {
+          document.getElementById('inventory-list').innerHTML =
+            '<div class="alert alert-error">' + inventory.error + '</div>';
+          return;
+        }
+
+        const html =
+          inventory.length > 0
+            ? inventory
+                .map(
+                  (i) => `
             <div class="card">
               <div style="display:flex; justify-content:space-between;">
                 <div>
@@ -1259,21 +1396,26 @@
                 <span class="stat-val">${i.quantity} ${i.unit || 'pcs'}</span>
               </div>
             </div>
-          `).join('')
-        : '<div class="empty-state"><i class="fas fa-box-open"></i><p>No inventory items</p></div>';
-      
-      document.getElementById('inventory-list').innerHTML = html;
-    }
-    
-    function loadSummary(summary) {
-      if (summary.error) {
-        document.getElementById('summary-list').innerHTML = 
-          '<div class="alert alert-error">' + summary.error + '</div>';
-        return;
+          `,
+                )
+                .join('')
+            : '<div class="empty-state"><i class="fas fa-box-open"></i><p>No inventory items</p></div>';
+
+        document.getElementById('inventory-list').innerHTML = html;
       }
-      
-      const html = summary.length > 0
-        ? summary.map(s => `
+
+      function loadSummary(summary) {
+        if (summary.error) {
+          document.getElementById('summary-list').innerHTML =
+            '<div class="alert alert-error">' + summary.error + '</div>';
+          return;
+        }
+
+        const html =
+          summary.length > 0
+            ? summary
+                .map(
+                  (s) => `
             <div class="card">
               <h4 style="margin-bottom:10px;">${s.project}</h4>
               <div class="stat-row">
@@ -1291,11 +1433,13 @@
                 </span>
               </div>
             </div>
-          `).join('')
-        : '<div class="empty-state"><i class="fas fa-chart-pie"></i><p>No summary data</p></div>';
-      
-      document.getElementById('summary-list').innerHTML = html;
-    }
-  </script>
-</body>
+          `,
+                )
+                .join('')
+            : '<div class="empty-state"><i class="fas fa-chart-pie"></i><p>No summary data</p></div>';
+
+        document.getElementById('summary-list').innerHTML = html;
+      }
+    </script>
+  </body>
 </html>

@@ -35,61 +35,69 @@ automatrix-erp/
 ## 🚀 Quick Start
 
 ### Deploy
+
 ```bash
 ./scripts/deploy.sh
 ```
 
 ### Initialize
+
 ```javascript
-initializeSystem()  // Run once in Apps Script
+initializeSystem(); // Run once in Apps Script
 ```
 
 ## 🔑 Key Constants
 
 ### Sheet Names
+
 ```javascript
-SHEET_NAMES.EXPENSES
-SHEET_NAMES.INCOME
-SHEET_NAMES.EMPLOYEES
-SHEET_NAMES.INVENTORY
-SHEET_NAMES.PROJECTS
-SHEET_NAMES.WALLET
-SHEET_NAMES.AUDIT_LOG
+SHEET_NAMES.EXPENSES;
+SHEET_NAMES.INCOME;
+SHEET_NAMES.EMPLOYEES;
+SHEET_NAMES.INVENTORY;
+SHEET_NAMES.PROJECTS;
+SHEET_NAMES.WALLET;
+SHEET_NAMES.AUDIT_LOG;
 ```
 
 ### Column Access
+
 ```javascript
-EXPENSES_COLS.AMOUNT
-EXPENSES_COLS.STATUS
-EXPENSES_COLS.SUBMITTED_BY
+EXPENSES_COLS.AMOUNT;
+EXPENSES_COLS.STATUS;
+EXPENSES_COLS.SUBMITTED_BY;
 ```
 
 ### Status Values
+
 ```javascript
-STATUS.PENDING
-STATUS.APPROVED
-STATUS.REJECTED
+STATUS.PENDING;
+STATUS.APPROVED;
+STATUS.REJECTED;
 ```
 
 ### Roles
+
 ```javascript
-ROLES.CEO
-ROLES.FINANCE_MANAGER
-ROLES.MANAGER
-ROLES.STAFF
+ROLES.CEO;
+ROLES.FINANCE_MANAGER;
+ROLES.MANAGER;
+ROLES.STAFF;
 ```
 
 ## 📞 Main API Functions
 
 ### Authentication
+
 ```javascript
-getCurrentUser()              // Get current user
-getUserRole(email)           // Get user role
-getUserProfile(email)        // Get user profile
-hasPermission(user, perm)    // Check permission
+getCurrentUser(); // Get current user
+getUserRole(email); // Get user role
+getUserProfile(email); // Get user profile
+hasPermission(user, perm); // Check permission
 ```
 
 ### Expenses
+
 ```javascript
 submitExpense(data)          // Submit expense
 getExpenses(filters)         // Get expenses
@@ -97,6 +105,7 @@ processExpenseApproval(...)  // Approve/reject
 ```
 
 ### Validation
+
 ```javascript
 validateExpense(expense)     // Validate expense
 validateIncome(income)       // Validate income
@@ -104,6 +113,7 @@ checkDuplicateExpense(...)   // Check duplicates
 ```
 
 ### Audit
+
 ```javascript
 logAudit(...)                // Log action
 getAuditHistory(sheet, id)   // Get history
@@ -111,10 +121,11 @@ getRecentActivity(limit)     // Recent actions
 ```
 
 ### Utilities
+
 ```javascript
-formatCurrency(amount)       // ₹1,234.56
-formatDate(date)             // 2026-01-27
-formatStatus(status)         // With icon/color
+formatCurrency(amount); // PKR1,234.56
+formatDate(date); // 2026-01-27
+formatStatus(status); // With icon/color
 ```
 
 ## 🔐 Permission Checks
@@ -150,14 +161,16 @@ batchWriteWithLock(sheetName, startRow, startCol, values);
 const expenses = getSheetDataAsObjects(SHEET_NAMES.EXPENSES);
 
 // Filter data
-const filtered = getFilteredData(SHEET_NAMES.EXPENSES, 
-  row => row.Status === STATUS.PENDING
+const filtered = getFilteredData(
+  SHEET_NAMES.EXPENSES,
+  (row) => row.Status === STATUS.PENDING,
 );
 
 // Find row
-const rowNum = findRowByValue(SHEET_NAMES.EXPENSES, 
-  EXPENSES_COLS.SUBMITTED_BY, 
-  'user@example.com'
+const rowNum = findRowByValue(
+  SHEET_NAMES.EXPENSES,
+  EXPENSES_COLS.SUBMITTED_BY,
+  'user@example.com',
 );
 ```
 
@@ -177,6 +190,7 @@ console.error('Operation failed: ' + error.message);
 ## 🎯 Common Patterns
 
 ### Submit with Validation
+
 ```javascript
 function submitExpense(data) {
   // 1. Validate
@@ -184,21 +198,22 @@ function submitExpense(data) {
   if (!validation.valid) {
     return { success: false, errors: validation.errors };
   }
-  
+
   // 2. Check duplicates
   const duplicates = checkDuplicateExpense(data);
-  
+
   // 3. Submit with lock
   const rowNum = appendRowWithLock(SHEET_NAMES.EXPENSES, rowData);
-  
+
   // 4. Log audit
   logExpenseSubmission(rowNum, data);
-  
+
   return { success: true, rowNum };
 }
 ```
 
 ### Approval with Lock
+
 ```javascript
 function approveExpense(rowNum) {
   return preventDoubleApproval('EXPENSE', rowNum, () => {
@@ -206,13 +221,13 @@ function approveExpense(rowNum) {
     if (!canApproveAmount(user, 'EXPENSE', amount)) {
       throw new Error('Insufficient authority');
     }
-    
+
     // Update status
     sheet.getRange(rowNum, STATUS_COL).setValue(STATUS.APPROVED);
-    
+
     // Log audit
     logExpenseApproval(rowNum, STATUS.APPROVED, amount);
-    
+
     return { success: true };
   });
 }
@@ -220,23 +235,25 @@ function approveExpense(rowNum) {
 
 ## 📋 Approval Thresholds
 
-| Amount | Approver |
-|--------|----------|
-| ≤ ₹5,000 | Manager |
-| ₹5,001 - ₹50,000 | Finance Manager |
-| > ₹50,000 | CEO |
+| Amount               | Approver        |
+| -------------------- | --------------- |
+| ≤ PKR5,000           | Manager         |
+| PKR5,001 - PKR50,000 | Finance Manager |
+| > PKR50,000          | CEO             |
 
 ## 🔧 Troubleshooting
 
 ### Common Issues
 
 **Lock timeout:**
+
 ```javascript
 // Increase timeout
 withLock('operation', fn, 60000); // 60 seconds
 ```
 
 **Permission denied:**
+
 ```javascript
 // Check user role
 const role = getUserRole(email);
@@ -244,6 +261,7 @@ console.log('User role:', role);
 ```
 
 **Validation failed:**
+
 ```javascript
 // Get detailed errors
 const result = validateExpense(data);
@@ -274,7 +292,9 @@ console.log('Errors:', result.errors);
 5. **Handle errors gracefully**
 6. **Return consistent format**:
    ```javascript
-   { success: true/false, data/error, message }
+   {
+     success: (true / false, data / error, message);
+   }
    ```
 
 ---
