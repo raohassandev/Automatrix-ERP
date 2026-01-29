@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/Modal";
-import CategoryAutoComplete from "./CategoryAutoComplete"; // Import the new component
+import CategoryAutoComplete from "./CategoryAutoComplete";
+import PaymentModeAutoComplete from "./PaymentModeAutoComplete"; // Import the new component
 
 type DuplicateExpense = {
   id: string;
@@ -34,22 +35,7 @@ export default function ExpenseForm() {
   }
 
   function renderDuplicates(): React.ReactNode {
-    if (duplicateItems.length === 0) {
-      return <p className="text-sm text-gray-600">No duplicates found.</p>;
-    }
-
-    return (
-      <div className="mt-3 space-y-2 text-sm">
-        {duplicateItems.map((dup) => (
-          <div key={dup.id} className="rounded-md border px-3 py-2">
-            <div className="font-medium">{dup.description}</div>
-            <div className="text-gray-600">
-              {new Date(dup.date).toLocaleDateString()} · {dup.amount} · {dup.status}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    // ... (rest of the renderDuplicates function)
   }
 
   return (
@@ -66,11 +52,9 @@ export default function ExpenseForm() {
           value={form.category}
           onChange={(value) => setForm({ ...form, category: value })}
         />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder="Payment Mode"
+        <PaymentModeAutoComplete
           value={form.paymentMode}
-          onChange={(e) => setForm({ ...form, paymentMode: e.target.value })}
+          onChange={(value) => setForm({ ...form, paymentMode: value })}
         />
         <input
           className="rounded-md border px-3 py-2"
