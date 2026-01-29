@@ -25,8 +25,11 @@ export async function middleware(request: NextRequest) {
   const url = new URL(request.url);
   const { pathname } = url;
 
-  if (pathname.startsWith("/api/auth") || pathname.startsWith("/login")) {
-    return NextResponse.next();
+  // Public routes - add security headers and allow through
+  if (pathname.startsWith("/api/auth") || pathname.startsWith("/login") || pathname.startsWith("/api/register")) {
+    const response = NextResponse.next();
+    addSecurityHeaders(response);
+    return response;
   }
 
   const session = await auth();
@@ -44,7 +47,47 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(fallbackUrl);
   }
 
-  return NextResponse.next();
+  // Authenticated routes - add security headers
+  const response = NextResponse.next();
+  addSecurityHeaders(response);
+  return response;
+}
+
+/**
+ * Add security headers to all responses
+ * Implements OWASP security best practices
+ */
+function addSecurityHeaders(response: NextResponse) {
+  // Prevent clickjacking attacks
+  response.headers.set('X-Frame-Options', 'DENY');
+  
+  // Prevent MIME type sniffing
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  
+  // XSS Protection for older browsers
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  
+  // Control referrer information
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Restrict browser features
+  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  
+  // Content Security Policy
+  response.headers.set(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Next.js dev
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self'",
+      "frame-ancestors 'none'",
+    ].join('; ')
+  );
+  
+  return response;
 }
 
 export const config = {

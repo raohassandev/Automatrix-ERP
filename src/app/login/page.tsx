@@ -3,20 +3,24 @@
 import { useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { isGoogleAuthConfigured } from "@/lib/env";
 
 export default function LoginPage() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
     name: "",
-    email: "",
-    password: "",
+    email: "israrulhaq5@gmail.com",
+    password: "Password",
   });
   const [message, setMessage] = useState<string | null>(null);
 
   async function handleEmailLogin() {
     setMessage(null);
+    if (!form.email || !form.password) {
+      setMessage("Email and password are required");
+      return;
+    }
     const res = await signIn("credentials", {
       email: form.email,
       password: form.password,
@@ -32,9 +36,18 @@ export default function LoginPage() {
     router.refresh();
   }
 
+  async function handleGoogleLogin() {
+    setMessage(null);
+    if (!isGoogleAuthConfigured) {
+      setMessage('Google authentication is not configured.');
+      return;
+    }
+    await signIn("google", { callbackUrl: "/dashboard" });
+  }
+
   async function handleRegister() {
     setMessage(null);
-    const res = await fetch("/api/auth/register", {
+    const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -71,9 +84,18 @@ export default function LoginPage() {
       <p className="mt-2 text-gray-600">Use Google or your email/password.</p>
 
       <div className="mt-6 grid gap-3">
-        <Link className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-white" href="/api/auth/signin"  >
-          Sign in with Google
-        </Link>
+        {isGoogleAuthConfigured ? (
+          <button 
+            type="button"
+            className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-white hover:bg-gray-800"
+            onClick={() => startTransition(handleGoogleLogin)}
+            disabled={pending}
+          >
+            {pending ? "Working..." : "Sign in with Google"}
+          </button>
+        ) : (
+          <p className="text-sm text-gray-500">Google auth is disabled in this environment.</p>
+        )}
 
         <div className="border-t pt-4">
           <div className="grid gap-2">
@@ -103,14 +125,16 @@ export default function LoginPage() {
 
           <div className="mt-4 flex flex-wrap gap-2">
             <button
-              className="rounded-md bg-black px-4 py-2 text-white"
+              type="button"
+              className="rounded-md bg-black px-4 py-2 text-white hover:bg-gray-800"
               disabled={pending}
               onClick={() => startTransition(handleEmailLogin)}
             >
               {pending ? "Working..." : "Sign in"}
             </button>
             <button
-              className="rounded-md border px-4 py-2"
+              type="button"
+              className="rounded-md border px-4 py-2 hover:bg-gray-50"
               disabled={pending}
               onClick={() => startTransition(handleRegister)}
             >

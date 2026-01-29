@@ -23,3 +23,22 @@ export async function logAudit(params: {
     },
   });
 }
+
+// Alias for compatibility with approval-engine
+export async function createAuditLog(params: {
+  action: string;
+  entityType: string;
+  entityId: string;
+  userId: string;
+  changes?: unknown;
+}) {
+  await prisma.auditLog.create({
+    data: {
+      action: params.action,
+      entity: params.entityType,
+      entityId: params.entityId,
+      userId: params.userId,
+      oldValue: params.changes ? JSON.stringify(params.changes) : null,
+    },
+  });
+}
