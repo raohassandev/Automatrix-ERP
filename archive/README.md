@@ -11,6 +11,7 @@ AutoMatrix ERP is a comprehensive, enterprise-grade ERP system built on Google A
 ## ✨ Key Features
 
 ### Current Features (v6.0)
+
 - ✅ **Modular Architecture** - Clean, maintainable codebase
 - ✅ **Role-Based Access Control** - CEO, Finance Manager, Manager, Staff roles
 - ✅ **Audit Trail** - Complete logging of all actions
@@ -24,6 +25,7 @@ AutoMatrix ERP is a comprehensive, enterprise-grade ERP system built on Google A
 - ✅ **Concurrent Access Protection** - LockService integration
 
 ### Upcoming Features (Phase 2)
+
 - 🔄 **Dashboard Enhancements** - KPI trends, date ranges, activity feed
 - 🔄 **Receipt Attachments** - Google Drive integration
 - 🔄 **Inventory Ledger** - Transaction-based inventory system
@@ -54,6 +56,7 @@ automatrix-erp/
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Google Account
 - Google Apps Script project
 - Google Sheets spreadsheet
@@ -63,12 +66,14 @@ automatrix-erp/
 #### **Option 1: Automated Deployment** (Recommended) ⚡
 
 **One-Time Setup (5 minutes):**
+
 ```bash
 # Run setup wizard
 ./scripts/setup-clasp.sh
 ```
 
 **Deploy Anytime (30 seconds):**
+
 ```bash
 # Automated deployment
 ./scripts/auto-deploy.sh
@@ -79,31 +84,36 @@ See [QUICK_DEPLOY.md](./QUICK_DEPLOY.md) for details.
 #### **Option 2: Manual Deployment**
 
 1. **Create Google Sheets Spreadsheet**
+
    ```
    File → New → Google Sheets
    ```
 
 2. **Open Apps Script Editor**
+
    ```
    Extensions → Apps Script
    ```
 
 3. **Build & Copy Files**
+
    ```bash
    # Build deployment package
    ./scripts/deploy.sh
-   
+
    # Copy content of script.gs to Apps Script Code.gs
    # Copy src/client/Index.html to Apps Script Index.html
    ```
 
 4. **Initialize System**
+
    ```javascript
    // Run this function once in Apps Script editor
-   initializeSystem()
+   initializeSystem();
    ```
 
 5. **Deploy as Web App**
+
    ```
    Deploy → New deployment
    Type: Web app
@@ -161,21 +171,21 @@ The system follows a clean, layered architecture:
 
 ### Role-Based Access Control (RBAC)
 
-| Role | Permissions |
-|------|------------|
-| **CEO/Owner** | Full access to all features |
+| Role                | Permissions                                              |
+| ------------------- | -------------------------------------------------------- |
+| **CEO/Owner**       | Full access to all features                              |
 | **Finance Manager** | Approve high amounts, view all financials, manage income |
-| **Manager** | Approve low amounts, view team data, submit expenses |
-| **Staff** | Submit expenses, view own data |
-| **Guest** | Limited read-only access |
+| **Manager**         | Approve low amounts, view team data, submit expenses     |
+| **Staff**           | Submit expenses, view own data                           |
+| **Guest**           | Limited read-only access                                 |
 
 ### Approval Thresholds
 
-| Amount Range | Required Approver |
-|--------------|-------------------|
-| ₹0 - ₹5,000 | Manager |
-| ₹5,001 - ₹50,000 | Finance Manager |
-| > ₹50,000 | CEO |
+| Amount Range         | Required Approver |
+| -------------------- | ----------------- |
+| PKR0 - PKR5,000      | Manager           |
+| PKR5,001 - PKR50,000 | Finance Manager   |
+| > PKR50,000          | CEO               |
 
 ### Security Features
 
@@ -202,6 +212,7 @@ The system follows a clean, layered architecture:
 ## 🛠️ Development
 
 ### Prerequisites
+
 - Basic knowledge of JavaScript
 - Understanding of Google Apps Script
 - Familiarity with Google Sheets
@@ -219,6 +230,7 @@ The system follows a clean, layered architecture:
 ### Testing
 
 Run manual tests for:
+
 - User authentication
 - Permission enforcement
 - Data validation
@@ -229,44 +241,52 @@ Run manual tests for:
 ## 📈 Roadmap
 
 ### Phase 1: Foundation ✅ (Current)
+
 - Modular architecture
 - Core modules (auth, validation, audit, locks)
 - Basic utilities
 - Permission system
 
 ### Phase 2: Dashboard & UX (Weeks 3-4)
+
 - KPI trends and sparklines
 - Date range filtering
 - Recent activity feed
 - Clickable dashboard cards
 
 ### Phase 3: Advanced Approvals (Weeks 4-5)
+
 - Multi-level approval routing
 - Partial approvals
 - Mandatory validations
 - Notifications
 
 ### Phase 4: Attachments (Week 6)
+
 - Google Drive integration
 - Receipt uploads
 - File management
 
 ### Phase 5: Inventory Ledger (Weeks 8-9)
+
 - Transaction-based inventory
 - Reorder management
 - Project reservations
 
 ### Phase 6: Project Financials (Weeks 10-11)
+
 - Aging reports
 - Invoice tracking
 - Cost tracking
 
 ### Phase 7: Reporting & Analytics (Week 12)
+
 - P&L statements
 - Cash flow reports
 - Custom reports
 
 ### Phase 8: UI/UX Polish (Week 13)
+
 - Global search
 - Navigation optimization
 - Accessibility improvements
@@ -296,6 +316,7 @@ This project is proprietary software. All rights reserved.
 ## 📞 Support
 
 For issues or questions:
+
 - Review documentation in `docs/` folder
 - Check [MASTER_PLAN.md](./MASTER_PLAN.md) for feature status
 - See [STRUCTURE_GUIDE.md](./STRUCTURE_GUIDE.md) for architecture details
@@ -303,6 +324,7 @@ For issues or questions:
 ## 🎉 Acknowledgments
 
 Built with:
+
 - Google Apps Script
 - Google Sheets
 - HTML5/CSS3/JavaScript

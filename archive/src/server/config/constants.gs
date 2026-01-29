@@ -19,7 +19,7 @@ const SHEET_NAMES = {
   INVENTORY_LEDGER: 'InventoryLedger',
   INVOICES: 'Invoices',
   CHART_OF_ACCOUNTS: 'ChartOfAccounts',
-  NOTIFICATIONS: 'Notifications'
+  NOTIFICATIONS: 'Notifications',
 };
 
 // ============================================================================
@@ -45,7 +45,7 @@ const EXPENSES_COLS = {
   RECEIPT_URL: 12,
   APPROVAL_LEVEL: 13,
   APPROVED_AMOUNT: 14,
-  VALIDATION_STATUS: 15
+  VALIDATION_STATUS: 15,
 };
 
 /**
@@ -65,7 +65,7 @@ const INCOME_COLS = {
   RECEIPT_FILE_ID: 10,
   RECEIPT_URL: 11,
   INVOICE_ID: 12,
-  APPROVAL_LEVEL: 13
+  APPROVAL_LEVEL: 13,
 };
 
 /**
@@ -77,7 +77,7 @@ const EMPLOYEES_COLS = {
   PHONE: 2,
   ROLE: 3,
   WALLET_BALANCE: 4,
-  STATUS: 5
+  STATUS: 5,
 };
 
 /**
@@ -96,7 +96,7 @@ const INVENTORY_COLS = {
   AVAILABLE_QTY: 9,
   LAST_PURCHASE_DATE: 10,
   AVG_USAGE_30_DAYS: 11,
-  LAST_UPDATED: 12
+  LAST_UPDATED: 12,
 };
 
 /**
@@ -115,7 +115,7 @@ const PROJECTS_COLS = {
   PENDING_RECOVERY: 9,
   COST_TO_DATE: 10,
   GROSS_MARGIN: 11,
-  MARGIN_PERCENT: 12
+  MARGIN_PERCENT: 12,
 };
 
 /**
@@ -127,7 +127,7 @@ const WALLET_COLS = {
   TYPE: 2,
   AMOUNT: 3,
   REFERENCE: 4,
-  BALANCE: 5
+  BALANCE: 5,
 };
 
 /**
@@ -142,7 +142,7 @@ const AUDIT_LOG_COLS = {
   FIELD: 5,
   OLD_VALUE: 6,
   NEW_VALUE: 7,
-  REASON: 8
+  REASON: 8,
 };
 
 /**
@@ -158,7 +158,7 @@ const INVENTORY_LEDGER_COLS = {
   REFERENCE: 6,
   PROJECT: 7,
   USER: 8,
-  RUNNING_BALANCE: 9
+  RUNNING_BALANCE: 9,
 };
 
 /**
@@ -172,7 +172,7 @@ const INVOICES_COLS = {
   DUE_DATE: 4,
   STATUS: 5,
   PAYMENT_DATE: 6,
-  NOTES: 7
+  NOTES: 7,
 };
 
 // ============================================================================
@@ -188,32 +188,32 @@ const STATUS = {
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
   PARTIALLY_APPROVED: 'Partially Approved',
-  
+
   // Employee statuses
   ACTIVE: 'Active',
   INACTIVE: 'Inactive',
-  
+
   // Project statuses
   PLANNING: 'Planning',
   IN_PROGRESS: 'In Progress',
   ON_HOLD: 'On Hold',
   COMPLETED: 'Completed',
   CANCELLED: 'Cancelled',
-  
+
   // Invoice statuses
   DRAFT: 'Draft',
   SENT: 'Sent',
   PAID: 'Paid',
   OVERDUE: 'Overdue',
   CANCELLED: 'Cancelled',
-  
+
   // Inventory ledger types
   PURCHASE: 'PURCHASE',
   SALE: 'SALE',
   ADJUSTMENT: 'ADJUSTMENT',
   TRANSFER: 'TRANSFER',
   RETURN: 'RETURN',
-  PROJECT_ALLOCATION: 'PROJECT_ALLOCATION'
+  PROJECT_ALLOCATION: 'PROJECT_ALLOCATION',
 };
 
 // ============================================================================
@@ -227,12 +227,12 @@ const APPROVAL_LEVELS = {
   EXPENSE: [
     { max: 5000, level: 'L1', role: 'Manager' },
     { max: 50000, level: 'L2', role: 'Finance Manager' },
-    { max: Infinity, level: 'L3', role: 'CEO' }
+    { max: Infinity, level: 'L3', role: 'CEO' },
   ],
   INCOME: [
     { max: 100000, level: 'L1', role: 'Finance Manager' },
-    { max: Infinity, level: 'L2', role: 'CEO' }
-  ]
+    { max: Infinity, level: 'L2', role: 'CEO' },
+  ],
 };
 
 // ============================================================================
@@ -247,7 +247,7 @@ const ACCOUNT_GROUPS = {
   OPEX: 'Operating Expenses',
   CAPEX: 'Capital Expenses',
   TRAVEL: 'Travel & Entertainment',
-  ADMIN: 'Administrative'
+  ADMIN: 'Administrative',
 };
 
 // ============================================================================
@@ -259,7 +259,7 @@ const VALIDATION_RULES = {
   AMOUNT_MAX: 10000000,
   RECEIPT_MANDATORY_THRESHOLD: 5000,
   DUPLICATE_CHECK_DAYS: 3,
-  MAX_DESCRIPTION_LENGTH: 500
+  MAX_DESCRIPTION_LENGTH: 500,
 };
 
 // ============================================================================
@@ -270,10 +270,10 @@ const SYSTEM_SETTINGS = {
   APP_NAME: 'AutoMatrix ERP',
   VERSION: '6.0',
   DATE_FORMAT: 'yyyy-MM-dd',
-  CURRENCY: '₹',
+  CURRENCY: 'PKR',
   TIMEZONE: 'Asia/Kolkata',
   ITEMS_PER_PAGE: 50,
-  MAX_SEARCH_RESULTS: 100
+  MAX_SEARCH_RESULTS: 100,
 };
 
 // ============================================================================
@@ -283,5 +283,5 @@ const SYSTEM_SETTINGS = {
 const NOTIFICATION_SETTINGS = {
   DAILY_DIGEST_HOUR: 9, // 9 AM
   URGENT_THRESHOLD: 50000, // Amounts above this trigger immediate notification
-  REMINDER_DAYS: [7, 14, 30] // Follow-up reminder intervals
+  REMINDER_DAYS: [7, 14, 30], // Follow-up reminder intervals
 };

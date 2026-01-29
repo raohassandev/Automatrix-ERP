@@ -1382,3 +1382,14 @@ This execution plan transforms AutoMatrix ERP from a **functional prototype (35%
 *Plan version: 2.0*  
 *Status: Ready for execution*
 
+
+---
+
+## 📝 UPDATE LOG
+
+### January 29, 2026 - Currency Update
+- **Changed:** Currency format from ₹ (INR) to PKR
+- **File:** `src/lib/format.ts`
+- **Impact:** All money displays throughout application
+- **Reason:** AutoMatrix ERP is for Pakistani market
+
