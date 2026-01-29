@@ -1,13 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
 import ExpenseForm from "@/components/ExpenseForm";
-import { requirePermission } from "@/lib/rbac";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import PaginationControls from "@/components/PaginationControls";
 import SearchInput from "@/components/SearchInput";
@@ -23,9 +19,28 @@ const COLUMNS = [
   { key: 'status', label: 'Status', visible: true },
 ];
 
+interface Expense {
+  id: string;
+  date: string;
+  description: string;
+  category: string;
+  amount: number;
+  status: string;
+  [key: string]: any; // Add index signature
+  // Add other properties as needed based on your API response
+}
+
 export default function ExpensesPage() {
+  return (
+    <Suspense fallback={<div>Loading expenses...</div>}>
+      <ExpensesPageContent />
+    </Suspense>
+  );
+}
+
+function ExpensesPageContent() {
   const searchParams = useSearchParams();
-  const [expenses, setExpenses] = useState([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [columns, setColumns] = useState(COLUMNS);
 
@@ -108,3 +123,4 @@ export default function ExpensesPage() {
     </div>
   );
 }
+

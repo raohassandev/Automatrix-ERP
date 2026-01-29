@@ -52,6 +52,20 @@ export async function getDashboardDataEnhanced(dateRange = 'THIS_MONTH', customS
     return null;
   }
 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  });
+
+  if (!user || !user.email) {
+    return null;
+  }
+
+  const employee = await prisma.employee.findUnique({
+    where: { email: user.email },
+    select: { walletBalance: true },
+  });
+
   // TODO: Implement date range logic
   const [
     expenseSum,
@@ -64,7 +78,6 @@ export async function getDashboardDataEnhanced(dateRange = 'THIS_MONTH', customS
     rejectedExpensesSum,
     expenseCount,
     incomeCount,
-    user,
   ] = await Promise.all([
     prisma.expense.aggregate({ _sum: { amount: true } }),
     prisma.income.aggregate({ _sum: { amount: true } }),
@@ -79,7 +92,6 @@ export async function getDashboardDataEnhanced(dateRange = 'THIS_MONTH', customS
     prisma.expense.aggregate({ where: { status: "REJECTED" }, _sum: { amount: true } }),
     prisma.expense.count(),
     prisma.income.count(),
-    prisma.user.findUnique({ where: { id: userId }, select: { walletBalance: true } }),
   ]);
 
   const totalExpenses = Number(expenseSum._sum.amount || 0);
@@ -92,7 +104,7 @@ export async function getDashboardDataEnhanced(dateRange = 'THIS_MONTH', customS
   const approvedExpenses = Number(approvedExpensesSum._sum.amount || 0);
   const rejectedExpenses = Number(rejectedExpensesSum._sum.amount || 0);
   const profitMargin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
-  const walletBalance = Number(user?.walletBalance || 0);
+  const walletBalance = Number(employee?.walletBalance || 0);
 
 
   return {
@@ -126,33 +138,31 @@ export async function getExpenseByCategoryData() {
 }
 
 export async function getProjectProfitabilityData() {
-  const projects = await prisma.project.findMany({
-    include: {
-      incomes: {
-        where: { status: 'APPROVED' },
-      },
-      expenses: {
-        where: { status: 'APPROVED' },
-      },
-    },
-  });
+  const projects = await prisma.project.findMany(); // Fetch projects first
 
-  return projects.map((project) => {
-    const totalIncome = project.incomes.reduce(
-      (sum, income) => sum + Number(income.amount),
-      0
-    );
-    const totalExpense = project.expenses.reduce(
-      (sum, expense) => sum + Number(expense.amount),
-      0
-    );
-    return {
-      name: project.name,
-      profit: totalIncome - totalExpense,
-      income: totalIncome,
-      expense: totalExpense,
-    };
-  });
+  const projectData = await Promise.all(
+    projects.map(async (project) => {
+      const incomes = await prisma.income.aggregate({
+        _sum: { amount: true },
+        where: { project: project.name, status: 'APPROVED' },
+      });
+      const expenses = await prisma.expense.aggregate({
+        _sum: { amount: true },
+        where: { project: project.name, status: 'APPROVED' },
+      });
+
+      const totalIncome = Number(incomes._sum.amount || 0);
+      const totalExpense = Number(expenses._sum.amount || 0);
+
+      return {
+        name: project.name,
+        profit: totalIncome - totalExpense,
+        income: totalIncome,
+        expense: totalExpense,
+      };
+    })
+  );
+  return projectData;
 }
 
 export async function getWalletBalanceData() {
@@ -165,25 +175,30 @@ export async function getWalletBalanceData() {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
+    select: { email: true },
+  });
+
+  if (!user?.email) {
+    return [];
+  }
+
+  const employee = await prisma.employee.findUnique({
+    where: { email: user.email },
     include: {
-      employee: {
-        include: {
-          walletLedger: {
-            orderBy: {
-              date: 'asc',
-            },
-            take: 100,
-          },
+      wallets: {
+        orderBy: {
+          date: 'asc',
         },
+        take: 100,
       },
     },
   });
 
-  if (!user?.employee) {
+  if (!employee || !employee.wallets) {
     return [];
   }
 
-  return user.employee.walletLedger.map((entry) => ({
+  return employee.wallets.map((entry) => ({
     date: new Date(entry.date).toLocaleDateString(),
     balance: Number(entry.balance),
   }));

@@ -35,7 +35,7 @@ export default function ProjectProfitabilityChart({
           <XAxis dataKey="name" />
           <YAxis tickFormatter={(value) => formatMoney(value, 'PKR ')} />
           <Tooltip
-            formatter={(value: number) => [formatMoney(value, 'PKR '), null]}
+            formatter={(value: number | undefined) => [formatMoney(value || 0, 'PKR '), null]}
           />
           <Legend />
           <Bar dataKey="income" fill="#82ca9d" />

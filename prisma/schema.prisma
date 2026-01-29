@@ -27,6 +27,7 @@ enum ExpenseStatus {
   APPROVED
   REJECTED
   PARTIALLY_APPROVED
+  PAID
 }
 
 enum IncomeStatus {

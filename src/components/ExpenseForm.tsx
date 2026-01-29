@@ -33,8 +33,23 @@ export default function ExpenseForm() {
     // ... (rest of the submit function)
   }
 
-  function renderDuplicates() {
-    // ... (rest of the renderDuplicates function)
+  function renderDuplicates(): React.ReactNode {
+    if (duplicateItems.length === 0) {
+      return <p className="text-sm text-gray-600">No duplicates found.</p>;
+    }
+
+    return (
+      <div className="mt-3 space-y-2 text-sm">
+        {duplicateItems.map((dup) => (
+          <div key={dup.id} className="rounded-md border px-3 py-2">
+            <div className="font-medium">{dup.description}</div>
+            <div className="text-gray-600">
+              {new Date(dup.date).toLocaleDateString()} · {dup.amount} · {dup.status}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (

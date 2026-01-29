@@ -49,7 +49,7 @@ export default function ExpenseByCategoryChart({
               />
             ))}
           </Pie>
-          <Tooltip formatter={(value: number) => [formatMoney(value, 'PKR '), 'Value']} />
+          <Tooltip formatter={(value: number | undefined) => [formatMoney(value || 0, 'PKR '), 'Value']} />
           <Legend />
         </PieChart>
       </ResponsiveContainer>

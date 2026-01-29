@@ -65,8 +65,8 @@ export async function GET(request: Request) {
       {
         OR: search
           ? [
-              { description: { contains: search, mode: "insensitive" } },
-              { category: { contains: search, mode: "insensitive" } },
+              { description: { contains: search, mode: Prisma.QueryMode.insensitive } },
+              { category: { contains: search, mode: Prisma.QueryMode.insensitive } },
             ]
           : undefined,
       },

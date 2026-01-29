@@ -33,7 +33,7 @@ export default function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
           <XAxis dataKey="name" />
           <YAxis tickFormatter={(value) => formatMoney(value, 'PKR ')} />
           <Tooltip
-            formatter={(value: number) => [formatMoney(value, 'PKR '), null]}
+            formatter={(value: number | undefined) => [formatMoney(value || 0, 'PKR '), null]}
           />
           <Legend />
           <Line

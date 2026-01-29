@@ -13,11 +13,6 @@ export async function GET() {
       category: true,
     },
     distinct: ['category'],
-    where: {
-      category: {
-        not: null,
-      },
-    },
     orderBy: {
       category: 'asc',
     },

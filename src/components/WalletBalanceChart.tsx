@@ -30,7 +30,7 @@ export default function WalletBalanceChart({ data }: WalletBalanceChartProps) {
           <XAxis dataKey="date" />
           <YAxis tickFormatter={(value) => formatMoney(value, 'PKR ')} />
           <Tooltip
-            formatter={(value: number) => [formatMoney(value, 'PKR '), 'Balance']}
+            formatter={(value: number | undefined) => [formatMoney(value || 0, 'PKR '), 'Balance']}
           />
           <Area
             type="monotone"

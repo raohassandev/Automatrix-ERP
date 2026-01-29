@@ -36,7 +36,7 @@ export default function DateRangePicker() {
     <div className="flex items-center gap-2">
       <DatePicker
         selected={startDate}
-        onChange={(date) => setStartDate(date)}
+        onChange={(date: Date | null) => setStartDate(date)}
         selectsStart
         startDate={startDate}
         endDate={endDate}
@@ -45,11 +45,11 @@ export default function DateRangePicker() {
       />
       <DatePicker
         selected={endDate}
-        onChange={(date) => setEndDate(date)}
+        onChange={(date: Date | null) => setEndDate(date)}
         selectsEnd
         startDate={startDate}
         endDate={endDate}
-        minDate={startDate}
+        minDate={startDate || undefined}
         placeholderText="To"
         className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
       />
