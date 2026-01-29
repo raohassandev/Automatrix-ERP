@@ -4,6 +4,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import MobileMenu from "@/components/MobileMenu";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,7 +39,10 @@ export default function RootLayout({
             <header className="border-b bg-white">
               <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
                 <div className="text-lg font-semibold">AutoMatrix ERP</div>
-                <MobileMenu />
+                <div className="flex items-center gap-4">
+                  <MobileMenu />
+                  <ThemeToggle />
+                </div>
               </div>
             </header>
             <main className="mx-auto max-w-6xl px-6 py-8">{children}</main>

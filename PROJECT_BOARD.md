@@ -34,6 +34,7 @@
 | QW-004: Add toast notifications for success/error | Done | CODEX | Implemented toast notifications in the approval workflow |
 | QW-015: Add mobile responsive menu | Done | CODEX | Implemented a mobile responsive menu |
 | FORM-002: Add autocomplete/typeahead for categories | Done | CODEX | Added autocomplete for the category field in expense form |
+| UI-006: Implement dark mode | Done | CODEX | Implemented dark mode with ThemeToggle component |
 
 ## Testing
 | Task | Status | Owner | Notes |
