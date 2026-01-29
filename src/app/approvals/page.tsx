@@ -13,7 +13,10 @@ export default async function ApprovalsPage() {
   }
 
   // Check if user can view approvals
-  await requirePermission(session, "expenses.approve");
+  const canApprove = await requirePermission(session.user.id, "expenses.approve");
+  if (!canApprove) {
+    redirect("/dashboard?error=forbidden");
+  }
 
   // Fetch pending approvals for this user using our approval engine
   const pendingApprovals = await getPendingApprovalsForUser(session.user.id);
