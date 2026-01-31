@@ -29,7 +29,13 @@ export default async function EmployeesPage() {
     ? {}
     : { email: session.user.email || "__none__" };
 
-  const employees = await prisma.employee.findMany({ where, orderBy: { name: "asc" } });
+  const employeesRaw = await prisma.employee.findMany({ where, orderBy: { name: "asc" } });
+  
+  // Convert Decimal to number for component compatibility
+  const employees = employeesRaw.map((emp) => ({
+    ...emp,
+    walletBalance: parseFloat(emp.walletBalance.toString()),
+  }));
 
   return (
     <div className="grid gap-6">

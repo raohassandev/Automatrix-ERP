@@ -101,10 +101,16 @@ function ExpensesPageContent() {
                     col.visible ? (
                       <td key={col.key} className="py-2">
                         {col.key === 'date'
-                          ? new Date(expense[col.key]).toLocaleDateString()
+                          ? new Date(expense.date).toLocaleDateString()
                           : col.key === 'amount'
-                          ? formatMoney(Number(expense[col.key]))
-                          : expense[col.key]}
+                          ? formatMoney(Number(expense.amount))
+                          : col.key === 'description'
+                          ? expense.description
+                          : col.key === 'category'
+                          ? expense.category
+                          : col.key === 'status'
+                          ? expense.status
+                          : ''}
                       </td>
                     ) : null
                   )}

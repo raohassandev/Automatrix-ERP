@@ -10,8 +10,8 @@ export default function LoginPage() {
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
     name: "",
-    email: "israrulhaq5@gmail.com",
-    password: "Password",
+    email: "admin@automatrix.local",
+    password: "admin123",
   });
   const [message, setMessage] = useState<string | null>(null);
 
@@ -25,6 +25,7 @@ export default function LoginPage() {
       email: form.email,
       password: form.password,
       redirect: false,
+      callbackUrl: "/dashboard",
     });
 
     if (res?.error) {
@@ -32,8 +33,10 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    if (res?.ok) {
+      router.push("/dashboard");
+      router.refresh();
+    }
   }
 
   async function handleGoogleLogin() {
@@ -67,6 +70,7 @@ export default function LoginPage() {
       email: form.email,
       password: form.password,
       redirect: false,
+      callbackUrl: "/dashboard",
     });
 
     if (signInRes?.error) {
@@ -74,8 +78,10 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    if (signInRes?.ok) {
+      router.push("/dashboard");
+      router.refresh();
+    }
   }
 
   return (

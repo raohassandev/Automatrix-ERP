@@ -24,15 +24,20 @@ export default async function ApprovalsPage() {
 
   // Fetch employee wallet balances for each expense
   const expensesWithWalletInfo = await Promise.all(
-    pendingApprovals.expenses.map(async (expense: Expense) => {
-      const employee = await prisma.employee.findUnique({
-        where: { email: expense.submittedBy.email },
-        select: { walletBalance: true },
+    pendingApprovals.expenses.map(async (expense: any) => {
+      const submitter = await prisma.user.findUnique({
+        where: { id: expense.submittedById },
+        select: { email: true },
       });
+      
+      const employee = submitter ? await prisma.employee.findUnique({
+        where: { email: submitter.email },
+        select: { walletBalance: true },
+      }) : null;
 
       return {
         ...expense,
-        currentWalletBalance: employee?.walletBalance || 0,
+        currentWalletBalance: employee?.walletBalance ? parseFloat(employee.walletBalance.toString()) : 0,
       };
     })
   );
@@ -40,14 +45,14 @@ export default async function ApprovalsPage() {
   // Combine expenses and income for display (income doesn't need wallet balance)
   const approvalsWithWalletInfo = [
     ...expensesWithWalletInfo,
-    ...pendingApprovals.income.map((income: Income) => ({
+    ...pendingApprovals.income.map((income: any) => ({
       ...income,
       currentWalletBalance: null, // Income doesn't affect wallet
     })),
   ];
 
   // Fetch recent approval history (last 10 approved/rejected)
-  const recentHistory = await prisma.expense.findMany({
+  const recentHistoryRaw = await prisma.expense.findMany({
     where: {
       status: { in: ['APPROVED', 'REJECTED'] },
       approvedById: session.user.id,
@@ -59,6 +64,12 @@ export default async function ApprovalsPage() {
     orderBy: { updatedAt: 'desc' },
     take: 10,
   });
+
+  // Convert Decimal to number for component compatibility
+  const recentHistory = recentHistoryRaw.map((item) => ({
+    ...item,
+    amount: parseFloat(item.amount.toString()),
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -84,7 +95,7 @@ export default async function ApprovalsPage() {
             <div className="mt-2 text-2xl font-bold text-gray-900">
               {formatMoney(
                 approvalsWithWalletInfo.reduce(
-                  (sum: number, exp: Expense | Income) => sum + parseFloat(exp.amount.toString()),
+                  (sum: number, exp: any) => sum + parseFloat(exp.amount.toString()),
                   0
                 )
               )}
@@ -95,7 +106,7 @@ export default async function ApprovalsPage() {
             <div className="mt-2 text-3xl font-bold text-blue-600">
               {
                 approvalsWithWalletInfo.filter(
-                  (exp: Expense | Income) => exp.requiredApprovalLevel === "MANAGER"
+                  (exp: any) => exp.requiredApprovalLevel === "MANAGER"
                 ).length
               }
             </div>
@@ -105,7 +116,7 @@ export default async function ApprovalsPage() {
             <div className="mt-2 text-3xl font-bold text-red-600">
               {
                 approvalsWithWalletInfo.filter(
-                  (exp: Expense | Income) => exp.requiredApprovalLevel === "CEO"
+                  (exp: any) => exp.requiredApprovalLevel === "CEO"
                 ).length
               }
             </div>

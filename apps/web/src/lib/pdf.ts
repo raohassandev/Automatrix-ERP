@@ -26,7 +26,7 @@ export function generatePdf({
   autoTable(doc, {
     startY: 20,
     head: [columns.map((col) => col.header)],
-    body: data.map((row) => columns.map((col) => row[col.dataKey])),
+    body: data.map((row) => columns.map((col) => String(row[col.dataKey] ?? ''))),
   });
 
   doc.save(fileName);

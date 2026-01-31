@@ -6,9 +6,9 @@ import { requirePermission } from '@/lib/rbac';
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } } // Temporary workaround for persistent TypeScript error
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { params } = context;
+  const params = await context.params;
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
