@@ -1,6 +1,4 @@
-import { defineConfig } from 'tailwindcss';
-
-const config = defineConfig({
+const config = {
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -66,6 +64,6 @@ const config = defineConfig({
     },
   },
   plugins: [],
-});
+};
 
 export default config;

@@ -6,7 +6,7 @@
   "tailwind": {
     "config": "tailwind.config.mjs",
     "css": "src/app/globals.css",
-    "baseColor": "stone",
+    "baseColor": "Lime",
     "cssVariables": true,
     "prefix": ""
   },
@@ -14,4 +14,4 @@
     "components": "@/components",
     "utils": "@/lib/utils"
   }
-  }
+}
