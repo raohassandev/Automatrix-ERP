@@ -27,7 +27,7 @@ interface Expense {
   category: string;
   amount: number;
   status: string;
-  [key: string]: any; // Add index signature
+
   // Add other properties as needed based on your API response
 }
 

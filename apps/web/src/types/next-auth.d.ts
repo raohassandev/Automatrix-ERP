@@ -1,13 +1,17 @@
 import "next-auth";
 
 declare module "next-auth" {
+  interface User {
+    id: string;
+    roleId?: string | null;
+    role?: { name: string } | null;
+  }
+
   interface Session {
-    user: {
+    user: User & {
       id: string;
       roleId?: string | null;
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
+      role?: { name: string } | null;
     };
   }
 }

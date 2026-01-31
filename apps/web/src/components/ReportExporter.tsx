@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { generatePdf } from '@/lib/pdf';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Expense } from '@prisma/client';
 
 export default function ReportExporter() {
   const [loading, setLoading] = useState(false);
@@ -27,7 +28,7 @@ export default function ReportExporter() {
         { header: 'Status', dataKey: 'status' },
       ];
 
-      const expenses = data.data.map((expense: any) => ({
+      const expenses = data.data.map((expense: Expense) => ({
         ...expense,
         date: new Date(expense.date).toLocaleDateString(),
         amount: Number(expense.amount),

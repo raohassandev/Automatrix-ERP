@@ -13,7 +13,7 @@ interface Employee {
   name: string;
   email: string;
   role: string;
-  walletBalance: any;
+  walletBalance: number | string;
   status: string;
 }
 

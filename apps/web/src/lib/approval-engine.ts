@@ -1,8 +1,4 @@
-/**
- * Approval Workflow Engine for AutoMatrix ERP
- * Handles threshold-based routing and approval logic
- */
-
+import { Expense, Income } from '@prisma/client';
 import { prisma } from './prisma';
 import { createAuditLog } from './audit';
 
@@ -414,8 +410,8 @@ export async function rejectIncome(params: {
  * Get pending approvals for a user based on their role
  */
 export async function getPendingApprovalsForUser(userId: string): Promise<{
-  expenses: Array<any>;
-  income: Array<any>;
+  expenses: Expense[];
+  income: Income[];
 }> {
   const user = await prisma.user.findUnique({
     where: { id: userId },

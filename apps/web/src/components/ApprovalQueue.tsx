@@ -13,10 +13,10 @@ interface Approval {
   date: Date;
   category: string;
   description: string;
-  amount: any;
+  amount: number | string;
   project?: string;
   submittedBy: { id: string; email: string; name?: string | null };
-  currentWalletBalance: any;
+  currentWalletBalance: number | string;
   requiredApprovalLevel: string;
   status: string;
 }
@@ -25,7 +25,7 @@ interface HistoryItem {
   id: string;
   date: Date;
   category: string;
-  amount: any;
+  amount: number | string;
   status: string;
   submittedBy: { email: string; name?: string | null };
   approvedBy: { email: string; name?: string | null } | null;

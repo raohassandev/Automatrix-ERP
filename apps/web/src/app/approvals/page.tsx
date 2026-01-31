@@ -5,6 +5,7 @@ import { formatMoney } from "@/lib/format";
 import { getPendingApprovalsForUser } from "@/lib/approval-engine";
 import { prisma } from "@/lib/prisma";
 import ApprovalQueue from "@/components/ApprovalQueue";
+import { Expense, Income } from "@prisma/client";
 
 export default async function ApprovalsPage() {
   const session = await auth();
@@ -23,7 +24,7 @@ export default async function ApprovalsPage() {
 
   // Fetch employee wallet balances for each expense
   const expensesWithWalletInfo = await Promise.all(
-    pendingApprovals.expenses.map(async (expense: any) => {
+    pendingApprovals.expenses.map(async (expense: Expense) => {
       const employee = await prisma.employee.findUnique({
         where: { email: expense.submittedBy.email },
         select: { walletBalance: true },
@@ -39,7 +40,7 @@ export default async function ApprovalsPage() {
   // Combine expenses and income for display (income doesn't need wallet balance)
   const approvalsWithWalletInfo = [
     ...expensesWithWalletInfo,
-    ...pendingApprovals.income.map((income: any) => ({
+    ...pendingApprovals.income.map((income: Income) => ({
       ...income,
       currentWalletBalance: null, // Income doesn't affect wallet
     })),
@@ -83,7 +84,7 @@ export default async function ApprovalsPage() {
             <div className="mt-2 text-2xl font-bold text-gray-900">
               {formatMoney(
                 approvalsWithWalletInfo.reduce(
-                  (sum: number, exp: any) => sum + parseFloat(exp.amount.toString()),
+                  (sum: number, exp: Expense | Income) => sum + parseFloat(exp.amount.toString()),
                   0
                 )
               )}
@@ -94,7 +95,7 @@ export default async function ApprovalsPage() {
             <div className="mt-2 text-3xl font-bold text-blue-600">
               {
                 approvalsWithWalletInfo.filter(
-                  (exp: any) => exp.requiredApprovalLevel === "MANAGER"
+                  (exp: Expense | Income) => exp.requiredApprovalLevel === "MANAGER"
                 ).length
               }
             </div>
@@ -104,7 +105,7 @@ export default async function ApprovalsPage() {
             <div className="mt-2 text-3xl font-bold text-red-600">
               {
                 approvalsWithWalletInfo.filter(
-                  (exp: any) => exp.requiredApprovalLevel === "CEO"
+                  (exp: Expense | Income) => exp.requiredApprovalLevel === "CEO"
                 ).length
               }
             </div>

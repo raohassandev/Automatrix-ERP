@@ -29,7 +29,7 @@ export function UserNav() {
     .slice(0, 2) || user.email?.slice(0, 2).toUpperCase() || "??";
 
   // Get role name if available
-  const roleName = (user as any).role?.name || (user as any).roleId;
+  const roleName = user.role?.name || user.roleId;
 
   return (
     <DropdownMenu>

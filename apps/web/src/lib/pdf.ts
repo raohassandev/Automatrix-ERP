@@ -1,5 +1,5 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Column {
   header: string;
@@ -9,7 +9,7 @@ interface Column {
 interface PdfOptions {
   title: string;
   columns: Column[];
-  data: any[];
+  data: Record<string, unknown>[];
   fileName?: string;
 }
 
@@ -23,7 +23,7 @@ export function generatePdf({
 
   doc.text(title, 14, 15);
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: 20,
     head: [columns.map((col) => col.header)],
     body: data.map((row) => columns.map((col) => row[col.dataKey])),

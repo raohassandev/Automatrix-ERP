@@ -6,7 +6,7 @@ import { requirePermission } from '@/lib/rbac';
 
 export async function PUT(
   request: NextRequest,
-  context: any // Temporary workaround for persistent TypeScript error
+  context: { params: { id: string } } // Temporary workaround for persistent TypeScript error
 ) {
   const { params } = context;
   const session = await auth();
