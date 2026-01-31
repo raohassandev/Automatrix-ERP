@@ -2,6 +2,22 @@ import { prisma } from "./prisma";
 import { auth } from "./auth";
 
 export async function getChartData() {
+  // Development bypass: return mock data if no database
+  const session = await auth();
+  if (process.env.NODE_ENV === 'development' && session?.user?.id === 'dev-admin-id') {
+    const months = Array.from({ length: 12 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      return d.toLocaleString('default', { month: 'short' }) + ' ' + d.getFullYear();
+    }).reverse();
+    
+    return months.map((name, i) => ({
+      name,
+      income: Math.floor(Math.random() * 20000) + 10000,
+      expense: Math.floor(Math.random() * 15000) + 5000,
+    }));
+  }
+
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = new Date();
     d.setMonth(d.getMonth() - i);
@@ -50,6 +66,24 @@ export async function getDashboardDataEnhanced(dateRange = 'THIS_MONTH', customS
 
   if (!userId) {
     return null;
+  }
+
+  // Development bypass: return mock data if no database
+  if (process.env.NODE_ENV === 'development' && userId === 'dev-admin-id') {
+    return {
+      totalIncome: 150000,
+      totalExpenses: 85000,
+      netProfit: 65000,
+      pendingApprovals: 5,
+      pendingRecovery: 12000,
+      lowStockCount: 3,
+      approvedExpenses: 75000,
+      rejectedExpenses: 5000,
+      expenseCount: 42,
+      incomeCount: 18,
+      profitMargin: 43.33,
+      walletBalance: 25000,
+    };
   }
 
   const user = await prisma.user.findUnique({
@@ -198,6 +232,18 @@ export async function getDashboardDataEnhanced(dateRange = 'THIS_MONTH', customS
 }
 
 export async function getExpenseByCategoryData() {
+  // Development bypass: return mock data if no database
+  const session = await auth();
+  if (process.env.NODE_ENV === 'development' && session?.user?.id === 'dev-admin-id') {
+    return [
+      { name: 'Salaries', value: 45000 },
+      { name: 'Office Supplies', value: 12000 },
+      { name: 'Travel', value: 8000 },
+      { name: 'Marketing', value: 15000 },
+      { name: 'Utilities', value: 5000 },
+    ];
+  }
+
   const data = await prisma.expense.groupBy({
     by: ['category'],
     _sum: {
@@ -212,6 +258,16 @@ export async function getExpenseByCategoryData() {
 }
 
 export async function getProjectProfitabilityData() {
+  // Development bypass: return mock data if no database
+  const session = await auth();
+  if (process.env.NODE_ENV === 'development' && session?.user?.id === 'dev-admin-id') {
+    return [
+      { name: 'Project Alpha', profit: 25000, income: 50000, expense: 25000 },
+      { name: 'Project Beta', profit: 15000, income: 40000, expense: 25000 },
+      { name: 'Project Gamma', profit: -5000, income: 20000, expense: 25000 },
+    ];
+  }
+
   const projects = await prisma.project.findMany(); // Fetch projects first
 
   const projectData = await Promise.all(
@@ -245,6 +301,19 @@ export async function getWalletBalanceData() {
 
   if (!userId) {
     return [];
+  }
+
+  // Development bypass: return mock data if no database
+  if (process.env.NODE_ENV === 'development' && userId === 'dev-admin-id') {
+    const last30Days = Array.from({ length: 30 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (29 - i));
+      return {
+        date: d.toLocaleDateString(),
+        balance: 20000 + Math.floor(Math.random() * 10000),
+      };
+    });
+    return last30Days;
   }
 
   const user = await prisma.user.findUnique({
