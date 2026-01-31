@@ -165,7 +165,7 @@ export async function POST(req: Request) {
         },
         { status: 400 }
       );
-    );
+    }
   }
 
   // Create expense and deduct from wallet in a transaction
