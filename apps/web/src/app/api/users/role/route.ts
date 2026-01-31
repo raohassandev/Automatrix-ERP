@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -15,7 +16,12 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { email, roleName } = body || {};
+  let { email, roleName } = body || {};
+
+  // Sanitize inputs
+  if (email) email = sanitizeString(email);
+  if (roleName) roleName = sanitizeString(roleName);
+  
   if (!email || !roleName) {
     return NextResponse.json({ success: false, error: "email and roleName required" }, { status: 400 });
   }

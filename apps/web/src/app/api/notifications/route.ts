@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notificationSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function GET() {
   const session = await auth();
@@ -34,12 +35,21 @@ export async function POST(req: Request) {
     );
   }
 
+  // Sanitize string inputs after validation
+  const sanitizedData = {
+    ...parsed.data,
+    userId: parsed.data.userId ? sanitizeString(parsed.data.userId) : undefined,
+    type: sanitizeString(parsed.data.type),
+    message: sanitizeString(parsed.data.message),
+    status: parsed.data.status ? sanitizeString(parsed.data.status) : "NEW",
+  };
+
   const created = await prisma.notification.create({
     data: {
-      userId: parsed.data.userId || session.user.id,
-      type: parsed.data.type,
-      message: parsed.data.message,
-      status: parsed.data.status || "NEW",
+      userId: sanitizedData.userId || session.user.id,
+      type: sanitizedData.type,
+      message: sanitizedData.message,
+      status: sanitizedData.status,
     },
   });
 
@@ -47,7 +57,7 @@ export async function POST(req: Request) {
     action: "CREATE_NOTIFICATION",
     entity: "Notification",
     entityId: created.id,
-    newValue: JSON.stringify(parsed.data),
+    newValue: JSON.stringify(sanitizedData),
     userId: session.user.id,
   });
 

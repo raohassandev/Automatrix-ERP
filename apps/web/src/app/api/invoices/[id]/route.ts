@@ -5,6 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -24,8 +25,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   const data: Record<string, unknown> = {};
-  if (body.status) data.status = body.status;
-  if (body.notes !== undefined) data.notes = body.notes;
+  if (body.status) data.status = sanitizeString(body.status);
+  if (body.notes !== undefined) data.notes = sanitizeString(body.notes);
   if (body.paymentDate) data.paymentDate = new Date(body.paymentDate);
   if (body.dueDate) data.dueDate = new Date(body.dueDate);
   if (body.amount !== undefined) data.amount = new Prisma.Decimal(body.amount);
@@ -44,7 +45,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   return NextResponse.json({ success: true, data: updated });
 }
-
 export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {

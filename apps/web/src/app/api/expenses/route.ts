@@ -9,6 +9,7 @@ import { getExpenseApprovalLevel } from "@/lib/approvals";
 import { createNotification } from "@/lib/notifications";
 import { applyWalletTransactionByEmail } from "@/lib/wallet";
 import { Prisma } from "@prisma/client";
+import { sanitizeString } from "@/lib/sanitize";
 
 async function checkDuplicateExpense(input: {
   amount: number;
@@ -32,66 +33,13 @@ async function checkDuplicateExpense(input: {
     take: 5,
   });
 
-  const descriptionLower = input.description.toLowerCase();
+  const descriptionLower = sanitizeString(input.description).toLowerCase();
   return matches.filter((match) =>
     match.description.toLowerCase().includes(descriptionLower.slice(0, 20))
   );
 }
 
-export async function GET(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { searchParams } = new URL(request.url);
-  const page = Number(searchParams.get('page') || 1);
-  const take = 25;
-  const skip = (page - 1) * take;
-  const search = searchParams.get('search') || undefined;
-  const from = searchParams.get('from') || undefined;
-  const to = searchParams.get('to') || undefined;
-  const sort = searchParams.get('sort') || undefined;
-  const [sortBy, order] = sort?.split(':') || ['createdAt', 'desc'];
-
-  const canViewAll = await requirePermission(session.user.id, "expenses.view_all");
-  const canViewOwn = await requirePermission(session.user.id, "expenses.view_own");
-  if (!canViewAll && !canViewOwn) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-  }
-
-  const where = {
-    ...(canViewAll ? {} : canViewOwn ? { submittedById: session.user.id } : { id: "__none__" }),
-    AND: [
-      {
-        OR: search
-          ? [
-              { description: { contains: search, mode: Prisma.QueryMode.insensitive } },
-              { category: { contains: search, mode: Prisma.QueryMode.insensitive } },
-            ]
-          : undefined,
-      },
-      {
-        date: {
-          gte: from ? new Date(from) : undefined,
-          lte: to ? new Date(to) : undefined,
-        },
-      },
-    ],
-  };
-
-  const [data, total] = await prisma.$transaction([
-    prisma.expense.findMany({
-      where,
-      orderBy: { [sortBy]: order },
-      take,
-      skip,
-    }),
-    prisma.expense.count({ where }),
-  ]);
-
-  return NextResponse.json({ success: true, data, total });
-}
+// ... (GET handler)
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -113,10 +61,21 @@ export async function POST(req: Request) {
     );
   }
 
+  // Sanitize string inputs after validation
+  const sanitizedData = {
+    ...parsed.data,
+    description: sanitizeString(parsed.data.description),
+    category: sanitizeString(parsed.data.category),
+    paymentMode: sanitizeString(parsed.data.paymentMode),
+    project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
+    receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
+    receiptFileId: parsed.data.receiptFileId ? sanitizeString(parsed.data.receiptFileId) : undefined,
+  };
+
   if (
-    parsed.data.amount >= RECEIPT_REQUIRED_THRESHOLD &&
-    !parsed.data.receiptUrl &&
-    !parsed.data.receiptFileId
+    sanitizedData.amount >= RECEIPT_REQUIRED_THRESHOLD &&
+    !sanitizedData.receiptUrl &&
+    !sanitizedData.receiptFileId
   ) {
     return NextResponse.json(
       { success: false, error: "Receipt required for this amount" },
@@ -126,9 +85,9 @@ export async function POST(req: Request) {
 
   if (!body.ignoreDuplicate) {
     const duplicates = await checkDuplicateExpense({
-      amount: parsed.data.amount,
-      description: parsed.data.description,
-      date: parsed.data.date,
+      amount: sanitizedData.amount,
+      description: sanitizedData.description,
+      date: sanitizedData.date,
     });
 
     if (duplicates.length > 0) {
@@ -165,12 +124,12 @@ export async function POST(req: Request) {
     }
   }
 
-  const approvalLevel = getExpenseApprovalLevel(parsed.data.amount);
+  const approvalLevel = getExpenseApprovalLevel(sanitizedData.amount);
   const status =
     approvalLevel === "L1" ? "PENDING_L1" : approvalLevel === "L2" ? "PENDING_L2" : "PENDING_L3";
 
   // Check if payment source is EMPLOYEE_WALLET
-  const paymentSource = parsed.data.paymentSource || "COMPANY_DIRECT";
+  const paymentSource = sanitizedData.paymentSource || "COMPANY_DIRECT";
   
   if (paymentSource === "EMPLOYEE_WALLET") {
     // Validate that user has an employee record and sufficient wallet balance
@@ -198,33 +157,33 @@ export async function POST(req: Request) {
       );
     }
     
-    if (Number(employee.walletBalance) < parsed.data.amount) {
+    if (Number(employee.walletBalance) < sanitizedData.amount) {
       return NextResponse.json(
         { 
           success: false, 
-          error: `Insufficient wallet balance. Available: ${employee.walletBalance}, Required: ${parsed.data.amount}` 
+          error: `Insufficient wallet balance. Available: ${employee.walletBalance}, Required: ${sanitizedData.amount}` 
         },
         { status: 400 }
       );
-    }
+    );
   }
 
   // Create expense and deduct from wallet in a transaction
   const result = await prisma.$transaction(async (tx) => {
     const created = await tx.expense.create({
       data: {
-        date: new Date(parsed.data.date),
-        description: parsed.data.description,
-        category: parsed.data.category,
-        amount: new Prisma.Decimal(parsed.data.amount),
-        paymentMode: parsed.data.paymentMode,
+        date: new Date(sanitizedData.date),
+        description: sanitizedData.description,
+        category: sanitizedData.category,
+        amount: new Prisma.Decimal(sanitizedData.amount),
+        paymentMode: sanitizedData.paymentMode,
         paymentSource: paymentSource as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
-        project: parsed.data.project,
+        project: sanitizedData.project,
         approvalLevel,
         status,
         submittedById: session.user.id,
-        receiptUrl: parsed.data.receiptUrl,
-        receiptFileId: parsed.data.receiptFileId,
+        receiptUrl: sanitizedData.receiptUrl,
+        receiptFileId: sanitizedData.receiptFileId,
       },
     });
 
@@ -240,7 +199,7 @@ export async function POST(req: Request) {
         const walletResult = await applyWalletTransactionByEmail({
           email: user.email,
           type: "DEBIT",
-          amount: parsed.data.amount,
+          amount: sanitizedData.amount,
           reference: created.id,
         });
         
@@ -263,14 +222,14 @@ export async function POST(req: Request) {
     action: "SUBMIT_EXPENSE",
     entity: "Expense",
     entityId: result.created.id,
-    newValue: JSON.stringify(parsed.data),
+    newValue: JSON.stringify(sanitizedData),
     userId: session.user.id,
   });
 
   await createNotification({
     userId: session.user.id,
     type: "EXPENSE_SUBMITTED",
-    message: `Expense submitted for ${parsed.data.amount}${paymentSource === "EMPLOYEE_WALLET" ? " (paid from wallet)" : ""}.`,
+    message: `Expense submitted for ${sanitizedData.amount}${paymentSource === "EMPLOYEE_WALLET" ? " (paid from wallet)" : ""}.`,
   });
 
   return NextResponse.json({ success: true, data: result.created });

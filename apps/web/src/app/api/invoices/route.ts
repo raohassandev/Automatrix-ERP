@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function GET() {
   const session = await auth();
@@ -42,15 +43,24 @@ export async function POST(req: Request) {
     );
   }
 
+  // Sanitize string inputs after validation
+  const sanitizedData = {
+    ...parsed.data,
+    invoiceNo: sanitizeString(parsed.data.invoiceNo),
+    projectId: sanitizeString(parsed.data.projectId),
+    status: parsed.data.status ? (sanitizeString(parsed.data.status) as "DRAFT" | "SENT" | "PAID" | "OVERDUE") : "DRAFT",
+    notes: parsed.data.notes ? sanitizeString(parsed.data.notes) : undefined,
+  };
+
   const created = await prisma.invoice.create({
     data: {
-      invoiceNo: parsed.data.invoiceNo,
-      projectId: parsed.data.projectId,
-      date: new Date(parsed.data.date),
-      amount: new Prisma.Decimal(parsed.data.amount),
-      dueDate: new Date(parsed.data.dueDate),
-      status: (parsed.data.status as "DRAFT" | "SENT" | "PAID" | "OVERDUE") || "DRAFT",
-      notes: parsed.data.notes,
+      invoiceNo: sanitizedData.invoiceNo,
+      projectId: sanitizedData.projectId,
+      date: new Date(sanitizedData.date),
+      amount: new Prisma.Decimal(sanitizedData.amount),
+      dueDate: new Date(sanitizedData.dueDate),
+      status: sanitizedData.status,
+      notes: sanitizedData.notes,
     },
   });
 
@@ -58,7 +68,7 @@ export async function POST(req: Request) {
     action: "CREATE_INVOICE",
     entity: "Invoice",
     entityId: created.id,
-    newValue: JSON.stringify(parsed.data),
+    newValue: JSON.stringify(sanitizedData),
     userId: session.user.id,
   });
 

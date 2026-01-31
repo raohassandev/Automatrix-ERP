@@ -5,6 +5,7 @@ import { employeeSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function GET() {
   const session = await auth();
@@ -41,16 +42,25 @@ export async function POST(req: Request) {
     );
   }
 
+  // Sanitize string inputs after validation
+  const sanitizedData = {
+    ...parsed.data,
+    email: sanitizeString(parsed.data.email),
+    name: sanitizeString(parsed.data.name),
+    phone: parsed.data.phone ? sanitizeString(parsed.data.phone) : undefined,
+    role: sanitizeString(parsed.data.role),
+  };
+
   const initialWalletBalance = body.initialWalletBalance || 0;
 
   // Create employee and initial wallet entry in a transaction
   const result = await prisma.$transaction(async (tx) => {
     const created = await tx.employee.create({
       data: {
-        email: parsed.data.email,
-        name: parsed.data.name,
-        phone: parsed.data.phone,
-        role: parsed.data.role,
+        email: sanitizedData.email,
+        name: sanitizedData.name,
+        phone: sanitizedData.phone,
+        role: sanitizedData.role,
         walletBalance: new Prisma.Decimal(initialWalletBalance),
       },
     });
@@ -76,7 +86,7 @@ export async function POST(req: Request) {
     action: "CREATE_EMPLOYEE",
     entity: "Employee",
     entityId: result.id,
-    newValue: JSON.stringify({ ...parsed.data, initialWalletBalance }),
+    newValue: JSON.stringify({ ...sanitizedData, initialWalletBalance }),
     userId: session.user.id,
   });
 

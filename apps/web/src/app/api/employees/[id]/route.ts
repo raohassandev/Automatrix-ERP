@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -18,10 +19,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const body = await req.json();
 
   const data: Record<string, unknown> = {};
-  if (body.name) data.name = body.name;
-  if (body.phone !== undefined) data.phone = body.phone;
-  if (body.role) data.role = body.role;
-  if (body.status) data.status = body.status;
+  if (body.name) data.name = sanitizeString(body.name);
+  if (body.phone !== undefined) data.phone = body.phone ? sanitizeString(body.phone) : null;
+  if (body.role) data.role = sanitizeString(body.role);
+  if (body.status) data.status = sanitizeString(body.status);
 
   const updated = await prisma.employee.update({ where: { id }, data });
 
