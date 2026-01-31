@@ -19,6 +19,17 @@ const credentialsProvider = Credentials({
     const password = typeof credentials?.password === "string" ? credentials.password : "";
     if (!email || !password) return null;
 
+    // Development bypass: hardcoded credentials
+    if (process.env.NODE_ENV === "development" && email === "admin@automatrix.local" && password === "admin123") {
+      return {
+        id: "dev-admin-id",
+        email: "admin@automatrix.local",
+        name: "Admin User",
+        roleId: "dev-ceo-role-id",
+        role: "CEO",
+      };
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
     });
