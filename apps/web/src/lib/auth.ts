@@ -63,14 +63,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         token.roleId = (user as { roleId?: string }).roleId || null;
-        const roleId = (user as { roleId?: string }).roleId;
-        const role = roleId
-          ? await prisma.role.findUnique({
-              where: { id: roleId },
-              select: { name: true },
-            })
-          : null;
-        token.role = role?.name || "Guest";
+        
+        // Development bypass: use role from user object if available
+        if ((user as { role?: string }).role) {
+          token.role = (user as { role?: string }).role;
+        } else {
+          const roleId = (user as { roleId?: string }).roleId;
+          const role = roleId
+            ? await prisma.role.findUnique({
+                where: { id: roleId },
+                select: { name: true },
+              })
+            : null;
+          token.role = role?.name || "Guest";
+        }
       }
       return token;
     },
