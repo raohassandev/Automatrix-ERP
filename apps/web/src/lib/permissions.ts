@@ -70,6 +70,13 @@ export function hasPermission(role: RoleName, permission: string) {
   const list = PERMISSIONS[role] as readonly string[] | undefined;
   if (!list) return false;
   if (list.includes("*")) return true;
+  
+  // Defensive check: ensure permission is a string
+  if (typeof permission !== 'string') {
+    console.error('Permission must be a string, got:', typeof permission, permission);
+    return false;
+  }
+  
   if (list.includes(permission)) return true;
   const permissionModule = permission.split(".")[0];
   return list.includes(`${permissionModule}.*`);

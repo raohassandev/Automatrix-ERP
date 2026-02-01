@@ -39,7 +39,99 @@ async function checkDuplicateExpense(input: {
   );
 }
 
-// ... (GET handler)
+export async function GET(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const canViewAll = await requirePermission(session.user.id, "expenses.view_all");
+  const canViewOwn = await requirePermission(session.user.id, "expenses.view_own");
+  
+  if (!canViewAll && !canViewOwn) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const category = searchParams.get('category') || '';
+    const status = searchParams.get('status') || '';
+    const sortBy = searchParams.get('sortBy') || 'date';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
+
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {};
+    
+    // Check if user can view all expenses or only their own
+    if (!canViewAll) {
+      where.submittedById = session.user.id;
+    }
+
+    if (search) {
+      where.OR = [
+        { description: { contains: search } },
+        { category: { contains: search } },
+      ];
+    }
+
+    if (category) {
+      where.category = category;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    // Build orderBy
+    const orderBy: any = {};
+    orderBy[sortBy] = sortOrder;
+
+    const [expenses, total] = await Promise.all([
+      prisma.expense.findMany({
+        where,
+        include: {
+          submittedBy: { select: { id: true, email: true, name: true } },
+          approvedBy: { select: { id: true, email: true, name: true } },
+        },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      prisma.expense.count({ where }),
+    ]);
+
+    // Convert Decimal to number for JSON serialization
+    const serializedExpenses = expenses.map(expense => ({
+      ...expense,
+      amount: Number(expense.amount),
+      approvedAmount: expense.approvedAmount ? Number(expense.approvedAmount) : null,
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        expenses: serializedExpenses,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching expenses:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(req: Request) {
   const session = await auth();

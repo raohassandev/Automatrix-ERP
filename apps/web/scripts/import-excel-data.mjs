@@ -55,7 +55,7 @@ async function getOrCreateUser(email, name, role) {
 async function importData() {
   console.log('📊 Starting data import from Excel...\n');
   
-  const filePath = '/Users/israrulhaq/Desktop/DEV/Automatrix-ERP/archive/Automatrix_ERP.xlsx';
+  const filePath = '/Users/israrulhaq/Desktop/DEV/Automatrix-ERP/data/legacy/Automatrix_ERP.xlsx';
   const workbook = XLSX.readFile(filePath);
   
   let stats = {

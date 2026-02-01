@@ -9,7 +9,7 @@ test.describe('Authentication', () => {
 
   test('should register a new user and login', async ({ page }) => {
     // Navigate to login page
-    await page.goto('http://localhost:3001/login');
+    await page.goto('/login');
     
     // Fill in registration form
     await page.fill('input[placeholder="Name (for new account)"]', testName);
@@ -28,7 +28,7 @@ test.describe('Authentication', () => {
 
   test('should login with existing credentials', async ({ page }) => {
     // First create a user via API
-    const response = await page.request.post('http://localhost:3001/api/register', {
+    const response = await page.request.post('http://localhost:3000/api/register', {
       data: {
         email: `existing${Date.now()}@example.com`,
         password: testPassword,
@@ -41,7 +41,7 @@ test.describe('Authentication', () => {
     const email = data.data.email;
     
     // Now test login
-    await page.goto('http://localhost:3001/login');
+    await page.goto('/login');
     
     await page.fill('input[placeholder="Email"]', email);
     await page.fill('input[placeholder*="Password"]', testPassword);
@@ -54,7 +54,7 @@ test.describe('Authentication', () => {
   });
 
   test('should show error for invalid credentials', async ({ page }) => {
-    await page.goto('http://localhost:3001/login');
+    await page.goto('/login');
     
     await page.fill('input[placeholder="Email"]', 'nonexistent@example.com');
     await page.fill('input[placeholder*="Password"]', 'wrongpassword');
@@ -69,7 +69,7 @@ test.describe('Authentication', () => {
     const duplicateEmail = `duplicate${Date.now()}@example.com`;
     
     // Create user via API first
-    await page.request.post('http://localhost:3001/api/register', {
+    await page.request.post('http://localhost:3000/api/register', {
       data: {
         email: duplicateEmail,
         password: testPassword,
@@ -78,7 +78,7 @@ test.describe('Authentication', () => {
     });
     
     // Try to register again with same email
-    await page.goto('http://localhost:3001/login');
+    await page.goto('/login');
     
     await page.fill('input[placeholder="Name (for new account)"]', 'Second User');
     await page.fill('input[placeholder="Email"]', duplicateEmail);
@@ -91,7 +91,7 @@ test.describe('Authentication', () => {
   });
 
   test('should validate email format', async ({ page }) => {
-    await page.goto('http://localhost:3001/login');
+    await page.goto('/login');
     
     await page.fill('input[placeholder="Name (for new account)"]', 'Test User');
     await page.fill('input[placeholder="Email"]', 'notanemail');
@@ -104,7 +104,7 @@ test.describe('Authentication', () => {
   });
 
   test('should validate password length', async ({ page }) => {
-    await page.goto('http://localhost:3001/login');
+    await page.goto('/login');
     
     await page.fill('input[placeholder="Name (for new account)"]', 'Test User');
     await page.fill('input[placeholder="Email"]', `user${Date.now()}@example.com`);
@@ -117,7 +117,7 @@ test.describe('Authentication', () => {
   });
 
   test('should show Google sign-in button', async ({ page }) => {
-    await page.goto('http://localhost:3001/login');
+    await page.goto('/login');
     
     // Google button should be present (if configured)
     const googleButton = page.locator('button:has-text("Sign in with Google")');

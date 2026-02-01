@@ -6,12 +6,12 @@ const config: PlaywrightTestConfig = {
   expect: { timeout: 5000 },
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:3001",
+    baseURL: "http://127.0.0.1:3000",
     trace: "on-first-retry",
   },
   webServer: {
-    command: "pnpm dev -- --hostname 0.0.0.0 --port 3001",
-    url: "http://127.0.0.1:3001",
+    command: "cd ../../ && pnpm -C apps/web dev",
+    url: "http://127.0.0.1:3000",
     reuseExistingServer: true,
     timeout: 120 * 1000,
   },
