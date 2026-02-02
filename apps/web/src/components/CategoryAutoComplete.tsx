@@ -11,11 +11,13 @@ import { toast } from 'sonner';
 interface CategoryAutoCompleteProps {
   value: string;
   onChange: (value: string) => void;
+  type?: 'expense' | 'inventory' | 'income'; // Filter categories by type
 }
 
 export default function CategoryAutoComplete({
   value,
   onChange,
+  type = 'expense', // Default to expense for backward compatibility
 }: CategoryAutoCompleteProps) {
   const [open, setOpen] = React.useState(false);
   const [categories, setCategories] = React.useState<string[]>([]);
@@ -25,7 +27,8 @@ export default function CategoryAutoComplete({
     const fetchCategories = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/categories');
+        const url = `/api/categories${type ? `?type=${type}` : ''}`;
+        const res = await fetch(url);
         const data = await res.json();
         if (!res.ok) {
           throw new Error(data.error || 'Failed to fetch categories');
@@ -39,7 +42,7 @@ export default function CategoryAutoComplete({
       }
     };
     fetchCategories();
-  }, []);
+  }, [type]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

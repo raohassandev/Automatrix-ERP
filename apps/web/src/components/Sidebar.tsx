@@ -13,10 +13,9 @@ import {
   FileText,
   Bell,
   FileCheck,
-  Paperclip,
   FileBarChart,
   Settings,
-  Wallet,
+  Tags,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
@@ -35,6 +34,7 @@ const navigation = [
   { name: "Notifications", href: "/notifications", icon: Bell },
   { name: "Project Reports", href: "/reports/projects", icon: FileBarChart },
   { name: "Reports", href: "/reports", icon: FileBarChart },
+  { name: "Categories", href: "/categories", icon: Tags },
   { name: "Audit Log", href: "/audit", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

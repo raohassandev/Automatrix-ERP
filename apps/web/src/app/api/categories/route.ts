@@ -2,21 +2,72 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const categories = await prisma.expense.findMany({
+  const { searchParams } = new URL(req.url);
+  const type = searchParams.get('type'); // 'expense', 'inventory', or 'income'
+
+  const where: any = {
+    isActive: true,
+  };
+  
+  if (type) {
+    where.type = type;
+  }
+
+  const categories = await prisma.category.findMany({
+    where,
     select: {
-      category: true,
+      id: true,
+      name: true,
+      type: true,
+      description: true,
     },
-    distinct: ['category'],
     orderBy: {
-      category: 'asc',
+      name: 'asc',
     },
   });
 
-  return NextResponse.json({ success: true, data: categories.map((c) => c.category) });
+  // Return just the names for backward compatibility with AutoComplete components
+  return NextResponse.json({ 
+    success: true, 
+    data: categories.map((c) => c.name),
+    categories: categories // Also return full category objects for admin use
+  });
+}
+
+export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const { name, type, description } = body;
+
+    if (!name || !type) {
+      return NextResponse.json({ success: false, error: "Name and type are required" }, { status: 400 });
+    }
+
+    const category = await prisma.category.create({
+      data: {
+        name,
+        type,
+        description,
+      },
+    });
+
+    return NextResponse.json({ success: true, data: category });
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      return NextResponse.json({ success: false, error: "Category name already exists" }, { status: 400 });
+    }
+    console.error("Error creating category:", error);
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+  }
 }

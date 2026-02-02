@@ -49,6 +49,16 @@ model Permission {
   roles       RolePermission[]
 }
 
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  type        String   // 'expense' or 'inventory' or 'income'
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model RolePermission {
   id            String      @id @default(cuid())
   roleId        String
