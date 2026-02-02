@@ -49,8 +49,8 @@ function ExpensesPageContent() {
     const fetchExpenses = async () => {
       const res = await fetch(`/api/expenses?${searchParams.toString()}`);
       const data = await res.json();
-      setExpenses(data.data || []); // Ensure data.data is always an array
-      setTotalPages(Math.ceil((data.total || 0) / 25));
+      setExpenses(data.data?.expenses || []); // Access expenses from nested data object
+      setTotalPages(Math.ceil((data.data?.pagination?.total || 0) / 25));
     };
     fetchExpenses();
   }, [searchParams]);
