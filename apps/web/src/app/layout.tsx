@@ -4,13 +4,9 @@ import './globals.css';
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
-import MobileMenu from "@/components/MobileMenu";
-import ThemeToggle from "@/components/ThemeToggle";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
-import { KeyboardShortcutsHelp } from "@/components/KeyboardShortcutsHelp";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Sidebar } from "@/components/Sidebar";
-import { UserNav } from "@/components/UserNav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

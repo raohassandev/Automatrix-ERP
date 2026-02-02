@@ -24,10 +24,21 @@ export default async function AttachmentsPage() {
     );
   }
 
-  const attachments = await prisma.attachment.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  let attachments = [];
+  try {
+    attachments = await prisma.attachment.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  } catch (error) {
+    console.error("Error fetching attachments:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Attachments</h1>
+        <p className="mt-2 text-muted-foreground">Error loading attachment data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">

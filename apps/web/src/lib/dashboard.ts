@@ -13,8 +13,8 @@ export async function getChartData() {
     
     return months.map((name, i) => ({
       name,
-      income: Math.floor(Math.random() * 20000) + 10000,
-      expense: Math.floor(Math.random() * 15000) + 5000,
+      income: (i % 3 + 1) * 8000 + 12000, // Deterministic values between 20000-36000
+      expense: (i % 2 + 1) * 6000 + 8000,  // Deterministic values between 14000-20000
     }));
   }
 
@@ -310,7 +310,7 @@ export async function getWalletBalanceData() {
       d.setDate(d.getDate() - (29 - i));
       return {
         date: d.toLocaleDateString(),
-        balance: 20000 + Math.floor(Math.random() * 10000),
+        balance: 20000 + (i % 10) * 1000, // Deterministic values between 20000-29000
       };
     });
     return last30Days;

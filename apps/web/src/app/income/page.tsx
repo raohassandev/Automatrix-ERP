@@ -20,11 +20,22 @@ export default async function IncomePage() {
   const canViewOwn = await requirePermission(userId, "income.view_own");
   const canExport = canViewAll || canViewOwn;
 
-  const entries = await prisma.income.findMany({
-    where: canViewAll ? {} : canViewOwn ? { addedById: userId } : { id: "__none__" },
-    orderBy: { createdAt: "desc" },
-    take: 25,
-  });
+  let entries = [];
+  try {
+    entries = await prisma.income.findMany({
+      where: canViewAll ? {} : canViewOwn ? { addedById: userId } : { id: "__none__" },
+      orderBy: { createdAt: "desc" },
+      take: 25,
+    });
+  } catch (error) {
+    console.error("Error fetching income entries:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Income</h1>
+        <p className="mt-2 text-muted-foreground">Error loading income data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">

@@ -29,13 +29,24 @@ export default async function EmployeesPage() {
     ? {}
     : { email: session.user.email || "__none__" };
 
-  const employeesRaw = await prisma.employee.findMany({ where, orderBy: { name: "asc" } });
-  
-  // Convert Decimal to number for component compatibility
-  const employees = employeesRaw.map((emp) => ({
-    ...emp,
-    walletBalance: parseFloat(emp.walletBalance.toString()),
-  }));
+  let employees = [];
+  try {
+    const employeesRaw = await prisma.employee.findMany({ where, orderBy: { name: "asc" } });
+    
+    // Convert Decimal to number for component compatibility
+    employees = employeesRaw.map((emp) => ({
+      ...emp,
+      walletBalance: parseFloat(emp.walletBalance.toString()),
+    }));
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Employees</h1>
+        <p className="mt-2 text-muted-foreground">Error loading employee data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">

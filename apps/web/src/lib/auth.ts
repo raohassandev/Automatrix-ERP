@@ -26,7 +26,7 @@ const credentialsProvider = Credentials({
         email: "admin@automatrix.local",
         name: "Admin User",
         roleId: "dev-ceo-role-id",
-        role: "CEO",
+        role: { name: "CEO" },
       };
     }
 
@@ -62,13 +62,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id;
-        token.roleId = (user as { roleId?: string }).roleId || null;
+        token.roleId = user.roleId || null;
         
-        // Development bypass: use role from user object if available
-        if ((user as { role?: string }).role) {
-          token.role = (user as { role?: string }).role;
+        // Check if role is already populated (from dev bypass or includes)
+        if (user.role && typeof user.role === 'object' && 'name' in user.role) {
+          token.role = user.role.name;
         } else {
-          const roleId = (user as { roleId?: string }).roleId;
+          const roleId = user.roleId;
           const role = roleId
             ? await prisma.role.findUnique({
                 where: { id: roleId },

@@ -26,7 +26,18 @@ export default async function InventoryPage() {
     );
   }
 
-  const items = await prisma.inventoryItem.findMany({ orderBy: { createdAt: "desc" } });
+  let items = [];
+  try {
+    items = await prisma.inventoryItem.findMany({ orderBy: { createdAt: "desc" } });
+  } catch (error) {
+    console.error("Error fetching inventory items:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Inventory</h1>
+        <p className="mt-2 text-muted-foreground">Error loading inventory data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">

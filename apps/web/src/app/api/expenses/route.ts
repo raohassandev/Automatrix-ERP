@@ -65,7 +65,12 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: {
+      submittedById?: string;
+      OR?: Array<{ description?: { contains: string } } | { category?: { contains: string } }>;
+      category?: string;
+      status?: string;
+    } = {};
     
     // Check if user can view all expenses or only their own
     if (!canViewAll) {
@@ -88,7 +93,7 @@ export async function GET(req: Request) {
     }
 
     // Build orderBy
-    const orderBy: any = {};
+    const orderBy: Record<string, string> = {};
     orderBy[sortBy] = sortOrder;
 
     const [expenses, total] = await Promise.all([

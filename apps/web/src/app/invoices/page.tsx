@@ -24,7 +24,18 @@ export default async function InvoicesPage() {
     );
   }
 
-  const invoices = await prisma.invoice.findMany({ orderBy: { createdAt: "desc" } });
+  let invoices = [];
+  try {
+    invoices = await prisma.invoice.findMany({ orderBy: { createdAt: "desc" } });
+  } catch (error) {
+    console.error("Error fetching invoices:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Invoices</h1>
+        <p className="mt-2 text-muted-foreground">Error loading invoice data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">

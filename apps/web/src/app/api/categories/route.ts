@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get('type'); // 'expense', 'inventory', or 'income'
 
-  const where: any = {
+  const where: { isActive: boolean; type?: string } = {
     isActive: true,
   };
   
@@ -63,8 +63,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ success: true, data: category });
-  } catch (error: any) {
-    if (error.code === 'P2002') {
+  } catch (error: unknown) {
+    if ((error as { code?: string })?.code === 'P2002') {
       return NextResponse.json({ success: false, error: "Category name already exists" }, { status: 400 });
     }
     console.error("Error creating category:", error);

@@ -7,14 +7,15 @@ import Link from "next/link";
 export default async function ExpensesByProjectPage({
   searchParams,
 }: {
-  searchParams: { project?: string };
+  searchParams: Promise<{ project?: string }>;
 }) {
   const session = await auth();
   if (!session) {
     redirect("/login");
   }
 
-  const projectName = searchParams.project;
+  const resolvedSearchParams = await searchParams;
+  const projectName = resolvedSearchParams.project;
 
   // Get all expenses grouped by project
   const expenses = await prisma.expense.findMany({

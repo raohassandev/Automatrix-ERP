@@ -37,7 +37,7 @@ async function logApiRequest(request: NextRequest, userId: string) {
   }
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const url = new URL(request.url);
   const { pathname } = url;
 
