@@ -16,6 +16,7 @@ import {
   FileBarChart,
   Settings,
   Tags,
+  Shield,
 } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
@@ -36,6 +37,7 @@ const navigation = [
   { name: "Project Reports", href: "/reports/projects", icon: FileBarChart },
   { name: "Reports", href: "/reports", icon: FileBarChart },
   { name: "Categories", href: "/categories", icon: Tags },
+  { name: "User Management", href: "/admin/users", icon: Shield },
   { name: "Audit Log", href: "/audit", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
