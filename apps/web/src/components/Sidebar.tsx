@@ -28,6 +28,7 @@ const navigation = [
   { name: "Income", href: "/income", icon: TrendingUp },
   { name: "Employees", href: "/employees", icon: Users },
   { name: "Projects", href: "/projects", icon: FolderKanban },
+  { name: "Project Financials", href: "/projects/financial", icon: FileBarChart },
   { name: "Inventory", href: "/inventory", icon: Package },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Approvals", href: "/approvals", icon: FileCheck },
