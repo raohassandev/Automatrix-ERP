@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { notificationSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { sanitizeString } from "@/lib/sanitize";
+import { requirePermission } from "@/lib/rbac";
 
 export async function GET() {
   const session = await auth();
@@ -11,8 +12,9 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  const canViewAll = await requirePermission(session.user.id, "notifications.view_all");
   const data = await prisma.notification.findMany({
-    where: { userId: session.user.id },
+    where: canViewAll ? {} : { userId: session.user.id },
     orderBy: { createdAt: "desc" },
     take: 100,
   });
@@ -24,6 +26,11 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const canCreate = await requirePermission(session.user.id, "notifications.edit");
+  if (!canCreate) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   const body = await req.json();

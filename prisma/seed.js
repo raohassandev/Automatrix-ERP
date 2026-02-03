@@ -63,6 +63,11 @@ const permissions = [
   "employees.view_team",
   "employees.view_own",
   "employees.edit_wallet",
+  "notifications.view_all",
+  "notifications.edit",
+  "attachments.view_all",
+  "attachments.edit",
+  "categories.manage",
 ];
 
 const rolePermissionMap = {

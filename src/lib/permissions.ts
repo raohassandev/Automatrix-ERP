@@ -27,6 +27,11 @@ export const PERMISSIONS = {
     "reports.export",
     "employees.view_all",
     "employees.edit_wallet",
+    "notifications.view_all",
+    "notifications.edit",
+    "attachments.view_all",
+    "attachments.edit",
+    "categories.manage",
   ],
   CFO: [
     "dashboard.view",
@@ -61,6 +66,8 @@ export const PERMISSIONS = {
     "reports.export",
     "employees.view_all",
     "employees.edit_wallet",
+    "notifications.view_all",
+    "attachments.view_all",
   ],
   Accountant: [
     "dashboard.view",
@@ -82,6 +89,8 @@ export const PERMISSIONS = {
     "reports.export",
     "employees.view_all",
     "employees.edit_wallet",
+    "attachments.view_all",
+    "notifications.view_all",
   ],
   Marketing: [
     "dashboard.view",
@@ -91,6 +100,7 @@ export const PERMISSIONS = {
     "projects.view_assigned",
     "projects.update_status",
     "reports.view_team",
+    "notifications.view_all",
   ],
   Sales: [
     "dashboard.view",
@@ -100,6 +110,7 @@ export const PERMISSIONS = {
     "projects.view_assigned",
     "invoices.view_all",
     "reports.view_team",
+    "notifications.view_all",
   ],
   Engineering: [
     "dashboard.view",
@@ -115,6 +126,7 @@ export const PERMISSIONS = {
     "employees.view_all",
     "employees.view_team",
     "reports.view_team",
+    "notifications.view_all",
   ],
   Procurement: [
     "dashboard.view",
@@ -125,6 +137,7 @@ export const PERMISSIONS = {
     "inventory.adjust",
     "projects.view_assigned",
     "reports.view_own",
+    "attachments.view_all",
   ],
   "Finance Manager": [
     "dashboard.view",
@@ -159,6 +172,10 @@ export const PERMISSIONS = {
     "reports.export",
     "employees.view_all",
     "employees.edit_wallet",
+    "notifications.view_all",
+    "attachments.view_all",
+    "attachments.edit",
+    "categories.manage",
   ],
   Manager: [
     "dashboard.view",
@@ -179,6 +196,7 @@ export const PERMISSIONS = {
     "projects.update_status",
     "reports.view_team",
     "employees.view_team",
+    "notifications.view_all",
   ],
   Staff: [
     "dashboard.view",
@@ -196,6 +214,9 @@ export const PERMISSIONS = {
 
 export type RoleName = keyof typeof PERMISSIONS;
 export const ROLE_OPTIONS = Object.keys(PERMISSIONS) as RoleName[];
+export const PERMISSION_KEYS = Array.from(
+  new Set(Object.values(PERMISSIONS).flat().filter((perm) => perm !== "*"))
+) as string[];
 
 export function hasPermission(role: RoleName, permission: string) {
   const list = PERMISSIONS[role] as readonly string[] | undefined;

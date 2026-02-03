@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { hasPermission, type RoleName } from "@/lib/permissions";
 
 type Category = {
   id: string;
@@ -13,6 +15,9 @@ type Category = {
 };
 
 export default function CategoriesPage() {
+  const { data: session } = useSession();
+  const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
+  const canManage = hasPermission(roleName, "categories.manage");
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -39,6 +44,10 @@ export default function CategoriesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!canManage) {
+      toast.error('You do not have permission to create categories');
+      return;
+    }
     if (!form.name.trim()) {
       toast.error('Category name is required');
       return;
@@ -74,6 +83,15 @@ export default function CategoriesPage() {
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Category Management</h1>
         <p className="mt-2 text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!canManage) {
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Category Management</h1>
+        <p className="mt-2 text-muted-foreground">You do not have access to categories.</p>
       </div>
     );
   }

@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { requirePermission } from "@/lib/rbac";
 
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const canView = await requirePermission(session.user.id, "categories.manage");
+  if (!canView) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
@@ -44,6 +50,11 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const canManage = await requirePermission(session.user.id, "categories.manage");
+  if (!canManage) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   try {

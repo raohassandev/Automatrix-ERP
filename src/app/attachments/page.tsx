@@ -20,7 +20,9 @@ export default async function AttachmentsPage({
     return redirect('/login');
   }
 
-  const canViewAll = await requirePermission(session.user.id, "reports.view_all");
+  const canViewAll =
+    (await requirePermission(session.user.id, "attachments.view_all")) ||
+    (await requirePermission(session.user.id, "reports.view_all"));
   if (!canViewAll) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">

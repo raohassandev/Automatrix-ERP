@@ -58,7 +58,7 @@ const navigation = [
   { name: "Notifications", href: "/notifications", icon: Bell, permissions: ["dashboard.view", "reports.view_all"] },
   { name: "Project Reports", href: "/reports/projects", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
   { name: "Reports", href: "/reports", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
-  { name: "Categories", href: "/categories", icon: Tags, permissions: ["dashboard.view"] },
+  { name: "Categories", href: "/categories", icon: Tags, permissions: ["categories.manage"] },
   { name: "User Management", href: "/admin/users", icon: Shield, permissions: ["employees.view_all"] },
   { name: "Audit Log", href: "/audit", icon: FileText, permissions: ["reports.view_all"] },
   { name: "Settings", href: "/settings", icon: Settings, permissions: ["dashboard.view"] },

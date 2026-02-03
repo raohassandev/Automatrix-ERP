@@ -3,11 +3,17 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { attachmentSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
+import { requirePermission } from "@/lib/rbac";
 
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const canViewAll = await requirePermission(session.user.id, "attachments.view_all");
+  if (!canViewAll) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   const data = await prisma.attachment.findMany({
@@ -22,6 +28,11 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const canEdit = await requirePermission(session.user.id, "attachments.edit");
+  if (!canEdit) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   const body = await req.json();

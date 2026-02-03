@@ -21,6 +21,7 @@ export default async function NotificationsPage({
   }
 
   const canView =
+    (await requirePermission(session.user.id, "notifications.view_all")) ||
     (await requirePermission(session.user.id, "dashboard.view")) ||
     (await requirePermission(session.user.id, "reports.view_all"));
   if (!canView) {

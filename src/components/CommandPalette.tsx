@@ -24,6 +24,7 @@ import {
   Bell,
   FileCheck,
   Paperclip,
+  Tags,
 } from "lucide-react";
 import { hasPermission, type RoleName } from "@/lib/permissions";
 
@@ -100,6 +101,7 @@ export function CommandPalette() {
             { href: "/audit", label: "Audit Log", icon: FileText, permissions: ["reports.view_all"] },
             { href: "/settings", label: "Settings", icon: Settings, permissions: ["dashboard.view"] },
             { href: "/reports", label: "Reports", icon: FileText, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+            { href: "/categories", label: "Categories", icon: Tags, permissions: ["categories.manage"] },
           ]
             .filter((item) => canAccess(item.permissions))
             .map((item) => {
