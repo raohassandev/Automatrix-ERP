@@ -4,11 +4,13 @@ import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import PaginationControls from "@/components/PaginationControls";
+import DateRangePicker from "@/components/DateRangePicker";
+import Link from "next/link";
 
 export default async function InventoryLedgerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; type?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; type?: string; from?: string; to?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -29,6 +31,8 @@ export default async function InventoryLedgerPage({
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const query = (params.q || "").trim();
   const type = (params.type || "").trim();
+  const from = params.from;
+  const to = params.to;
   const take = 25;
   const skip = (page - 1) * take;
 
@@ -49,6 +53,12 @@ export default async function InventoryLedgerPage({
       { project: { contains: query, mode: "insensitive" } },
       ...(itemFilterIds && itemFilterIds.length > 0 ? [{ itemId: { in: itemFilterIds } }] : []),
     ];
+  }
+  if (from || to) {
+    const range: { gte?: Date; lte?: Date } = {};
+    if (from) range.gte = new Date(from);
+    if (to) range.lte = new Date(to);
+    where.date = range;
   }
 
   const [entries, total] = await Promise.all([
@@ -73,6 +83,7 @@ export default async function InventoryLedgerPage({
 
       <form className="rounded-xl border bg-card p-6 shadow-sm" method="get">
         <div className="flex flex-wrap gap-3 items-end">
+          <DateRangePicker />
           <div className="flex-1 min-w-[200px]">
             <label className="text-sm font-medium">Search</label>
             <input
@@ -95,6 +106,17 @@ export default async function InventoryLedgerPage({
             </select>
           </div>
           <button className="rounded-md bg-black px-4 py-2 text-white">Apply</button>
+          <Link
+            href={`/api/inventory/ledger/export?${new URLSearchParams({
+              ...(query ? { q: query } : {}),
+              ...(type ? { type } : {}),
+              ...(from ? { from } : {}),
+              ...(to ? { to } : {}),
+            }).toString()}`}
+            className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+          >
+            Export CSV
+          </Link>
         </div>
       </form>
 
