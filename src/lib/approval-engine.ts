@@ -35,11 +35,11 @@ export function getRequiredApprovalLevel(amount: number): ApprovalLevel {
 export function getRequiredRoleForLevel(level: ApprovalLevel): string[] {
   switch (level) {
     case 'AUTO':
-      return ['Manager', 'Finance Manager', 'CEO', 'Owner'];
+      return ['Manager', 'Finance Manager', 'CFO', 'CEO', 'Owner'];
     case 'MANAGER':
-      return ['Manager', 'Finance Manager', 'CEO', 'Owner'];
+      return ['Manager', 'Finance Manager', 'CFO', 'CEO', 'Owner'];
     case 'FINANCE_MANAGER':
-      return ['Finance Manager', 'CEO', 'Owner'];
+      return ['Finance Manager', 'CFO', 'CEO', 'Owner'];
     case 'CEO':
       return ['CEO', 'Owner'];
     default:

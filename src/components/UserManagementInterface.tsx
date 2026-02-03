@@ -71,10 +71,26 @@ export function UserManagementInterface({ users, roles }: UserManagementInterfac
       case 'CEO':
       case 'Owner':
         return 'Full system access and administrative privileges';
+      case 'Admin':
+        return 'System administration with broad operational access';
+      case 'CFO':
+        return 'Executive finance oversight, approvals, and reporting';
+      case 'Accountant':
+        return 'Accounting operations, invoicing, and wallet management';
       case 'Finance Manager':
         return 'Financial oversight, approvals, and reporting access';
       case 'Manager':
         return 'Team management and limited approval authority';
+      case 'Marketing':
+        return 'Client and project visibility with updates to sales pipeline';
+      case 'Sales':
+        return 'Client and quotation visibility with invoice access';
+      case 'Engineering':
+        return 'Project execution with expense submission and inventory requests';
+      case 'HR':
+        return 'Employee visibility and team reporting';
+      case 'Procurement':
+        return 'Purchasing, inventory requests, and expense submissions';
       case 'Staff':
         return 'Basic access to own records and assigned projects';
       case 'Guest':
@@ -232,7 +248,7 @@ export function UserManagementInterface({ users, roles }: UserManagementInterfac
                   <h3 className="font-medium">{role.name}</h3>
                   <Badge variant={
                     role.name === 'CEO' || role.name === 'Owner' ? 'default' :
-                    role.name === 'Finance Manager' ? 'secondary' :
+                    role.name === 'CFO' || role.name === 'Finance Manager' ? 'secondary' :
                     role.name === 'Manager' ? 'outline' :
                     role.name === 'Staff' ? 'outline' : 'destructive'
                   }>

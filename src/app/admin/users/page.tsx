@@ -48,6 +48,7 @@ export default async function UserManagementPage() {
       case 'CEO':
       case 'Owner':
         return 'default';
+      case 'CFO':
       case 'Finance Manager':
         return 'secondary';
       case 'Manager':

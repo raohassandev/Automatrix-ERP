@@ -32,7 +32,7 @@ export default function RoleAssignForm() {
         />
         <input
           className="rounded-md border border-border bg-background px-3 py-2 text-foreground"
-          placeholder="Role (Owner, CEO, Finance Manager, Manager, Staff, Guest)"
+          placeholder="Role (Owner, CEO, Admin, CFO, Accountant, Finance Manager, Manager, Marketing, Sales, Engineering, HR, Procurement, Staff, Guest)"
           value={form.roleName}
           onChange={(e) => setForm({ ...form, roleName: e.target.value })}
         />
