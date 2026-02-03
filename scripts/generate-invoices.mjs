@@ -55,8 +55,6 @@ async function generateInvoices() {
 
     // Generate realistic milestone-based invoices
     const invoices = [];
-    let invoiceCounter = 1;
-    
     if (project.client === 'Internal') {
       // Internal projects: Single invoice for cost recovery
       invoices.push({
@@ -159,7 +157,7 @@ async function generateInvoices() {
       const dueDate = new Date(invoiceDate);
       dueDate.setDate(dueDate.getDate() + 30); // 30 day payment terms
       
-      const createdInvoice = await prisma.invoice.create({
+      await prisma.invoice.create({
         data: {
           invoiceNo: invoiceData.invoiceNo,
           projectId: project.projectId,

@@ -112,16 +112,6 @@ export default function InvoiceForm({ projects = [], onClose }: InvoiceFormProps
     }
   }
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'PAID': return 'default';
-      case 'SENT': return 'secondary';
-      case 'OVERDUE': return 'destructive';
-      case 'DRAFT': return 'outline';
-      default: return 'outline';
-    }
-  };
-
   if (!showForm) {
     return (
       <Card>

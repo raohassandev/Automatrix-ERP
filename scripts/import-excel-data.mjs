@@ -23,7 +23,7 @@ function normalizeEmail(email) {
 }
 
 // Helper to get or create user
-async function getOrCreateUser(email, name, role) {
+async function getOrCreateUser(email, name) {
   const normalizedEmail = normalizeEmail(email);
   
   let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
@@ -142,7 +142,7 @@ async function importData() {
         const phone = row['Status'] || '';
         
         // Create user first
-        const user = await getOrCreateUser(email, name, role);
+        await getOrCreateUser(email, name);
         stats.users++;
         
         // Create or update employee
@@ -233,7 +233,7 @@ async function importData() {
         const unitCost = item.unitCost;
         const total = quantity * unitCost;
         
-        const ledger = await prisma.inventoryLedger.create({
+        await prisma.inventoryLedger.create({
           data: {
             itemId: item.id,
             type: ledgerType,
@@ -247,7 +247,7 @@ async function importData() {
           }
         });
         
-        console.log(`  ✅ Created ledger entry: ${item.name} (${action} ${quantity})`);
+        console.log(`  ✅ Created ledger entry: ${item.name} (${ledgerType} ${quantity})`);
         stats.inventoryLedger++;
       } catch (error) {
         console.error(`  ❌ Error importing ledger: ${error.message}`);
@@ -359,7 +359,7 @@ async function importData() {
             const currentBalance = employee.walletBalance || 0;
             const newBalance = parseFloat(currentBalance) + amount;
             
-            const walletEntry = await prisma.walletLedger.create({
+            await prisma.walletLedger.create({
               data: {
                 employeeId: employee.id,
                 type: 'CREDIT',

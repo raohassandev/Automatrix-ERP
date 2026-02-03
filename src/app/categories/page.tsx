@@ -36,6 +36,7 @@ export default function CategoriesPage() {
         setCategories(data.categories || []);
       }
     } catch (error) {
+      console.error("Failed to fetch categories", error);
       toast.error('Failed to fetch categories');
     } finally {
       setLoading(false);
@@ -70,6 +71,7 @@ export default function CategoriesPage() {
         toast.error(data.error || 'Failed to create category');
       }
     } catch (error) {
+      console.error("Failed to create category", error);
       toast.error('Failed to create category');
     }
   }

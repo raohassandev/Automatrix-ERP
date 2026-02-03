@@ -162,7 +162,41 @@ export default function ApprovalActions({
         {/* Reject Modal */}
         {showRejectModal && (
           <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50'>
-            {/* ... (existing reject modal) */}
+            <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+              <h3 className="mb-3 text-lg font-semibold text-foreground">Reject Expense</h3>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Provide a reason for rejection.
+              </p>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Reason for rejection..."
+                className="mb-4 w-full rounded border border-border bg-background p-2 text-sm"
+                rows={4}
+                disabled={pending}
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowRejectModal(false);
+                    setRejectReason('');
+                  }}
+                  disabled={pending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleReject}
+                  disabled={pending || !rejectReason.trim()}
+                >
+                  {pending ? "Rejecting..." : "Confirm Reject"}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </>
@@ -182,4 +216,3 @@ export default function ApprovalActions({
 
   return <span className="text-sm text-gray-500">{status}</span>;
 }
-

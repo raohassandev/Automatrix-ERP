@@ -33,8 +33,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
-  
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type"); // 'pending' or 'stats'

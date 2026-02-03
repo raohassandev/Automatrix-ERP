@@ -2,7 +2,6 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  DollarSign,
   Plus,
   Users,
   FolderKanban,
@@ -11,8 +10,7 @@ import {
   TrendingUp,
   Building2,
 } from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FormDialogManager, type FormType } from "./FormDialogManager";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSession } from "next-auth/react";
@@ -34,8 +32,6 @@ interface ActionMenuProps {
 }
 
 export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
-  const router = useRouter();
-  const pathname = usePathname();
   const [openFormDialog, setOpenFormDialog] = useState<FormType>(null);
   const { data: session } = useSession();
   const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
@@ -225,7 +221,7 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
             exit="exit"
             className="hidden md:flex fixed bottom-24 right-6 z-40 flex-col-reverse gap-3 w-72"
           >
-            {visibleActions.map((action, index) => {
+            {visibleActions.map((action) => {
               const Icon = action.icon;
               return (
                 <motion.button

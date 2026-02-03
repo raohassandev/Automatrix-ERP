@@ -85,7 +85,7 @@ export async function approveExpense(params: {
   reason?: string;
   approvedAmount?: number;
 }) {
-  const { expenseId, approverId, reason, approvedAmount } = params;
+  const { expenseId, approverId, approvedAmount } = params;
 
   // Get expense with employee info
   const expense = await prisma.expense.findUnique({
@@ -269,7 +269,7 @@ export async function approveIncome(params: {
   reason?: string;
   approvedAmount?: number;
 }) {
-  const { incomeId, approverId, reason, approvedAmount } = params;
+  const { incomeId, approverId, approvedAmount } = params;
 
   // Get income entry
   const income = await prisma.income.findUnique({

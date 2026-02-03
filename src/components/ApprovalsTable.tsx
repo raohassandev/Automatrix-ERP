@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import ApprovalActions from "@/components/ApprovalActions";
 import ApprovalTableSection from "@/components/ApprovalTableSection";
@@ -30,8 +29,6 @@ export default function ApprovalsTable({
   expenses: ExpenseRow[];
   income: IncomeRow[];
 }) {
-  const router = useRouter();
-
   return (
     <div className="grid gap-6">
       <ApprovalTableSection
