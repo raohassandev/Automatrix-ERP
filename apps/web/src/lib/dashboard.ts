@@ -45,7 +45,11 @@ export async function getChartData() {
   return data;
 }
 
-export async function getDashboardDataEnhanced(dateRange = 'THIS_MONTH', customStartDate: Date | null = null, customEndDate: Date | null = null) {
+export async function getDashboardDataEnhanced(
+  dateRange = 'ALL_TIME',
+  customStartDate: Date | null = null,
+  customEndDate: Date | null = null
+) {
   const session = await auth();
   const userId = session?.user?.id;
 
@@ -53,17 +57,23 @@ export async function getDashboardDataEnhanced(dateRange = 'THIS_MONTH', customS
     return null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { email: true },
-  });
+  // Prefer session email (works for dev-bypass users that do not exist in the User table).
+  let email: string | null = (session.user as { email?: string | null } | undefined)?.email ?? null;
 
-  if (!user || !user.email) {
+  if (!email) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    email = user?.email ?? null;
+  }
+
+  if (!email) {
     return null;
   }
 
   const employee = await prisma.employee.findUnique({
-    where: { email: user.email },
+    where: { email },
     select: { walletBalance: true },
   });
 
@@ -250,18 +260,24 @@ export async function getWalletBalanceData() {
     return [];
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { email: true },
-  });
+  // Prefer session email (works for dev-bypass users that do not exist in the User table).
+  let email: string | null = (session.user as { email?: string | null } | undefined)?.email ?? null;
 
-  if (!user?.email) {
+  if (!email) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    email = user?.email ?? null;
+  }
+
+  if (!email) {
     return [];
   }
 
   const employee = await prisma.employee.findUnique({
-    where: { email: user.email },
-    include: {
+    where: { email },
+    include: { 
       wallets: {
         orderBy: {
           date: 'asc',

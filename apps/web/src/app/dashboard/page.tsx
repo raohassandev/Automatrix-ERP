@@ -7,21 +7,25 @@ import {
 } from "@/lib/dashboard";
 import { formatMoney } from "@/lib/format";
 import { redirect } from 'next/navigation';
+import { auth } from "@/lib/auth";
 import IncomeExpenseChart from '@/components/IncomeExpenseChart';
 import ExpenseByCategoryChart from '@/components/ExpenseByCategoryChart';
 import ProjectProfitabilityChart from '@/components/ProjectProfitabilityChart';
 import WalletBalanceChart from '@/components/WalletBalanceChart';
 
 export default async function DashboardPage() {
+  // IMPORTANT: Next.js `redirect()` works by throwing a NEXT_REDIRECT error.
+  // Do not call it inside a broad try/catch, otherwise it gets swallowed and logged as a failure.
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect('/login');
+  }
+
   let data, chartData, expenseByCategoryData, projectProfitabilityData, walletBalanceData;
-  
+
   try {
     data = await getDashboardDataEnhanced();
-    
-    if (!data) {
-      return redirect('/login');
-    }
-    
+
     chartData = await getChartData();
     expenseByCategoryData = await getExpenseByCategoryData();
     projectProfitabilityData = await getProjectProfitabilityData();

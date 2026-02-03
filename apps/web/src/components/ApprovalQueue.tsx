@@ -150,7 +150,7 @@ export default function ApprovalQueue({
   if (approvals.length === 0) {
     return (
       <>
-        <div className="rounded-lg bg-white p-12 text-center shadow">
+        <div className="rounded-lg bg-card p-12 text-center shadow">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
             <svg
               className="h-8 w-8 text-green-600"
@@ -166,8 +166,8 @@ export default function ApprovalQueue({
               />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900">All caught up!</h3>
-          <p className="mt-2 text-gray-600">
+          <h3 className="text-lg font-medium text-foreground">All caught up!</h3>
+          <p className="mt-2 text-muted-foreground">
             No pending approvals at the moment. Great job!
           </p>
           
@@ -220,45 +220,45 @@ export default function ApprovalQueue({
       )}
 
       {/* Approvals Table */}
-      <div className="mb-6 overflow-hidden rounded-lg bg-white shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="mb-6 overflow-hidden rounded-lg bg-card shadow">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
               <th className="px-6 py-3 text-left">
                 <input
                   type="checkbox"
                   checked={selectedIds.size === approvals.length && approvals.length > 0}
                   onChange={handleSelectAll}
-                  className="h-4 w-4 rounded border-gray-300"
+                  className="h-4 w-4 rounded border-border"
                 />
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Date
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Employee
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Category
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Description
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Amount
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Wallet Impact
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Level
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
+          <tbody className="divide-y divide-border bg-card">
             {approvals.map((expense) => {
               const currentBalance = parseFloat(expense.currentWalletBalance.toString());
               const amount = parseFloat(expense.amount.toString());
@@ -269,7 +269,7 @@ export default function ApprovalQueue({
               return (
                 <tr
                   key={expense.id}
-                  className={`hover:bg-gray-50 ${
+                  className={`hover:bg-accent ${
                     selectedIds.has(expense.id) ? "bg-blue-50" : ""
                   }`}
                 >
@@ -278,37 +278,37 @@ export default function ApprovalQueue({
                       type="checkbox"
                       checked={selectedIds.has(expense.id)}
                       onChange={() => handleSelectOne(expense.id)}
-                      className="h-4 w-4 rounded border-gray-300"
+                      className="h-4 w-4 rounded border-border"
                     />
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-foreground">
                     {new Date(expense.date).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
+                  <td className="px-6 py-4 text-sm text-foreground">
                     <div className="font-medium">
                       {expense.submittedBy.name || expense.submittedBy.email}
                     </div>
-                    <div className="text-gray-500">{expense.submittedBy.email}</div>
+                    <div className="text-muted-foreground">{expense.submittedBy.email}</div>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-foreground">
                     {expense.category}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
+                  <td className="px-6 py-4 text-sm text-foreground">
                     <div className="max-w-xs truncate" title={expense.description}>
                       {expense.description}
                     </div>
                     {expense.project && (
-                      <div className="mt-1 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-muted-foreground">
                         Project: {expense.project}
                       </div>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-gray-900">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-foreground">
                     {formatMoney(amount)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm">
                     <div className="space-y-1">
-                      <div className="text-gray-600">
+                      <div className="text-muted-foreground">
                         Current: <span className="font-medium">{formatMoney(currentBalance)}</span>
                       </div>
                       <div
@@ -377,18 +377,18 @@ export default function ApprovalQueue({
       {/* Bulk Reject Modal */}
       {showBulkReject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-            <h3 className="mb-4 text-lg font-semibold text-gray-900">
+          <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-foreground">
               Reject {selectedIds.size} Expense(s)
             </h3>
-            <p className="mb-4 text-sm text-gray-600">
+            <p className="mb-4 text-sm text-muted-foreground">
               Please provide a reason for rejecting these expenses.
             </p>
             <textarea
               value={bulkRejectReason}
               onChange={(e) => setBulkRejectReason(e.target.value)}
               placeholder="Enter rejection reason..."
-              className="mb-4 w-full rounded border border-gray-300 p-2 text-sm"
+              className="mb-4 w-full rounded border border-border bg-background p-2 text-sm"
               rows={4}
               disabled={pending}
             />
@@ -421,7 +421,7 @@ export default function ApprovalQueue({
 
 function ApprovalLevelBadge({ level }: { level: string }) {
   const badges: Record<string, { color: string; text: string }> = {
-    AUTO: { color: "bg-gray-100 text-gray-800", text: "Auto" },
+    AUTO: { color: "bg-muted text-foreground", text: "Auto" },
     MANAGER: { color: "bg-blue-100 text-blue-800", text: "Manager" },
     FINANCE_MANAGER: { color: "bg-purple-100 text-purple-800", text: "Finance Mgr" },
     CEO: { color: "bg-red-100 text-red-800", text: "CEO" },
@@ -438,13 +438,13 @@ function ApprovalLevelBadge({ level }: { level: string }) {
 
 function ApprovalHistory({ history }: { history: HistoryItem[] }) {
   return (
-    <div className="mt-6 rounded-lg bg-white p-6 shadow">
-      <h3 className="mb-4 text-lg font-semibold text-gray-900">Recent Approval History</h3>
+    <div className="mt-6 rounded-lg bg-card p-6 shadow">
+      <h3 className="mb-4 text-lg font-semibold text-foreground">Recent Approval History</h3>
       <div className="space-y-3">
         {history.map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between border-l-4 border-gray-200 bg-gray-50 p-3"
+            className="flex items-center justify-between border-l-4 border-border bg-muted p-3"
             style={{
               borderLeftColor: item.status === "APPROVED" ? "#10b981" : "#ef4444",
             }}
@@ -460,12 +460,12 @@ function ApprovalHistory({ history }: { history: HistoryItem[] }) {
                 >
                   {item.status}
                 </span>
-                <span className="text-sm font-medium text-gray-900">{item.category}</span>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm font-medium text-foreground">{item.category}</span>
+                <span className="text-sm text-muted-foreground">
                   {formatMoney(parseFloat(item.amount.toString()))}
                 </span>
               </div>
-              <div className="mt-1 text-xs text-gray-500">
+              <div className="mt-1 text-xs text-muted-foreground">
                 {item.submittedBy.name || item.submittedBy.email} •{" "}
                 {new Date(item.updatedAt).toLocaleDateString()}{" "}
                 {new Date(item.updatedAt).toLocaleTimeString()}

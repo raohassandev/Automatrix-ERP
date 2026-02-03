@@ -8,6 +8,14 @@ Refer to the root [README.md](../../README.md) for overall project setup instruc
 
 ## Running Locally
 
+1) Create env file
+
+```bash
+cp .env.example .env.local
+```
+
+2) Install + start
+
 ```bash
 pnpm install
 pnpm dev

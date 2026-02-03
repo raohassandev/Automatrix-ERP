@@ -72,16 +72,18 @@ model RolePermission {
 
 model Expense {
   id              String        @id @default(cuid())
+  // For idempotent imports from legacy systems (e.g., Excel Transactions sheet)
+  externalId      String?       @unique
   date            DateTime
   description     String
   category        String
-  amount          Decimal       
+  amount          Decimal
   paymentMode     String
   paymentSource   String @default("COMPANY_DIRECT")
   project         String?
   status          String @default("PENDING")
   approvalLevel   String?
-  approvedAmount  Decimal?      
+  approvedAmount  Decimal?
   submittedById   String
   approvedById    String?
   receiptUrl      String?
@@ -97,10 +99,12 @@ model Expense {
 
 model Income {
   id              String        @id @default(cuid())
+  // For idempotent imports from legacy systems (e.g., Excel Income_Log sheet)
+  externalId      String?       @unique
   date            DateTime
   source          String
   category        String
-  amount          Decimal       
+  amount          Decimal
   paymentMode     String
   project         String?
   status          String  @default("PENDING")

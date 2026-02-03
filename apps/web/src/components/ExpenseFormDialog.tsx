@@ -57,9 +57,9 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           category: form.category,
           amount: parseFloat(form.amount),
           paymentMode: form.paymentMode,
-          project: form.project || null,
-          receiptUrl: form.receiptUrl || null,
-          receiptFileId: form.receiptFileId || null,
+          project: form.project || undefined,
+          receiptUrl: form.receiptUrl || undefined,
+          receiptFileId: form.receiptFileId || undefined,
           ignoreDuplicate,
         }),
       });
@@ -74,7 +74,16 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
       }
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to submit expense");
+        // If backend provided zod details, surface them to the user.
+        const fieldErrors: Record<string, string[] | undefined> | undefined = data?.details?.fieldErrors;
+        const fieldErrorMsg = fieldErrors
+          ? Object.entries(fieldErrors)
+              .filter(([, v]) => v && v.length)
+              .map(([k, v]) => `${k}: ${(v || []).join(", ")}`)
+              .join(" | ")
+          : "";
+
+        throw new Error(fieldErrorMsg || data.error || "Failed to submit expense");
       }
 
       toast.success("Expense submitted successfully!");

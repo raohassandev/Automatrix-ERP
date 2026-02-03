@@ -140,10 +140,10 @@ export default async function ApprovalsPage() {
   } catch (error) {
     console.error("Error fetching approvals data:", error);
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-7xl">
           <div className="rounded-xl border bg-card p-8 shadow-sm">
-            <h1 className="text-3xl font-bold text-gray-900">Pending Approvals</h1>
+            <h1 className="text-3xl font-bold text-foreground">Pending Approvals</h1>
             <p className="mt-2 text-muted-foreground">Error loading approvals data. Please try again later.</p>
           </div>
         </div>
@@ -152,11 +152,11 @@ export default async function ApprovalsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Pending Approvals</h1>
+          <h1 className="text-3xl font-bold text-foreground">Pending Approvals</h1>
           <p className="mt-2 text-muted-foreground">
             Review and approve expenses that require your authorization
           </p>
@@ -166,13 +166,13 @@ export default async function ApprovalsPage() {
         <div className="mb-6 grid gap-4 md:grid-cols-4">
           <div className="rounded-lg bg-card p-4 shadow">
             <div className="text-sm font-medium text-muted-foreground">Total Pending</div>
-            <div className="mt-2 text-3xl font-bold text-gray-900">
+            <div className="mt-2 text-3xl font-bold text-foreground">
               {approvalsWithWalletInfo.length}
             </div>
           </div>
           <div className="rounded-lg bg-card p-4 shadow">
             <div className="text-sm font-medium text-muted-foreground">Total Amount</div>
-            <div className="mt-2 text-2xl font-bold text-gray-900">
+            <div className="mt-2 text-2xl font-bold text-foreground">
               {formatMoney(
                 approvalsWithWalletInfo.reduce(
                   (sum: number, exp: Approval) => sum + Number(exp.amount),

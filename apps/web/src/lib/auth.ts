@@ -20,12 +20,53 @@ const credentialsProvider = Credentials({
     if (!email || !password) return null;
 
     // Development bypass: hardcoded credentials
+    // NOTE: If this user does not exist in the DB, pages that filter by `submittedById/addedById`
+    // will show empty lists and dashboards will appear as 0. We auto-provision a real DB user
+    // in development so created records correctly belong to this user.
     if (process.env.NODE_ENV === "development" && email === "admin@automatrix.local" && password === "admin123") {
+      const devUserId = "dev-admin-id";
+
+      // Ensure CEO role exists
+      const ceoRole = await prisma.role.upsert({
+        where: { name: "CEO" },
+        update: {},
+        create: { name: "CEO" },
+      });
+
+      // Ensure dev user exists
+      await prisma.user.upsert({
+        where: { id: devUserId },
+        update: {
+          email: "admin@automatrix.local",
+          name: "Admin User",
+          roleId: ceoRole.id,
+        },
+        create: {
+          id: devUserId,
+          email: "admin@automatrix.local",
+          name: "Admin User",
+          roleId: ceoRole.id,
+          // passwordHash intentionally omitted for dev-bypass
+        },
+      });
+
+      // Ensure employee exists for wallet/dashboard charts
+      await prisma.employee.upsert({
+        where: { email: "admin@automatrix.local" },
+        update: { name: "Admin User", role: "CEO" },
+        create: {
+          email: "admin@automatrix.local",
+          name: "Admin User",
+          role: "CEO",
+          walletBalance: 0,
+        },
+      });
+
       return {
-        id: "dev-admin-id",
+        id: devUserId,
         email: "admin@automatrix.local",
         name: "Admin User",
-        roleId: "dev-ceo-role-id",
+        roleId: ceoRole.id,
         role: { name: "CEO" },
       };
     }
@@ -58,6 +99,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/login",
   },
+  experimental: {
+    enableWebAuthn: false,
+  },
+  skipCSRFCheck: process.env.NODE_ENV === "development",
   callbacks: {
     jwt: async ({ token, user }) => {
       if (user) {
