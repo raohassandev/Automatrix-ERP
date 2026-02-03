@@ -195,6 +195,7 @@ export const PERMISSIONS = {
 } as const;
 
 export type RoleName = keyof typeof PERMISSIONS;
+export const ROLE_OPTIONS = Object.keys(PERMISSIONS) as RoleName[];
 
 export function hasPermission(role: RoleName, permission: string) {
   const list = PERMISSIONS[role] as readonly string[] | undefined;

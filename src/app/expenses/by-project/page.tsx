@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { requirePermission } from "@/lib/rbac";
 
 export default async function ExpensesByProjectPage({
   searchParams,
@@ -12,6 +13,17 @@ export default async function ExpensesByProjectPage({
   const session = await auth();
   if (!session) {
     redirect("/login");
+  }
+
+  const canViewAll = await requirePermission(session.user.id, "expenses.view_all");
+  const canViewOwn = await requirePermission(session.user.id, "expenses.view_own");
+  if (!canViewAll && !canViewOwn) {
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Expenses by Project</h1>
+        <p className="mt-2 text-muted-foreground">You do not have access to expenses.</p>
+      </div>
+    );
   }
 
   const resolvedSearchParams = await searchParams;

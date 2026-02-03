@@ -39,7 +39,13 @@ export default async function ApprovalsPage() {
   }
 
   // Check if user can view approvals
-  const canApprove = await requirePermission(session.user.id, "expenses.approve");
+  const canApprove =
+    (await requirePermission(session.user.id, "expenses.approve_low")) ||
+    (await requirePermission(session.user.id, "expenses.approve_medium")) ||
+    (await requirePermission(session.user.id, "expenses.approve_high")) ||
+    (await requirePermission(session.user.id, "approvals.approve_low")) ||
+    (await requirePermission(session.user.id, "approvals.approve_high")) ||
+    (await requirePermission(session.user.id, "approvals.partial_approve"));
   if (!canApprove) {
     redirect("/dashboard?error=forbidden");
   }

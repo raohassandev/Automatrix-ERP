@@ -13,6 +13,17 @@ import { ZodError } from "zod";
 import { approvalSchema } from "@/lib/validation-schemas";
 import { logger } from "@/lib/logger";
 
+function canApproveWithRole(roleName: RoleName) {
+  return (
+    hasPermission(roleName, "expenses.approve_low") ||
+    hasPermission(roleName, "expenses.approve_medium") ||
+    hasPermission(roleName, "expenses.approve_high") ||
+    hasPermission(roleName, "approvals.approve_low") ||
+    hasPermission(roleName, "approvals.approve_high") ||
+    hasPermission(roleName, "approvals.partial_approve")
+  );
+}
+
 /**
  * GET /api/approvals - Get pending approvals for current user
  */
@@ -62,7 +73,7 @@ export async function POST(request: NextRequest) {
   const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
   
   // Check if user has approval permissions
-  if (!hasPermission(roleName, "expenses.approve")) {
+  if (!canApproveWithRole(roleName)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -188,7 +199,7 @@ export async function PUT(request: NextRequest) {
 
   const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
   
-  if (!hasPermission(roleName, "expenses.approve")) {
+  if (!canApproveWithRole(roleName)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

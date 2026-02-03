@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ROLE_OPTIONS } from "@/lib/permissions";
 
 export default function EmployeeForm() {
   const router = useRouter();
@@ -63,12 +64,17 @@ export default function EmployeeForm() {
           value={form.phone}
           onChange={(e) => setForm({ ...form, phone: e.target.value })}
         />
-        <input
+        <select
           className="rounded-md border px-3 py-2"
-          placeholder="Role"
           value={form.role}
           onChange={(e) => setForm({ ...form, role: e.target.value })}
-        />
+        >
+          {ROLE_OPTIONS.map((role) => (
+            <option key={role} value={role}>
+              {role}
+            </option>
+          ))}
+        </select>
         <input
           className="rounded-md border px-3 py-2"
           placeholder="Initial Wallet Balance (optional)"

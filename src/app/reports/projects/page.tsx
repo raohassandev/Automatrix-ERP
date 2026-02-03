@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
+import { requirePermission } from "@/lib/rbac";
 
 export default async function ProjectExpensesReportPage({
   searchParams,
@@ -14,6 +15,19 @@ export default async function ProjectExpensesReportPage({
   const session = await auth();
   if (!session) {
     redirect("/login");
+  }
+
+  const canViewAll = await requirePermission(session.user.id, "reports.view_all");
+  const canViewTeam = await requirePermission(session.user.id, "reports.view_team");
+  const canViewOwn = await requirePermission(session.user.id, "reports.view_own");
+  const canView = canViewAll || canViewTeam || canViewOwn;
+  if (!canView) {
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Project-Wise Expense Report</h1>
+        <p className="mt-2 text-muted-foreground">You do not have access to reports.</p>
+      </div>
+    );
   }
 
   const params = await searchParams;

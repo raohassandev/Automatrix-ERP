@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Calculator,
   Calendar,
@@ -24,6 +25,7 @@ import {
   FileCheck,
   Paperclip,
 } from "lucide-react";
+import { hasPermission, type RoleName } from "@/lib/permissions";
 
 import {
   CommandDialog,
@@ -38,6 +40,10 @@ import {
 export function CommandPalette() {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
+  const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
+  const canAccess = (permissions?: string[]) =>
+    !permissions || permissions.some((permission) => hasPermission(roleName, permission));
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -63,74 +69,48 @@ export function CommandPalette() {
         <CommandEmpty>No results found.</CommandEmpty>
         
         <CommandGroup heading="Pages">
-          <CommandItem onSelect={() => runCommand(() => router.push("/dashboard"))}>
-            <LayoutDashboard className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/expenses"))}>
-            <CreditCard className="mr-2 h-4 w-4" />
-            <span>Expenses</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/income"))}>
-            <TrendingUp className="mr-2 h-4 w-4" />
-            <span>Income</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/employees"))}>
-            <Users className="mr-2 h-4 w-4" />
-            <span>Employees</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/wallets"))}>
-            <Wallet className="mr-2 h-4 w-4" />
-            <span>Wallet Ledger</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/clients"))}>
-            <Building2 className="mr-2 h-4 w-4" />
-            <span>Clients</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/quotations"))}>
-            <FileSignature className="mr-2 h-4 w-4" />
-            <span>Quotations</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/projects"))}>
-            <FolderKanban className="mr-2 h-4 w-4" />
-            <span>Projects</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/inventory"))}>
-            <Package className="mr-2 h-4 w-4" />
-            <span>Inventory</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/inventory/ledger"))}>
-            <FileBarChart className="mr-2 h-4 w-4" />
-            <span>Inventory Ledger</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/invoices"))}>
-            <FileText className="mr-2 h-4 w-4" />
-            <span>Invoices</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/approvals"))}>
-            <FileCheck className="mr-2 h-4 w-4" />
-            <span>Approvals</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/notifications"))}>
-            <Bell className="mr-2 h-4 w-4" />
-            <span>Notifications</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/attachments"))}>
-            <Paperclip className="mr-2 h-4 w-4" />
-            <span>Attachments</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/audit"))}>
-            <FileText className="mr-2 h-4 w-4" />
-            <span>Audit Log</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/settings"))}>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
-          </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => router.push("/reports"))}>
-            <FileText className="mr-2 h-4 w-4" />
-            <span>Reports</span>
-          </CommandItem>
+          {[
+            { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permissions: ["dashboard.view"] },
+            { href: "/expenses", label: "Expenses", icon: CreditCard, permissions: ["expenses.view_all", "expenses.view_own"] },
+            { href: "/income", label: "Income", icon: TrendingUp, permissions: ["income.view_all", "income.view_own"] },
+            { href: "/employees", label: "Employees", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
+            { href: "/wallets", label: "Wallet Ledger", icon: Wallet, permissions: ["employees.view_all", "employees.view_own", "employees.edit_wallet"] },
+            { href: "/clients", label: "Clients", icon: Building2, permissions: ["clients.view_all"] },
+            { href: "/quotations", label: "Quotations", icon: FileSignature, permissions: ["quotations.view_all"] },
+            { href: "/projects", label: "Projects", icon: FolderKanban, permissions: ["projects.view_all", "projects.view_assigned"] },
+            { href: "/inventory", label: "Inventory", icon: Package, permissions: ["inventory.view"] },
+            { href: "/inventory/ledger", label: "Inventory Ledger", icon: FileBarChart, permissions: ["inventory.view"] },
+            { href: "/invoices", label: "Invoices", icon: FileText, permissions: ["invoices.view_all"] },
+            {
+              href: "/approvals",
+              label: "Approvals",
+              icon: FileCheck,
+              permissions: [
+                "approvals.view_all",
+                "approvals.view_pending",
+                "approvals.approve_low",
+                "approvals.approve_high",
+                "expenses.approve_low",
+                "expenses.approve_medium",
+                "expenses.approve_high",
+              ],
+            },
+            { href: "/notifications", label: "Notifications", icon: Bell, permissions: ["dashboard.view", "reports.view_all"] },
+            { href: "/attachments", label: "Attachments", icon: Paperclip, permissions: ["reports.view_all"] },
+            { href: "/audit", label: "Audit Log", icon: FileText, permissions: ["reports.view_all"] },
+            { href: "/settings", label: "Settings", icon: Settings, permissions: ["dashboard.view"] },
+            { href: "/reports", label: "Reports", icon: FileText, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+          ]
+            .filter((item) => canAccess(item.permissions))
+            .map((item) => {
+              const Icon = item.icon;
+              return (
+                <CommandItem key={item.href} onSelect={() => runCommand(() => router.push(item.href))}>
+                  <Icon className="mr-2 h-4 w-4" />
+                  <span>{item.label}</span>
+                </CommandItem>
+              );
+            })}
         </CommandGroup>
 
         <CommandSeparator />

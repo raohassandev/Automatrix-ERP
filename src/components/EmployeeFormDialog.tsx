@@ -7,6 +7,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
+import { ROLE_OPTIONS } from "@/lib/permissions";
 
 interface EmployeeFormDialogProps {
   open: boolean;
@@ -20,10 +21,8 @@ export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogPro
     name: "",
     email: "",
     phone: "",
-    position: "",
-    department: "",
-    salary: "",
-    joiningDate: "",
+    role: "Staff",
+    initialWalletBalance: "",
   });
 
   async function submit() {
@@ -35,10 +34,10 @@ export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogPro
           name: form.name,
           email: form.email,
           phone: form.phone || null,
-          position: form.position,
-          department: form.department || null,
-          salary: form.salary ? parseFloat(form.salary) : null,
-          joiningDate: form.joiningDate || null,
+          role: form.role,
+          initialWalletBalance: form.initialWalletBalance
+            ? parseFloat(form.initialWalletBalance)
+            : 0,
         }),
       });
 
@@ -55,10 +54,8 @@ export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogPro
         name: "",
         email: "",
         phone: "",
-        position: "",
-        department: "",
-        salary: "",
-        joiningDate: "",
+        role: "Staff",
+        initialWalletBalance: "",
       });
       
       // Close dialog
@@ -122,45 +119,30 @@ export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogPro
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="position">Position</Label>
-            <Input
-              id="position"
-              placeholder="Software Engineer"
-              value={form.position}
-              onChange={(e) => setForm({ ...form, position: e.target.value })}
-              required
-            />
+            <Label htmlFor="role">Role</Label>
+            <select
+              id="role"
+              className="rounded-md border px-3 py-2"
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+            >
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="department">Department (Optional)</Label>
+            <Label htmlFor="initialWalletBalance">Initial Wallet Balance (Optional)</Label>
             <Input
-              id="department"
-              placeholder="Engineering"
-              value={form.department}
-              onChange={(e) => setForm({ ...form, department: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="salary">Salary (Optional)</Label>
-            <Input
-              id="salary"
+              id="initialWalletBalance"
               type="number"
               step="0.01"
               placeholder="0.00"
-              value={form.salary}
-              onChange={(e) => setForm({ ...form, salary: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="joiningDate">Joining Date (Optional)</Label>
-            <Input
-              id="joiningDate"
-              type="date"
-              value={form.joiningDate}
-              onChange={(e) => setForm({ ...form, joiningDate: e.target.value })}
+              value={form.initialWalletBalance}
+              onChange={(e) => setForm({ ...form, initialWalletBalance: e.target.value })}
             />
           </div>
         </div>
