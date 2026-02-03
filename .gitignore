@@ -7,6 +7,9 @@ node_modules/
 out/
 # Prisma
 prisma/dev.db
+# Local dev DBs in monorepo
+apps/web/dev.db
+apps/web/prisma/**/*.db
 # Playwright
 playwright/.auth/
 playwright/test-results/
@@ -18,6 +21,11 @@ logs/
 # IDE
 .vscode/
 .idea/
+# Local agent/tooling
+.claude/
+# Python cache
+**/__pycache__/
+*.pyc
 # Generated
 pnpm-lock.yaml
 legacy/apps-script/build/
