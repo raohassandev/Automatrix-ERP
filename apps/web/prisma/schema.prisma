@@ -1,0 +1,302 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+
+
+
+
+
+
+
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  roleId        String?
+  passwordHash String?
+  role          Role?     @relation(fields: [roleId], references: [id])
+
+  expenses        Expense[] @relation("ExpenseSubmittedBy")
+  expenseApprovals Expense[] @relation("ExpenseApprovedBy")
+  incomes         Income[]  @relation("IncomeAddedBy")
+  incomeApprovals  Income[] @relation("IncomeApprovedBy")
+  approvals       Approval[] @relation("ApprovalBy")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  users       User[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  roles       RolePermission[]
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  type        String   // 'expense' or 'inventory' or 'income'
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model RolePermission {
+  id            String      @id @default(cuid())
+  roleId        String
+  permissionId  String
+  role          Role        @relation(fields: [roleId], references: [id])
+  permission    Permission  @relation(fields: [permissionId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+
+model Expense {
+  id              String        @id @default(cuid())
+  // For idempotent imports from legacy systems (e.g., Excel Transactions sheet)
+  externalId      String?       @unique
+  date            DateTime
+  description     String
+  category        String
+  amount          Decimal
+  paymentMode     String
+  paymentSource   String @default("COMPANY_DIRECT")
+  project         String?
+  status          String @default("PENDING")
+  approvalLevel   String?
+  approvedAmount  Decimal?
+  submittedById   String
+  approvedById    String?
+  receiptUrl      String?
+  receiptFileId   String?
+  walletLedgerId  String?       // Link to wallet transaction if paid from wallet
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  submittedBy     User          @relation("ExpenseSubmittedBy", fields: [submittedById], references: [id])
+  approvedBy      User?         @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+  approvals       Approval[]
+}
+
+model Income {
+  id              String        @id @default(cuid())
+  // For idempotent imports from legacy systems (e.g., Excel Income_Log sheet)
+  externalId      String?       @unique
+  date            DateTime
+  source          String
+  category        String
+  amount          Decimal
+  paymentMode     String
+  project         String?
+  status          String  @default("PENDING")
+  approvalLevel   String?
+  approvedById    String?
+  receiptUrl      String?
+  receiptFileId   String?
+  invoiceId       String?
+  addedById       String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  addedBy         User          @relation("IncomeAddedBy", fields: [addedById], references: [id])
+  approvedBy      User?         @relation("IncomeApprovedBy", fields: [approvedById], references: [id])
+  approvals       Approval[]
+}
+
+model Approval {
+  id             String         @id @default(cuid())
+  type           String
+  status         String @default("PENDING")
+  amount         Decimal        
+  approvedAmount Decimal?       
+  reason         String?
+  expenseId      String?
+  incomeId       String?
+  submittedById  String?
+  approvedById   String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  expense        Expense?       @relation(fields: [expenseId], references: [id])
+  income         Income?        @relation(fields: [incomeId], references: [id])
+  approvedBy     User?          @relation("ApprovalBy", fields: [approvedById], references: [id])
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  projectId      String   @unique
+  name           String
+  client         String
+  startDate      DateTime
+  endDate        DateTime?
+  status         String
+  contractValue  Decimal  
+  invoicedAmount Decimal  
+  receivedAmount Decimal  
+  pendingRecovery Decimal 
+  costToDate     Decimal  
+  grossMargin    Decimal  
+  marginPercent  Decimal  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model InventoryItem {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  category       String
+  quantity       Decimal  
+  unit           String
+  unitCost       Decimal  
+  totalValue     Decimal  
+  minStock       Decimal   @default(0)
+  reorderQty     Decimal   @default(0)
+  reservedQty    Decimal   @default(0)
+  availableQty   Decimal   @default(0)
+  lastPurchaseDate DateTime?
+  avgUsage30Days Decimal   @default(0)
+  lastUpdated    DateTime
+  ledger         InventoryLedger[]
+  createdAt      DateTime @default(now())
+}
+
+model InventoryLedger {
+  id            String     @id @default(cuid())
+  date          DateTime
+  itemId        String
+  type          String
+  quantity      Decimal    
+  unitCost      Decimal    
+  total         Decimal    
+  reference     String?
+  project       String?
+  userId        String?
+  runningBalance Decimal   
+
+  item          InventoryItem @relation(fields: [itemId], references: [id])
+}
+
+model Employee {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  phone         String?
+  role          String
+  walletBalance Decimal         @default(0)
+  status        String @default("ACTIVE")
+  wallets       WalletLedger[]
+}
+
+model WalletLedger {
+  id         String     @id @default(cuid())
+  date       DateTime
+  employeeId String
+  type       String
+  amount     Decimal    
+  reference  String?
+  balance    Decimal    
+
+  employee   Employee   @relation(fields: [employeeId], references: [id])
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  invoiceNo  String        @unique
+  projectId  String
+  date       DateTime
+  amount     Decimal       
+  dueDate    DateTime
+  status     String @default("DRAFT")
+  paymentDate DateTime?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  type      String
+  recordId  String
+  fileName  String
+  fileUrl   String
+  fileId    String?
+  size      Int?
+  mimeType  String?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  type      String
+  message   String
+  status    String
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  reason    String?
+  userId    String?
+  createdAt DateTime @default(now())
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

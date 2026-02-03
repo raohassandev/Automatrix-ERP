@@ -1,0 +1,479 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { formatMoney } from "@/lib/format";
+import ApprovalActions from "./ApprovalActions";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+interface Approval {
+  id: string;
+  date: Date;
+  category: string;
+  description: string;
+  amount: number | string;
+  project?: string;
+  submittedBy: { id: string; email: string; name?: string | null };
+  currentWalletBalance: number | string;
+  requiredApprovalLevel: string;
+  status: string;
+}
+
+interface HistoryItem {
+  id: string;
+  date: Date;
+  category: string;
+  amount: number | string;
+  status: string;
+  submittedBy: { email: string; name?: string | null };
+  approvedBy: { email: string; name?: string | null } | null;
+  updatedAt: Date;
+}
+
+export default function ApprovalQueue({
+  approvals,
+  history,
+}: {
+  approvals: Approval[];
+  history: HistoryItem[];
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkReject, setShowBulkReject] = useState(false);
+  const [bulkRejectReason, setBulkRejectReason] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === approvals.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(approvals.map((a) => a.id)));
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedIds.size === 0) return;
+
+    const confirmed = window.confirm(
+      `Approve ${selectedIds.size} expense(s)?\n\nThis will deduct amounts from employee wallets.`
+    );
+
+    if (!confirmed) return;
+
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/approvals", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expenseIds: Array.from(selectedIds),
+            action: "APPROVE",
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to bulk approve");
+        }
+
+        toast.success(
+          "Bulk approval complete!",
+          {
+            description: `Successful: ${data.results.successful.length}, Failed: ${data.results.failed.length}`,
+          }
+        );
+        setSelectedIds(new Set());
+        router.refresh();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "An error occurred";
+        toast.error(message);
+      }
+    });
+  };
+
+  const handleBulkReject = async () => {
+    if (selectedIds.size === 0) return;
+    if (!bulkRejectReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/approvals", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            expenseIds: Array.from(selectedIds),
+            action: "REJECT",
+            reason: bulkRejectReason,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to bulk reject");
+        }
+
+        toast.success(
+          "Bulk rejection complete!",
+          {
+            description: `Successful: ${data.results.successful.length}, Failed: ${data.results.failed.length}`,
+          }
+        );
+        setSelectedIds(new Set());
+        setShowBulkReject(false);
+        setBulkRejectReason("");
+        router.refresh();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "An error occurred";
+        toast.error(message);
+      }
+    });
+  };
+
+  if (approvals.length === 0) {
+    return (
+      <>
+        <div className="rounded-lg bg-card p-12 text-center shadow">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <svg
+              className="h-8 w-8 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-foreground">All caught up!</h3>
+          <p className="mt-2 text-muted-foreground">
+            No pending approvals at the moment. Great job!
+          </p>
+          
+          {history.length > 0 && (
+            <Button
+              onClick={() => setShowHistory(!showHistory)}
+              variant="link"
+            >
+              View Recent Approval History
+            </Button>
+          )}
+        </div>
+
+        {showHistory && <ApprovalHistory history={history} />}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex items-center justify-between rounded-lg bg-blue-50 p-4">
+          <div className="text-sm font-medium text-blue-900">
+            {selectedIds.size} expense(s) selected
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleBulkApprove}
+              disabled={pending}
+            >
+              {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {pending ? "Processing..." : "Approve Selected"}
+            </Button>
+            <Button
+              onClick={() => setShowBulkReject(true)}
+              disabled={pending}
+              variant="destructive"
+            >
+              Reject Selected
+            </Button>
+            <Button
+              onClick={() => setSelectedIds(new Set())}
+              variant="ghost"
+            >
+              Clear Selection
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Approvals Table */}
+      <div className="mb-6 overflow-hidden rounded-lg bg-card shadow">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
+            <tr>
+              <th className="px-6 py-3 text-left">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === approvals.length && approvals.length > 0}
+                  onChange={handleSelectAll}
+                  className="h-4 w-4 rounded border-border"
+                />
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Employee
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Category
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Description
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Amount
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Wallet Impact
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Level
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border bg-card">
+            {approvals.map((expense) => {
+              const currentBalance = parseFloat(expense.currentWalletBalance.toString());
+              const amount = parseFloat(expense.amount.toString());
+              const afterBalance = currentBalance - amount;
+              const isInsufficient = afterBalance < 0;
+              const isLow = afterBalance < 10000 && afterBalance >= 0;
+
+              return (
+                <tr
+                  key={expense.id}
+                  className={`hover:bg-accent ${
+                    selectedIds.has(expense.id) ? "bg-blue-50" : ""
+                  }`}
+                >
+                  <td className="px-6 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(expense.id)}
+                      onChange={() => handleSelectOne(expense.id)}
+                      className="h-4 w-4 rounded border-border"
+                    />
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-foreground">
+                    {new Date(expense.date).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-foreground">
+                    <div className="font-medium">
+                      {expense.submittedBy.name || expense.submittedBy.email}
+                    </div>
+                    <div className="text-muted-foreground">{expense.submittedBy.email}</div>
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-foreground">
+                    {expense.category}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-foreground">
+                    <div className="max-w-xs truncate" title={expense.description}>
+                      {expense.description}
+                    </div>
+                    {expense.project && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        Project: {expense.project}
+                      </div>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-foreground">
+                    {formatMoney(amount)}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm">
+                    <div className="space-y-1">
+                      <div className="text-muted-foreground">
+                        Current: <span className="font-medium">{formatMoney(currentBalance)}</span>
+                      </div>
+                      <div
+                        className={`font-medium ${
+                          isInsufficient
+                            ? "text-red-600"
+                            : isLow
+                            ? "text-yellow-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        After: {formatMoney(afterBalance)}
+                      </div>
+                      {isInsufficient && (
+                        <div className="flex items-center gap-1 text-xs text-red-600">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            />
+                          </svg>
+                          Insufficient
+                        </div>
+                      )}
+                      {isLow && !isInsufficient && (
+                        <div className="text-xs text-yellow-600">⚠️ Low balance</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4">
+                    <ApprovalLevelBadge level={expense.requiredApprovalLevel} />
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm">
+                    <ApprovalActions
+                      expenseId={expense.id}
+                      amount={amount}
+                      employeeName={expense.submittedBy.name || expense.submittedBy.email}
+                      currentBalance={currentBalance}
+                      afterBalance={afterBalance}
+                      status={expense.status}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Approval History Toggle */}
+      {history.length > 0 && (
+        <div className="mb-4">
+          <Button
+            onClick={() => setShowHistory(!showHistory)}
+            variant="link"
+          >
+            {showHistory ? "Hide" : "Show"} Recent Approval History ({history.length})
+          </Button>
+        </div>
+      )}
+
+      {showHistory && <ApprovalHistory history={history} />}
+
+      {/* Bulk Reject Modal */}
+      {showBulkReject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-foreground">
+              Reject {selectedIds.size} Expense(s)
+            </h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Please provide a reason for rejecting these expenses.
+            </p>
+            <textarea
+              value={bulkRejectReason}
+              onChange={(e) => setBulkRejectReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              className="mb-4 w-full rounded border border-border bg-background p-2 text-sm"
+              rows={4}
+              disabled={pending}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                onClick={() => {
+                  setShowBulkReject(false);
+                  setBulkRejectReason("");
+                }}
+                disabled={pending}
+                variant="ghost"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkReject}
+                disabled={pending || !bulkRejectReason.trim()}
+                variant="destructive"
+              >
+                {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {pending ? "Rejecting..." : "Confirm Reject All"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function ApprovalLevelBadge({ level }: { level: string }) {
+  const badges: Record<string, { color: string; text: string }> = {
+    AUTO: { color: "bg-muted text-foreground", text: "Auto" },
+    MANAGER: { color: "bg-blue-100 text-blue-800", text: "Manager" },
+    FINANCE_MANAGER: { color: "bg-purple-100 text-purple-800", text: "Finance Mgr" },
+    CEO: { color: "bg-red-100 text-red-800", text: "CEO" },
+  };
+
+  const badge = badges[level] || badges.AUTO;
+
+  return (
+    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${badge.color}`}>
+      {badge.text}
+    </span>
+  );
+}
+
+function ApprovalHistory({ history }: { history: HistoryItem[] }) {
+  return (
+    <div className="mt-6 rounded-lg bg-card p-6 shadow">
+      <h3 className="mb-4 text-lg font-semibold text-foreground">Recent Approval History</h3>
+      <div className="space-y-3">
+        {history.map((item) => (
+          <div
+            key={item.id}
+            className="flex items-center justify-between border-l-4 border-border bg-muted p-3"
+            style={{
+              borderLeftColor: item.status === "APPROVED" ? "#10b981" : "#ef4444",
+            }}
+          >
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${
+                    item.status === "APPROVED"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {item.status}
+                </span>
+                <span className="text-sm font-medium text-foreground">{item.category}</span>
+                <span className="text-sm text-muted-foreground">
+                  {formatMoney(parseFloat(item.amount.toString()))}
+                </span>
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {item.submittedBy.name || item.submittedBy.email} •{" "}
+                {new Date(item.updatedAt).toLocaleDateString()}{" "}
+                {new Date(item.updatedAt).toLocaleTimeString()}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

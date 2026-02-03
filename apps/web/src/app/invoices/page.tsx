@@ -1,0 +1,172 @@
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { formatMoney } from "@/lib/format";
+import { DeleteButton, QuickEditButton } from "@/components/TableActions";
+import { requirePermission } from "@/lib/rbac";
+import { redirect } from "next/navigation";
+import { MobileCard } from "@/components/MobileCard";
+import { Badge } from "@/components/ui/badge";
+import InvoiceForm from "@/components/InvoiceForm";
+
+export default async function InvoicesPage() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return (
+       redirect("/login")
+       );
+  }
+
+  const canView = await requirePermission(session.user.id, "invoices.view_all");
+  if (!canView) {
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Invoices</h1>
+        <p className="mt-2 text-muted-foreground">You do not have access to invoices.</p>
+      </div>
+    );
+  }
+
+  let invoices = [];
+  let projects = [];
+  
+  try {
+    [invoices, projects] = await Promise.all([
+      prisma.invoice.findMany({ orderBy: { createdAt: "desc" } }),
+      prisma.project.findMany({ orderBy: { name: "asc" } })
+    ]);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Invoices</h1>
+        <p className="mt-2 text-muted-foreground">Error loading data. Please try again later.</p>
+      </div>
+    );
+  }
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'PAID': return 'default';
+      case 'SENT': return 'secondary'; 
+      case 'OVERDUE': return 'destructive';
+      case 'DRAFT': return 'outline';
+      default: return 'outline';
+    }
+  };
+
+  // Calculate summary statistics
+  const totalInvoiced = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
+  const totalReceived = invoices.filter(inv => inv.status === 'PAID').reduce((sum, inv) => sum + Number(inv.amount), 0);
+  const totalPending = totalInvoiced - totalReceived;
+  const overdueInvoices = invoices.filter(inv => inv.status === 'OVERDUE');
+
+  return (
+    <div className="grid gap-6">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Invoice Management</h1>
+        <p className="mt-2 text-muted-foreground">Track and manage your project invoices</p>
+        
+        {/* Summary Cards */}
+        <div className="grid gap-4 md:grid-cols-4 mt-6">
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Total Invoiced</div>
+            <div className="text-xl font-semibold text-blue-600">{formatMoney(totalInvoiced)}</div>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Received</div>
+            <div className="text-xl font-semibold text-green-600">{formatMoney(totalReceived)}</div>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Pending</div>
+            <div className="text-xl font-semibold text-yellow-600">{formatMoney(totalPending)}</div>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="text-sm text-muted-foreground">Overdue</div>
+            <div className="text-xl font-semibold text-red-600">{overdueInvoices.length} invoices</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Invoice Form */}
+      <InvoiceForm projects={projects.map(p => ({
+        id: p.id,
+        projectId: p.projectId,
+        name: p.name,
+        client: p.client,
+        contractValue: Number(p.contractValue),
+        costToDate: Number(p.costToDate)
+      }))} />
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2">Invoice</th>
+                <th className="py-2">Project</th>
+                <th className="py-2">Amount</th>
+                <th className="py-2">Status</th>
+                <th className="py-2">Due</th>
+                <th className="py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoices.map((invoice) => (
+                <tr key={invoice.id} className="border-b">
+                  <td className="py-2 font-medium">{invoice.invoiceNo}</td>
+                  <td className="py-2">{invoice.projectId}</td>
+                  <td className="py-2 font-semibold">{formatMoney(Number(invoice.amount))}</td>
+                  <td className="py-2">
+                    <Badge variant={getStatusBadgeVariant(invoice.status)}>
+                      {invoice.status}
+                    </Badge>
+                  </td>
+                  <td className="py-2">{new Date(invoice.dueDate).toLocaleDateString()}</td>
+                  <td className="py-2">
+                    <div className="flex gap-2">
+                      <QuickEditButton
+                        url={`/api/invoices/${invoice.id}`}
+                        fields={{ status: "Status", paymentDate: "Payment Date", dueDate: "Due Date" }}
+                      />
+                      <DeleteButton url={`/api/invoices/${invoice.id}`} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile: Cards */}
+        <div className="md:hidden space-y-4">
+          {invoices.map((invoice) => (
+            <MobileCard
+              key={invoice.id}
+              title={invoice.invoiceNo}
+              subtitle={`Due: ${new Date(invoice.dueDate).toLocaleDateString()}`}
+              fields={[
+                { label: "Project", value: invoice.projectId },
+                { label: "Amount", value: formatMoney(Number(invoice.amount)) },
+                { 
+                  label: "Status", 
+                  value: <Badge variant={getStatusBadgeVariant(invoice.status)}>
+                    {invoice.status}
+                  </Badge> 
+                },
+              ]}
+              actions={
+                <>
+                  <QuickEditButton
+                    url={`/api/invoices/${invoice.id}`}
+                    fields={{ status: "Status", paymentDate: "Payment Date", dueDate: "Due Date" }}
+                  />
+                  <DeleteButton url={`/api/invoices/${invoice.id}`} />
+                </>
+              }
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
