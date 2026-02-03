@@ -43,7 +43,7 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
           source: form.source,
           amount: parseFloat(form.amount),
           paymentMode: form.paymentMode,
-          invoiceNumber: form.invoiceNumber || null,
+          invoiceId: form.invoiceNumber || null,
           remarks: form.remarks || null,
         }),
       });

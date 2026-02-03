@@ -17,13 +17,14 @@ export const expenseUpdateSchema = expenseSchema.partial();
 export const incomeSchema = z.object({
   date: z.string().min(1),
   source: z.string().min(1),
-  category: z.string().min(1),
+  category: z.string().min(1).optional(),
   amount: z.number().positive(),
   paymentMode: z.string().min(1),
   project: z.string().optional(),
   receiptUrl: z.string().url().optional(),
   receiptFileId: z.string().optional(),
   invoiceId: z.string().optional(),
+  remarks: z.string().optional(),
 });
 
 export const incomeUpdateSchema = incomeSchema.partial();

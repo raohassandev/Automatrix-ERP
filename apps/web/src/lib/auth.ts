@@ -102,7 +102,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   experimental: {
     enableWebAuthn: false,
   },
-  skipCSRFCheck: process.env.NODE_ENV === "development",
   callbacks: {
     jwt: async ({ token, user }) => {
       if (user) {

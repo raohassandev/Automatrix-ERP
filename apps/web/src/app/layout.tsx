@@ -7,8 +7,6 @@ import { SessionProvider } from "next-auth/react";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Sidebar } from "@/components/Sidebar";
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,8 +53,6 @@ export default function RootLayout({
             </div>
           </ThemeProvider>
         </SessionProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

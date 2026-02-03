@@ -29,6 +29,7 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcuts) {
       if (event.altKey) keys.push('alt');
       
       // Add the actual key (lowercase)
+      if (typeof event.key !== "string") return;
       const key = event.key.toLowerCase();
       if (key !== 'control' && key !== 'shift' && key !== 'alt' && key !== 'meta') {
         keys.push(key);

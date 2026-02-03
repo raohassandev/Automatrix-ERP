@@ -113,6 +113,7 @@ model Income {
   receiptUrl      String?
   receiptFileId   String?
   invoiceId       String?
+  remarks         String?
   addedById       String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

@@ -138,7 +138,8 @@ export const incomeSchema = z.object({
   amount: positiveNumberSchema,
   category: z.string()
     .min(2, 'Category must be at least 2 characters')
-    .max(100, 'Category too long'),
+    .max(100, 'Category too long')
+    .optional(),
   project: z.string().max(100, 'Project name too long').optional(),
   projectId: z.string().uuid('Invalid project ID').optional(),
   paymentMode: z.enum(['Cash', 'Bank Transfer', 'Cheque', 'Online Transfer', 'Other'])
@@ -146,6 +147,7 @@ export const incomeSchema = z.object({
   status: z.enum(['PENDING', 'APPROVED', 'RECEIVED'])
     .default('PENDING'),
   invoiceId: z.string().uuid('Invalid invoice ID').optional(),
+  remarks: z.string().max(500, 'Remarks too long').optional(),
 });
 
 export const updateIncomeSchema = incomeSchema.partial();

@@ -1,212 +1,168 @@
-# 🚀 Automatrix ERP Master Plan & Requirements
+# AutoMatrix ERP — Master Plan (C&I Engineering)
 
-## 📋 Executive Summary
-
-**Migration from Google Sheets + AppSheet to Next.js ERP**
-
-We are migrating from a Google Sheets/AppSheet system due to its limitations and building a comprehensive Next.js ERP system. Based on analysis of the legacy Excel data (`Automatrix_ERP.xlsx`), we have identified the complete business requirements and gaps that need to be filled.
-
-## 📊 Legacy System Analysis
-
-### Current Data Structure (from Excel import):
-- **Projects**: 5 active projects (General Office, Marketing, Home & Food, Form House H9 ISB, Multan PV DG sites)
-- **Employees**: 6 team members with wallet balances
-- **Inventory**: 3 categories (Cable, Fiber Optic, Electrical Material)  
-- **Transactions**: Mix of expenses (10), income (2), wallet advances (7)
-- **Business Types**: Project-based electrical/solar contracting company
-
-### Excel Sheet Structure Found:
-1. **Projects** - Project tracking with clients, contract values
-2. **Employees** - Staff management with wallet balances
-3. **Inventory_Items** - Material stock tracking
-4. **Inventory_Logs** - Stock movement history
-5. **Income_Log** - Client payments and milestones
-6. **Transactions** - All financial movements (expenses, advances, etc.)
-
-## 🎯 Business Requirements & Gaps Analysis
-
-### ✅ Already Implemented (Partial)
-- Basic expense submission and approval workflow
-- User authentication and role-based access
-- Project tracking foundation
-- Inventory item management
-- Employee wallet system
-
-### ❌ Critical Gaps Identified
-1. **Inventory Management System**
-   - InventoryForm has NO category dropdown (just text input)
-   - No category management/consistency
-   - Missing autocomplete functionality vs ExpenseForm
-
-2. **Master Data Management**
-   - No centralized category management
-   - No predefined dropdowns for consistency
-   - Categories only come from existing expenses (chicken-egg problem)
-
-3. **Project Management**
-   - Basic project CRUD exists but no integration with expenses/inventory
-   - Missing project profitability calculations
-   - No milestone/payment tracking integration
-
-4. **Financial Management**
-   - Missing comprehensive reporting
-   - No budget vs actual tracking
-   - Limited approval workflow customization
-
-## 🏗️ Implementation Roadmap
-
-### Phase 1: Core Fixes & Data Integrity (Week 1-2)
-#### 1.1 Master Data Management
-- [ ] Create `CategoryManagement` page for predefined categories
-- [ ] Update `InventoryForm` to use `CategoryAutoComplete` like `ExpenseForm`
-- [ ] Add API endpoints for category CRUD operations
-- [ ] Implement category seeding with business-relevant categories
-
-#### 1.2 Form Consistency
-- [ ] Standardize all forms to use autocomplete components
-- [ ] Create reusable form components (`ProjectAutoComplete`, `SupplierAutoComplete`)
-- [ ] Add validation for required fields across all forms
-
-#### 1.3 Database Optimization
-- [ ] Ensure proper database relationships and foreign keys
-- [ ] Add database indexes for performance
-- [ ] Implement data backup and migration scripts
-
-### Phase 2: Enhanced Business Logic (Week 3-4)
-#### 2.1 Project Integration
-- [ ] Connect expenses to projects for cost tracking
-- [ ] Implement project budget vs actual spending
-- [ ] Add project profitability calculations
-- [ ] Create project dashboard with financial overview
-
-#### 2.2 Inventory Management Enhancement
-- [ ] Add supplier management system
-- [ ] Implement stock alerts and reorder points
-- [ ] Create purchase order system
-- [ ] Add barcode/QR code support for inventory items
-
-#### 2.3 Employee Wallet System
-- [ ] Enhance wallet ledger with better tracking
-- [ ] Add wallet balance alerts and limits
-- [ ] Implement wallet approval workflows
-- [ ] Create wallet transaction reports
-
-### Phase 3: Advanced Features (Week 5-6)
-#### 3.1 Financial Reporting
-- [ ] Comprehensive financial dashboards
-- [ ] Profit & Loss statements
-- [ ] Cash flow reports
-- [ ] Project-wise profitability reports
-
-#### 3.2 Mobile Optimization
-- [ ] Responsive design improvements
-- [ ] Mobile-first forms and interfaces
-- [ ] Offline capability for field workers
-- [ ] Photo upload for receipts
-
-#### 3.3 Integration & Automation
-- [ ] Email notifications for approvals
-- [ ] Automated backup systems
-- [ ] Integration with accounting software
-- [ ] API for third-party integrations
-
-### Phase 4: Business Intelligence (Week 7-8)
-#### 4.1 Advanced Analytics
-- [ ] Predictive analytics for inventory
-- [ ] Project performance metrics
-- [ ] Employee productivity tracking
-- [ ] Financial forecasting
-
-#### 4.2 Workflow Optimization
-- [ ] Customizable approval workflows
-- [ ] Automated categorization using ML
-- [ ] Smart expense duplicate detection
-- [ ] Intelligent project cost allocation
-
-## 🔧 Technical Improvements Needed
-
-### 1. Component Architecture
-```
-Current Issues:
-- InventoryForm uses basic <input> instead of CategoryAutoComplete
-- Inconsistent form patterns across modules
-- Missing reusable component library
-
-Fixes Needed:
-- Standardize all forms to use consistent components
-- Create shared component library
-- Implement proper TypeScript interfaces
-```
-
-### 2. API Standardization
-```
-Current Issues:
-- Categories API only returns from existing expenses
-- Missing CRUD operations for master data
-- Inconsistent error handling
-
-Fixes Needed:
-- Full CRUD APIs for all entities
-- Proper error handling and validation
-- API documentation and testing
-```
-
-### 3. Database Schema
-```
-Current Issues:
-- Enum fields converted to strings (lost type safety)
-- Missing proper relationships
-- No data validation at DB level
-
-Fixes Needed:
-- Restore enum types with proper string enums
-- Add proper foreign key constraints
-- Implement database-level validation
-```
-
-## 📋 Immediate Action Items
-
-### Week 1 Priority Tasks:
-1. **Fix Category Management**
-   - Create CategoryManagement page
-   - Update InventoryForm to use CategoryAutoComplete
-   - Seed database with proper categories
-
-2. **Form Standardization**
-   - Audit all forms for consistency
-   - Replace text inputs with appropriate autocomplete components
-   - Add proper validation
-
-3. **Data Quality**
-   - Import legacy data properly
-   - Validate all imported records
-   - Clean up any data inconsistencies
-
-### Success Metrics:
-- All forms use consistent autocomplete patterns
-- Categories are managed centrally
-- Data integrity is maintained
-- User experience is consistent across modules
-
-## 🎯 Business Value Delivered
-
-### Immediate Benefits:
-- Consistent user experience across all forms
-- Reduced data entry errors
-- Proper category management
-
-### Medium-term Benefits:
-- Real-time project profitability tracking
-- Automated financial reporting
-- Streamlined approval workflows
-
-### Long-term Benefits:
-- Predictive analytics for business decisions
-- Complete business intelligence platform
-- Scalable system for business growth
+**Purpose:** Build a clean, role‑based ERP for a C&I (Commercial & Industrial) engineering company.  
+**Focus:** Project-centric operations with strict role permissions, auditable transactions, and simple CRUD for every module.
 
 ---
 
-**Last Updated**: February 1, 2026  
-**Status**: Phase 1 Planning Complete - Ready for Implementation  
-**Next Review**: Weekly team sync to track progress against roadmap
+## 1) Vision & Principles
+
+**Vision:** One reliable system to manage projects, expenses, inventory, wallets, approvals, and reporting for engineering work.
+
+**Principles**
+- Single source of truth (no shadow spreadsheets).
+- Role‑based access for each module and field (prices, approvals, wallet, etc.).
+- Every financial action is auditable.
+- Keep UI simple and consistent; avoid “smart” behavior that hides data.
+
+---
+
+## 2) Core Modules (Must Have)
+
+**Master Data (CRUD)**
+- Clients (with contacts)
+- Projects (linked to clients)
+- Employees
+- Inventory Items
+- Expense Categories
+- Payment Modes / Sources
+
+**Transactions (CRUD)**
+- Expenses (linked to project + employee)
+- Income / Payments (linked to project)
+- Inventory Ledger (stock in/out with references)
+- Employee Wallet (credit/debit with audit)
+
+**Operations**
+- Approvals (expense + income)
+- Project‑wise expenses and recovery tracking
+- Attachments (receipts, invoices)
+
+**Reporting (initial)**
+- Project summary (budget vs actual, pending recovery)
+- Expense by project / category
+- Inventory stock report
+- Employee wallet summary
+
+---
+
+## 3) Roles & Access (C&I focused)
+
+**CEO**
+- Full access
+
+**Admin**
+- User management, roles, system settings
+
+**Finance / Accounts**
+- Full financial view, approvals, wallet transfers, reports
+
+**Procurement**
+- Inventory CRUD + purchase price entry
+
+**Store Keeper**
+- Stock in/out, view quantities, no purchase cost edit
+
+**Sales**
+- Can view selling price and project pipeline
+
+**Marketing / Sales Manager**
+- Can update project status, payment received, recovery
+
+**Engineering / Project Manager**
+- Can create/update project info, view project expenses
+
+**Employee**
+- Can submit expenses, view own wallet
+
+**Field‑level access must be enforced** (e.g., purchase price only visible/editable to Procurement/Finance, selling price visible to Sales/Marketing).  
+
+---
+
+## 4) Immediate Scope (Phase 0: Stabilize)
+
+**Goal:** Make the system usable for daily operations without gaps.
+
+**Deliverables**
+1. Align all forms ↔ API ↔ DB schema (no mismatches).
+2. CRUD works for:
+   - Clients, Projects, Employees, Inventory Items
+   - Expenses, Income, Approvals
+   - Employee Wallet transactions
+3. Permissions enforced for all modules (read/write/approve).
+4. Audit logs for all create/update/delete.
+
+**Success Criteria**
+- No 400/500 errors for standard CRUD.
+- All required fields match real business workflow.
+- Role permissions actually restrict access.
+
+---
+
+## 5) Phase 1: Core Operations
+
+**Clients**
+- Create client + contacts
+- Client dropdown in Project form with “Create Client” option
+
+**Projects**
+- Project ID (from quotation)
+- Client (required)
+- Start Date
+- Total Budget (approved/settled amount)
+
+**Expenses**
+- Employee submits expense against project + category
+- Receipt attachment
+- Approval workflow
+
+**Inventory**
+- Items with purchase + selling price
+- Ledger (stock in/out, project reference)
+
+**Employee Wallet**
+- Finance credits wallet
+- Employee logs expenses using wallet
+
+---
+
+## 6) Phase 2: Approvals & Reporting
+
+**Approvals**
+- Expense approvals
+- Income approvals
+- Approval history + audit logs
+
+**Reporting**
+- Project‑wise expense summary
+- Project recovery (received vs pending)
+- Inventory valuation
+- Employee expense summary
+
+---
+
+## 7) Phase 3: Attachments & Notifications
+
+- Receipt upload + preview
+- Attachment permissions by parent record
+- Notifications for approvals, low stock, overdue invoices
+
+---
+
+## 8) Phase 4: Future Expansion (Optional)
+
+- Procurement workflow (PO, GRN)
+- Advanced inventory costing (FIFO/Avg)
+- Maintenance/service module
+- Client portal
+- Automated billing and invoicing
+
+---
+
+## 9) Execution Rules (Non‑negotiable)
+
+- No feature without CRUD working end‑to‑end.
+- No UI without validation & permission checks in API.
+- All monetary changes must have audit logs.
+- Keep workflows simple before adding automation.
+
