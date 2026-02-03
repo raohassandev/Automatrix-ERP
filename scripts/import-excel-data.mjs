@@ -55,7 +55,11 @@ async function getOrCreateUser(email, name, role) {
 async function importData() {
   console.log('📊 Starting data import from Excel...\n');
   
-  const filePath = '/Users/israrulhaq/Desktop/DEV/Automatrix-ERP/archive/Automatrix_ERP.xlsx';
+  // Default to the repo copy of the Excel file. Allow override via CLI:
+  //   node scripts/import-excel-data.mjs --file ../data/legacy/Automatrix_ERP.xlsx
+  const fileArgIndex = process.argv.findIndex((a) => a === "--file");
+  const filePath = fileArgIndex >= 0 ? process.argv[fileArgIndex + 1] : "../data/legacy/Automatrix_ERP.xlsx";
+
   const workbook = XLSX.readFile(filePath);
   
   let stats = {
@@ -82,8 +86,17 @@ async function importData() {
         const projectName = row['Name'];
         const client = row['Client'] || 'Unknown';
         
-        const project = await prisma.project.create({
-          data: {
+        const project = await prisma.project.upsert({
+          where: { projectId: projectId || `P-${Date.now()}` },
+          update: {
+            name: projectName,
+            client: client,
+            status: 'ACTIVE',
+            contractValue: parseFloat(row['Contract Value']) || 0,
+            invoicedAmount: parseFloat(row['Invoiced Amount']) || 0,
+            receivedAmount: parseFloat(row['Received Amount']) || 0,
+          },
+          create: {
             projectId: projectId || `P-${Date.now()}`,
             name: projectName,
             client: client,
@@ -258,18 +271,44 @@ async function importData() {
           continue;
         }
         
-        const income = await prisma.income.create({
-          data: {
-            date,
-            source: row['Client_Name (Auto)'] || 'Unknown',
-            amount,
-            category: row['Milestone'] || 'General',
-            project: row['Project_Ref'],
-            paymentMode: row['Payment_Mode'] || 'Cash',
-            status: row['Status'] === 'Received' ? 'APPROVED' : 'PENDING',
-            addedById: firstUser.id,
-          }
-        });
+        const externalId = row['ID'] ? String(row['ID']) : null;
+        const income = externalId
+          ? await prisma.income.upsert({
+              where: { externalId },
+              update: {
+                date,
+                source: row['Client_Name (Auto)'] || 'Unknown',
+                amount,
+                category: row['Milestone'] || 'General',
+                project: row['Project_Ref'],
+                paymentMode: row['Payment_Mode'] || 'Cash',
+                status: row['Status'] === 'Received' ? 'APPROVED' : 'PENDING',
+                addedById: firstUser.id,
+              },
+              create: {
+                externalId,
+                date,
+                source: row['Client_Name (Auto)'] || 'Unknown',
+                amount,
+                category: row['Milestone'] || 'General',
+                project: row['Project_Ref'],
+                paymentMode: row['Payment_Mode'] || 'Cash',
+                status: row['Status'] === 'Received' ? 'APPROVED' : 'PENDING',
+                addedById: firstUser.id,
+              },
+            })
+          : await prisma.income.create({
+              data: {
+                date,
+                source: row['Client_Name (Auto)'] || 'Unknown',
+                amount,
+                category: row['Milestone'] || 'General',
+                project: row['Project_Ref'],
+                paymentMode: row['Payment_Mode'] || 'Cash',
+                status: row['Status'] === 'Received' ? 'APPROVED' : 'PENDING',
+                addedById: firstUser.id,
+              },
+            });
         
         console.log(`  ✅ Created income: ${income.source} - ${amount}`);
         stats.income++;
@@ -342,21 +381,53 @@ async function importData() {
           }
         } else {
           // Create expense
-          const expense = await prisma.expense.create({
-            data: {
-              date,
-              category,
-              amount,
-              description: row['Description'] || '',
-              project: row['Project_Ref'],
-              paymentMode: type.includes('Direct') ? 'Bank Transfer' : 
-                          type.includes('Company Account') ? 'Bank Transfer' : 'Cash',
-              submittedById: submittedByUser.id,
-              status: row['Status'] === 'Approved' ? 'APPROVED' : 
-                      row['Status'] === 'Pending' ? 'PENDING' : 'APPROVED',
-              receiptUrl: row['Receipt_Image'] || null
-            }
-          });
+          const externalId = row['ID'] ? String(row['ID']) : null;
+          const expense = externalId
+            ? await prisma.expense.upsert({
+                where: { externalId },
+                update: {
+                  date,
+                  category,
+                  amount,
+                  description: row['Description'] || '',
+                  project: row['Project_Ref'],
+                  paymentMode: type.includes('Direct') ? 'Bank Transfer' : 
+                              type.includes('Company Account') ? 'Bank Transfer' : 'Cash',
+                  submittedById: submittedByUser.id,
+                  status: row['Status'] === 'Approved' ? 'APPROVED' : 
+                          row['Status'] === 'Pending' ? 'PENDING' : 'APPROVED',
+                  receiptUrl: row['Receipt_Image'] || null,
+                },
+                create: {
+                  externalId,
+                  date,
+                  category,
+                  amount,
+                  description: row['Description'] || '',
+                  project: row['Project_Ref'],
+                  paymentMode: type.includes('Direct') ? 'Bank Transfer' : 
+                              type.includes('Company Account') ? 'Bank Transfer' : 'Cash',
+                  submittedById: submittedByUser.id,
+                  status: row['Status'] === 'Approved' ? 'APPROVED' : 
+                          row['Status'] === 'Pending' ? 'PENDING' : 'APPROVED',
+                  receiptUrl: row['Receipt_Image'] || null,
+                }
+              })
+            : await prisma.expense.create({
+                data: {
+                  date,
+                  category,
+                  amount,
+                  description: row['Description'] || '',
+                  project: row['Project_Ref'],
+                  paymentMode: type.includes('Direct') ? 'Bank Transfer' : 
+                              type.includes('Company Account') ? 'Bank Transfer' : 'Cash',
+                  submittedById: submittedByUser.id,
+                  status: row['Status'] === 'Approved' ? 'APPROVED' : 
+                          row['Status'] === 'Pending' ? 'PENDING' : 'APPROVED',
+                  receiptUrl: row['Receipt_Image'] || null
+                }
+              });
           
           console.log(`  ✅ Created expense: ${category} - ${amount}`);
           stats.expenses++;

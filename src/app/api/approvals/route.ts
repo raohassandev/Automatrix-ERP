@@ -5,10 +5,13 @@ import {
   getPendingApprovalsForUser,
   approveExpense,
   rejectExpense,
+  approveIncome,
+  rejectIncome,
   getApprovalStats,
 } from "@/lib/approval-engine";
 import { ZodError } from "zod";
 import { approvalSchema } from "@/lib/validation-schemas";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /api/approvals - Get pending approvals for current user
@@ -36,10 +39,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       data: pendingApprovals,
-      count: pendingApprovals.length,
+      count: pendingApprovals.expenses.length + pendingApprovals.income.length,
     });
   } catch (error) {
-    console.error("Error fetching approvals:", error);
+    logger.error("Error fetching approvals", error, { userId: session.user.id });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -106,12 +109,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle income approval (TODO: implement similar to expense)
+    // Handle income approval
     if (validated.incomeId) {
-      return NextResponse.json(
-        { error: "Income approval not yet implemented" },
-        { status: 501 }
-      );
+      if (validated.action === "APPROVE" || validated.action === "PARTIAL_APPROVE") {
+        const result = await approveIncome({
+          incomeId: validated.incomeId,
+          approverId: session.user.id,
+          reason: validated.reason,
+          approvedAmount: validated.approvedAmount,
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Income approved successfully",
+          data: result,
+        });
+      } else if (validated.action === "REJECT") {
+        if (!validated.reason) {
+          return NextResponse.json(
+            { error: "Reason is required for rejection" },
+            { status: 400 }
+          );
+        }
+
+        const result = await rejectIncome({
+          incomeId: validated.incomeId,
+          approverId: session.user.id,
+          reason: validated.reason,
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Income rejected successfully",
+          data: result,
+        });
+      }
     }
 
     return NextResponse.json(
@@ -134,7 +166,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error("Error processing approval:", error);
+    logger.error("Error processing approval", error, { 
+      userId: session.user.id,
+      action: 'POST',
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -220,7 +255,10 @@ export async function PUT(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error("Error processing bulk approval:", error);
+    logger.error("Error processing bulk approval", error, { 
+      userId: session.user.id,
+      action: 'PUT',
+    });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

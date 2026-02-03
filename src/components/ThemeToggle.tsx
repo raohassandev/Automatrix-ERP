@@ -1,38 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-const themes = ["light", "dark"] as const;
-type Theme = (typeof themes)[number];
-
-function applyTheme(theme: Theme) {
-  document.documentElement.dataset.theme = theme;
-  document.body.dataset.theme = theme;
-}
+import { useTheme } from "next-themes";
+import { Button } from "@/components/ui/button";
+import { Sun, Moon } from "lucide-react";
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "light";
-    const stored = window.localStorage.getItem("automatrix-theme");
-    if (stored === "dark") return "dark";
-    return "light";
-  });
-
-  useEffect(() => {
-    applyTheme(theme);
-    window.localStorage.setItem("automatrix-theme", theme);
-  }, [theme]);
-
-  const nextTheme: Theme = theme === "light" ? "dark" : "light";
+  const { theme, setTheme } = useTheme();
 
   return (
-    <button
-      type="button"
-      className="rounded-md border px-3 py-1 text-sm"
-      onClick={() => setTheme(nextTheme)}
-      aria-label={`Switch to ${nextTheme} theme`}
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
     >
-      {theme === "light" ? "Dark" : "Light"}
-    </button>
+      <Sun className="h-[1.5rem] w-[1.3rem] dark:hidden" />
+      <Moon className="hidden h-[1.5rem] w-[1.3rem] dark:block" />
+      <span className="sr-only">Toggle theme</span>
+    </Button>
   );
 }

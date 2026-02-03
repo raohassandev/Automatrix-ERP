@@ -18,33 +18,44 @@ export default async function NotificationsPage() {
     (await requirePermission(session.user.id, "reports.view_all"));
   if (!canView) {
     return (
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Notifications</h1>
-        <p className="mt-2 text-gray-600">You do not have access to notifications.</p>
+        <p className="mt-2 text-muted-foreground">You do not have access to notifications.</p>
       </div>
     );
   }
 
-  const notifications = await prisma.notification.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  let notifications = [];
+  try {
+    notifications = await prisma.notification.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Notifications</h1>
+        <p className="mt-2 text-muted-foreground">Error loading notification data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Notifications</h1>
-        <p className="mt-2 text-gray-600">Personal notifications.</p>
+        <p className="mt-2 text-muted-foreground">Personal notifications.</p>
       </div>
 
       <NotificationForm />
 
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-gray-500">
+              <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">Type</th>
                 <th className="py-2">Message</th>
                 <th className="py-2">Status</th>

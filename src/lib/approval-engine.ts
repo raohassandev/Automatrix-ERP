@@ -1,8 +1,4 @@
-/**
- * Approval Workflow Engine for AutoMatrix ERP
- * Handles threshold-based routing and approval logic
- */
-
+import { Expense, Income } from '@prisma/client';
 import { prisma } from './prisma';
 import { createAuditLog } from './audit';
 
@@ -265,16 +261,165 @@ export async function rejectExpense(params: {
 }
 
 /**
+ * Approve an income entry
+ */
+export async function approveIncome(params: {
+  incomeId: string;
+  approverId: string;
+  reason?: string;
+  approvedAmount?: number;
+}) {
+  const { incomeId, approverId, reason, approvedAmount } = params;
+
+  // Get income entry
+  const income = await prisma.income.findUnique({
+    where: { id: incomeId },
+    include: {
+      addedBy: true,
+    },
+  });
+
+  if (!income) {
+    throw new Error('Income entry not found');
+  }
+
+  if (income.status !== 'PENDING') {
+    throw new Error(`Cannot approve income with status: ${income.status}`);
+  }
+
+  // Check if user can approve this amount
+  const finalAmount = approvedAmount || parseFloat(income.amount.toString());
+  const { canApprove, reason: approvalReason } = await canUserApprove(
+    approverId,
+    finalAmount,
+  );
+
+  if (!canApprove) {
+    throw new Error(approvalReason || 'User cannot approve this income');
+  }
+
+  // Start transaction
+  const result = await prisma.$transaction(async (tx) => {
+    // Update income status
+    const updatedIncome = await tx.income.update({
+      where: { id: incomeId },
+      data: {
+        status: 'APPROVED',
+        approvedById: approverId,
+      },
+    });
+
+    // Create audit log
+    await createAuditLog({
+      action: 'UPDATE',
+      entityType: 'Income',
+      entityId: incomeId,
+      userId: approverId,
+      changes: {
+        status: { from: 'PENDING', to: 'APPROVED' },
+        approvedAmount: finalAmount,
+      },
+    });
+
+    // Create notification for submitter
+    await tx.notification.create({
+      data: {
+        userId: income.addedById,
+        type: 'SUCCESS',
+        message: `Your income entry of PKR ${finalAmount} has been approved.`,
+        status: 'UNREAD',
+      },
+    });
+
+    return { updatedIncome };
+  });
+
+  return result;
+}
+
+/**
+ * Reject an income entry
+ */
+export async function rejectIncome(params: {
+  incomeId: string;
+  approverId: string;
+  reason: string;
+}) {
+  const { incomeId, approverId, reason } = params;
+
+  const income = await prisma.income.findUnique({
+    where: { id: incomeId },
+    include: { addedBy: true },
+  });
+
+  if (!income) {
+    throw new Error('Income entry not found');
+  }
+
+  if (income.status !== 'PENDING') {
+    throw new Error(`Cannot reject income with status: ${income.status}`);
+  }
+
+  // Check if user can approve (same permission for reject)
+  const amount = parseFloat(income.amount.toString());
+  const { canApprove } = await canUserApprove(approverId, amount);
+
+  if (!canApprove) {
+    throw new Error('User cannot reject this income');
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Update income status
+    const updatedIncome = await tx.income.update({
+      where: { id: incomeId },
+      data: {
+        status: 'REJECTED',
+        approvedById: approverId,
+      },
+    });
+
+    // Create audit log
+    await createAuditLog({
+      action: 'UPDATE',
+      entityType: 'Income',
+      entityId: incomeId,
+      userId: approverId,
+      changes: {
+        status: { from: 'PENDING', to: 'REJECTED' },
+        reason,
+      },
+    });
+
+    // Create notification for submitter
+    await tx.notification.create({
+      data: {
+        userId: income.addedById,
+        type: 'ERROR',
+        message: `Your income entry of PKR ${amount} has been rejected. Reason: ${reason}`,
+        status: 'UNREAD',
+      },
+    });
+
+    return updatedIncome;
+  });
+
+  return result;
+}
+
+/**
  * Get pending approvals for a user based on their role
  */
-export async function getPendingApprovalsForUser(userId: string) {
+export async function getPendingApprovalsForUser(userId: string): Promise<{
+  expenses: Expense[];
+  income: Income[];
+}> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { role: true },
   });
 
   if (!user || !user.role) {
-    return [];
+    return { expenses: [], income: [] };
   }
 
   // Get all pending expenses
@@ -282,6 +427,15 @@ export async function getPendingApprovalsForUser(userId: string) {
     where: { status: 'PENDING' },
     include: {
       submittedBy: { select: { id: true, email: true, name: true } },
+    },
+    orderBy: { date: 'desc' },
+  });
+
+  // Get all pending income entries
+  const pendingIncome = await prisma.income.findMany({
+    where: { status: 'PENDING' },
+    include: {
+      addedBy: { select: { id: true, email: true, name: true } },
     },
     orderBy: { date: 'desc' },
   });
@@ -294,12 +448,27 @@ export async function getPendingApprovalsForUser(userId: string) {
     return allowedRoles.includes(user.role!.name);
   });
 
-  return approvableExpenses.map((expense) => ({
-    ...expense,
-    requiredApprovalLevel: getRequiredApprovalLevel(
-      parseFloat(expense.amount.toString()),
-    ),
-  }));
+  const approvableIncome = pendingIncome.filter((income) => {
+    const amount = parseFloat(income.amount.toString());
+    const requiredLevel = getRequiredApprovalLevel(amount);
+    const allowedRoles = getRequiredRoleForLevel(requiredLevel);
+    return allowedRoles.includes(user.role!.name);
+  });
+
+  return {
+    expenses: approvableExpenses.map((expense) => ({
+      ...expense,
+      requiredApprovalLevel: getRequiredApprovalLevel(
+        parseFloat(expense.amount.toString()),
+      ),
+    })),
+    income: approvableIncome.map((income) => ({
+      ...income,
+      requiredApprovalLevel: getRequiredApprovalLevel(
+        parseFloat(income.amount.toString()),
+      ),
+    })),
+  };
 }
 
 /**

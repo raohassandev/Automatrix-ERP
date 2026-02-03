@@ -17,32 +17,43 @@ export default async function AttachmentsPage() {
   const canViewAll = await requirePermission(session.user.id, "reports.view_all");
   if (!canViewAll) {
     return (
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Attachments</h1>
-        <p className="mt-2 text-gray-600">You do not have access to attachments.</p>
+        <p className="mt-2 text-muted-foreground">You do not have access to attachments.</p>
       </div>
     );
   }
 
-  const attachments = await prisma.attachment.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  let attachments = [];
+  try {
+    attachments = await prisma.attachment.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  } catch (error) {
+    console.error("Error fetching attachments:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Attachments</h1>
+        <p className="mt-2 text-muted-foreground">Error loading attachment data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Attachments</h1>
-        <p className="mt-2 text-gray-600">External links and file metadata.</p>
+        <p className="mt-2 text-muted-foreground">External links and file metadata.</p>
       </div>
 
       <AttachmentForm />
 
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-gray-500">
+              <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">Type</th>
                 <th className="py-2">Record</th>
                 <th className="py-2">File</th>

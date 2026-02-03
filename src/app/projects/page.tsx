@@ -1,10 +1,10 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
-import ProjectForm from "@/components/ProjectForm";
 import { DeleteButton, QuickEditButton } from "@/components/TableActions";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
+import { MobileCard } from "@/components/MobileCard";
 
 export default async function ProjectsPage() {
   const session = await auth();
@@ -19,9 +19,9 @@ export default async function ProjectsPage() {
 
   if (!canViewAll && !canViewAssigned) {
     return (
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Projects</h1>
-        <p className="mt-2 text-gray-600">You do not have access to projects.</p>
+        <p className="mt-2 text-muted-foreground">You do not have access to projects.</p>
       </div>
     );
   }
@@ -30,18 +30,16 @@ export default async function ProjectsPage() {
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Projects</h1>
-        <p className="mt-2 text-gray-600">Projects overview.</p>
+        <p className="mt-2 text-muted-foreground">Projects overview.</p>
       </div>
 
-      <ProjectForm />
-
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-gray-500">
+              <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">Project</th>
                 <th className="py-2">Client</th>
                 <th className="py-2">Status</th>
@@ -71,6 +69,31 @@ export default async function ProjectsPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: Cards */}
+        <div className="md:hidden space-y-4">
+          {projects.map((project) => (
+            <MobileCard
+              key={project.id}
+              title={project.name}
+              subtitle={project.client}
+              fields={[
+                { label: "Status", value: project.status },
+                { label: "Contract", value: formatMoney(Number(project.contractValue)) },
+                { label: "Pending", value: formatMoney(Number(project.pendingRecovery)) },
+              ]}
+              actions={
+                <>
+                  <QuickEditButton
+                    url={`/api/projects/${project.id}`}
+                    fields={{ status: "Status", contractValue: "Contract Value", endDate: "End Date" }}
+                  />
+                  <DeleteButton url={`/api/projects/${project.id}`} />
+                </>
+              }
+            />
+          ))}
         </div>
       </div>
     </div>

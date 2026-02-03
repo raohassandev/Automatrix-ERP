@@ -11,13 +11,32 @@ export default function EmployeeForm() {
     name: "",
     phone: "",
     role: "Staff",
+    initialWalletBalance: "0",
   });
 
   async function submit() {
-    await fetch("/api/employees", {
+    const res = await fetch("/api/employees", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        initialWalletBalance: parseFloat(form.initialWalletBalance) || 0,
+      }),
+    });
+    
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.error || "Failed to create employee");
+      return;
+    }
+    
+    alert("Employee created successfully!");
+    setForm({
+      email: "",
+      name: "",
+      phone: "",
+      role: "Staff",
+      initialWalletBalance: "0",
     });
     router.refresh();
   }
@@ -49,6 +68,13 @@ export default function EmployeeForm() {
           placeholder="Role"
           value={form.role}
           onChange={(e) => setForm({ ...form, role: e.target.value })}
+        />
+        <input
+          className="rounded-md border px-3 py-2"
+          placeholder="Initial Wallet Balance (optional)"
+          type="number"
+          value={form.initialWalletBalance}
+          onChange={(e) => setForm({ ...form, initialWalletBalance: e.target.value })}
         />
       </div>
       <button

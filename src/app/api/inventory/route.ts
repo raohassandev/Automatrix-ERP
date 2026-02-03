@@ -5,6 +5,7 @@ import { inventorySchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function GET() {
   const session = await auth();
@@ -41,16 +42,24 @@ export async function POST(req: Request) {
     );
   }
 
+  // Sanitize string inputs after validation
+  const sanitizedData = {
+    ...parsed.data,
+    name: sanitizeString(parsed.data.name),
+    category: sanitizeString(parsed.data.category),
+    unit: sanitizeString(parsed.data.unit),
+  };
+
   const created = await prisma.inventoryItem.create({
     data: {
-      name: parsed.data.name,
-      category: parsed.data.category,
-      unit: parsed.data.unit,
-      unitCost: new Prisma.Decimal(parsed.data.unitCost),
+      name: sanitizedData.name,
+      category: sanitizedData.category,
+      unit: sanitizedData.unit,
+      unitCost: new Prisma.Decimal(sanitizedData.unitCost),
       quantity: new Prisma.Decimal(0),
       totalValue: new Prisma.Decimal(0),
-      minStock: new Prisma.Decimal(parsed.data.minStock || 0),
-      reorderQty: new Prisma.Decimal(parsed.data.reorderQty || 0),
+      minStock: new Prisma.Decimal(sanitizedData.minStock || 0),
+      reorderQty: new Prisma.Decimal(sanitizedData.reorderQty || 0),
       reservedQty: new Prisma.Decimal(0),
       availableQty: new Prisma.Decimal(0),
       lastUpdated: new Date(),
@@ -62,7 +71,7 @@ export async function POST(req: Request) {
     action: "CREATE_INVENTORY_ITEM",
     entity: "InventoryItem",
     entityId: created.id,
-    newValue: JSON.stringify(parsed.data),
+    newValue: JSON.stringify(sanitizedData),
     userId: session.user.id,
   });
 

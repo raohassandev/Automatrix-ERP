@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
 import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/rbac";
+import ReportExporter from "@/components/ReportExporter";
 
 export default async function ReportsPage() {
   const session = await auth();
@@ -18,9 +19,9 @@ export default async function ReportsPage() {
   const canExport = await requirePermission(session.user.id, "reports.export");
   if (!canViewAll && !canViewTeam && !canViewOwn) {
     return (
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Reports</h1>
-        <p className="mt-2 text-gray-600">You do not have access to reports.</p>
+        <p className="mt-2 text-muted-foreground">You do not have access to reports.</p>
       </div>
     );
   }
@@ -46,48 +47,51 @@ export default async function ReportsPage() {
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Reports</h1>
-            <p className="mt-2 text-gray-600">High-level summary report.</p>
+            <p className="mt-2 text-muted-foreground">High-level summary report.</p>
           </div>
-          {canExport ? (
-            <a
-              href="/api/reports/export"
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Export CSV
-            </a>
-          ) : null}
+          <div className="flex gap-2">
+            {canExport ? (
+              <a
+                href="/api/reports/export"
+                className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+              >
+                Export CSV
+              </a>
+            ) : null}
+            {canExport ? <ReportExporter /> : null}
+          </div>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <div className="text-sm text-gray-500">Total Income</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Total Income</div>
           <div className="mt-2 text-xl font-semibold">{formatMoney(totalIncome)}</div>
         </div>
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <div className="text-sm text-gray-500">Total Expenses</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Total Expenses</div>
           <div className="mt-2 text-xl font-semibold">{formatMoney(totalExpenses)}</div>
         </div>
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <div className="text-sm text-gray-500">Projects</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Projects</div>
           <div className="mt-2 text-xl font-semibold">{projectCount}</div>
         </div>
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <div className="text-sm text-gray-500">Invoices</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Invoices</div>
           <div className="mt-2 text-xl font-semibold">{invoiceCount}</div>
         </div>
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <div className="text-sm text-gray-500">Pending Recovery</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Pending Recovery</div>
           <div className="mt-2 text-xl font-semibold">
             {formatMoney(Number(pendingRecoverySum._sum.pendingRecovery || 0))}
           </div>
         </div>
-        <div className="rounded-xl border bg-white p-6 shadow-sm">
-          <div className="text-sm text-gray-500">Low Stock Alerts</div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Low Stock Alerts</div>
           <div className="mt-2 text-xl font-semibold">{lowStockCount}</div>
         </div>
       </div>

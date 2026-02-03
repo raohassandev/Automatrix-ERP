@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import IncomeSourceAutoComplete from "./IncomeSourceAutoComplete";
+import PaymentModeAutoComplete from "./PaymentModeAutoComplete";
+import ProjectAutoComplete from "./ProjectAutoComplete";
 
 export default function IncomeForm() {
   const router = useRouter();
@@ -57,11 +60,9 @@ export default function IncomeForm() {
           value={form.date}
           onChange={(e) => setForm({ ...form, date: e.target.value })}
         />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder="Source"
+        <IncomeSourceAutoComplete
           value={form.source}
-          onChange={(e) => setForm({ ...form, source: e.target.value })}
+          onChange={(value) => setForm({ ...form, source: value })}
         />
         <input
           className="rounded-md border px-3 py-2"
@@ -69,17 +70,14 @@ export default function IncomeForm() {
           value={form.category}
           onChange={(e) => setForm({ ...form, category: e.target.value })}
         />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder="Payment Mode"
+        <PaymentModeAutoComplete
           value={form.paymentMode}
-          onChange={(e) => setForm({ ...form, paymentMode: e.target.value })}
+          onChange={(value) => setForm({ ...form, paymentMode: value })}
         />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder="Project"
+        <ProjectAutoComplete
           value={form.project}
-          onChange={(e) => setForm({ ...form, project: e.target.value })}
+          onChange={(value) => setForm({ ...form, project: value })}
+          placeholder="Select project (optional)"
         />
         <input
           className="rounded-md border px-3 py-2"

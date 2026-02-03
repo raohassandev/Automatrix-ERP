@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import CategoryAutoComplete from "./CategoryAutoComplete";
 
 export default function InventoryForm() {
   const router = useRouter();
@@ -39,11 +40,10 @@ export default function InventoryForm() {
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder="Category"
+        <CategoryAutoComplete
+          type="inventory"
           value={form.category}
-          onChange={(e) => setForm({ ...form, category: e.target.value })}
+          onChange={(value) => setForm({ ...form, category: value })}
         />
         <input
           className="rounded-md border px-3 py-2"

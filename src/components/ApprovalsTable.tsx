@@ -1,6 +1,5 @@
 "use client";
 
-import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import ApprovalActions from "@/components/ApprovalActions";
@@ -12,6 +11,7 @@ type ExpenseRow = {
   description: string;
   amount: number;
   approvalLevel?: string | null;
+  status?: string; // Add status to ExpenseRow
 };
 
 type IncomeRow = {
@@ -20,6 +20,7 @@ type IncomeRow = {
   source: string;
   amount: number;
   approvalLevel?: string | null;
+  status?: string; // Add status to IncomeRow
 };
 
 export default function ApprovalsTable({
@@ -30,38 +31,6 @@ export default function ApprovalsTable({
   income: IncomeRow[];
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
-
-  async function submitApproval(
-    type: "EXPENSE" | "INCOME",
-    id: string,
-    action: "APPROVE" | "REJECT" | "PARTIAL",
-    opts?: { approvedAmount?: number; reason?: string }
-  ) {
-    await fetch("/api/approvals", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, id, action, ...opts }),
-    });
-    router.refresh();
-  }
-
-  function handleReject(type: "EXPENSE" | "INCOME", id: string) {
-    const reason = window.prompt("Reason for rejection (optional):") || undefined;
-    startTransition(() => submitApproval(type, id, "REJECT", { reason }));
-  }
-
-  function handlePartial(id: string) {
-    const raw = window.prompt("Approved amount:");
-    if (!raw) return;
-    const amount = Number(raw);
-    if (Number.isNaN(amount) || amount <= 0) {
-      window.alert("Enter a valid amount.");
-      return;
-    }
-    const reason = window.prompt("Reason for partial approval (optional):") || undefined;
-    startTransition(() => submitApproval("EXPENSE", id, "PARTIAL", { approvedAmount: amount, reason }));
-  }
 
   return (
     <div className="grid gap-6">
@@ -77,10 +46,12 @@ export default function ApprovalsTable({
             <td className="py-2">{expense.approvalLevel || "-"}</td>
             <td className="py-2">
               <ApprovalActions
-                pending={pending}
-                onApprove={() => submitApproval("EXPENSE", expense.id, "APPROVE")}
-                onReject={() => handleReject("EXPENSE", expense.id)}
-                onPartial={() => handlePartial(expense.id)}
+                expenseId={expense.id}
+                amount={expense.amount}
+                employeeName="Unknown" // Placeholder
+                currentBalance={0} // Placeholder
+                afterBalance={0} // Placeholder
+                status={expense.status || "PENDING"} // Ensure status is passed
               />
             </td>
           </tr>
@@ -99,9 +70,12 @@ export default function ApprovalsTable({
             <td className="py-2">{entry.approvalLevel || "-"}</td>
             <td className="py-2">
               <ApprovalActions
-                pending={pending}
-                onApprove={() => submitApproval("INCOME", entry.id, "APPROVE")}
-                onReject={() => handleReject("INCOME", entry.id)}
+                expenseId={entry.id}
+                amount={entry.amount}
+                employeeName="Unknown" // Placeholder
+                currentBalance={0} // Placeholder
+                afterBalance={0} // Placeholder
+                status={entry.status || "PENDING"} // Ensure status is passed
               />
             </td>
           </tr>

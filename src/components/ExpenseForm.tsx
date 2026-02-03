@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/Modal";
+import CategoryAutoComplete from "./CategoryAutoComplete";
+import PaymentModeAutoComplete from "./PaymentModeAutoComplete";
+import ProjectAutoComplete from "./ProjectAutoComplete";
 
 type DuplicateExpense = {
   id: string;
@@ -21,6 +24,7 @@ export default function ExpenseForm() {
     category: "",
     amount: "",
     paymentMode: "",
+    paymentSource: "COMPANY_DIRECT" as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
     project: "",
     receiptUrl: "",
     receiptFileId: "",
@@ -33,49 +37,49 @@ export default function ExpenseForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...form,
-        amount: Number(form.amount),
+        date: form.date,
+        description: form.description,
+        category: form.category,
+        amount: parseFloat(form.amount),
+        paymentMode: form.paymentMode,
+        paymentSource: form.paymentSource,
+        project: form.project || undefined,
         receiptUrl: form.receiptUrl || undefined,
         receiptFileId: form.receiptFileId || undefined,
         ignoreDuplicate,
       }),
     });
 
-    if (res.ok) {
-      setForm({
-        date: "",
-        description: "",
-        category: "",
-        amount: "",
-        paymentMode: "",
-        project: "",
-        receiptUrl: "",
-        receiptFileId: "",
-      });
-      setDuplicateItems([]);
-      setDuplicateModalOpen(false);
-      router.refresh();
-      return;
-    }
+    const data = await res.json();
 
-    const payload = await res.json().catch(() => ({}));
-    if (res.status === 409) {
-      if (payload?.requiresConfirmation && Array.isArray(payload.duplicates)) {
-        setDuplicateItems(payload.duplicates as DuplicateExpense[]);
+    if (!data.success) {
+      if (data.requiresConfirmation && data.duplicates) {
+        setDuplicateItems(data.duplicates);
         setDuplicateModalOpen(true);
         return;
       }
-
-      alert(payload?.error || "A similar expense already exists.");
+      alert(data.error || "Failed to submit expense");
       return;
     }
 
-    alert(payload?.error || "Unable to submit expense.");
+    alert("Expense submitted successfully!");
+    setForm({
+      date: "",
+      description: "",
+      category: "",
+      amount: "",
+      paymentMode: "",
+      paymentSource: "COMPANY_DIRECT",
+      project: "",
+      receiptUrl: "",
+      receiptFileId: "",
+    });
+    router.refresh();
   }
 
-  function renderDuplicates() {
+  function renderDuplicates(): React.ReactNode {
     if (duplicateItems.length === 0) {
-      return <p className="text-sm text-gray-600">No duplicates found.</p>;
+      return null; // Explicitly return null if no duplicates
     }
 
     return (
@@ -102,23 +106,27 @@ export default function ExpenseForm() {
           value={form.date}
           onChange={(e) => setForm({ ...form, date: e.target.value })}
         />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder="Category"
+        <CategoryAutoComplete
           value={form.category}
-          onChange={(e) => setForm({ ...form, category: e.target.value })}
+          onChange={(value) => setForm({ ...form, category: value })}
         />
-        <input
-          className="rounded-md border px-3 py-2"
-          placeholder="Payment Mode"
+        <PaymentModeAutoComplete
           value={form.paymentMode}
-          onChange={(e) => setForm({ ...form, paymentMode: e.target.value })}
+          onChange={(value) => setForm({ ...form, paymentMode: value })}
         />
-        <input
+        <select
           className="rounded-md border px-3 py-2"
-          placeholder="Project"
+          value={form.paymentSource}
+          onChange={(e) => setForm({ ...form, paymentSource: e.target.value as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT" })}
+        >
+          <option value="COMPANY_DIRECT">Company Paid (Direct)</option>
+          <option value="COMPANY_ACCOUNT">Company Paid (Account)</option>
+          <option value="EMPLOYEE_WALLET">Employee Wallet</option>
+        </select>
+        <ProjectAutoComplete
           value={form.project}
-          onChange={(e) => setForm({ ...form, project: e.target.value })}
+          onChange={(value) => setForm({ ...form, project: value })}
+          placeholder="Select project (optional)"
         />
         <input
           className="rounded-md border px-3 py-2 md:col-span-2"

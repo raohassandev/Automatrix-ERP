@@ -1,15 +1,17 @@
 # Node
 node_modules/
-.env*
+.env
+.env.local
+.env.* 
+!.env.example
 .pnpm-debug.log*
 # Next.js
 .next/
 out/
 # Prisma
+dev.db
 prisma/dev.db
-# Local dev DBs in monorepo
-apps/web/dev.db
-apps/web/prisma/**/*.db
+prisma/**/*.db
 # Playwright
 playwright/.auth/
 playwright/test-results/
@@ -27,5 +29,4 @@ logs/
 **/__pycache__/
 *.pyc
 # Generated
-pnpm-lock.yaml
-legacy/apps-script/build/
+test-results/

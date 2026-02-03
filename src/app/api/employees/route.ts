@@ -5,6 +5,7 @@ import { employeeSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function GET() {
   const session = await auth();
@@ -41,23 +42,53 @@ export async function POST(req: Request) {
     );
   }
 
-  const created = await prisma.employee.create({
-    data: {
-      email: parsed.data.email,
-      name: parsed.data.name,
-      phone: parsed.data.phone,
-      role: parsed.data.role,
-      walletBalance: new Prisma.Decimal(0),
-    },
+  // Sanitize string inputs after validation
+  const sanitizedData = {
+    ...parsed.data,
+    email: sanitizeString(parsed.data.email),
+    name: sanitizeString(parsed.data.name),
+    phone: parsed.data.phone ? sanitizeString(parsed.data.phone) : undefined,
+    role: sanitizeString(parsed.data.role),
+  };
+
+  const initialWalletBalance = body.initialWalletBalance || 0;
+
+  // Create employee and initial wallet entry in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    const created = await tx.employee.create({
+      data: {
+        email: sanitizedData.email,
+        name: sanitizedData.name,
+        phone: sanitizedData.phone,
+        role: sanitizedData.role,
+        walletBalance: new Prisma.Decimal(initialWalletBalance),
+      },
+    });
+
+    // If initial wallet balance > 0, create a CREDIT wallet ledger entry
+    if (initialWalletBalance > 0) {
+      await tx.walletLedger.create({
+        data: {
+          employeeId: created.id,
+          type: "CREDIT",
+          amount: new Prisma.Decimal(initialWalletBalance),
+          date: new Date(),
+          reference: "Initial Balance",
+          balance: new Prisma.Decimal(initialWalletBalance),
+        },
+      });
+    }
+
+    return created;
   });
 
   await logAudit({
     action: "CREATE_EMPLOYEE",
     entity: "Employee",
-    entityId: created.id,
-    newValue: JSON.stringify(parsed.data),
+    entityId: result.id,
+    newValue: JSON.stringify({ ...sanitizedData, initialWalletBalance }),
     userId: session.user.id,
   });
 
-  return NextResponse.json({ success: true, data: created });
+  return NextResponse.json({ success: true, data: result });
 }

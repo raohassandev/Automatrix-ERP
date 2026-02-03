@@ -1,10 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatMoney } from "@/lib/format";
-import EmployeeForm from "@/components/EmployeeForm";
-import { DeleteButton, QuickEditButton } from "@/components/TableActions";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from 'next/navigation';
+import { EmployeesTable } from "@/components/EmployeesTable";
 
 export default async function EmployeesPage() {
   const session = await auth();
@@ -20,9 +18,9 @@ export default async function EmployeesPage() {
 
   if (!canViewAll && !canViewTeam && !canViewOwn) {
     return (
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Employees</h1>
-        <p className="mt-2 text-gray-600">You do not have access to employees.</p>
+        <p className="mt-2 text-muted-foreground">You do not have access to employees.</p>
       </div>
     );
   }
@@ -31,52 +29,34 @@ export default async function EmployeesPage() {
     ? {}
     : { email: session.user.email || "__none__" };
 
-  const employees = await prisma.employee.findMany({ where, orderBy: { name: "asc" } });
+  let employees = [];
+  try {
+    const employeesRaw = await prisma.employee.findMany({ where, orderBy: { name: "asc" } });
+    
+    // Convert Decimal to number for component compatibility
+    employees = employeesRaw.map((emp) => ({
+      ...emp,
+      walletBalance: parseFloat(emp.walletBalance.toString()),
+    }));
+  } catch (error) {
+    console.error("Error fetching employees:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Employees</h1>
+        <p className="mt-2 text-muted-foreground">Error loading employee data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Employees</h1>
-        <p className="mt-2 text-gray-600">Employee directory.</p>
+        <p className="mt-2 text-muted-foreground">Employee directory.</p>
       </div>
 
-      <EmployeeForm />
-
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-gray-500">
-                <th className="py-2">Name</th>
-                <th className="py-2">Email</th>
-                <th className="py-2">Role</th>
-                <th className="py-2">Wallet</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((employee) => (
-                <tr key={employee.id} className="border-b">
-                  <td className="py-2">{employee.name}</td>
-                  <td className="py-2">{employee.email}</td>
-                  <td className="py-2">{employee.role}</td>
-                  <td className="py-2">{formatMoney(Number(employee.walletBalance))}</td>
-                  <td className="py-2">{employee.status}</td>
-                  <td className="py-2">
-                    <div className="flex gap-2">
-                      <QuickEditButton
-                        url={`/api/employees/${employee.id}`}
-                        fields={{ role: "Role", status: "Status", phone: "Phone" }}
-                      />
-                      <DeleteButton url={`/api/employees/${employee.id}`} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <EmployeesTable employees={employees} />
       </div>
     </div>
   );

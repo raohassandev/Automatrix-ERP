@@ -1,10 +1,10 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
-import IncomeForm from "@/components/IncomeForm";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { MobileCard } from "@/components/MobileCard";
 
 export default async function IncomePage() {
   const session = await auth();
@@ -20,24 +20,35 @@ export default async function IncomePage() {
   const canViewOwn = await requirePermission(userId, "income.view_own");
   const canExport = canViewAll || canViewOwn;
 
-  const entries = await prisma.income.findMany({
-    where: canViewAll ? {} : canViewOwn ? { addedById: userId } : { id: "__none__" },
-    orderBy: { createdAt: "desc" },
-    take: 25,
-  });
+  let entries = [];
+  try {
+    entries = await prisma.income.findMany({
+      where: canViewAll ? {} : canViewOwn ? { addedById: userId } : { id: "__none__" },
+      orderBy: { createdAt: "desc" },
+      take: 25,
+    });
+  } catch (error) {
+    console.error("Error fetching income entries:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Income</h1>
+        <p className="mt-2 text-muted-foreground">Error loading income data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Income</h1>
-            <p className="mt-2 text-gray-600">Latest 25 income entries.</p>
+            <p className="mt-2 text-muted-foreground">Latest 25 income entries.</p>
           </div>
           {canExport ? (
             <Link
               href="/api/income/export"
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
             >
               Export CSV
             </Link>
@@ -45,13 +56,12 @@ export default async function IncomePage() {
         </div>
       </div>
 
-      <IncomeForm />
-
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        {/* Desktop: Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-gray-500">
+              <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">Date</th>
                 <th className="py-2">Source</th>
                 <th className="py-2">Category</th>
@@ -71,6 +81,23 @@ export default async function IncomePage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: Cards */}
+        <div className="md:hidden space-y-4">
+          {entries.map((entry) => (
+            <MobileCard
+              key={entry.id}
+              title={entry.source}
+              subtitle={new Date(entry.date).toLocaleDateString()}
+              fields={[
+                { label: "Amount", value: formatMoney(Number(entry.amount)) },
+                { label: "Category", value: entry.category },
+                { label: "Status", value: entry.status },
+                { label: "Date", value: new Date(entry.date).toLocaleDateString() },
+              ]}
+            />
+          ))}
         </div>
       </div>
     </div>

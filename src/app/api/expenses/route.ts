@@ -7,7 +7,9 @@ import { requirePermission } from "@/lib/rbac";
 import { DUPLICATE_CHECK_DAYS, RECEIPT_REQUIRED_THRESHOLD } from "@/lib/constants";
 import { getExpenseApprovalLevel } from "@/lib/approvals";
 import { createNotification } from "@/lib/notifications";
+import { applyWalletTransactionByEmail } from "@/lib/wallet";
 import { Prisma } from "@prisma/client";
+import { sanitizeString } from "@/lib/sanitize";
 
 async function checkDuplicateExpense(input: {
   amount: number;
@@ -31,13 +33,13 @@ async function checkDuplicateExpense(input: {
     take: 5,
   });
 
-  const descriptionLower = input.description.toLowerCase();
+  const descriptionLower = sanitizeString(input.description).toLowerCase();
   return matches.filter((match) =>
     match.description.toLowerCase().includes(descriptionLower.slice(0, 20))
   );
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -45,17 +47,95 @@ export async function GET() {
 
   const canViewAll = await requirePermission(session.user.id, "expenses.view_all");
   const canViewOwn = await requirePermission(session.user.id, "expenses.view_own");
+  
   if (!canViewAll && !canViewOwn) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
-  const data = await prisma.expense.findMany({
-    where: canViewAll ? {} : { submittedById: session.user.id },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  try {
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const category = searchParams.get('category') || '';
+    const status = searchParams.get('status') || '';
+    const sortBy = searchParams.get('sortBy') || 'date';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-  return NextResponse.json({ success: true, data });
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: {
+      submittedById?: string;
+      OR?: Array<{ description?: { contains: string } } | { category?: { contains: string } }>;
+      category?: string;
+      status?: string;
+    } = {};
+    
+    // Check if user can view all expenses or only their own
+    if (!canViewAll) {
+      where.submittedById = session.user.id;
+    }
+
+    if (search) {
+      where.OR = [
+        { description: { contains: search } },
+        { category: { contains: search } },
+      ];
+    }
+
+    if (category) {
+      where.category = category;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    // Build orderBy
+    const orderBy: Record<string, string> = {};
+    orderBy[sortBy] = sortOrder;
+
+    const [expenses, total] = await Promise.all([
+      prisma.expense.findMany({
+        where,
+        include: {
+          submittedBy: { select: { id: true, email: true, name: true } },
+          approvedBy: { select: { id: true, email: true, name: true } },
+        },
+        orderBy,
+        skip,
+        take: limit,
+      }),
+      prisma.expense.count({ where }),
+    ]);
+
+    // Convert Decimal to number for JSON serialization
+    const serializedExpenses = expenses.map(expense => ({
+      ...expense,
+      amount: Number(expense.amount),
+      approvedAmount: expense.approvedAmount ? Number(expense.approvedAmount) : null,
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        expenses: serializedExpenses,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching expenses:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: Request) {
@@ -78,10 +158,21 @@ export async function POST(req: Request) {
     );
   }
 
+  // Sanitize string inputs after validation
+  const sanitizedData = {
+    ...parsed.data,
+    description: sanitizeString(parsed.data.description),
+    category: sanitizeString(parsed.data.category),
+    paymentMode: sanitizeString(parsed.data.paymentMode),
+    project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
+    receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
+    receiptFileId: parsed.data.receiptFileId ? sanitizeString(parsed.data.receiptFileId) : undefined,
+  };
+
   if (
-    parsed.data.amount >= RECEIPT_REQUIRED_THRESHOLD &&
-    !parsed.data.receiptUrl &&
-    !parsed.data.receiptFileId
+    sanitizedData.amount >= RECEIPT_REQUIRED_THRESHOLD &&
+    !sanitizedData.receiptUrl &&
+    !sanitizedData.receiptFileId
   ) {
     return NextResponse.json(
       { success: false, error: "Receipt required for this amount" },
@@ -91,9 +182,9 @@ export async function POST(req: Request) {
 
   if (!body.ignoreDuplicate) {
     const duplicates = await checkDuplicateExpense({
-      amount: parsed.data.amount,
-      description: parsed.data.description,
-      date: parsed.data.date,
+      amount: sanitizedData.amount,
+      description: sanitizedData.description,
+      date: sanitizedData.date,
     });
 
     if (duplicates.length > 0) {
@@ -130,39 +221,113 @@ export async function POST(req: Request) {
     }
   }
 
-  const approvalLevel = getExpenseApprovalLevel(parsed.data.amount);
+  const approvalLevel = getExpenseApprovalLevel(sanitizedData.amount);
   const status =
     approvalLevel === "L1" ? "PENDING_L1" : approvalLevel === "L2" ? "PENDING_L2" : "PENDING_L3";
 
-  const created = await prisma.expense.create({
-    data: {
-      date: new Date(parsed.data.date),
-      description: parsed.data.description,
-      category: parsed.data.category,
-      amount: new Prisma.Decimal(parsed.data.amount),
-      paymentMode: parsed.data.paymentMode,
-      project: parsed.data.project,
-      approvalLevel,
-      status,
-      submittedById: session.user.id,
-      receiptUrl: parsed.data.receiptUrl,
-      receiptFileId: parsed.data.receiptFileId,
-    },
+  // Check if payment source is EMPLOYEE_WALLET
+  const paymentSource = sanitizedData.paymentSource || "COMPANY_DIRECT";
+  
+  if (paymentSource === "EMPLOYEE_WALLET") {
+    // Validate that user has an employee record and sufficient wallet balance
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true },
+    });
+    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 400 }
+      );
+    }
+    
+    const employee = await prisma.employee.findUnique({
+      where: { email: user.email },
+      select: { id: true, walletBalance: true },
+    });
+    
+    if (!employee) {
+      return NextResponse.json(
+        { success: false, error: "Employee record not found. Cannot use wallet payment." },
+        { status: 400 }
+      );
+    }
+    
+    if (Number(employee.walletBalance) < sanitizedData.amount) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Insufficient wallet balance. Available: ${employee.walletBalance}, Required: ${sanitizedData.amount}` 
+        },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Create expense and deduct from wallet in a transaction
+  const result = await prisma.$transaction(async (tx) => {
+    const created = await tx.expense.create({
+      data: {
+        date: new Date(sanitizedData.date),
+        description: sanitizedData.description,
+        category: sanitizedData.category,
+        amount: new Prisma.Decimal(sanitizedData.amount),
+        paymentMode: sanitizedData.paymentMode,
+        paymentSource: paymentSource as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
+        project: sanitizedData.project,
+        approvalLevel,
+        status,
+        submittedById: session.user.id,
+        receiptUrl: sanitizedData.receiptUrl,
+        receiptFileId: sanitizedData.receiptFileId,
+      },
+    });
+
+    // If paid from wallet, deduct the amount
+    let walletLedgerId: string | undefined;
+    if (paymentSource === "EMPLOYEE_WALLET") {
+      const user = await tx.user.findUnique({
+        where: { id: session.user.id },
+        select: { email: true },
+      });
+      
+      if (user) {
+        const walletResult = await applyWalletTransactionByEmail({
+          email: user.email,
+          type: "DEBIT",
+          amount: sanitizedData.amount,
+          reference: created.id,
+        });
+        
+        if (walletResult.applied && 'ledger' in walletResult) {
+          walletLedgerId = walletResult.ledger.id;
+          
+          // Update expense with wallet ledger link
+          await tx.expense.update({
+            where: { id: created.id },
+            data: { walletLedgerId },
+          });
+        }
+      }
+    }
+
+    return { created, walletLedgerId };
   });
 
   await logAudit({
     action: "SUBMIT_EXPENSE",
     entity: "Expense",
-    entityId: created.id,
-    newValue: JSON.stringify(parsed.data),
+    entityId: result.created.id,
+    newValue: JSON.stringify(sanitizedData),
     userId: session.user.id,
   });
 
   await createNotification({
     userId: session.user.id,
     type: "EXPENSE_SUBMITTED",
-    message: `Expense submitted for ${parsed.data.amount}.`,
+    message: `Expense submitted for ${sanitizedData.amount}${paymentSource === "EMPLOYEE_WALLET" ? " (paid from wallet)" : ""}.`,
   });
 
-  return NextResponse.json({ success: true, data: created });
+  return NextResponse.json({ success: true, data: result.created });
 }

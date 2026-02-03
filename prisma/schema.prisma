@@ -3,64 +3,17 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
-enum ApprovalType {
-  EXPENSE
-  INCOME
-}
 
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  PARTIALLY_APPROVED
-}
 
-enum ExpenseStatus {
-  PENDING
-  PENDING_L1
-  PENDING_L2
-  PENDING_L3
-  APPROVED
-  REJECTED
-  PARTIALLY_APPROVED
-}
 
-enum IncomeStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
 
-enum LedgerType {
-  PURCHASE
-  SALE
-  ADJUSTMENT
-  TRANSFER
-  RETURN
-  PROJECT_ALLOCATION
-}
 
-enum InvoiceStatus {
-  DRAFT
-  SENT
-  PAID
-  OVERDUE
-  CANCELLED
-}
 
-enum EmployeeStatus {
-  ACTIVE
-  INACTIVE
-}
 
-enum WalletType {
-  CREDIT
-  DEBIT
-}
 
 model User {
   id            String    @id @default(cuid())
@@ -96,6 +49,16 @@ model Permission {
   roles       RolePermission[]
 }
 
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  type        String   // 'expense' or 'inventory' or 'income'
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model RolePermission {
   id            String      @id @default(cuid())
   roleId        String
@@ -106,21 +69,26 @@ model RolePermission {
   @@unique([roleId, permissionId])
 }
 
+
 model Expense {
   id              String        @id @default(cuid())
+  // For idempotent imports from legacy systems (e.g., Excel Transactions sheet)
+  externalId      String?       @unique
   date            DateTime
   description     String
   category        String
-  amount          Decimal       @db.Decimal(12, 2)
+  amount          Decimal
   paymentMode     String
+  paymentSource   String @default("COMPANY_DIRECT")
   project         String?
-  status          ExpenseStatus @default(PENDING)
+  status          String @default("PENDING")
   approvalLevel   String?
-  approvedAmount  Decimal?      @db.Decimal(12, 2)
+  approvedAmount  Decimal?
   submittedById   String
   approvedById    String?
   receiptUrl      String?
   receiptFileId   String?
+  walletLedgerId  String?       // Link to wallet transaction if paid from wallet
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -131,18 +99,21 @@ model Expense {
 
 model Income {
   id              String        @id @default(cuid())
+  // For idempotent imports from legacy systems (e.g., Excel Income_Log sheet)
+  externalId      String?       @unique
   date            DateTime
   source          String
   category        String
-  amount          Decimal       @db.Decimal(12, 2)
+  amount          Decimal
   paymentMode     String
   project         String?
-  status          IncomeStatus  @default(PENDING)
+  status          String  @default("PENDING")
   approvalLevel   String?
   approvedById    String?
   receiptUrl      String?
   receiptFileId   String?
   invoiceId       String?
+  remarks         String?
   addedById       String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -154,10 +125,10 @@ model Income {
 
 model Approval {
   id             String         @id @default(cuid())
-  type           ApprovalType
-  status         ApprovalStatus @default(PENDING)
-  amount         Decimal        @db.Decimal(12, 2)
-  approvedAmount Decimal?       @db.Decimal(12, 2)
+  type           String
+  status         String @default("PENDING")
+  amount         Decimal        
+  approvedAmount Decimal?       
   reason         String?
   expenseId      String?
   incomeId       String?
@@ -179,13 +150,13 @@ model Project {
   startDate      DateTime
   endDate        DateTime?
   status         String
-  contractValue  Decimal  @db.Decimal(12, 2)
-  invoicedAmount Decimal  @db.Decimal(12, 2)
-  receivedAmount Decimal  @db.Decimal(12, 2)
-  pendingRecovery Decimal @db.Decimal(12, 2)
-  costToDate     Decimal  @db.Decimal(12, 2)
-  grossMargin    Decimal  @db.Decimal(12, 2)
-  marginPercent  Decimal  @db.Decimal(5, 2)
+  contractValue  Decimal  
+  invoicedAmount Decimal  
+  receivedAmount Decimal  
+  pendingRecovery Decimal 
+  costToDate     Decimal  
+  grossMargin    Decimal  
+  marginPercent  Decimal  
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -194,16 +165,16 @@ model InventoryItem {
   id             String   @id @default(cuid())
   name           String   @unique
   category       String
-  quantity       Decimal  @db.Decimal(12, 2)
+  quantity       Decimal  
   unit           String
-  unitCost       Decimal  @db.Decimal(12, 2)
-  totalValue     Decimal  @db.Decimal(12, 2)
-  minStock       Decimal  @db.Decimal(12, 2) @default(0)
-  reorderQty     Decimal  @db.Decimal(12, 2) @default(0)
-  reservedQty    Decimal  @db.Decimal(12, 2) @default(0)
-  availableQty   Decimal  @db.Decimal(12, 2) @default(0)
+  unitCost       Decimal  
+  totalValue     Decimal  
+  minStock       Decimal   @default(0)
+  reorderQty     Decimal   @default(0)
+  reservedQty    Decimal   @default(0)
+  availableQty   Decimal   @default(0)
   lastPurchaseDate DateTime?
-  avgUsage30Days Decimal  @db.Decimal(12, 2) @default(0)
+  avgUsage30Days Decimal   @default(0)
   lastUpdated    DateTime
   ledger         InventoryLedger[]
   createdAt      DateTime @default(now())
@@ -213,14 +184,14 @@ model InventoryLedger {
   id            String     @id @default(cuid())
   date          DateTime
   itemId        String
-  type          LedgerType
-  quantity      Decimal    @db.Decimal(12, 2)
-  unitCost      Decimal    @db.Decimal(12, 2)
-  total         Decimal    @db.Decimal(12, 2)
+  type          String
+  quantity      Decimal    
+  unitCost      Decimal    
+  total         Decimal    
   reference     String?
   project       String?
   userId        String?
-  runningBalance Decimal   @db.Decimal(12, 2)
+  runningBalance Decimal   
 
   item          InventoryItem @relation(fields: [itemId], references: [id])
 }
@@ -231,8 +202,8 @@ model Employee {
   name          String
   phone         String?
   role          String
-  walletBalance Decimal        @db.Decimal(12, 2) @default(0)
-  status        EmployeeStatus @default(ACTIVE)
+  walletBalance Decimal         @default(0)
+  status        String @default("ACTIVE")
   wallets       WalletLedger[]
 }
 
@@ -240,10 +211,10 @@ model WalletLedger {
   id         String     @id @default(cuid())
   date       DateTime
   employeeId String
-  type       WalletType
-  amount     Decimal    @db.Decimal(12, 2)
+  type       String
+  amount     Decimal    
   reference  String?
-  balance    Decimal    @db.Decimal(12, 2)
+  balance    Decimal    
 
   employee   Employee   @relation(fields: [employeeId], references: [id])
 }
@@ -253,9 +224,9 @@ model Invoice {
   invoiceNo  String        @unique
   projectId  String
   date       DateTime
-  amount     Decimal       @db.Decimal(12, 2)
+  amount     Decimal       
   dueDate    DateTime
-  status     InvoiceStatus @default(DRAFT)
+  status     String @default("DRAFT")
   paymentDate DateTime?
   notes      String?
   createdAt  DateTime @default(now())

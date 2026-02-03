@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
  * Authenticated smoke test: visit all sidebar pages and fail on obvious runtime errors.
  *
  * Run:
- *   pnpm -C apps/web test:e2e -- smoke-all-pages
+ *   pnpm test:e2e -- smoke-all-pages
  */
 
 test.describe("Smoke: authenticated user can load all pages", () => {

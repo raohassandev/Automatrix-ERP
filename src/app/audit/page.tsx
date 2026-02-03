@@ -14,26 +14,37 @@ export default async function AuditPage() {
   const canView = await requirePermission(session.user.id, "reports.view_all");
   if (!canView) {
     return (
-      <div className="rounded-xl border bg-white p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Audit Log</h1>
-        <p className="mt-2 text-gray-600">You do not have access to the audit log.</p>
+        <p className="mt-2 text-muted-foreground">You do not have access to the audit log.</p>
       </div>
     );
   }
 
-  const logs = await prisma.auditLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  let logs = [];
+  try {
+    logs = await prisma.auditLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  } catch (error) {
+    console.error("Error fetching audit logs:", error);
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Audit Log</h1>
+        <p className="mt-2 text-muted-foreground">Error loading audit log data. Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="rounded-xl border bg-white p-8 shadow-sm">
+    <div className="rounded-xl border bg-card p-8 shadow-sm">
       <h1 className="text-2xl font-semibold">Audit Log</h1>
-      <p className="mt-2 text-gray-600">Latest 100 actions.</p>
+      <p className="mt-2 text-muted-foreground">Latest 100 actions.</p>
       <div className="mt-6 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b text-left text-gray-500">
+            <tr className="border-b text-left text-muted-foreground">
               <th className="py-2">Time</th>
               <th className="py-2">Action</th>
               <th className="py-2">Entity</th>

@@ -10,8 +10,8 @@ export default function LoginPage() {
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
     name: "",
-    email: "israrulhaq5@gmail.com",
-    password: "Password",
+    email: "admin@automatrix.local",
+    password: "admin123",
   });
   const [message, setMessage] = useState<string | null>(null);
 
@@ -25,6 +25,7 @@ export default function LoginPage() {
       email: form.email,
       password: form.password,
       redirect: false,
+      callbackUrl: "/dashboard",
     });
 
     if (res?.error) {
@@ -32,8 +33,10 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    if (res?.ok) {
+      router.push("/dashboard");
+      router.refresh();
+    }
   }
 
   async function handleGoogleLogin() {
@@ -67,6 +70,7 @@ export default function LoginPage() {
       email: form.email,
       password: form.password,
       redirect: false,
+      callbackUrl: "/dashboard",
     });
 
     if (signInRes?.error) {
@@ -74,14 +78,16 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    if (signInRes?.ok) {
+      router.push("/dashboard");
+      router.refresh();
+    }
   }
 
   return (
-    <div className="mx-auto max-w-md rounded-xl border bg-white p-8 shadow-sm">
+    <div className="mx-auto max-w-md rounded-xl border bg-card p-8 shadow-sm">
       <h1 className="text-2xl font-semibold">Sign in</h1>
-      <p className="mt-2 text-gray-600">Use Google or your email/password.</p>
+      <p className="mt-2 text-muted-foreground">Use Google or your email/password.</p>
 
       <div className="mt-6 grid gap-3">
         {isGoogleAuthConfigured ? (
@@ -94,7 +100,7 @@ export default function LoginPage() {
             {pending ? "Working..." : "Sign in with Google"}
           </button>
         ) : (
-          <p className="text-sm text-gray-500">Google auth is disabled in this environment.</p>
+          <p className="text-sm text-muted-foreground">Google auth is disabled in this environment.</p>
         )}
 
         <div className="border-t pt-4">
@@ -134,7 +140,7 @@ export default function LoginPage() {
             </button>
             <button
               type="button"
-              className="rounded-md border px-4 py-2 hover:bg-gray-50"
+              className="rounded-md border px-4 py-2 hover:bg-accent"
               disabled={pending}
               onClick={() => startTransition(handleRegister)}
             >

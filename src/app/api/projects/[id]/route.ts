@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -19,9 +20,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const body = await req.json();
 
   const data: Record<string, unknown> = {};
-  if (body.name) data.name = body.name;
-  if (body.client) data.client = body.client;
-  if (body.status) data.status = body.status;
+  if (body.name) data.name = sanitizeString(body.name);
+  if (body.client) data.client = sanitizeString(body.client);
+  if (body.status) data.status = sanitizeString(body.status);
   if (body.endDate) data.endDate = new Date(body.endDate);
   if (body.contractValue !== undefined) data.contractValue = new Prisma.Decimal(body.contractValue);
 

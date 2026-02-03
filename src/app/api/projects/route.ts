@@ -5,6 +5,7 @@ import { projectSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
+import { sanitizeString } from "@/lib/sanitize";
 
 export async function GET() {
   const session = await auth();
@@ -41,15 +42,24 @@ export async function POST(req: Request) {
     );
   }
 
+  // Sanitize string inputs after validation
+  const sanitizedData = {
+    ...parsed.data,
+    projectId: sanitizeString(parsed.data.projectId),
+    name: sanitizeString(parsed.data.name),
+    client: sanitizeString(parsed.data.client),
+    status: parsed.data.status ? sanitizeString(parsed.data.status) : "Planning",
+  };
+
   const created = await prisma.project.create({
     data: {
-      projectId: parsed.data.projectId,
-      name: parsed.data.name,
-      client: parsed.data.client,
-      startDate: new Date(parsed.data.startDate),
-      endDate: parsed.data.endDate ? new Date(parsed.data.endDate) : null,
-      status: parsed.data.status || "Planning",
-      contractValue: new Prisma.Decimal(parsed.data.contractValue || 0),
+      projectId: sanitizedData.projectId,
+      name: sanitizedData.name,
+      client: sanitizedData.client,
+      startDate: new Date(sanitizedData.startDate),
+      endDate: sanitizedData.endDate ? new Date(sanitizedData.endDate) : null,
+      status: sanitizedData.status,
+      contractValue: new Prisma.Decimal(sanitizedData.contractValue || 0),
       invoicedAmount: new Prisma.Decimal(0),
       receivedAmount: new Prisma.Decimal(0),
       pendingRecovery: new Prisma.Decimal(0),
@@ -63,7 +73,7 @@ export async function POST(req: Request) {
     action: "CREATE_PROJECT",
     entity: "Project",
     entityId: created.id,
-    newValue: JSON.stringify(parsed.data),
+    newValue: JSON.stringify(sanitizedData),
     userId: session.user.id,
   });
 

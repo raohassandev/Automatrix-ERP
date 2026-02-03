@@ -8,11 +8,11 @@ import path from "node:path";
  * IMPORTANT:
  * - Do NOT hardcode credentials in this file.
  * - Provide credentials via env vars when running locally:
- *   REFRENS_EMAIL="..." REFRENS_PASSWORD="..." pnpm -C apps/web playwright test refrens-audit
+ *   REFRENS_EMAIL="..." REFRENS_PASSWORD="..." pnpm playwright test refrens-audit
  *
  * Output:
- * - apps/web/playwright/screenshots/refrens_features.json
- * - apps/web/playwright/screenshots/refrens_features.txt
+ * - playwright/screenshots/refrens_features.json
+ * - playwright/screenshots/refrens_features.txt
  */
 
 test.describe("Refrens portal - feature inventory (navigation crawl)", () => {
@@ -25,7 +25,7 @@ test.describe("Refrens portal - feature inventory (navigation crawl)", () => {
     }
 
     const base = "https://www.refrens.com";
-    const outDir = path.resolve(process.cwd(), "apps/web/playwright/screenshots");
+    const outDir = path.resolve(process.cwd(), "playwright/screenshots");
     fs.mkdirSync(outDir, { recursive: true });
 
     // 1) Login
