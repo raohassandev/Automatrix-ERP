@@ -1,11 +1,15 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { formatMoney } from "@/lib/format";
-import { DeleteButton, QuickEditButton } from "@/components/TableActions";
 import { requirePermission } from "@/lib/rbac";
-import { MobileCard } from "@/components/MobileCard";
+import { InventoryTable } from "@/components/InventoryTable";
+import SearchInput from "@/components/SearchInput";
+import PaginationControls from "@/components/PaginationControls";
 
-export default async function InventoryPage() {
+export default async function InventoryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; page?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) {
     return (
@@ -26,9 +30,31 @@ export default async function InventoryPage() {
     );
   }
 
+  const params = await searchParams;
+  const search = (params.search || "").trim();
+  const page = Math.max(parseInt(params.page || "1", 10), 1);
+  const take = 25;
+  const skip = (page - 1) * take;
+
   let items = [];
+  let total = 0;
   try {
-    items = await prisma.inventoryItem.findMany({ orderBy: { createdAt: "desc" } });
+    const where = search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { category: { contains: search, mode: "insensitive" } },
+            { sku: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {};
+
+    const [itemsResult, totalResult] = await Promise.all([
+      prisma.inventoryItem.findMany({ where, orderBy: { createdAt: "desc" }, skip, take }),
+      prisma.inventoryItem.count({ where }),
+    ]);
+    items = itemsResult;
+    total = totalResult;
   } catch (error) {
     console.error("Error fetching inventory items:", error);
     return (
@@ -38,75 +64,35 @@ export default async function InventoryPage() {
       </div>
     );
   }
+  const totalPages = Math.max(1, Math.ceil(total / take));
 
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Inventory</h1>
-        <p className="mt-2 text-muted-foreground">Inventory item list.</p>
-      </div>
-
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="hidden md:block overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="py-2">Item</th>
-                <th className="py-2">Category</th>
-                <th className="py-2">Qty</th>
-                <th className="py-2">Unit Cost</th>
-                <th className="py-2">Total</th>
-                <th className="py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-b">
-                  <td className="py-2">{item.name}</td>
-                  <td className="py-2">{item.category}</td>
-                  <td className="py-2">{Number(item.quantity)}</td>
-                  <td className="py-2">{formatMoney(Number(item.unitCost))}</td>
-                  <td className="py-2">{formatMoney(Number(item.totalValue))}</td>
-                  <td className="py-2">
-                    <div className="flex gap-2">
-                      <QuickEditButton
-                        url={`/api/inventory/${item.id}`}
-                        fields={{ unitCost: "Unit Cost", minStock: "Min Stock", reorderQty: "Reorder Qty" }}
-                      />
-                      <DeleteButton url={`/api/inventory/${item.id}`} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Mobile: Cards */}
-        <div className="md:hidden space-y-4">
-          {items.map((item) => (
-            <MobileCard
-              key={item.id}
-              title={item.name}
-              subtitle={item.category}
-              fields={[
-                { label: "Quantity", value: Number(item.quantity) },
-                { label: "Unit Cost", value: formatMoney(Number(item.unitCost)) },
-                { label: "Total Value", value: formatMoney(Number(item.totalValue)) },
-              ]}
-              actions={
-                <>
-                  <QuickEditButton
-                    url={`/api/inventory/${item.id}`}
-                    fields={{ unitCost: "Unit Cost", minStock: "Min Stock", reorderQty: "Reorder Qty" }}
-                  />
-                  <DeleteButton url={`/api/inventory/${item.id}`} />
-                </>
-              }
-            />
-          ))}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Inventory</h1>
+            <p className="mt-2 text-muted-foreground">Inventory item list.</p>
+          </div>
+          <div className="min-w-[220px]">
+            <SearchInput placeholder="Search inventory..." />
+          </div>
         </div>
       </div>
+
+      <InventoryTable items={items} />
+
+      {items.length === 0 && (
+        <div className="rounded-xl border bg-card p-6 text-center text-muted-foreground shadow-sm">
+          No inventory items found.
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <PaginationControls totalPages={totalPages} currentPage={page} />
+        </div>
+      )}
     </div>
   );
 }

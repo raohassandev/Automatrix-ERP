@@ -80,7 +80,7 @@ model Expense {
   amount          Decimal
   paymentMode     String
   paymentSource   String @default("COMPANY_DIRECT")
-  project         String?
+  project         String
   status          String @default("PENDING")
   approvalLevel   String?
   approvedAmount  Decimal?
@@ -142,11 +142,34 @@ model Approval {
   approvedBy     User?          @relation("ApprovalBy", fields: [approvedById], references: [id])
 }
 
+model Client {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  address     String?
+  contacts    ClientContact[]
+  projects    Project[]
+  quotations  Quotation[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ClientContact {
+  id          String   @id @default(cuid())
+  clientId    String
+  name        String
+  phone       String?
+  designation String?
+  email       String?
+  client      Client   @relation(fields: [clientId], references: [id])
+}
+
 model Project {
   id             String   @id @default(cuid())
   projectId      String   @unique
   name           String
-  client         String
+  clientId       String
+  client         Client   @relation(fields: [clientId], references: [id])
   startDate      DateTime
   endDate        DateTime?
   status         String
@@ -164,10 +187,12 @@ model Project {
 model InventoryItem {
   id             String   @id @default(cuid())
   name           String   @unique
+  sku            String?
   category       String
   quantity       Decimal  
   unit           String
   unitCost       Decimal  
+  sellingPrice   Decimal @default(0)
   totalValue     Decimal  
   minStock       Decimal   @default(0)
   reorderQty     Decimal   @default(0)
@@ -231,6 +256,73 @@ model Invoice {
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model Quotation {
+  id            String   @id @default(cuid())
+  quoteNumber   String   @unique
+  quoteSeries   String?
+  voucherNumber String?
+  voucherDate   DateTime?
+  dueDate       DateTime?
+  currency      String?
+  status        String?
+  title         String?
+  subTitle      String?
+  projectRef    String?
+  salesEngineer String?
+
+  clientId      String?
+  client        Client?  @relation(fields: [clientId], references: [id])
+  clientName    String?
+  clientEmail   String?
+  clientPhone   String?
+  clientAddress String?
+
+  businessName  String?
+  placeOfSupply String?
+  paymentMethod String?
+  notes         String?
+  terms         String?
+
+  paidAmount    Decimal?
+  dueAmount     Decimal?
+  totalAmount   Decimal?
+  totalTax      Decimal?
+
+  lineItems     QuotationLineItem[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model QuotationLineItem {
+  id              String   @id @default(cuid())
+  quotationId     String
+  quotation       Quotation @relation(fields: [quotationId], references: [id])
+  lineItem        String?
+  description     String?
+  unit            String?
+  quantity        Decimal?
+  rate            Decimal?
+  amount          Decimal?
+  taxRate         Decimal?
+  taxCategory     String?
+  taxCategoryReason String?
+  totalTax        Decimal?
+  totalAmount     Decimal?
+  hsn             String?
+  sku             String?
+  discountType    String?
+  itemLevelPercent Decimal?
+  itemLevelAmount Decimal?
+
+  itemUnit        String?
+  itemModel       String?
+  itemSpecs       String?
+  itemMake        String?
+  itemUom         String?
+
+  createdAt       DateTime @default(now())
 }
 
 model Attachment {

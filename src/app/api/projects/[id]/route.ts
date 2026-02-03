@@ -21,7 +21,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   const data: Record<string, unknown> = {};
   if (body.name) data.name = sanitizeString(body.name);
-  if (body.client) data.client = sanitizeString(body.client);
+  if (body.clientId) data.clientId = sanitizeString(body.clientId);
   if (body.status) data.status = sanitizeString(body.status);
   if (body.endDate) data.endDate = new Date(body.endDate);
   if (body.contractValue !== undefined) data.contractValue = new Prisma.Decimal(body.contractValue);

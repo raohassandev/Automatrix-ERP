@@ -13,6 +13,7 @@ export default async function ProjectExpensesReportPage() {
   // Get all projects
   const projects = await prisma.project.findMany({
     orderBy: { name: "asc" },
+    include: { client: true },
   });
 
   // Get expense totals per project
@@ -20,7 +21,7 @@ export default async function ProjectExpensesReportPage() {
     projects.map(async (project) => {
       // Match expenses by project name (expenses.project field stores project name as string)
       const expenses = await prisma.expense.aggregate({
-        where: { project: project.name },
+        where: { project: { in: [project.projectId, project.name] } },
         _sum: { amount: true },
         _count: true,
       });
@@ -68,7 +69,7 @@ export default async function ProjectExpensesReportPage() {
                 return (
                   <tr key={project.id} className="border-b">
                     <td className="py-2 font-medium">{project.name}</td>
-                    <td className="py-2">{project.client || '-'}</td>
+                    <td className="py-2">{project.client?.name || '-'}</td>
                     <td className="py-2">{project.status}</td>
                     <td className="py-2">{expenseCount}</td>
                     <td className="py-2">{formatMoney(Number(totalExpenses))}</td>
@@ -78,7 +79,7 @@ export default async function ProjectExpensesReportPage() {
                     </td>
                     <td className="py-2">
                       <Link
-                        href={`/expenses?project=${encodeURIComponent(project.name)}`}
+                        href={`/expenses?project=${encodeURIComponent(project.projectId)}`}
                         className="text-primary hover:underline text-sm"
                       >
                         View Expenses
@@ -105,7 +106,7 @@ export default async function ProjectExpensesReportPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Client:</span>
-                    <span>{project.client || '-'}</span>
+                    <span>{project.client?.name || '-'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status:</span>
@@ -131,7 +132,7 @@ export default async function ProjectExpensesReportPage() {
                   </div>
                   <div className="pt-2 border-t">
                     <Link
-                      href={`/expenses?project=${encodeURIComponent(project.name)}`}
+                      href={`/expenses?project=${encodeURIComponent(project.projectId)}`}
                       className="text-primary hover:underline text-sm"
                     >
                       View Expenses →

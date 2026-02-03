@@ -11,6 +11,7 @@ import { DatePicker } from "./ui/date-picker";
 import { toast } from "sonner";
 import Modal from "@/components/Modal";
 import { format } from "date-fns";
+import ProjectAutoComplete from "./ProjectAutoComplete";
 
 type DuplicateExpense = {
   id: string;
@@ -48,6 +49,10 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     }
 
     try {
+      if (!form.project) {
+        toast.error("Project is required");
+        return;
+      }
       const res = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,7 +62,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           category: form.category,
           amount: parseFloat(form.amount),
           paymentMode: form.paymentMode,
-          project: form.project || undefined,
+          project: form.project,
           receiptUrl: form.receiptUrl || undefined,
           receiptFileId: form.receiptFileId || undefined,
           ignoreDuplicate,
@@ -220,12 +225,11 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="project">Project (Optional)</Label>
-              <Input
-                id="project"
-                placeholder="Project name"
+              <Label htmlFor="project">Project</Label>
+              <ProjectAutoComplete
                 value={form.project}
-                onChange={(e) => setForm({ ...form, project: e.target.value })}
+                onChange={(value) => setForm({ ...form, project: value })}
+                placeholder="Select project"
               />
             </div>
 

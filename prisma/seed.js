@@ -6,6 +6,9 @@ const roles = ["Owner", "CEO", "Finance Manager", "Manager", "Staff", "Guest"];
 const permissions = [
   "dashboard.view",
   "dashboard.view_all_metrics",
+  "clients.view_all",
+  "clients.edit",
+  "quotations.view_all",
   "expenses.view_all",
   "expenses.view_own",
   "expenses.submit",
@@ -53,6 +56,9 @@ const rolePermissionMap = {
   "Finance Manager": [
     "dashboard.view",
     "dashboard.view_all_metrics",
+    "clients.view_all",
+    "clients.edit",
+    "quotations.view_all",
     "expenses.view_all",
     "expenses.approve_high",
     "expenses.approve_medium",
@@ -83,6 +89,8 @@ const rolePermissionMap = {
   ],
   Manager: [
     "dashboard.view",
+    "clients.view_all",
+    "quotations.view_all",
     "expenses.view_all",
     "expenses.submit",
     "expenses.approve_low",
@@ -114,17 +122,15 @@ const rolePermissionMap = {
 };
 
 async function main() {
-  const existingRoles = await prisma.role.findMany();
-  if (existingRoles.length === 0) {
-    await prisma.role.createMany({ data: roles.map((name) => ({ name })) });
-  }
+  await prisma.role.createMany({
+    data: roles.map((name) => ({ name })),
+    skipDuplicates: true,
+  });
 
-  const existingPermissions = await prisma.permission.findMany();
-  if (existingPermissions.length === 0) {
-    await prisma.permission.createMany({
-      data: permissions.map((key) => ({ key })),
-    });
-  }
+  await prisma.permission.createMany({
+    data: permissions.map((key) => ({ key })),
+    skipDuplicates: true,
+  });
 
   const dbRoles = await prisma.role.findMany();
   const dbPermissions = await prisma.permission.findMany();
@@ -161,6 +167,43 @@ async function main() {
         await prisma.user.update({ where: { email: adminEmail }, data: { roleId: ownerRole.id } });
       }
     }
+  }
+
+  const existingClients = await prisma.client.findMany();
+  if (existingClients.length === 0) {
+    const client = await prisma.client.create({
+      data: {
+        name: "Fouz Energy",
+        description: "Automation and engineering services",
+        address: "Lahore, Pakistan",
+        contacts: {
+          create: [
+            {
+              name: "Operations",
+              phone: "+92-300-0000000",
+              designation: "Coordinator",
+            },
+          ],
+        },
+      },
+    });
+
+    await prisma.project.create({
+      data: {
+        projectId: "AE-MON-CI-90",
+        name: "ZKB Form House Project",
+        clientId: client.id,
+        startDate: new Date(),
+        status: "ACTIVE",
+        contractValue: 400000,
+        invoicedAmount: 0,
+        receivedAmount: 0,
+        pendingRecovery: 0,
+        costToDate: 0,
+        grossMargin: 0,
+        marginPercent: 0,
+      },
+    });
   }
 }
 

@@ -13,7 +13,11 @@ import {
   TrendingUp,
   Users,
   FolderKanban,
+  Building2,
+  FileSignature,
+  Wallet,
   Package,
+  FileBarChart,
   FileText,
   LayoutDashboard,
   Bell,
@@ -75,6 +79,18 @@ export function CommandPalette() {
             <Users className="mr-2 h-4 w-4" />
             <span>Employees</span>
           </CommandItem>
+          <CommandItem onSelect={() => runCommand(() => router.push("/wallets"))}>
+            <Wallet className="mr-2 h-4 w-4" />
+            <span>Wallet Ledger</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runCommand(() => router.push("/clients"))}>
+            <Building2 className="mr-2 h-4 w-4" />
+            <span>Clients</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runCommand(() => router.push("/quotations"))}>
+            <FileSignature className="mr-2 h-4 w-4" />
+            <span>Quotations</span>
+          </CommandItem>
           <CommandItem onSelect={() => runCommand(() => router.push("/projects"))}>
             <FolderKanban className="mr-2 h-4 w-4" />
             <span>Projects</span>
@@ -82,6 +98,10 @@ export function CommandPalette() {
           <CommandItem onSelect={() => runCommand(() => router.push("/inventory"))}>
             <Package className="mr-2 h-4 w-4" />
             <span>Inventory</span>
+          </CommandItem>
+          <CommandItem onSelect={() => runCommand(() => router.push("/inventory/ledger"))}>
+            <FileBarChart className="mr-2 h-4 w-4" />
+            <span>Inventory Ledger</span>
           </CommandItem>
           <CommandItem onSelect={() => runCommand(() => router.push("/invoices"))}>
             <FileText className="mr-2 h-4 w-4" />

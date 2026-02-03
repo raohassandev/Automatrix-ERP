@@ -4,10 +4,19 @@ import { ExpenseFormDialog } from "./ExpenseFormDialog";
 import { IncomeFormDialog } from "./IncomeFormDialog";
 import { EmployeeFormDialog } from "./EmployeeFormDialog";
 import { ProjectFormDialog } from "./ProjectFormDialog";
+import { ClientFormDialog } from "./ClientFormDialog";
 import { InventoryFormDialog } from "./InventoryFormDialog";
 import { InvoiceFormDialog } from "./InvoiceFormDialog";
 
-export type FormType = "expense" | "income" | "employee" | "project" | "inventory" | "invoice" | null;
+export type FormType =
+  | "expense"
+  | "income"
+  | "employee"
+  | "project"
+  | "client"
+  | "inventory"
+  | "invoice"
+  | null;
 
 interface FormDialogManagerProps {
   openForm: FormType;
@@ -32,6 +41,10 @@ export function FormDialogManager({ openForm, onClose }: FormDialogManagerProps)
       <ProjectFormDialog 
         open={openForm === "project"} 
         onOpenChange={(open) => !open && onClose()} 
+      />
+      <ClientFormDialog
+        open={openForm === "client"}
+        onOpenChange={(open) => !open && onClose()}
       />
       <InventoryFormDialog 
         open={openForm === "inventory"} 

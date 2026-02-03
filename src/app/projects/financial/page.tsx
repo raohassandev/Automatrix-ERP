@@ -11,7 +11,7 @@ interface Project {
   id: string;
   projectId: string;
   name: string;
-  client: string;
+  clientName: string;
   contractValue: number;
   costToDate: number;
   grossMargin: number;
@@ -130,7 +130,7 @@ export default function ProjectFinancialPage() {
                   <div>
                     <CardTitle className="text-lg">{project.name}</CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      {project.projectId} • {project.client} • {project.status}
+                      {project.projectId} • {project.clientName || "Unknown client"} • {project.status}
                     </p>
                   </div>
                   <div className="text-right">
@@ -196,7 +196,7 @@ export default function ProjectFinancialPage() {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Link href={`/expenses/by-project?project=${encodeURIComponent(project.name)}`}>
+                  <Link href={`/expenses/by-project?project=${encodeURIComponent(project.projectId)}`}>
                     <Button variant="outline" size="sm">View Expenses</Button>
                   </Link>
                   <Link href={`/projects/${project.id}`}>

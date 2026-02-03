@@ -20,21 +20,22 @@ export async function GET() {
     // Get projects with financial data
     const projects = await prisma.project.findMany({
       orderBy: [
-        { costToDate: 'desc' },
-        { name: 'asc' }
-      ]
+        { costToDate: "desc" },
+        { name: "asc" },
+      ],
+      include: { client: true },
     });
 
     // Get expense counts and latest expense dates for each project
     const projectsWithExpenseData = await Promise.all(
       projects.map(async (project) => {
         const expenseData = await prisma.expense.aggregate({
-          where: { project: project.name },
+          where: { project: { in: [project.projectId, project.name] } },
           _count: true,
         });
 
         const latestExpense = await prisma.expense.findFirst({
-          where: { project: project.name },
+          where: { project: { in: [project.projectId, project.name] } },
           orderBy: { date: 'desc' },
           select: { date: true }
         });
@@ -52,7 +53,7 @@ export async function GET() {
       id: project.id,
       projectId: project.projectId,
       name: project.name,
-      client: project.client,
+      clientName: project.client?.name || "",
       contractValue: Number(project.contractValue),
       costToDate: Number(project.costToDate),
       grossMargin: Number(project.grossMargin),

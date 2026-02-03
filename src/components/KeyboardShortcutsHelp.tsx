@@ -17,6 +17,7 @@ const shortcuts = [
   { keys: ["⌘", "I"], description: "Log Income" },
   { keys: ["⌘", "⇧", "E"], description: "Add Employee" },
   { keys: ["⌘", "⇧", "P"], description: "Create Project" },
+  { keys: ["⌘", "⇧", "C"], description: "Create Client" },
   { keys: ["⌘", "⇧", "I"], description: "Add Inventory Item" },
   { keys: ["⌘", "⇧", "N"], description: "Create Invoice" },
   { keys: ["⌘", "/"], description: "Show Keyboard Shortcuts" },

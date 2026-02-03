@@ -4,6 +4,9 @@ export const PERMISSIONS = {
   "Finance Manager": [
     "dashboard.view",
     "dashboard.view_all_metrics",
+    "clients.view_all",
+    "clients.edit",
+    "quotations.view_all",
     "expenses.view_all",
     "expenses.approve_high",
     "expenses.approve_medium",
@@ -34,6 +37,8 @@ export const PERMISSIONS = {
   ],
   Manager: [
     "dashboard.view",
+    "clients.view_all",
+    "quotations.view_all",
     "expenses.view_all",
     "expenses.submit",
     "expenses.approve_low",

@@ -1,32 +1,75 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { ClientFormDialog } from "./ClientFormDialog";
 import { toast } from "sonner";
 
 interface ProjectFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: {
+    projectId?: string;
+    name?: string;
+    clientId?: string;
+    startDate?: string;
+    contractValue?: string;
+  };
+  onCreated?: () => void;
 }
 
-export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps) {
+export function ProjectFormDialog({
+  open,
+  onOpenChange,
+  initialData,
+  onCreated,
+}: ProjectFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [clientDialogOpen, setClientDialogOpen] = useState(false);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
+    projectId: "",
     name: "",
-    clientName: "",
+    clientId: "",
     startDate: "",
     endDate: "",
-    budget: "",
-    totalExpense: "",
-    totalIncome: "",
-    pendingRecovery: "",
-    status: "ACTIVE",
+    contractValue: "",
   });
+
+  const loadClients = async () => {
+    try {
+      const res = await fetch("/api/clients");
+      const data = await res.json();
+      if (res.ok) {
+        setClients(data.data || []);
+      } else {
+        throw new Error(data.error || "Failed to fetch clients");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to load clients");
+    }
+  };
+
+  useEffect(() => {
+    loadClients();
+  }, []);
+
+  useEffect(() => {
+    if (!open || !initialData) return;
+    setForm((prev) => ({
+      ...prev,
+      projectId: initialData.projectId ?? prev.projectId,
+      name: initialData.name ?? prev.name,
+      clientId: initialData.clientId ?? prev.clientId,
+      startDate: initialData.startDate ?? prev.startDate,
+      contractValue: initialData.contractValue ?? prev.contractValue,
+    }));
+  }, [open, initialData]);
 
   async function submit() {
     try {
@@ -34,15 +77,12 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          projectId: form.projectId,
           name: form.name,
-          clientName: form.clientName || null,
-          startDate: form.startDate || null,
-          endDate: form.endDate || null,
-          budget: form.budget ? parseFloat(form.budget) : 0,
-          totalExpense: form.totalExpense ? parseFloat(form.totalExpense) : 0,
-          totalIncome: form.totalIncome ? parseFloat(form.totalIncome) : 0,
-          pendingRecovery: form.pendingRecovery ? parseFloat(form.pendingRecovery) : 0,
-          status: form.status,
+          clientId: form.clientId,
+          startDate: form.startDate,
+          endDate: form.endDate || undefined,
+          contractValue: form.contractValue ? parseFloat(form.contractValue) : 0,
         }),
       });
 
@@ -56,15 +96,12 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
       
       // Reset form
       setForm({
+        projectId: "",
         name: "",
-        clientName: "",
+        clientId: "",
         startDate: "",
         endDate: "",
-        budget: "",
-        totalExpense: "",
-        totalIncome: "",
-        pendingRecovery: "",
-        status: "ACTIVE",
+        contractValue: "",
       });
       
       // Close dialog
@@ -72,6 +109,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
       
       // Refresh data
       router.refresh();
+      onCreated?.();
     } catch (error) {
       console.error("Error creating project:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create project");
@@ -83,7 +121,7 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
       open={open}
       onOpenChange={onOpenChange}
       title="Create Project"
-      description="Add a new project to track income, expenses, and profitability"
+      description="Add a new project linked to a client"
     >
       <form
         onSubmit={(e) => {
@@ -93,6 +131,17 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
         className="space-y-4"
       >
         <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="projectId">Project ID</Label>
+            <Input
+              id="projectId"
+              placeholder="From quotation system"
+              value={form.projectId}
+              onChange={(e) => setForm({ ...form, projectId: e.target.value })}
+              required
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="name">Project Name</Label>
             <Input
@@ -105,22 +154,34 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="clientName">Client Name (Optional)</Label>
-            <Input
-              id="clientName"
-              placeholder="Acme Corp"
-              value={form.clientName}
-              onChange={(e) => setForm({ ...form, clientName: e.target.value })}
-            />
+            <Label htmlFor="clientId">Client</Label>
+            <select
+              id="clientId"
+              value={form.clientId}
+              onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+              required
+            >
+              <option value="">Select a client</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+            <Button type="button" variant="outline" size="sm" onClick={() => setClientDialogOpen(true)}>
+              Create Client
+            </Button>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="startDate">Start Date (Optional)</Label>
+            <Label htmlFor="startDate">Start Date</Label>
             <Input
               id="startDate"
               type="date"
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              required
             />
           </div>
 
@@ -135,65 +196,15 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="budget">Budget (PKR)</Label>
+            <Label htmlFor="contractValue">Total Budget (PKR)</Label>
             <Input
-              id="budget"
+              id="contractValue"
               type="number"
               step="0.01"
               placeholder="0.00"
-              value={form.budget}
-              onChange={(e) => setForm({ ...form, budget: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <select
-              id="status"
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-            >
-              <option value="ACTIVE">Active</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="ON_HOLD">On Hold</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="totalExpense">Total Expense (PKR)</Label>
-            <Input
-              id="totalExpense"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.totalExpense}
-              onChange={(e) => setForm({ ...form, totalExpense: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="totalIncome">Total Income (PKR)</Label>
-            <Input
-              id="totalIncome"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.totalIncome}
-              onChange={(e) => setForm({ ...form, totalIncome: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="pendingRecovery">Pending Recovery (PKR)</Label>
-            <Input
-              id="pendingRecovery"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.pendingRecovery}
-              onChange={(e) => setForm({ ...form, pendingRecovery: e.target.value })}
+              value={form.contractValue}
+              onChange={(e) => setForm({ ...form, contractValue: e.target.value })}
+              required
             />
           </div>
         </div>
@@ -212,6 +223,11 @@ export function ProjectFormDialog({ open, onOpenChange }: ProjectFormDialogProps
           </Button>
         </div>
       </form>
+      <ClientFormDialog
+        open={clientDialogOpen}
+        onOpenChange={setClientDialogOpen}
+        onCreated={loadClients}
+      />
     </FormDialog>
   );
 }

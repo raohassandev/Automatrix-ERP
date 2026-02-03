@@ -16,7 +16,7 @@ interface Project {
   id: string;
   projectId: string;
   name: string;
-  client: string;
+  clientName: string;
   contractValue: number;
   costToDate: number;
 }
@@ -50,7 +50,11 @@ export default function InvoiceForm({ projects = [], onClose }: InvoiceFormProps
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            setLoadedProjects(data.data);
+            const mapped = (data.data || []).map((project: { client?: { name?: string } | null }) => ({
+              ...project,
+              clientName: project.client?.name || "",
+            }));
+            setLoadedProjects(mapped);
           }
         })
         .catch(console.error);
@@ -212,7 +216,7 @@ export default function InvoiceForm({ projects = [], onClose }: InvoiceFormProps
                   <div className="flex flex-col">
                     <span className="font-medium">{project.name}</span>
                     <span className="text-sm text-muted-foreground">
-                      {project.projectId} • {project.client} • {formatMoney(project.contractValue)}
+                      {project.projectId} • {project.clientName} • {formatMoney(project.contractValue)}
                     </span>
                   </div>
                 </SelectItem>
@@ -227,7 +231,7 @@ export default function InvoiceForm({ projects = [], onClose }: InvoiceFormProps
               <div className="grid gap-2 md:grid-cols-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">Client:</span>
-                  <p className="font-medium">{selectedProject.client}</p>
+                  <p className="font-medium">{selectedProject.clientName}</p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Contract Value:</span>

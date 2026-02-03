@@ -5,8 +5,14 @@ import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { MobileCard } from "@/components/MobileCard";
+import SearchInput from "@/components/SearchInput";
+import PaginationControls from "@/components/PaginationControls";
 
-export default async function IncomePage() {
+export default async function IncomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; page?: string }>;
+}) {
   const session = await auth();
   const userId = session?.user?.id;
 
@@ -20,13 +26,43 @@ export default async function IncomePage() {
   const canViewOwn = await requirePermission(userId, "income.view_own");
   const canExport = canViewAll || canViewOwn;
 
+  const params = await searchParams;
+  const search = (params.search || "").trim();
+  const page = Math.max(parseInt(params.page || "1", 10), 1);
+  const take = 25;
+  const skip = (page - 1) * take;
+
   let entries = [];
+  let total = 0;
   try {
-    entries = await prisma.income.findMany({
-      where: canViewAll ? {} : canViewOwn ? { addedById: userId } : { id: "__none__" },
-      orderBy: { createdAt: "desc" },
-      take: 25,
-    });
+    const baseWhere = canViewAll ? {} : canViewOwn ? { addedById: userId } : { id: "__none__" };
+    const where = search
+      ? {
+          AND: [
+            baseWhere,
+            {
+              OR: [
+                { source: { contains: search, mode: "insensitive" } },
+                { category: { contains: search, mode: "insensitive" } },
+                { project: { contains: search, mode: "insensitive" } },
+                { status: { contains: search, mode: "insensitive" } },
+              ],
+            },
+          ],
+        }
+      : baseWhere;
+
+    const [entriesResult, totalResult] = await Promise.all([
+      prisma.income.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.income.count({ where }),
+    ]);
+    entries = entriesResult;
+    total = totalResult;
   } catch (error) {
     console.error("Error fetching income entries:", error);
     return (
@@ -36,6 +72,7 @@ export default async function IncomePage() {
       </div>
     );
   }
+  const totalPages = Math.max(1, Math.ceil(total / take));
 
   return (
     <div className="grid gap-6">
@@ -43,16 +80,21 @@ export default async function IncomePage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Income</h1>
-            <p className="mt-2 text-muted-foreground">Latest 25 income entries.</p>
+            <p className="mt-2 text-muted-foreground">Income entries.</p>
           </div>
-          {canExport ? (
-            <Link
-              href="/api/income/export"
-              className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
-            >
-              Export CSV
-            </Link>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-[220px]">
+              <SearchInput placeholder="Search income..." />
+            </div>
+            {canExport ? (
+              <Link
+                href="/api/income/export"
+                className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+              >
+                Export CSV
+              </Link>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -99,6 +141,16 @@ export default async function IncomePage() {
             />
           ))}
         </div>
+
+        {entries.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">No income entries found.</div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-4">
+            <PaginationControls totalPages={totalPages} currentPage={page} />
+          </div>
+        )}
       </div>
     </div>
   );

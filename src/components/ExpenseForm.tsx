@@ -33,6 +33,10 @@ export default function ExpenseForm() {
   const [duplicateItems, setDuplicateItems] = useState<DuplicateExpense[]>([]);
 
   async function submit(ignoreDuplicate = false) {
+    if (!form.project) {
+      alert("Project is required");
+      return;
+    }
     const res = await fetch("/api/expenses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -43,7 +47,7 @@ export default function ExpenseForm() {
         amount: parseFloat(form.amount),
         paymentMode: form.paymentMode,
         paymentSource: form.paymentSource,
-        project: form.project || undefined,
+        project: form.project,
         receiptUrl: form.receiptUrl || undefined,
         receiptFileId: form.receiptFileId || undefined,
         ignoreDuplicate,
@@ -126,7 +130,7 @@ export default function ExpenseForm() {
         <ProjectAutoComplete
           value={form.project}
           onChange={(value) => setForm({ ...form, project: value })}
-          placeholder="Select project (optional)"
+          placeholder="Select project"
         />
         <input
           className="rounded-md border px-3 py-2 md:col-span-2"

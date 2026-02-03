@@ -5,8 +5,14 @@ import { DeleteButton, QuickEditButton } from "@/components/TableActions";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { MobileCard } from "@/components/MobileCard";
+import SearchInput from "@/components/SearchInput";
+import PaginationControls from "@/components/PaginationControls";
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; page?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) {
     return (
@@ -26,13 +32,47 @@ export default async function ProjectsPage() {
     );
   }
 
-  const projects = await prisma.project.findMany({ orderBy: { createdAt: "desc" } });
+  const params = await searchParams;
+  const search = (params.search || "").trim();
+  const page = Math.max(parseInt(params.page || "1", 10), 1);
+  const take = 25;
+  const skip = (page - 1) * take;
+
+  const where = search
+    ? {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { projectId: { contains: search, mode: "insensitive" } },
+          { status: { contains: search, mode: "insensitive" } },
+          { client: { name: { contains: search, mode: "insensitive" } } },
+        ],
+      }
+    : {};
+
+  const [projects, total] = await Promise.all([
+    prisma.project.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: { client: true },
+      skip,
+      take,
+    }),
+    prisma.project.count({ where }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / take));
 
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Projects</h1>
-        <p className="mt-2 text-muted-foreground">Projects overview.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Projects</h1>
+            <p className="mt-2 text-muted-foreground">Projects overview.</p>
+          </div>
+          <div className="min-w-[220px]">
+            <SearchInput placeholder="Search projects..." />
+          </div>
+        </div>
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
@@ -52,7 +92,7 @@ export default async function ProjectsPage() {
               {projects.map((project) => (
                 <tr key={project.id} className="border-b">
                   <td className="py-2">{project.name}</td>
-                  <td className="py-2">{project.client}</td>
+                  <td className="py-2">{project.client?.name || "-"}</td>
                   <td className="py-2">{project.status}</td>
                   <td className="py-2">{formatMoney(Number(project.contractValue))}</td>
                   <td className="py-2">{formatMoney(Number(project.pendingRecovery))}</td>
@@ -77,7 +117,7 @@ export default async function ProjectsPage() {
             <MobileCard
               key={project.id}
               title={project.name}
-              subtitle={project.client}
+              subtitle={project.client?.name || "-"}
               fields={[
                 { label: "Status", value: project.status },
                 { label: "Contract", value: formatMoney(Number(project.contractValue)) },
@@ -95,6 +135,16 @@ export default async function ProjectsPage() {
             />
           ))}
         </div>
+
+        {projects.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">No projects found.</div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-4">
+            <PaginationControls totalPages={totalPages} currentPage={page} />
+          </div>
+        )}
       </div>
     </div>
   );

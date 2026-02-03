@@ -15,11 +15,11 @@ export default async function ExpensesByProjectPage({
   }
 
   const resolvedSearchParams = await searchParams;
-  const projectName = resolvedSearchParams.project;
+  const projectId = resolvedSearchParams.project;
 
   // Get all expenses grouped by project
   const expenses = await prisma.expense.findMany({
-    where: projectName ? { project: projectName } : {},
+    where: projectId ? { project: projectId } : {},
     orderBy: { date: "desc" },
     take: 100,
     include: {
@@ -30,8 +30,15 @@ export default async function ExpensesByProjectPage({
   });
 
   // Group expenses by project
+  const projectIds = Array.from(new Set(expenses.map((expense) => expense.project)));
+  const projects = await prisma.project.findMany({
+    where: { projectId: { in: projectIds } },
+    include: { client: true },
+  });
+  const projectMap = new Map(projects.map((project) => [project.projectId, project]));
+
   const expensesByProject = expenses.reduce((acc, expense) => {
-    const project = expense.project || "No Project";
+    const project = expense.project || "UNKNOWN";
     if (!acc[project]) {
       acc[project] = [];
     }
@@ -42,8 +49,11 @@ export default async function ExpensesByProjectPage({
   // Calculate totals per project
   const projectSummaries = Object.entries(expensesByProject).map(([project, projectExpenses]) => {
     const total = projectExpenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+    const projectInfo = projectMap.get(project);
     return {
       project,
+      projectName: projectInfo?.name || project,
+      clientName: projectInfo?.client?.name || "-",
       expenses: projectExpenses,
       total,
       count: projectExpenses.length,
@@ -56,15 +66,15 @@ export default async function ExpensesByProjectPage({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">
-              {projectName ? `Expenses for: ${projectName}` : "Expenses by Project/Client"}
+              {projectId ? `Expenses for: ${projectId}` : "Expenses by Project/Client"}
             </h1>
             <p className="mt-2 text-muted-foreground">
-              {projectName 
+              {projectId 
                 ? "All expenses recorded for this project" 
                 : "View all expenses grouped by project"}
             </p>
           </div>
-          {projectName && (
+          {projectId && (
             <Link
               href="/expenses/by-project"
               className="text-sm text-primary hover:underline"
@@ -75,13 +85,13 @@ export default async function ExpensesByProjectPage({
         </div>
       </div>
 
-      {projectSummaries.map(({ project, expenses: projectExpenses, total, count }) => (
+      {projectSummaries.map(({ project, projectName, clientName, expenses: projectExpenses, total, count }) => (
         <div key={project} className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold">{project}</h2>
+              <h2 className="text-lg font-semibold">{projectName}</h2>
               <p className="text-sm text-muted-foreground">
-                {count} expenses • Total: {formatMoney(total)}
+                {clientName} • {count} expenses • Total: {formatMoney(total)}
               </p>
             </div>
             <Link
@@ -170,7 +180,7 @@ export default async function ExpensesByProjectPage({
       {projectSummaries.length === 0 && (
         <div className="rounded-xl border bg-card p-12 shadow-sm text-center">
           <p className="text-muted-foreground">
-            No expenses found. Submit expenses with project names to see them here.
+            No expenses found. Submit expenses with project IDs to see them here.
           </p>
         </div>
       )}

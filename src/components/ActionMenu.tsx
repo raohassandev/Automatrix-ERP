@@ -9,6 +9,7 @@ import {
   Package,
   FileText,
   TrendingUp,
+  Building2,
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -50,6 +51,10 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
     },
     'cmd+shift+p': () => {
       setOpenFormDialog('project');
+      onClose();
+    },
+    'cmd+shift+c': () => {
+      setOpenFormDialog('client');
       onClose();
     },
     'cmd+shift+i': () => {
@@ -107,6 +112,17 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
       },
       color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
       show: true, // Always show
+    },
+    {
+      icon: Building2,
+      label: "Create Client",
+      description: "Add a new client",
+      onClick: () => {
+        setOpenFormDialog("client");
+        onClose();
+      },
+      color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+      show: true,
     },
     {
       icon: Package,

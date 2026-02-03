@@ -20,9 +20,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const body = await req.json();
 
   const data: Record<string, unknown> = {};
+  if (body.sku !== undefined) data.sku = body.sku ? sanitizeString(body.sku) : null;
   if (body.category) data.category = sanitizeString(body.category);
   if (body.unit) data.unit = sanitizeString(body.unit);
   if (body.unitCost !== undefined) data.unitCost = new Prisma.Decimal(body.unitCost);
+  if (body.sellingPrice !== undefined) data.sellingPrice = new Prisma.Decimal(body.sellingPrice);
   if (body.minStock !== undefined) data.minStock = new Prisma.Decimal(body.minStock);
   if (body.reorderQty !== undefined) data.reorderQty = new Prisma.Decimal(body.reorderQty);
 

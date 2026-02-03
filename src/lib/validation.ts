@@ -7,7 +7,7 @@ export const expenseSchema = z.object({
   amount: z.number().positive(),
   paymentMode: z.string().min(1),
   paymentSource: z.enum(["EMPLOYEE_WALLET", "COMPANY_DIRECT", "COMPANY_ACCOUNT"]).optional(),
-  project: z.string().optional(),
+  project: z.string().min(1),
   receiptUrl: z.string().url().optional(),
   receiptFileId: z.string().optional(),
 });
@@ -40,18 +40,37 @@ export const approvalSchema = z.object({
 export const projectSchema = z.object({
   projectId: z.string().min(1),
   name: z.string().min(1),
-  client: z.string().min(1),
+  clientId: z.string().min(1),
   startDate: z.string().min(1),
   endDate: z.string().optional(),
   status: z.string().optional(),
-  contractValue: z.number().optional(),
+  contractValue: z.number().nonnegative(),
+});
+
+export const clientSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  address: z.string().optional(),
+  contacts: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        phone: z.string().optional(),
+        designation: z.string().optional(),
+        email: z.string().email().optional(),
+      })
+    )
+    .optional(),
 });
 
 export const inventorySchema = z.object({
   name: z.string().min(1),
+  sku: z.string().optional(),
   category: z.string().min(1),
   unit: z.string().min(1),
   unitCost: z.number().nonnegative(),
+  sellingPrice: z.number().nonnegative(),
+  initialQuantity: z.number().nonnegative().optional(),
   minStock: z.number().optional(),
   reorderQty: z.number().optional(),
 });

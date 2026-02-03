@@ -164,7 +164,7 @@ export async function POST(req: Request) {
     description: sanitizeString(parsed.data.description),
     category: sanitizeString(parsed.data.category),
     paymentMode: sanitizeString(parsed.data.paymentMode),
-    project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
+    project: sanitizeString(parsed.data.project),
     receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
     receiptFileId: parsed.data.receiptFileId ? sanitizeString(parsed.data.receiptFileId) : undefined,
   };

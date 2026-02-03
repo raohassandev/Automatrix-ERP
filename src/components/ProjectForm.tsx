@@ -1,20 +1,29 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 export default function ProjectForm() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   const [form, setForm] = useState({
     projectId: "",
     name: "",
-    client: "",
+    clientId: "",
     startDate: "",
     endDate: "",
-    status: "Planning",
     contractValue: "",
   });
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      const res = await fetch("/api/clients");
+      const data = await res.json();
+      if (res.ok) setClients(data.data || []);
+    };
+    fetchClients();
+  }, []);
 
   async function submit() {
     await fetch("/api/projects", {
@@ -45,12 +54,18 @@ export default function ProjectForm() {
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
-        <input
+        <select
           className="rounded-md border px-3 py-2"
-          placeholder="Client"
-          value={form.client}
-          onChange={(e) => setForm({ ...form, client: e.target.value })}
-        />
+          value={form.clientId}
+          onChange={(e) => setForm({ ...form, clientId: e.target.value })}
+        >
+          <option value="">Select client</option>
+          {clients.map((client) => (
+            <option key={client.id} value={client.id}>
+              {client.name}
+            </option>
+          ))}
+        </select>
         <input
           className="rounded-md border px-3 py-2"
           type="date"
@@ -65,7 +80,7 @@ export default function ProjectForm() {
         />
         <input
           className="rounded-md border px-3 py-2"
-          placeholder="Contract Value"
+          placeholder="Total Budget"
           type="number"
           value={form.contractValue}
           onChange={(e) => setForm({ ...form, contractValue: e.target.value })}

@@ -16,8 +16,10 @@ export default function SearchInput({
     const params = new URLSearchParams(searchParams);
     if (term) {
       params.set('search', term);
+      params.delete('page');
     } else {
       params.delete('search');
+      params.delete('page');
     }
     router.replace(`?${params.toString()}`);
   }, 300);

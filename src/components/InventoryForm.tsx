@@ -9,9 +9,12 @@ export default function InventoryForm() {
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
     name: "",
+    sku: "",
     category: "",
     unit: "",
     unitCost: "",
+    sellingPrice: "",
+    initialQuantity: "",
     minStock: "",
     reorderQty: "",
   });
@@ -23,6 +26,8 @@ export default function InventoryForm() {
       body: JSON.stringify({
         ...form,
         unitCost: Number(form.unitCost),
+        sellingPrice: Number(form.sellingPrice),
+        initialQuantity: form.initialQuantity ? Number(form.initialQuantity) : undefined,
         minStock: form.minStock ? Number(form.minStock) : undefined,
         reorderQty: form.reorderQty ? Number(form.reorderQty) : undefined,
       }),
@@ -39,6 +44,12 @@ export default function InventoryForm() {
           placeholder="Item Name"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+        <input
+          className="rounded-md border px-3 py-2"
+          placeholder="SKU (optional)"
+          value={form.sku}
+          onChange={(e) => setForm({ ...form, sku: e.target.value })}
         />
         <CategoryAutoComplete
           type="inventory"
@@ -57,6 +68,20 @@ export default function InventoryForm() {
           type="number"
           value={form.unitCost}
           onChange={(e) => setForm({ ...form, unitCost: e.target.value })}
+        />
+        <input
+          className="rounded-md border px-3 py-2"
+          placeholder="Selling Price"
+          type="number"
+          value={form.sellingPrice}
+          onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })}
+        />
+        <input
+          className="rounded-md border px-3 py-2"
+          placeholder="Initial Quantity (optional)"
+          type="number"
+          value={form.initialQuantity}
+          onChange={(e) => setForm({ ...form, initialQuantity: e.target.value })}
         />
         <input
           className="rounded-md border px-3 py-2"

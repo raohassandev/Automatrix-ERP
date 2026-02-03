@@ -4,8 +4,14 @@ import AttachmentForm from "@/components/AttachmentForm";
 import { DeleteButton, QuickEditButton } from "@/components/TableActions";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
+import SearchInput from "@/components/SearchInput";
+import PaginationControls from "@/components/PaginationControls";
 
-export default async function AttachmentsPage() {
+export default async function AttachmentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; page?: string }>;
+}) {
   const session = await auth();
 
 
@@ -24,12 +30,37 @@ export default async function AttachmentsPage() {
     );
   }
 
+  const params = await searchParams;
+  const search = (params.search || "").trim();
+  const page = Math.max(parseInt(params.page || "1", 10), 1);
+  const take = 25;
+  const skip = (page - 1) * take;
+
   let attachments = [];
+  let total = 0;
   try {
-    attachments = await prisma.attachment.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    });
+    const where = search
+      ? {
+          OR: [
+            { type: { contains: search, mode: "insensitive" } },
+            { recordId: { contains: search, mode: "insensitive" } },
+            { fileName: { contains: search, mode: "insensitive" } },
+            { fileUrl: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {};
+
+    const [attachmentsResult, totalResult] = await Promise.all([
+      prisma.attachment.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.attachment.count({ where }),
+    ]);
+    attachments = attachmentsResult;
+    total = totalResult;
   } catch (error) {
     console.error("Error fetching attachments:", error);
     return (
@@ -39,12 +70,20 @@ export default async function AttachmentsPage() {
       </div>
     );
   }
+  const totalPages = Math.max(1, Math.ceil(total / take));
 
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Attachments</h1>
-        <p className="mt-2 text-muted-foreground">External links and file metadata.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Attachments</h1>
+            <p className="mt-2 text-muted-foreground">External links and file metadata.</p>
+          </div>
+          <div className="min-w-[220px]">
+            <SearchInput placeholder="Search attachments..." />
+          </div>
+        </div>
       </div>
 
       <AttachmentForm />
@@ -86,6 +125,16 @@ export default async function AttachmentsPage() {
             </tbody>
           </table>
         </div>
+
+        {attachments.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">No attachments found.</div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-4">
+            <PaginationControls totalPages={totalPages} currentPage={page} />
+          </div>
+        )}
       </div>
     </div>
   );

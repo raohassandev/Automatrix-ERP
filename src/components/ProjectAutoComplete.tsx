@@ -12,7 +12,7 @@ interface Project {
   id: string;
   projectId: string;
   name: string;
-  client: string;
+  client?: { name: string } | null;
 }
 
 interface ProjectAutoCompleteProps {
@@ -95,7 +95,7 @@ export default function ProjectAutoComplete({
             {projects.map((project) => (
               <CommandItem
                 key={project.id}
-                value={`${project.projectId} ${project.name} ${project.client}`}
+                value={`${project.projectId} ${project.name} ${project.client?.name || ""}`}
                 onSelect={() => {
                   onChange(project.projectId);
                   setOpen(false);
@@ -109,7 +109,7 @@ export default function ProjectAutoComplete({
                 />
                 <div className="flex flex-col">
                   <span className="font-medium">{project.projectId} - {project.name}</span>
-                  <span className="text-xs text-gray-500">{project.client}</span>
+                  <span className="text-xs text-gray-500">{project.client?.name || "-"}</span>
                 </div>
               </CommandItem>
             ))}

@@ -7,8 +7,14 @@ import { redirect } from "next/navigation";
 import { MobileCard } from "@/components/MobileCard";
 import { Badge } from "@/components/ui/badge";
 import InvoiceForm from "@/components/InvoiceForm";
+import SearchInput from "@/components/SearchInput";
+import PaginationControls from "@/components/PaginationControls";
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; page?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) {
     return (
@@ -26,14 +32,51 @@ export default async function InvoicesPage() {
     );
   }
 
+  const params = await searchParams;
+  const search = (params.search || "").trim();
+  const page = Math.max(parseInt(params.page || "1", 10), 1);
+  const take = 25;
+  const skip = (page - 1) * take;
+
   let invoices = [];
   let projects = [];
+  let total = 0;
+  let totalInvoiced = 0;
+  let totalReceived = 0;
+  let overdueCount = 0;
   
   try {
-    [invoices, projects] = await Promise.all([
-      prisma.invoice.findMany({ orderBy: { createdAt: "desc" } }),
-      prisma.project.findMany({ orderBy: { name: "asc" } })
+    const where = search
+      ? {
+          OR: [
+            { invoiceNo: { contains: search, mode: "insensitive" } },
+            { projectId: { contains: search, mode: "insensitive" } },
+            { status: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {};
+
+    const [
+      invoicesResult,
+      totalResult,
+      projectsResult,
+      totalSum,
+      receivedSum,
+      overdueTotal,
+    ] = await Promise.all([
+      prisma.invoice.findMany({ where, orderBy: { createdAt: "desc" }, skip, take }),
+      prisma.invoice.count({ where }),
+      prisma.project.findMany({ orderBy: { name: "asc" }, include: { client: true } }),
+      prisma.invoice.aggregate({ where, _sum: { amount: true } }),
+      prisma.invoice.aggregate({ where: { ...where, status: "PAID" }, _sum: { amount: true } }),
+      prisma.invoice.count({ where: { ...where, status: "OVERDUE" } }),
     ]);
+    invoices = invoicesResult;
+    total = totalResult;
+    projects = projectsResult;
+    totalInvoiced = Number(totalSum._sum.amount || 0);
+    totalReceived = Number(receivedSum._sum.amount || 0);
+    overdueCount = overdueTotal;
   } catch (error) {
     console.error("Error fetching data:", error);
     return (
@@ -54,17 +97,21 @@ export default async function InvoicesPage() {
     }
   };
 
-  // Calculate summary statistics
-  const totalInvoiced = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
-  const totalReceived = invoices.filter(inv => inv.status === 'PAID').reduce((sum, inv) => sum + Number(inv.amount), 0);
   const totalPending = totalInvoiced - totalReceived;
-  const overdueInvoices = invoices.filter(inv => inv.status === 'OVERDUE');
+  const totalPages = Math.max(1, Math.ceil(total / take));
 
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Invoice Management</h1>
-        <p className="mt-2 text-muted-foreground">Track and manage your project invoices</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Invoice Management</h1>
+            <p className="mt-2 text-muted-foreground">Track and manage your project invoices</p>
+          </div>
+          <div className="min-w-[220px]">
+            <SearchInput placeholder="Search invoices..." />
+          </div>
+        </div>
         
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-4 mt-6">
@@ -82,7 +129,7 @@ export default async function InvoicesPage() {
           </div>
           <div className="bg-muted/50 rounded-lg p-4">
             <div className="text-sm text-muted-foreground">Overdue</div>
-            <div className="text-xl font-semibold text-red-600">{overdueInvoices.length} invoices</div>
+            <div className="text-xl font-semibold text-red-600">{overdueCount} invoices</div>
           </div>
         </div>
       </div>
@@ -92,7 +139,7 @@ export default async function InvoicesPage() {
         id: p.id,
         projectId: p.projectId,
         name: p.name,
-        client: p.client,
+        clientName: p.client?.name || "",
         contractValue: Number(p.contractValue),
         costToDate: Number(p.costToDate)
       }))} />
@@ -166,6 +213,16 @@ export default async function InvoicesPage() {
             />
           ))}
         </div>
+
+        {invoices.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">No invoices found.</div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-4">
+            <PaginationControls totalPages={totalPages} currentPage={page} />
+          </div>
+        )}
       </div>
     </div>
   );

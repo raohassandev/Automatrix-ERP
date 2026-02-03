@@ -16,6 +16,7 @@ const COLUMNS = [
   { key: 'date', label: 'Date', visible: true },
   { key: 'description', label: 'Description', visible: true },
   { key: 'category', label: 'Category', visible: true },
+  { key: 'project', label: 'Project', visible: true },
   { key: 'amount', label: 'Amount', visible: true },
   { key: 'status', label: 'Status', visible: true },
 ];
@@ -25,6 +26,7 @@ interface Expense {
   date: string;
   description: string;
   category: string;
+  project: string;
   amount: number;
   status: string;
 
@@ -108,6 +110,8 @@ function ExpensesPageContent() {
                           ? expense.description
                           : col.key === 'category'
                           ? expense.category
+                          : col.key === 'project'
+                          ? expense.project
                           : col.key === 'status'
                           ? expense.status
                           : ''}
@@ -129,6 +133,7 @@ function ExpensesPageContent() {
               subtitle={new Date(expense.date).toLocaleDateString()}
               fields={[
                 { label: "Category", value: expense.category },
+                { label: "Project", value: expense.project },
                 { label: "Amount", value: formatMoney(Number(expense.amount)) },
                 { label: "Status", value: expense.status },
                 { label: "Date", value: new Date(expense.date).toLocaleDateString() },
@@ -157,4 +162,3 @@ function ExpensesPageContent() {
     </div>
   );
 }
-

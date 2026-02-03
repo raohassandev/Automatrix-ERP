@@ -46,22 +46,28 @@ export async function POST(req: Request) {
   const sanitizedData = {
     ...parsed.data,
     name: sanitizeString(parsed.data.name),
+    sku: parsed.data.sku ? sanitizeString(parsed.data.sku) : undefined,
     category: sanitizeString(parsed.data.category),
     unit: sanitizeString(parsed.data.unit),
   };
 
+  const initialQuantity = sanitizedData.initialQuantity || 0;
+  const totalValue = initialQuantity * sanitizedData.unitCost;
+
   const created = await prisma.inventoryItem.create({
     data: {
       name: sanitizedData.name,
+      sku: sanitizedData.sku,
       category: sanitizedData.category,
       unit: sanitizedData.unit,
       unitCost: new Prisma.Decimal(sanitizedData.unitCost),
-      quantity: new Prisma.Decimal(0),
-      totalValue: new Prisma.Decimal(0),
+      sellingPrice: new Prisma.Decimal(sanitizedData.sellingPrice),
+      quantity: new Prisma.Decimal(initialQuantity),
+      totalValue: new Prisma.Decimal(totalValue),
       minStock: new Prisma.Decimal(sanitizedData.minStock || 0),
       reorderQty: new Prisma.Decimal(sanitizedData.reorderQty || 0),
       reservedQty: new Prisma.Decimal(0),
-      availableQty: new Prisma.Decimal(0),
+      availableQty: new Prisma.Decimal(initialQuantity),
       lastUpdated: new Date(),
       avgUsage30Days: new Prisma.Decimal(0),
     },

@@ -7,6 +7,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
+import CategoryAutoComplete from "./CategoryAutoComplete";
 
 interface InventoryFormDialogProps {
   open: boolean;
@@ -20,11 +21,12 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
     name: "",
     sku: "",
     category: "",
-    quantity: "",
+    unit: "",
+    unitCost: "",
+    sellingPrice: "",
+    initialQuantity: "",
     minStock: "",
-    unitPrice: "",
-    supplier: "",
-    location: "",
+    reorderQty: "",
   });
 
   async function submit() {
@@ -34,13 +36,14 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,
-          sku: form.sku || null,
-          category: form.category || null,
-          quantity: form.quantity ? parseInt(form.quantity) : 0,
-          minStock: form.minStock ? parseInt(form.minStock) : 0,
-          unitPrice: form.unitPrice ? parseFloat(form.unitPrice) : 0,
-          supplier: form.supplier || null,
-          location: form.location || null,
+          sku: form.sku || undefined,
+          category: form.category || undefined,
+          unit: form.unit,
+          unitCost: form.unitCost ? parseFloat(form.unitCost) : 0,
+          sellingPrice: form.sellingPrice ? parseFloat(form.sellingPrice) : 0,
+          initialQuantity: form.initialQuantity ? parseFloat(form.initialQuantity) : 0,
+          minStock: form.minStock ? parseFloat(form.minStock) : 0,
+          reorderQty: form.reorderQty ? parseFloat(form.reorderQty) : 0,
         }),
       });
 
@@ -57,11 +60,12 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
         name: "",
         sku: "",
         category: "",
-        quantity: "",
+        unit: "",
+        unitCost: "",
+        sellingPrice: "",
+        initialQuantity: "",
         minStock: "",
-        unitPrice: "",
-        supplier: "",
-        location: "",
+        reorderQty: "",
       });
       
       // Close dialog
@@ -112,24 +116,60 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category (Optional)</Label>
-            <Input
-              id="category"
-              placeholder="Electronics"
+            <Label htmlFor="category">Category</Label>
+            <CategoryAutoComplete
+              type="inventory"
               value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
+              onChange={(value) => setForm({ ...form, category: value })}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="quantity">Quantity</Label>
+            <Label htmlFor="unit">Unit</Label>
             <Input
-              id="quantity"
-              type="number"
-              placeholder="10"
-              value={form.quantity}
-              onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+              id="unit"
+              placeholder="Nos / Kg / Meters"
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="unitCost">Purchase Price (Unit Cost)</Label>
+            <Input
+              id="unitCost"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={form.unitCost}
+              onChange={(e) => setForm({ ...form, unitCost: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sellingPrice">Selling Price (PKR)</Label>
+            <Input
+              id="sellingPrice"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={form.sellingPrice}
+              onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="initialQuantity">Initial Quantity (Optional)</Label>
+            <Input
+              id="initialQuantity"
+              type="number"
+              step="0.01"
+              placeholder="0"
+              value={form.initialQuantity}
+              onChange={(e) => setForm({ ...form, initialQuantity: e.target.value })}
             />
           </div>
 
@@ -141,40 +181,17 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
               placeholder="5"
               value={form.minStock}
               onChange={(e) => setForm({ ...form, minStock: e.target.value })}
-              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="unitPrice">Unit Price (PKR)</Label>
+            <Label htmlFor="reorderQty">Reorder Qty (Optional)</Label>
             <Input
-              id="unitPrice"
+              id="reorderQty"
               type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.unitPrice}
-              onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="supplier">Supplier (Optional)</Label>
-            <Input
-              id="supplier"
-              placeholder="Tech Suppliers Inc."
-              value={form.supplier}
-              onChange={(e) => setForm({ ...form, supplier: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Location (Optional)</Label>
-            <Input
-              id="location"
-              placeholder="Warehouse A, Shelf 3"
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              placeholder="0"
+              value={form.reorderQty}
+              onChange={(e) => setForm({ ...form, reorderQty: e.target.value })}
             />
           </div>
         </div>

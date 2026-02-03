@@ -30,3 +30,5 @@ logs/
 *.pyc
 # Generated
 test-results/
+# Imported data
+data/Refrens/

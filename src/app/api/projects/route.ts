@@ -13,12 +13,16 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canView = await requirePermission(session.user.id, "projects.view_all");
-  if (!canView) {
+  const canViewAll = await requirePermission(session.user.id, "projects.view_all");
+  const canViewAssigned = await requirePermission(session.user.id, "projects.view_assigned");
+  if (!canViewAll && !canViewAssigned) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
-  const data = await prisma.project.findMany({ orderBy: { createdAt: "desc" } });
+  const data = await prisma.project.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { client: true },
+  });
   return NextResponse.json({ success: true, data });
 }
 
@@ -47,19 +51,24 @@ export async function POST(req: Request) {
     ...parsed.data,
     projectId: sanitizeString(parsed.data.projectId),
     name: sanitizeString(parsed.data.name),
-    client: sanitizeString(parsed.data.client),
-    status: parsed.data.status ? sanitizeString(parsed.data.status) : "Planning",
+    clientId: sanitizeString(parsed.data.clientId),
+    status: parsed.data.status ? sanitizeString(parsed.data.status) : "ACTIVE",
   };
+
+  const client = await prisma.client.findUnique({ where: { id: sanitizedData.clientId } });
+  if (!client) {
+    return NextResponse.json({ success: false, error: "Client not found" }, { status: 400 });
+  }
 
   const created = await prisma.project.create({
     data: {
       projectId: sanitizedData.projectId,
       name: sanitizedData.name,
-      client: sanitizedData.client,
+      clientId: sanitizedData.clientId,
       startDate: new Date(sanitizedData.startDate),
       endDate: sanitizedData.endDate ? new Date(sanitizedData.endDate) : null,
       status: sanitizedData.status,
-      contractValue: new Prisma.Decimal(sanitizedData.contractValue || 0),
+      contractValue: new Prisma.Decimal(sanitizedData.contractValue),
       invoicedAmount: new Prisma.Decimal(0),
       receivedAmount: new Prisma.Decimal(0),
       pendingRecovery: new Prisma.Decimal(0),
