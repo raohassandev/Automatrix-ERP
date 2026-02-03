@@ -5,6 +5,7 @@ import { inventoryLedgerSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
+import { resolveProjectId } from "@/lib/projects";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -27,6 +28,14 @@ export async function POST(req: Request) {
   }
 
   const { itemId, type, quantity, unitCost, reference, project } = parsed.data;
+
+  let resolvedProjectId: string | null = null;
+  if (project) {
+    resolvedProjectId = await resolveProjectId(project);
+    if (!resolvedProjectId) {
+      return NextResponse.json({ success: false, error: "Invalid project reference" }, { status: 400 });
+    }
+  }
 
   const item = await prisma.inventoryItem.findUnique({ where: { id: itemId } });
   if (!item) {
@@ -55,7 +64,7 @@ export async function POST(req: Request) {
         unitCost: new Prisma.Decimal(cost),
         total: new Prisma.Decimal(total),
         reference,
-        project,
+        project: resolvedProjectId || undefined,
         userId: session.user.id,
         runningBalance: new Prisma.Decimal(newQty),
       },

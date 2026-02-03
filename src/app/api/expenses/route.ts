@@ -10,6 +10,7 @@ import { createNotification } from "@/lib/notifications";
 import { applyWalletTransactionByEmail } from "@/lib/wallet";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { resolveProjectId } from "@/lib/projects";
 
 async function checkDuplicateExpense(input: {
   amount: number;
@@ -231,6 +232,17 @@ export async function POST(req: Request) {
     }
   }
 
+  let resolvedProjectId: string | null = null;
+  if (sanitizedData.project) {
+    resolvedProjectId = await resolveProjectId(sanitizedData.project);
+    if (!resolvedProjectId) {
+      return NextResponse.json(
+        { success: false, error: "Invalid project reference" },
+        { status: 400 }
+      );
+    }
+  }
+
   const approvalLevel = getExpenseApprovalLevel(sanitizedData.amount);
   const status =
     approvalLevel === "L1" ? "PENDING_L1" : approvalLevel === "L2" ? "PENDING_L2" : "PENDING_L3";
@@ -285,7 +297,7 @@ export async function POST(req: Request) {
         amount: new Prisma.Decimal(sanitizedData.amount),
         paymentMode: sanitizedData.paymentMode,
         paymentSource: paymentSource as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
-        project: sanitizedData.project,
+        project: resolvedProjectId,
         approvalLevel,
         status,
         submittedById: session.user.id,

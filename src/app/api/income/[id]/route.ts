@@ -5,7 +5,7 @@ import { incomeUpdateSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { getIncomeApprovalLevel, isPendingIncomeStatus } from "@/lib/approvals";
-import { recalculateProjectFinancials } from "@/lib/projects";
+import { recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
@@ -45,7 +45,20 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.category) data.category = parsed.data.category;
   if (parsed.data.amount) data.amount = new Prisma.Decimal(parsed.data.amount);
   if (parsed.data.paymentMode) data.paymentMode = parsed.data.paymentMode;
-  if (parsed.data.project !== undefined) data.project = parsed.data.project;
+  if (parsed.data.project !== undefined) {
+    if (parsed.data.project === null || parsed.data.project === "") {
+      data.project = null;
+    } else {
+      const resolvedProjectId = await resolveProjectId(parsed.data.project);
+      if (!resolvedProjectId) {
+        return NextResponse.json(
+          { success: false, error: "Invalid project reference" },
+          { status: 400 }
+        );
+      }
+      data.project = resolvedProjectId;
+    }
+  }
   if (parsed.data.receiptUrl) data.receiptUrl = parsed.data.receiptUrl;
   if (parsed.data.receiptFileId) data.receiptFileId = parsed.data.receiptFileId;
   if (parsed.data.invoiceId) data.invoiceId = parsed.data.invoiceId;

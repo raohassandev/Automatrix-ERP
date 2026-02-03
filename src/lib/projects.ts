@@ -9,6 +9,14 @@ async function findProjectByRef(projectRef: string) {
   });
 }
 
+export async function resolveProjectId(projectRef?: string | null) {
+  if (!projectRef) return null;
+  const trimmed = projectRef.trim();
+  if (!trimmed) return null;
+  const project = await findProjectByRef(trimmed);
+  return project?.projectId || null;
+}
+
 export async function recalculateProjectFinancials(projectRef: string) {
   const project = await findProjectByRef(projectRef);
   if (!project) return null;

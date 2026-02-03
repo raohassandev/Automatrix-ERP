@@ -9,6 +9,7 @@ import { createNotification } from "@/lib/notifications";
 import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { resolveProjectId } from "@/lib/projects";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -80,6 +81,17 @@ export async function POST(req: Request) {
     const approvalLevel = getIncomeApprovalLevel(sanitizedData.amount);
     const requiresApproval = approvalLevel === "L2";
 
+    let resolvedProjectId: string | null = null;
+    if (sanitizedData.project) {
+      resolvedProjectId = await resolveProjectId(sanitizedData.project);
+      if (!resolvedProjectId) {
+        return NextResponse.json(
+          { success: false, error: "Invalid project reference" },
+          { status: 400 }
+        );
+      }
+    }
+
     const created = await prisma.income.create({
       data: {
         date: new Date(sanitizedData.date),
@@ -87,7 +99,7 @@ export async function POST(req: Request) {
         category: sanitizedData.category,
         amount: new Prisma.Decimal(sanitizedData.amount),
         paymentMode: sanitizedData.paymentMode,
-        project: sanitizedData.project,
+        project: resolvedProjectId || undefined,
         approvalLevel,
         status: requiresApproval ? "PENDING" : "APPROVED",
         addedById: session.user.id,
@@ -126,8 +138,8 @@ export async function POST(req: Request) {
       message: `Income logged for ${sanitizedData.amount}.`,
     });
 
-    if (!requiresApproval && sanitizedData.project) {
-      await recalculateProjectFinancials(sanitizedData.project);
+    if (!requiresApproval && resolvedProjectId) {
+      await recalculateProjectFinancials(resolvedProjectId);
     }
 
     return NextResponse.json({ success: true, data: created, requiresApproval });
