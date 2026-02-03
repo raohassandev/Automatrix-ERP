@@ -9,11 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import InvoiceForm from "@/components/InvoiceForm";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
+import QuerySelect from "@/components/QuerySelect";
 
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; status?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -34,6 +35,7 @@ export default async function InvoicesPage({
 
   const params = await searchParams;
   const search = (params.search || "").trim();
+  const status = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;
   const skip = (page - 1) * take;
@@ -46,15 +48,17 @@ export default async function InvoicesPage({
   let overdueCount = 0;
   
   try {
-    const where = search
-      ? {
-          OR: [
-            { invoiceNo: { contains: search, mode: "insensitive" } },
-            { projectId: { contains: search, mode: "insensitive" } },
-            { status: { contains: search, mode: "insensitive" } },
-          ],
-        }
-      : {};
+    const where: Record<string, unknown> = {};
+    if (search) {
+      where.OR = [
+        { invoiceNo: { contains: search, mode: "insensitive" } },
+        { projectId: { contains: search, mode: "insensitive" } },
+        { status: { contains: search, mode: "insensitive" } },
+      ];
+    }
+    if (status) {
+      where.status = status;
+    }
 
     const [
       invoicesResult,
@@ -108,8 +112,20 @@ export default async function InvoicesPage({
             <h1 className="text-2xl font-semibold">Invoice Management</h1>
             <p className="mt-2 text-muted-foreground">Track and manage your project invoices</p>
           </div>
-          <div className="min-w-[220px]">
-            <SearchInput placeholder="Search invoices..." />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-[220px]">
+              <SearchInput placeholder="Search invoices..." />
+            </div>
+            <QuerySelect
+              param="status"
+              placeholder="All statuses"
+              options={[
+                { label: "Draft", value: "DRAFT" },
+                { label: "Sent", value: "SENT" },
+                { label: "Paid", value: "PAID" },
+                { label: "Overdue", value: "OVERDUE" },
+              ]}
+            />
           </div>
         </div>
         

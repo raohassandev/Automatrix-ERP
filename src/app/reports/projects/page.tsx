@@ -3,18 +3,48 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import SearchInput from "@/components/SearchInput";
+import PaginationControls from "@/components/PaginationControls";
 
-export default async function ProjectExpensesReportPage() {
+export default async function ProjectExpensesReportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; page?: string }>;
+}) {
   const session = await auth();
   if (!session) {
     redirect("/login");
   }
 
-  // Get all projects
-  const projects = await prisma.project.findMany({
-    orderBy: { name: "asc" },
-    include: { client: true },
-  });
+  const params = await searchParams;
+  const search = (params.search || "").trim();
+  const page = Math.max(parseInt(params.page || "1", 10), 1);
+  const take = 25;
+  const skip = (page - 1) * take;
+
+  const where = search
+    ? {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { projectId: { contains: search, mode: "insensitive" } },
+          { status: { contains: search, mode: "insensitive" } },
+          { client: { name: { contains: search, mode: "insensitive" } } },
+        ],
+      }
+    : {};
+
+  // Get paged projects
+  const [projects, total] = await Promise.all([
+    prisma.project.findMany({
+      where,
+      orderBy: { name: "asc" },
+      include: { client: true },
+      skip,
+      take,
+    }),
+    prisma.project.count({ where }),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(total / take));
 
   // Get expense totals per project
   const projectExpenses = await Promise.all(
@@ -37,10 +67,17 @@ export default async function ProjectExpensesReportPage() {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Project-Wise Expense Report</h1>
-        <p className="mt-2 text-muted-foreground">
-          View expenses grouped by project
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Project-Wise Expense Report</h1>
+            <p className="mt-2 text-muted-foreground">
+              View expenses grouped by project
+            </p>
+          </div>
+          <div className="min-w-[220px]">
+            <SearchInput placeholder="Search projects..." />
+          </div>
+        </div>
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
@@ -147,6 +184,12 @@ export default async function ProjectExpensesReportPage() {
         {projectExpenses.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
             No projects found. Create a project to track expenses.
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-4">
+            <PaginationControls totalPages={totalPages} currentPage={page} />
           </div>
         )}
       </div>

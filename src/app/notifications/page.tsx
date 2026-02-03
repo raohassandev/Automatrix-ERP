@@ -6,11 +6,12 @@ import { requirePermission } from "@/lib/rbac";
 import { redirect } from 'next/navigation';
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
+import QuerySelect from "@/components/QuerySelect";
 
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; status?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -33,6 +34,7 @@ export default async function NotificationsPage({
 
   const params = await searchParams;
   const search = (params.search || "").trim();
+  const status = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;
   const skip = (page - 1) * take;
@@ -40,20 +42,22 @@ export default async function NotificationsPage({
   let notifications = [];
   let total = 0;
   try {
-    const where = search
-      ? {
-          AND: [
-            { userId: session.user.id },
-            {
-              OR: [
-                { type: { contains: search, mode: "insensitive" } },
-                { message: { contains: search, mode: "insensitive" } },
-                { status: { contains: search, mode: "insensitive" } },
-              ],
-            },
+    const where: Record<string, unknown> = { userId: session.user.id };
+    if (search) {
+      where.AND = [
+        { userId: session.user.id },
+        {
+          OR: [
+            { type: { contains: search, mode: "insensitive" } },
+            { message: { contains: search, mode: "insensitive" } },
+            { status: { contains: search, mode: "insensitive" } },
           ],
-        }
-      : { userId: session.user.id };
+        },
+      ];
+    }
+    if (status) {
+      where.status = status;
+    }
 
     const [notificationsResult, totalResult] = await Promise.all([
       prisma.notification.findMany({
@@ -85,8 +89,18 @@ export default async function NotificationsPage({
             <h1 className="text-2xl font-semibold">Notifications</h1>
             <p className="mt-2 text-muted-foreground">Personal notifications.</p>
           </div>
-          <div className="min-w-[220px]">
-            <SearchInput placeholder="Search notifications..." />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-[220px]">
+              <SearchInput placeholder="Search notifications..." />
+            </div>
+            <QuerySelect
+              param="status"
+              placeholder="All statuses"
+              options={[
+                { label: "Unread", value: "UNREAD" },
+                { label: "Read", value: "READ" },
+              ]}
+            />
           </div>
         </div>
       </div>

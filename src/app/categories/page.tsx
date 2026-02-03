@@ -16,6 +16,7 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({
     name: "",
     type: "expense",
@@ -92,6 +93,16 @@ export default function CategoriesPage() {
           </Button>
         </div>
 
+        <div className="mt-4">
+          <label className="block text-sm font-medium">Search</label>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search categories..."
+            className="mt-1"
+          />
+        </div>
+
         {showForm && (
           <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-lg border p-4">
             <div className="grid gap-4 md:grid-cols-3">
@@ -137,6 +148,14 @@ export default function CategoriesPage() {
             <div className="mt-4 space-y-2">
               {categories
                 .filter((cat) => cat.type === type)
+                .filter((cat) => {
+                  if (!search.trim()) return true;
+                  const query = search.toLowerCase();
+                  return (
+                    cat.name.toLowerCase().includes(query) ||
+                    (cat.description || "").toLowerCase().includes(query)
+                  );
+                })
                 .map((category) => (
                   <div key={category.id} className="rounded-md border p-3">
                     <div className="font-medium">{category.name}</div>
@@ -147,7 +166,16 @@ export default function CategoriesPage() {
                     )}
                   </div>
                 ))}
-              {categories.filter((cat) => cat.type === type).length === 0 && (
+              {categories
+                .filter((cat) => cat.type === type)
+                .filter((cat) => {
+                  if (!search.trim()) return true;
+                  const query = search.toLowerCase();
+                  return (
+                    cat.name.toLowerCase().includes(query) ||
+                    (cat.description || "").toLowerCase().includes(query)
+                  );
+                }).length === 0 && (
                 <p className="text-sm text-muted-foreground">No {type} categories found</p>
               )}
             </div>

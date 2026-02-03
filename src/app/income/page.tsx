@@ -7,11 +7,12 @@ import Link from "next/link";
 import { MobileCard } from "@/components/MobileCard";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
+import QuerySelect from "@/components/QuerySelect";
 
 export default async function IncomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; status?: string }>;
 }) {
   const session = await auth();
   const userId = session?.user?.id;
@@ -28,6 +29,7 @@ export default async function IncomePage({
 
   const params = await searchParams;
   const search = (params.search || "").trim();
+  const status = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;
   const skip = (page - 1) * take;
@@ -36,21 +38,23 @@ export default async function IncomePage({
   let total = 0;
   try {
     const baseWhere = canViewAll ? {} : canViewOwn ? { addedById: userId } : { id: "__none__" };
-    const where = search
-      ? {
-          AND: [
-            baseWhere,
-            {
-              OR: [
-                { source: { contains: search, mode: "insensitive" } },
-                { category: { contains: search, mode: "insensitive" } },
-                { project: { contains: search, mode: "insensitive" } },
-                { status: { contains: search, mode: "insensitive" } },
-              ],
-            },
+    const where: Record<string, unknown> = { ...baseWhere };
+    if (search) {
+      where.AND = [
+        baseWhere,
+        {
+          OR: [
+            { source: { contains: search, mode: "insensitive" } },
+            { category: { contains: search, mode: "insensitive" } },
+            { project: { contains: search, mode: "insensitive" } },
+            { status: { contains: search, mode: "insensitive" } },
           ],
-        }
-      : baseWhere;
+        },
+      ];
+    }
+    if (status) {
+      where.status = status;
+    }
 
     const [entriesResult, totalResult] = await Promise.all([
       prisma.income.findMany({
@@ -86,6 +90,15 @@ export default async function IncomePage({
             <div className="min-w-[220px]">
               <SearchInput placeholder="Search income..." />
             </div>
+            <QuerySelect
+              param="status"
+              placeholder="All statuses"
+              options={[
+                { label: "Pending", value: "PENDING" },
+                { label: "Approved", value: "APPROVED" },
+                { label: "Rejected", value: "REJECTED" },
+              ]}
+            />
             {canExport ? (
               <Link
                 href="/api/income/export"

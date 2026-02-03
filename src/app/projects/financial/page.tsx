@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { formatMoney } from "@/lib/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
+import SearchInput from "@/components/SearchInput";
+import QuerySelect from "@/components/QuerySelect";
+import PaginationControls from "@/components/PaginationControls";
+import { useSearchParams } from "next/navigation";
 
 interface Project {
   id: string;
@@ -24,6 +28,11 @@ interface Project {
 export default function ProjectFinancialPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const search = (searchParams.get("search") || "").trim().toLowerCase();
+  const status = (searchParams.get("status") || "").trim();
+  const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
+  const take = 10;
 
   useEffect(() => {
     const fetchProjectFinancials = async () => {
@@ -56,20 +65,56 @@ export default function ProjectFinancialPage() {
   const totalCostToDate = projects.reduce((sum, p) => sum + Number(p.costToDate), 0);
   const totalGrossMargin = projects.reduce((sum, p) => sum + Number(p.grossMargin), 0);
 
+  const statusOptions = useMemo(() => {
+    const uniqueStatuses = Array.from(new Set(projects.map((p) => p.status).filter(Boolean)));
+    return uniqueStatuses.sort().map((value) => ({ label: value, value }));
+  }, [projects]);
+
+  const filteredProjects = useMemo(() => {
+    return projects.filter((project) => {
+      if (status && project.status !== status) return false;
+      if (!search) return true;
+      const haystack = [
+        project.name,
+        project.projectId,
+        project.clientName,
+        project.status,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(search);
+    });
+  }, [projects, search, status]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / take));
+  const pageStart = (page - 1) * take;
+  const pageProjects = filteredProjects.slice(pageStart, pageStart + take);
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Project Financial Dashboard</h1>
             <p className="mt-2 text-muted-foreground">
               Budget vs actual costs and profitability analysis
             </p>
           </div>
-          <Link href="/projects">
-            <Button variant="outline">View All Projects</Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-[220px]">
+              <SearchInput placeholder="Search projects..." />
+            </div>
+            <QuerySelect
+              param="status"
+              placeholder="All statuses"
+              options={statusOptions}
+            />
+            <Link href="/projects">
+              <Button variant="outline">View All Projects</Button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -117,7 +162,7 @@ export default function ProjectFinancialPage() {
 
       {/* Project Details */}
       <div className="space-y-4">
-        {projects.map((project) => {
+        {pageProjects.map((project) => {
           const costPercentage = project.contractValue > 0 
             ? Math.min((project.costToDate / project.contractValue) * 100, 100)
             : 0;
@@ -209,12 +254,18 @@ export default function ProjectFinancialPage() {
         })}
       </div>
 
-      {projects.length === 0 && (
+      {filteredProjects.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <p className="text-muted-foreground">No projects found with financial data.</p>
           </CardContent>
         </Card>
+      )}
+
+      {totalPages > 1 && (
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <PaginationControls totalPages={totalPages} currentPage={page} />
+        </div>
       )}
     </div>
   );
