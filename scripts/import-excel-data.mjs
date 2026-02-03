@@ -52,6 +52,21 @@ async function getOrCreateUser(email, name) {
   return user;
 }
 
+async function getOrCreateClient(name) {
+  const clientName = (name || 'Internal').toString().trim() || 'Internal';
+  const existing = await prisma.client.findUnique({ where: { name: clientName } });
+  if (existing) return existing;
+
+  const created = await prisma.client.create({
+    data: {
+      name: clientName,
+      description: clientName === 'Internal' ? 'Internal operations' : undefined,
+    },
+  });
+  console.log(`  ✅ Created client: ${created.name}`);
+  return created;
+}
+
 async function importData() {
   console.log('📊 Starting data import from Excel...\n');
   
@@ -84,13 +99,14 @@ async function importData() {
         // Parse project data (note: Excel has messy column mapping)
         const projectId = row['Project ID'];
         const projectName = row['Name'];
-        const client = row['Client'] || 'Unknown';
+        const clientName = row['Client'] || 'Internal';
+        const client = await getOrCreateClient(clientName);
         
         const project = await prisma.project.upsert({
           where: { projectId: projectId || `P-${Date.now()}` },
           update: {
             name: projectName,
-            client: client,
+            clientId: client.id,
             status: 'ACTIVE',
             contractValue: parseFloat(row['Contract Value']) || 0,
             invoicedAmount: parseFloat(row['Invoiced Amount']) || 0,
@@ -99,7 +115,7 @@ async function importData() {
           create: {
             projectId: projectId || `P-${Date.now()}`,
             name: projectName,
-            client: client,
+            clientId: client.id,
             startDate: new Date(),
             status: 'ACTIVE',
             contractValue: parseFloat(row['Contract Value']) || 0,
@@ -181,9 +197,23 @@ async function importData() {
         const unitCost = parseFloat(row['Purchase_Price']) || 0;
         const quantity = parseFloat(row['Current_Stock']) || 0;
         
-        const item = await prisma.inventoryItem.create({
-          data: {
-            name: row['Item_Name'],
+        const itemName = row['Item_Name'];
+        const itemSku = row['Item_ID'] ? String(row['Item_ID']).trim() : null;
+        const item = await prisma.inventoryItem.upsert({
+          where: { name: itemName },
+          update: {
+            sku: itemSku,
+            category: row['Category'] || 'General',
+            unit: row['Unit'] || 'Piece',
+            unitCost: unitCost,
+            quantity: quantity,
+            totalValue: quantity * unitCost,
+            availableQty: quantity,
+            lastUpdated: new Date(),
+          },
+          create: {
+            name: itemName,
+            sku: itemSku,
             category: row['Category'] || 'General',
             unit: row['Unit'] || 'Piece',
             quantity: quantity,
@@ -211,9 +241,11 @@ async function importData() {
     
     for (const row of inventoryLogsData) {
       try {
-        const itemName = row['Item_ID'];
+        const itemKey = row['Item_ID'] ? String(row['Item_ID']).trim() : '';
         const item = await prisma.inventoryItem.findFirst({
-          where: { name: { contains: itemName } }
+          where: itemKey
+            ? { OR: [{ sku: itemKey }, { name: { contains: itemKey } }] }
+            : { name: { contains: String(row['Item_Name'] || '') } }
         });
         
         if (!item) {
@@ -233,6 +265,16 @@ async function importData() {
         const unitCost = item.unitCost;
         const total = quantity * unitCost;
         
+        const existingLedger = await prisma.inventoryLedger.findFirst({
+          where: {
+            itemId: item.id,
+            reference: row['Log_ID'] ? String(row['Log_ID']) : undefined,
+          },
+        });
+        if (existingLedger) {
+          continue;
+        }
+
         await prisma.inventoryLedger.create({
           data: {
             itemId: item.id,
@@ -359,16 +401,26 @@ async function importData() {
             const currentBalance = employee.walletBalance || 0;
             const newBalance = parseFloat(currentBalance) + amount;
             
-            await prisma.walletLedger.create({
-              data: {
+            const existingWallet = await prisma.walletLedger.findFirst({
+              where: {
                 employeeId: employee.id,
                 type: 'CREDIT',
-                amount,
-                date,
-                reference: row['ID'],
-                balance: newBalance
-              }
+                reference: row['ID'] ? String(row['ID']) : undefined,
+                amount: amount,
+              },
             });
+            if (!existingWallet) {
+              await prisma.walletLedger.create({
+                data: {
+                  employeeId: employee.id,
+                  type: 'CREDIT',
+                  amount,
+                  date,
+                  reference: row['ID'],
+                  balance: newBalance
+                }
+              });
+            }
             
             // Update employee wallet balance
             await prisma.employee.update({
@@ -437,16 +489,26 @@ async function importData() {
             const currentBalance = employee.walletBalance || 0;
             const newBalance = parseFloat(currentBalance) - amount;
             
-            await prisma.walletLedger.create({
-              data: {
+            const existingWallet = await prisma.walletLedger.findFirst({
+              where: {
                 employeeId: employee.id,
                 type: 'DEBIT',
-                amount,
-                date,
                 reference: expense.id,
-                balance: newBalance
-              }
+                amount: amount,
+              },
             });
+            if (!existingWallet) {
+              await prisma.walletLedger.create({
+                data: {
+                  employeeId: employee.id,
+                  type: 'DEBIT',
+                  amount,
+                  date,
+                  reference: expense.id,
+                  balance: newBalance
+                }
+              });
+            }
             
             // Update employee wallet balance
             await prisma.employee.update({

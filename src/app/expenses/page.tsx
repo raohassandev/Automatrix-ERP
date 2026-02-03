@@ -10,8 +10,9 @@ import DateRangePicker from "@/components/DateRangePicker";
 import SortableHeader from "@/components/SortableHeader";
 import ColumnVisibilityToggle from "@/components/ColumnVisibilityToggle";
 import { MobileCard } from "@/components/MobileCard";
-import { Button } from "@/components/ui/button";
 import QuerySelect from "@/components/QuerySelect";
+import { Badge } from "@/components/ui/badge";
+import { DeleteButton, QuickEditButton } from "@/components/TableActions";
 
 const COLUMNS = [
   { key: 'date', label: 'Date', visible: true },
@@ -47,6 +48,19 @@ function ExpensesPageContent() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [columns, setColumns] = useState(COLUMNS);
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "APPROVED":
+        return "default";
+      case "REJECTED":
+        return "destructive";
+      case "PAID":
+        return "secondary";
+      case "PENDING":
+      default:
+        return "outline";
+    }
+  };
 
   useEffect(() => {
     const fetchExpenses = async () => {
@@ -124,7 +138,11 @@ function ExpensesPageContent() {
                           : col.key === 'project'
                           ? expense.project
                           : col.key === 'status'
-                          ? expense.status
+                          ? (
+                              <Badge variant={getStatusVariant(expense.status)}>
+                                {expense.status}
+                              </Badge>
+                            )
                           : ''}
                       </td>
                     ) : null
@@ -134,6 +152,10 @@ function ExpensesPageContent() {
             </tbody>
           </table>
         </div>
+
+        {expenses.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">No expenses found.</div>
+        )}
 
         {/* Mobile: Cards */}
         <div className="md:hidden space-y-4">
@@ -151,12 +173,11 @@ function ExpensesPageContent() {
               ]}
               actions={
                 <>
-                  <Button size="sm" variant="outline" className="flex-1">
-                    Edit
-                  </Button>
-                  <Button size="sm" variant="destructive" className="flex-1">
-                    Delete
-                  </Button>
+                  <QuickEditButton
+                    url={`/api/expenses/${expense.id}`}
+                    fields={{ status: "Status", paymentMode: "Payment Mode", description: "Description" }}
+                  />
+                  <DeleteButton url={`/api/expenses/${expense.id}`} />
                 </>
               }
             />
