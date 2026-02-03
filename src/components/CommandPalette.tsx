@@ -116,22 +116,22 @@ export function CommandPalette() {
         <CommandSeparator />
 
         <CommandGroup heading="Quick Actions">
-          <CommandItem>
-            <DollarSign className="mr-2 h-4 w-4" />
-            <span>Submit Expense (⌘E)</span>
-          </CommandItem>
-          <CommandItem>
-            <TrendingUp className="mr-2 h-4 w-4" />
-            <span>Log Income (⌘I)</span>
-          </CommandItem>
-          <CommandItem>
-            <Users className="mr-2 h-4 w-4" />
-            <span>Add Employee (⌘⇧E)</span>
-          </CommandItem>
-          <CommandItem>
-            <FolderKanban className="mr-2 h-4 w-4" />
-            <span>Create Project (⌘⇧P)</span>
-          </CommandItem>
+          {[
+            { label: "Submit Expense (⌘E)", icon: DollarSign, permissions: ["expenses.submit"] },
+            { label: "Log Income (⌘I)", icon: TrendingUp, permissions: ["income.add"] },
+            { label: "Add Employee (⌘⇧E)", icon: Users, permissions: ["employees.view_all"] },
+            { label: "Create Project (⌘⇧P)", icon: FolderKanban, permissions: ["projects.edit"] },
+          ]
+            .filter((item) => canAccess(item.permissions))
+            .map((item) => {
+              const Icon = item.icon;
+              return (
+                <CommandItem key={item.label}>
+                  <Icon className="mr-2 h-4 w-4" />
+                  <span>{item.label}</span>
+                </CommandItem>
+              );
+            })}
         </CommandGroup>
       </CommandList>
     </CommandDialog>

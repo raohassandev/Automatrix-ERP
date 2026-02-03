@@ -15,6 +15,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { FormDialogManager, type FormType } from "./FormDialogManager";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useSession } from "next-auth/react";
+import { hasPermission, type RoleName } from "@/lib/permissions";
 
 interface ActionMenuItem {
   icon: React.ElementType;
@@ -23,6 +25,7 @@ interface ActionMenuItem {
   onClick: () => void;
   color: string;
   show: boolean;
+  permissions?: string[];
 }
 
 interface ActionMenuProps {
@@ -34,6 +37,10 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [openFormDialog, setOpenFormDialog] = useState<FormType>(null);
+  const { data: session } = useSession();
+  const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
+  const canAccess = (permissions?: string[]) =>
+    !permissions || permissions.some((permission) => hasPermission(roleName, permission));
 
   // Register keyboard shortcuts
   useKeyboardShortcuts({
@@ -78,7 +85,8 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
         onClose();
       },
       color: "bg-red-500/10 text-red-600 dark:text-red-400",
-      show: true, // Always show
+      show: true,
+      permissions: ["expenses.submit"],
     },
     {
       icon: TrendingUp,
@@ -89,7 +97,8 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
         onClose();
       },
       color: "bg-green-500/10 text-green-600 dark:text-green-400",
-      show: true, // Always show
+      show: true,
+      permissions: ["income.add"],
     },
     {
       icon: Users,
@@ -100,7 +109,8 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
         onClose();
       },
       color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-      show: true, // Always show
+      show: true,
+      permissions: ["employees.view_all"],
     },
     {
       icon: FolderKanban,
@@ -111,7 +121,8 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
         onClose();
       },
       color: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-      show: true, // Always show
+      show: true,
+      permissions: ["projects.edit"],
     },
     {
       icon: Building2,
@@ -123,6 +134,7 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
       },
       color: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
       show: true,
+      permissions: ["clients.edit"],
     },
     {
       icon: Package,
@@ -133,7 +145,8 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
         onClose();
       },
       color: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-      show: true, // Always show
+      show: true,
+      permissions: ["inventory.adjust"],
     },
     {
       icon: FileText,
@@ -144,11 +157,12 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
         onClose();
       },
       color: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
-      show: true, // Always show
+      show: true,
+      permissions: ["invoices.create"],
     },
   ];
 
-  const visibleActions = actions.filter((action) => action.show);
+  const visibleActions = actions.filter((action) => action.show && canAccess(action.permissions));
 
   const containerVariants = {
     hidden: { opacity: 0 },
