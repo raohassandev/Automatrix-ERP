@@ -8,25 +8,23 @@ function validateDatabaseUrl() {
   const url = process.env.DATABASE_URL;
   if (!url) return;
 
-  // This repo currently uses Prisma with SQLite (see prisma/schema.prisma).
-  // A common failure mode is copying a Postgres URL into DATABASE_URL, which causes
-  // confusing runtime errors (often SQLite error code 14 / "unable to open database file").
-  if (/^postgres(ql)?:/i.test(url) || url.includes("postgresql://")) {
+  // This repo uses Prisma with PostgreSQL (see prisma/schema.prisma).
+  // A common failure mode is leaving the old SQLite URL in DATABASE_URL.
+  if (url.startsWith("file:")) {
     throw new Error(
       [
         "Invalid DATABASE_URL for current configuration.",
-        "This app is currently configured for SQLite (provider=\"sqlite\").",
-        "Set DATABASE_URL to something like: file:./dev.db",
+        "This app is configured for PostgreSQL (provider=\"postgresql\").",
+        "Set DATABASE_URL to something like: postgresql://user:pass@localhost:5432/db?schema=public",
       ].join(" ")
     );
   }
 
-  // SQLite URLs should be file-based.
-  if (!url.startsWith("file:")) {
+  if (!/^postgres(ql)?:/i.test(url)) {
     throw new Error(
       [
-        "Invalid DATABASE_URL format for SQLite.",
-        "Expected DATABASE_URL to start with 'file:' (example: file:./dev.db).",
+        "Invalid DATABASE_URL format for PostgreSQL.",
+        "Expected DATABASE_URL to start with 'postgresql://'.",
       ].join(" ")
     );
   }

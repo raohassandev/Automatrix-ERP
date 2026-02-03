@@ -95,6 +95,10 @@ authProviders.push(credentialsProvider);
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: authProviders,
+  secret:
+    process.env.AUTH_SECRET ??
+    process.env.NEXTAUTH_SECRET ??
+    (process.env.NODE_ENV === "development" ? "dev-secret-change-me" : undefined),
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

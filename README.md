@@ -14,7 +14,9 @@ This repository is a **single Next.js application** for C&I engineering operatio
 ```bash
 pnpm install
 cp .env.example .env.local
+docker compose up -d
 pnpm prisma generate
+pnpm prisma migrate dev --name init
 pnpm dev
 ```
 

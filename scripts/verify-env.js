@@ -1,9 +1,10 @@
-const required = [
-  "NEXTAUTH_SECRET",
-  "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET",
-  "DATABASE_URL",
-];
+const required = ["DATABASE_URL"];
+
+const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+if (!authSecret) {
+  console.error("Missing required environment variables: AUTH_SECRET (or NEXTAUTH_SECRET)");
+  process.exit(1);
+}
 
 const missing = required.filter((key) => !process.env[key]);
 
