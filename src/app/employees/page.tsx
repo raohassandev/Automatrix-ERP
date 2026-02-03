@@ -41,7 +41,17 @@ export default async function EmployeesPage({
     ? {}
     : { email: session.user.email || "__none__" };
 
-  let employees = [];
+  let employees: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    status: string;
+    walletBalance: number;
+  }> = [];
+  let totalPages = 1;
+  let hasError = false;
+
   try {
     const where = search
       ? {
@@ -67,45 +77,19 @@ export default async function EmployeesPage({
       }),
       prisma.employee.count({ where }),
     ]);
-    const totalPages = Math.max(1, Math.ceil(total / take));
-    
+    totalPages = Math.max(1, Math.ceil(total / take));
+
     // Convert Decimal to number for component compatibility
     employees = employeesRaw.map((emp) => ({
       ...emp,
       walletBalance: parseFloat(emp.walletBalance.toString()),
     }));
-
-    return (
-      <div className="grid gap-6">
-        <div className="rounded-xl border bg-card p-8 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold">Employees</h1>
-              <p className="mt-2 text-muted-foreground">Employee directory.</p>
-            </div>
-            <div className="min-w-[220px]">
-              <SearchInput placeholder="Search employees..." />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <EmployeesTable employees={employees} />
-
-          {employees.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">No employees found.</div>
-          )}
-
-          {totalPages > 1 && (
-            <div className="mt-4">
-              <PaginationControls totalPages={totalPages} currentPage={page} />
-            </div>
-          )}
-        </div>
-      </div>
-    );
   } catch (error) {
     console.error("Error fetching employees:", error);
+    hasError = true;
+  }
+
+  if (hasError) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Employees</h1>
@@ -113,4 +97,34 @@ export default async function EmployeesPage({
       </div>
     );
   }
+
+  return (
+    <div className="grid gap-6">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Employees</h1>
+            <p className="mt-2 text-muted-foreground">Employee directory.</p>
+          </div>
+          <div className="min-w-[220px]">
+            <SearchInput placeholder="Search employees..." />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <EmployeesTable employees={employees} />
+
+        {employees.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">No employees found.</div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-4">
+            <PaginationControls totalPages={totalPages} currentPage={page} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

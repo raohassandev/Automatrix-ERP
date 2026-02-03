@@ -52,15 +52,6 @@ export default function ProjectFinancialPage() {
     fetchProjectFinancials();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Project Financials</h1>
-        <p className="mt-2 text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
-
   const totalContractValue = projects.reduce((sum, p) => sum + Number(p.contractValue), 0);
   const totalCostToDate = projects.reduce((sum, p) => sum + Number(p.costToDate), 0);
   const totalGrossMargin = projects.reduce((sum, p) => sum + Number(p.grossMargin), 0);
@@ -90,6 +81,15 @@ export default function ProjectFinancialPage() {
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / take));
   const pageStart = (page - 1) * take;
   const pageProjects = filteredProjects.slice(pageStart, pageStart + take);
+
+  if (loading) {
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">Project Financials</h1>
+        <p className="mt-2 text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

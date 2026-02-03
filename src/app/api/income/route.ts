@@ -10,7 +10,7 @@ import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -22,8 +22,20 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+
+  const where: Record<string, unknown> = canViewAll ? {} : { addedById: session.user.id };
+  if (from || to) {
+    const range: { gte?: Date; lte?: Date } = {};
+    if (from) range.gte = new Date(from);
+    if (to) range.lte = new Date(to);
+    where.date = range;
+  }
+
   const data = await prisma.income.findMany({
-    where: canViewAll ? {} : { addedById: session.user.id },
+    where,
     orderBy: { createdAt: "desc" },
     take: 50,
   });

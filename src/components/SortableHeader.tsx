@@ -18,7 +18,9 @@ export default function SortableHeader({ label, value }: SortableHeaderProps) {
   const handleSort = () => {
     const newOrder = order === 'asc' ? 'desc' : 'asc';
     const params = new URLSearchParams(searchParams);
-    params.set('sort', `${value}:${newOrder}`);
+    params.set('sortBy', value);
+    params.set('sortOrder', newOrder);
+    params.delete('page');
     router.replace(`?${params.toString()}`);
   };
 

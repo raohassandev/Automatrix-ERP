@@ -59,6 +59,8 @@ export async function GET(req: Request) {
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
     const status = searchParams.get('status') || '';
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
     const sortBy = searchParams.get('sortBy') || 'date';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
@@ -70,6 +72,7 @@ export async function GET(req: Request) {
       OR?: Array<{ description?: { contains: string } } | { category?: { contains: string } }>;
       category?: string;
       status?: string;
+      date?: { gte?: Date; lte?: Date };
     } = {};
     
     // Check if user can view all expenses or only their own
@@ -90,6 +93,13 @@ export async function GET(req: Request) {
 
     if (status) {
       where.status = status;
+    }
+
+    if (from || to) {
+      const range: { gte?: Date; lte?: Date } = {};
+      if (from) range.gte = new Date(from);
+      if (to) range.lte = new Date(to);
+      where.date = range;
     }
 
     // Build orderBy

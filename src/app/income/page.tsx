@@ -8,6 +8,7 @@ import { MobileCard } from "@/components/MobileCard";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import QuerySelect from "@/components/QuerySelect";
+import DateRangePicker from "@/components/DateRangePicker";
 
 export default async function IncomePage({
   searchParams,
@@ -87,6 +88,7 @@ export default async function IncomePage({
             <p className="mt-2 text-muted-foreground">Income entries.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <DateRangePicker />
             <div className="min-w-[220px]">
               <SearchInput placeholder="Search income..." />
             </div>

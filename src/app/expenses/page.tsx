@@ -11,6 +11,7 @@ import SortableHeader from "@/components/SortableHeader";
 import ColumnVisibilityToggle from "@/components/ColumnVisibilityToggle";
 import { MobileCard } from "@/components/MobileCard";
 import { Button } from "@/components/ui/button";
+import QuerySelect from "@/components/QuerySelect";
 
 const COLUMNS = [
   { key: 'date', label: 'Date', visible: true },
@@ -49,10 +50,10 @@ function ExpensesPageContent() {
 
   useEffect(() => {
     const fetchExpenses = async () => {
-      const res = await fetch(`/api/expenses?${searchParams.toString()}`);
+      const res = await fetch(`/api/expenses?${searchParams.toString()}&limit=25`);
       const data = await res.json();
       setExpenses(data.data?.expenses || []); // Access expenses from nested data object
-      setTotalPages(Math.ceil((data.data?.pagination?.total || 0) / 25));
+      setTotalPages(data.data?.pagination?.totalPages || 0);
     };
     fetchExpenses();
   }, [searchParams]);
@@ -70,6 +71,16 @@ function ExpensesPageContent() {
           <div className="flex flex-wrap items-center gap-2">
             <DateRangePicker />
             <SearchInput placeholder="Search expenses..." />
+            <QuerySelect
+              param="status"
+              placeholder="All statuses"
+              options={[
+                { label: "Pending", value: "PENDING" },
+                { label: "Approved", value: "APPROVED" },
+                { label: "Rejected", value: "REJECTED" },
+                { label: "Paid", value: "PAID" },
+              ]}
+            />
             <ColumnVisibilityToggle columns={columns} onVisibilityChange={setColumns} />
             <Link
               href={`/api/expenses/export?${searchParams.toString()}`}
