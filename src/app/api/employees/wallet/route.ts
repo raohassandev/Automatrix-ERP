@@ -27,6 +27,9 @@ export async function POST(req: Request) {
   }
 
   const { employeeId, type, amount, reference } = parsed.data;
+  if (!reference || !reference.trim()) {
+    return NextResponse.json({ success: false, error: "Reference is required" }, { status: 400 });
+  }
   const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!employee) {
     return NextResponse.json({ success: false, error: "Employee not found" }, { status: 404 });
@@ -50,7 +53,7 @@ export async function POST(req: Request) {
         employeeId,
         type,
         amount: new Prisma.Decimal(amount),
-        reference,
+        reference: reference.trim(),
         balance: new Prisma.Decimal(newBalance),
       },
     });

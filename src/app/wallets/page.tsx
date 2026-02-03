@@ -6,6 +6,8 @@ import { formatMoney } from "@/lib/format";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import QuerySelect from "@/components/QuerySelect";
+import DateRangePicker from "@/components/DateRangePicker";
+import Link from "next/link";
 
 export default async function WalletLedgerPage({
   searchParams,
@@ -33,6 +35,8 @@ export default async function WalletLedgerPage({
   const params = await searchParams;
   const search = (params.search || "").trim();
   const type = (params.type || "").trim();
+  const from = params.from;
+  const to = params.to;
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;
   const skip = (page - 1) * take;
@@ -63,6 +67,12 @@ export default async function WalletLedgerPage({
   if (type) {
     where.type = type;
   }
+  if (from || to) {
+    const range: { gte?: Date; lte?: Date } = {};
+    if (from) range.gte = new Date(from);
+    if (to) range.lte = new Date(to);
+    where.date = range;
+  }
 
   const [ledgers, total] = await Promise.all([
     prisma.walletLedger.findMany({
@@ -85,6 +95,7 @@ export default async function WalletLedgerPage({
             <p className="mt-2 text-muted-foreground">Employee wallet transactions.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <DateRangePicker />
             <div className="min-w-[220px]">
               <SearchInput placeholder="Search employee or reference..." />
             </div>
@@ -96,6 +107,17 @@ export default async function WalletLedgerPage({
                 { label: "Debit", value: "DEBIT" },
               ]}
             />
+            <Link
+              href={`/api/wallets/export?${new URLSearchParams({
+                ...(search ? { search } : {}),
+                ...(type ? { type } : {}),
+                ...(from ? { from } : {}),
+                ...(to ? { to } : {}),
+              }).toString()}`}
+              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              Export CSV
+            </Link>
           </div>
         </div>
       </div>
