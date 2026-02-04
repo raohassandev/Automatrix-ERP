@@ -14,11 +14,14 @@ interface ProjectFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: {
+    id?: string;
     projectId?: string;
     name?: string;
     clientId?: string;
     startDate?: string;
     contractValue?: string;
+    endDate?: string;
+    status?: string;
   };
   onCreated?: () => void;
 }
@@ -40,7 +43,9 @@ export function ProjectFormDialog({
     startDate: "",
     endDate: "",
     contractValue: "",
+    status: "ACTIVE",
   });
+  const isEdit = Boolean(initialData?.id);
 
   useEffect(() => {
     if (open) {
@@ -56,32 +61,45 @@ export function ProjectFormDialog({
       name: initialData.name ?? prev.name,
       clientId: initialData.clientId ?? prev.clientId,
       startDate: initialData.startDate ?? prev.startDate,
+      endDate: initialData.endDate ?? prev.endDate,
       contractValue: initialData.contractValue ?? prev.contractValue,
+      status: initialData.status ?? prev.status,
     }));
   }, [open, initialData]);
 
   async function submit() {
     try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
+      const payload = isEdit
+        ? {
+            name: form.name,
+            clientId: form.clientId,
+            endDate: form.endDate || undefined,
+            contractValue: form.contractValue ? parseFloat(form.contractValue) : 0,
+            status: form.status,
+          }
+        : {
+            projectId: form.projectId,
+            name: form.name,
+            clientId: form.clientId,
+            startDate: form.startDate,
+            endDate: form.endDate || undefined,
+            contractValue: form.contractValue ? parseFloat(form.contractValue) : 0,
+            status: form.status,
+          };
+
+      const res = await fetch(isEdit ? `/api/projects/${initialData?.id}` : "/api/projects", {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          projectId: form.projectId,
-          name: form.name,
-          clientId: form.clientId,
-          startDate: form.startDate,
-          endDate: form.endDate || undefined,
-          contractValue: form.contractValue ? parseFloat(form.contractValue) : 0,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to create project");
+        throw new Error(data.error || `Failed to ${isEdit ? "update" : "create"} project`);
       }
 
-      toast.success("Project created successfully!");
+      toast.success(`Project ${isEdit ? "updated" : "created"} successfully!`);
       
       // Reset form
       setForm({
@@ -91,6 +109,7 @@ export function ProjectFormDialog({
         startDate: "",
         endDate: "",
         contractValue: "",
+        status: "ACTIVE",
       });
       
       // Close dialog
@@ -101,7 +120,7 @@ export function ProjectFormDialog({
       onCreated?.();
     } catch (error) {
       console.error("Error creating project:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create project");
+      toast.error(error instanceof Error ? error.message : `Failed to ${isEdit ? "update" : "create"} project`);
     }
   }
 
@@ -109,8 +128,8 @@ export function ProjectFormDialog({
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Create Project"
-      description="Add a new project linked to a client"
+        title={isEdit ? "Edit Project" : "Create Project"}
+        description={isEdit ? "Update project details" : "Add a new project linked to a client"}
     >
       <form
         onSubmit={(e) => {
@@ -127,6 +146,7 @@ export function ProjectFormDialog({
               placeholder="From quotation system"
               value={form.projectId}
               onChange={(e) => setForm({ ...form, projectId: e.target.value })}
+              disabled={isEdit}
               required
             />
           </div>
@@ -162,6 +182,7 @@ export function ProjectFormDialog({
               type="date"
               value={form.startDate}
               onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              disabled={isEdit}
               required
             />
           </div>
@@ -188,6 +209,21 @@ export function ProjectFormDialog({
               required
             />
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <select
+              id="status"
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+            >
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="ON_HOLD">ON_HOLD</option>
+              <option value="COMPLETED">COMPLETED</option>
+              <option value="CANCELLED">CANCELLED</option>
+            </select>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 pt-4">
@@ -200,7 +236,7 @@ export function ProjectFormDialog({
             Cancel
           </Button>
           <Button type="submit" disabled={pending}>
-            {pending ? "Creating..." : "Create Project"}
+            {pending ? (isEdit ? "Updating..." : "Creating...") : isEdit ? "Update Project" : "Create Project"}
           </Button>
         </div>
       </form>

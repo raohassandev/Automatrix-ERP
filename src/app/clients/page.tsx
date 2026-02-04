@@ -2,9 +2,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
-import { ClientForm } from "@/components/ClientForm";
 import { DeleteButton, QuickEditButton } from "@/components/TableActions";
 import PaginationControls from "@/components/PaginationControls";
+import { PageCreateButton } from "@/components/PageCreateButton";
 
 export default async function ClientsPage({
   searchParams,
@@ -17,6 +17,7 @@ export default async function ClientsPage({
   }
 
   const canViewAll = await requirePermission(session.user.id, "clients.view_all");
+  const canCreate = await requirePermission(session.user.id, "clients.edit");
   if (!canViewAll) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -60,8 +61,13 @@ export default async function ClientsPage({
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Clients</h1>
-        <p className="mt-2 text-muted-foreground">Client master data and contacts.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Clients</h1>
+            <p className="mt-2 text-muted-foreground">Client master data and contacts.</p>
+          </div>
+          {canCreate ? <PageCreateButton label="Create Client" formType="client" /> : null}
+        </div>
       </div>
 
       <form className="rounded-xl border bg-card p-6 shadow-sm" method="get">
@@ -78,8 +84,6 @@ export default async function ClientsPage({
           <button className="rounded-md bg-black px-4 py-2 text-white">Apply</button>
         </div>
       </form>
-
-      <ClientForm />
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="hidden md:block overflow-x-auto">

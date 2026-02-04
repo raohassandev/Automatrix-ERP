@@ -5,10 +5,13 @@ import { useRouter } from "next/navigation";
 import IncomeSourceAutoComplete from "./IncomeSourceAutoComplete";
 import PaymentModeAutoComplete from "./PaymentModeAutoComplete";
 import ProjectAutoComplete from "./ProjectAutoComplete";
+import { ProjectFormDialog } from "./ProjectFormDialog";
 
 export default function IncomeForm() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [projectRefreshKey, setProjectRefreshKey] = useState(0);
   const [form, setForm] = useState({
     date: "",
     source: "",
@@ -78,7 +81,15 @@ export default function IncomeForm() {
           value={form.project}
           onChange={(value) => setForm({ ...form, project: value })}
           placeholder="Select project (optional)"
+          refreshKey={projectRefreshKey}
         />
+        <button
+          type="button"
+          className="rounded-md border px-3 py-2"
+          onClick={() => setProjectDialogOpen(true)}
+        >
+          Create Project
+        </button>
         <input
           className="rounded-md border px-3 py-2"
           placeholder="Invoice ID"
@@ -112,6 +123,11 @@ export default function IncomeForm() {
       >
         {pending ? "Saving..." : "Save"}
       </button>
+      <ProjectFormDialog
+        open={projectDialogOpen}
+        onOpenChange={setProjectDialogOpen}
+        onCreated={() => setProjectRefreshKey((prev) => prev + 1)}
+      />
     </div>
   );
 }

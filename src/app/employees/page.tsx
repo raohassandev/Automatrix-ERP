@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { EmployeesTable } from "@/components/EmployeesTable";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
+import { PageCreateButton } from "@/components/PageCreateButton";
 
 export default async function EmployeesPage({
   searchParams,
@@ -21,6 +22,7 @@ export default async function EmployeesPage({
   const canViewAll = await requirePermission(session.user.id, "employees.view_all");
   const canViewTeam = await requirePermission(session.user.id, "employees.view_team");
   const canViewOwn = await requirePermission(session.user.id, "employees.view_own");
+  const canCreate = await requirePermission(session.user.id, "employees.view_all");
 
   if (!canViewAll && !canViewTeam && !canViewOwn) {
     return (
@@ -108,8 +110,13 @@ export default async function EmployeesPage({
             <h1 className="text-2xl font-semibold">Employees</h1>
             <p className="mt-2 text-muted-foreground">Employee directory.</p>
           </div>
-          <div className="min-w-[220px]">
-            <SearchInput placeholder="Search employees..." />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-[220px]">
+              <SearchInput placeholder="Search employees..." />
+            </div>
+            {canCreate ? (
+              <PageCreateButton label="Add Employee" formType="employee" />
+            ) : null}
           </div>
         </div>
       </div>

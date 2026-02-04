@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/rbac";
 import { InventoryTable } from "@/components/InventoryTable";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
+import { PageCreateButton } from "@/components/PageCreateButton";
 
 export default async function InventoryPage({
   searchParams,
@@ -82,8 +83,13 @@ export default async function InventoryPage({
             <h1 className="text-2xl font-semibold">Inventory</h1>
             <p className="mt-2 text-muted-foreground">Inventory item list.</p>
           </div>
-          <div className="min-w-[220px]">
-            <SearchInput placeholder="Search inventory..." />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-[220px]">
+              <SearchInput placeholder="Search inventory..." />
+            </div>
+            {canAdjust ? (
+              <PageCreateButton label="Add Inventory" formType="inventory" />
+            ) : null}
           </div>
         </div>
       </div>

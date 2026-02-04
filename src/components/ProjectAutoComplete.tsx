@@ -19,12 +19,14 @@ interface ProjectAutoCompleteProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  refreshKey?: number;
 }
 
 export default function ProjectAutoComplete({
   value,
   onChange,
   placeholder = 'Select project...',
+  refreshKey = 0,
 }: ProjectAutoCompleteProps) {
   const [open, setOpen] = React.useState(false);
   const [projects, setProjects] = React.useState<Project[]>([]);
@@ -50,7 +52,7 @@ export default function ProjectAutoComplete({
       }
     };
     fetchProjects();
-  }, []);
+  }, [refreshKey]);
 
   const selectedProject = projects.find((p) => p.projectId === value || p.name === value);
 

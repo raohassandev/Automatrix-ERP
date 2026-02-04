@@ -11,6 +11,7 @@ import { DatePicker } from "./ui/date-picker";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import ProjectAutoComplete from "./ProjectAutoComplete";
+import { ProjectFormDialog } from "./ProjectFormDialog";
 
 interface IncomeFormDialogProps {
   open: boolean;
@@ -21,6 +22,8 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [date, setDate] = useState<Date>();
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [projectRefreshKey, setProjectRefreshKey] = useState(0);
   const [form, setForm] = useState({
     source: "",
     amount: "",
@@ -171,7 +174,17 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
               value={form.project}
               onChange={(value) => setForm({ ...form, project: value })}
               placeholder="Select project"
+              refreshKey={projectRefreshKey}
             />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setProjectDialogOpen(true)}
+              className="mt-2"
+            >
+              Create Project
+            </Button>
           </div>
 
           <div className="space-y-2 md:col-span-2">
@@ -199,6 +212,11 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
           </Button>
         </div>
       </form>
+      <ProjectFormDialog
+        open={projectDialogOpen}
+        onOpenChange={setProjectDialogOpen}
+        onCreated={() => setProjectRefreshKey((prev) => prev + 1)}
+      />
     </FormDialog>
   );
 }
