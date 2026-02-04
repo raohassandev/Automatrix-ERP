@@ -95,6 +95,37 @@ export default async function ReportsPage() {
           <div className="mt-2 text-xl font-semibold">{lowStockCount}</div>
         </div>
       </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <a
+          href="/reports/projects"
+          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
+        >
+          <div className="text-sm text-muted-foreground">Project Expense Report</div>
+          <div className="mt-2 text-lg font-semibold">View project-wise expenses</div>
+        </a>
+        <a
+          href="/reports/expenses"
+          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
+        >
+          <div className="text-sm text-muted-foreground">Expense Report</div>
+          <div className="mt-2 text-lg font-semibold">Approved expenses by category</div>
+        </a>
+        <a
+          href="/reports/inventory"
+          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
+        >
+          <div className="text-sm text-muted-foreground">Inventory Report</div>
+          <div className="mt-2 text-lg font-semibold">Stock valuation and low stock</div>
+        </a>
+        <a
+          href="/reports/wallets"
+          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
+        >
+          <div className="text-sm text-muted-foreground">Wallet Summary</div>
+          <div className="mt-2 text-lg font-semibold">Employee balances and holds</div>
+        </a>
+      </div>
     </div>
   );
 }
