@@ -48,6 +48,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     receiptFileId: "",
     remarks: "",
     categoryRequest: "",
+    expenseType: "COMPANY",
   });
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [duplicateItems, setDuplicateItems] = useState<DuplicateExpense[]>([]);
@@ -95,8 +96,10 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
 
     try {
       if (!form.project) {
-        toast.error("Project is required");
-        return;
+        if (form.expenseType !== "OWNER_PERSONAL") {
+          toast.error("Project is required for company expenses");
+          return;
+        }
       }
       if (
         selectedCategory?.enforceStrict &&
@@ -116,6 +119,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           category: form.category,
           amount: parseFloat(form.amount),
           paymentMode: form.paymentMode,
+          expenseType: form.expenseType,
           project: form.project,
           receiptUrl: form.receiptUrl || undefined,
           receiptFileId: form.receiptFileId || undefined,
@@ -161,6 +165,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
         receiptFileId: "",
         remarks: "",
         categoryRequest: "",
+        expenseType: "COMPANY",
       });
       
       // Close dialog
@@ -261,6 +266,28 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="expenseType">Expense Type</Label>
+              <Select
+                value={form.expenseType}
+                onValueChange={(value) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    expenseType: value,
+                    project: value === "OWNER_PERSONAL" ? "" : prev.project,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="COMPANY">Company Expense</SelectItem>
+                  <SelectItem value="OWNER_PERSONAL">Owner Personal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="amount">Amount (PKR)</Label>
               <Input
                 id="amount"
@@ -289,7 +316,8 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
               <ProjectAutoComplete
                 value={form.project}
                 onChange={(value) => setForm({ ...form, project: value })}
-                placeholder="Select project"
+                placeholder={form.expenseType === "OWNER_PERSONAL" ? "Personal expense (no project)" : "Select project"}
+                disabled={form.expenseType === "OWNER_PERSONAL"}
               />
             </div>
 

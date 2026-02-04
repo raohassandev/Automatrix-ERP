@@ -31,6 +31,7 @@ export default function ExpenseForm() {
     amount: "",
     paymentMode: "",
     paymentSource: "COMPANY_DIRECT" as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
+    expenseType: "COMPANY" as "COMPANY" | "OWNER_PERSONAL",
     project: "",
     receiptUrl: "",
     receiptFileId: "",
@@ -76,8 +77,8 @@ export default function ExpenseForm() {
   const parsedAmount = Number(form.amount);
 
   async function submit(ignoreDuplicate = false) {
-    if (!form.project) {
-      alert("Project is required");
+    if (form.expenseType !== "OWNER_PERSONAL" && !form.project) {
+      alert("Project is required for company expenses");
       return;
     }
     if (
@@ -99,6 +100,7 @@ export default function ExpenseForm() {
         amount: parseFloat(form.amount),
         paymentMode: form.paymentMode,
         paymentSource: form.paymentSource,
+        expenseType: form.expenseType,
         project: form.project,
         receiptUrl: form.receiptUrl || undefined,
         receiptFileId: form.receiptFileId || undefined,
@@ -128,6 +130,7 @@ export default function ExpenseForm() {
       amount: "",
       paymentMode: "",
       paymentSource: "COMPANY_DIRECT",
+      expenseType: "COMPANY",
       project: "",
       receiptUrl: "",
       receiptFileId: "",
@@ -195,10 +198,26 @@ export default function ExpenseForm() {
           <option value="COMPANY_ACCOUNT">Company Paid (Account)</option>
           <option value="EMPLOYEE_WALLET">Employee Wallet</option>
         </select>
+        <select
+          className="rounded-md border px-3 py-2"
+          value={form.expenseType}
+          onChange={(e) => {
+            const nextType = e.target.value as "COMPANY" | "OWNER_PERSONAL";
+            setForm((prev) => ({
+              ...prev,
+              expenseType: nextType,
+              project: nextType === "OWNER_PERSONAL" ? "" : prev.project,
+            }));
+          }}
+        >
+          <option value="COMPANY">Company Expense</option>
+          <option value="OWNER_PERSONAL">Owner Personal</option>
+        </select>
         <ProjectAutoComplete
           value={form.project}
           onChange={(value) => setForm({ ...form, project: value })}
-          placeholder="Select project"
+          placeholder={form.expenseType === "OWNER_PERSONAL" ? "Personal expense (no project)" : "Select project"}
+          disabled={form.expenseType === "OWNER_PERSONAL"}
         />
         <input
           className="rounded-md border px-3 py-2 md:col-span-2"

@@ -95,6 +95,7 @@ export const expenseSchema = z.object({
     .default('Cash'),
   paymentSource: z.enum(['EMPLOYEE_WALLET', 'COMPANY_DIRECT', 'COMPANY_ACCOUNT'])
     .default('COMPANY_DIRECT'),
+  expenseType: z.enum(['COMPANY', 'OWNER_PERSONAL']).default('COMPANY'),
   receiptUrl: urlSchema,
   remarks: z.string().max(1000, 'Remarks too long').optional(),
   categoryRequest: z.string().max(200, 'Category request too long').optional(),
@@ -117,6 +118,7 @@ export const updateExpenseSchema = z.object({
   projectId: z.string().uuid().optional(),
   paymentMode: z.enum(['Cash', 'Bank Transfer', 'Credit Card', 'Other']).optional(),
   receiptUrl: urlSchema,
+  expenseType: z.enum(['COMPANY', 'OWNER_PERSONAL']).optional(),
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'PAID']).optional(),
   remarks: z.string().max(1000).optional(),
   categoryRequest: z.string().max(200).optional(),

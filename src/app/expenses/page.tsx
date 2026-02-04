@@ -21,6 +21,7 @@ const COLUMNS = [
   { key: 'date', label: 'Date', visible: true },
   { key: 'description', label: 'Description', visible: true },
   { key: 'category', label: 'Category', visible: true },
+  { key: 'expenseType', label: 'Type', visible: true },
   { key: 'categoryRequest', label: 'Category Request', visible: true },
   { key: 'remarks', label: 'Remarks', visible: false },
   { key: 'project', label: 'Project', visible: true },
@@ -33,6 +34,7 @@ interface Expense {
   date: string;
   description: string;
   category: string;
+  expenseType?: string | null;
   categoryRequest?: string | null;
   remarks?: string | null;
   project: string;
@@ -149,12 +151,14 @@ function ExpensesPageContent() {
                           ? expense.description
                           : col.key === 'category'
                           ? expense.category
+                          : col.key === 'expenseType'
+                          ? expense.expenseType || "-"
                           : col.key === 'categoryRequest'
                           ? expense.categoryRequest || "-"
                           : col.key === 'remarks'
                           ? expense.remarks || "-"
                           : col.key === 'project'
-                          ? expense.project
+                          ? expense.project || "-"
                           : col.key === 'status'
                           ? (
                               <Badge variant={getStatusVariant(expense.status)}>
@@ -184,9 +188,10 @@ function ExpensesPageContent() {
               subtitle={new Date(expense.date).toLocaleDateString()}
               fields={[
                 { label: "Category", value: expense.category },
+                { label: "Type", value: expense.expenseType || "-" },
                 { label: "Category Request", value: expense.categoryRequest || "-" },
                 { label: "Remarks", value: expense.remarks || "-" },
-                { label: "Project", value: expense.project },
+                { label: "Project", value: expense.project || "-" },
                 { label: "Amount", value: formatMoney(Number(expense.amount)) },
                 { label: "Status", value: expense.status },
                 { label: "Date", value: new Date(expense.date).toLocaleDateString() },

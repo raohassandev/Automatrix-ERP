@@ -174,12 +174,20 @@ export async function POST(req: Request) {
     description: sanitizeString(parsed.data.description),
     category: sanitizeString(parsed.data.category),
     paymentMode: sanitizeString(parsed.data.paymentMode),
-    project: sanitizeString(parsed.data.project),
+    project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
     receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
     receiptFileId: parsed.data.receiptFileId ? sanitizeString(parsed.data.receiptFileId) : undefined,
     remarks: parsed.data.remarks ? sanitizeString(parsed.data.remarks) : undefined,
     categoryRequest: parsed.data.categoryRequest ? sanitizeString(parsed.data.categoryRequest) : undefined,
   };
+  const expenseType = parsed.data.expenseType || "COMPANY";
+
+  if (expenseType !== "OWNER_PERSONAL" && !sanitizedData.project) {
+    return NextResponse.json(
+      { success: false, error: "Project is required for company expenses" },
+      { status: 400 }
+    );
+  }
 
   const category = await prisma.category.findFirst({
     where: { name: sanitizedData.category, type: "expense" },
@@ -317,6 +325,7 @@ export async function POST(req: Request) {
         amount: new Prisma.Decimal(sanitizedData.amount),
         paymentMode: sanitizedData.paymentMode,
         paymentSource: paymentSource as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
+        expenseType,
         project: resolvedProjectId,
         approvalLevel,
         status,

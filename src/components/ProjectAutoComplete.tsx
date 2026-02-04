@@ -20,6 +20,7 @@ interface ProjectAutoCompleteProps {
   onChange: (value: string) => void;
   placeholder?: string;
   refreshKey?: number;
+  disabled?: boolean;
 }
 
 export default function ProjectAutoComplete({
@@ -27,6 +28,7 @@ export default function ProjectAutoComplete({
   onChange,
   placeholder = 'Select project...',
   refreshKey = 0,
+  disabled = false,
 }: ProjectAutoCompleteProps) {
   const [open, setOpen] = React.useState(false);
   const [projects, setProjects] = React.useState<Project[]>([]);
@@ -64,7 +66,7 @@ export default function ProjectAutoComplete({
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
-          disabled={loading}
+          disabled={loading || disabled}
         >
           {selectedProject
             ? `${selectedProject.projectId} - ${selectedProject.name}`

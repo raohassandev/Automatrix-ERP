@@ -46,6 +46,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.category) data.category = parsed.data.category;
   if (parsed.data.amount) data.amount = new Prisma.Decimal(parsed.data.amount);
   if (parsed.data.paymentMode) data.paymentMode = parsed.data.paymentMode;
+  if (parsed.data.expenseType) data.expenseType = parsed.data.expenseType;
   if (parsed.data.project !== undefined) {
     if (parsed.data.project === null || parsed.data.project === "") {
       data.project = null;
@@ -64,6 +65,18 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.receiptFileId) data.receiptFileId = parsed.data.receiptFileId;
   if (parsed.data.remarks !== undefined) data.remarks = parsed.data.remarks;
   if (parsed.data.categoryRequest !== undefined) data.categoryRequest = parsed.data.categoryRequest;
+
+  const nextExpenseType = parsed.data.expenseType || expense.expenseType || "COMPANY";
+  const nextProject =
+    parsed.data.project !== undefined
+      ? parsed.data.project
+      : expense.project;
+  if (nextExpenseType !== "OWNER_PERSONAL" && (!nextProject || nextProject === "")) {
+    return NextResponse.json(
+      { success: false, error: "Project is required for company expenses" },
+      { status: 400 }
+    );
+  }
 
   const nextAmount = parsed.data.amount ?? Number(expense.amount);
 
