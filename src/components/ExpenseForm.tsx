@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/Modal";
 import CategoryAutoComplete from "./CategoryAutoComplete";
@@ -13,6 +13,12 @@ type DuplicateExpense = {
   description: string;
   amount: number;
   status: string;
+};
+
+type CategoryMeta = {
+  name: string;
+  maxAmount: number | null;
+  enforceStrict: boolean;
 };
 
 export default function ExpenseForm() {
@@ -28,13 +34,59 @@ export default function ExpenseForm() {
     project: "",
     receiptUrl: "",
     receiptFileId: "",
+    remarks: "",
+    categoryRequest: "",
   });
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [duplicateItems, setDuplicateItems] = useState<DuplicateExpense[]>([]);
+  const [categories, setCategories] = useState<CategoryMeta[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setCategoriesLoading(true);
+      try {
+        const res = await fetch("/api/categories?type=expense");
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load categories");
+        }
+        const list = Array.isArray(data.categories) ? data.categories : [];
+        setCategories(
+          list.map((item: { name: string; maxAmount?: number | null; enforceStrict?: boolean }) => ({
+            name: item.name,
+            maxAmount: typeof item.maxAmount === "number" ? item.maxAmount : null,
+            enforceStrict: Boolean(item.enforceStrict),
+          }))
+        );
+      } catch (error) {
+        console.error("Error loading categories:", error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.name === form.category),
+    [categories, form.category]
+  );
+  const parsedAmount = Number(form.amount);
 
   async function submit(ignoreDuplicate = false) {
     if (!form.project) {
       alert("Project is required");
+      return;
+    }
+    if (
+      selectedCategory?.enforceStrict &&
+      typeof selectedCategory.maxAmount === "number" &&
+      Number.isFinite(parsedAmount) &&
+      parsedAmount > selectedCategory.maxAmount
+    ) {
+      alert(`Amount exceeds the allowed limit of PKR ${selectedCategory.maxAmount} for this category.`);
       return;
     }
     const res = await fetch("/api/expenses", {
@@ -50,6 +102,8 @@ export default function ExpenseForm() {
         project: form.project,
         receiptUrl: form.receiptUrl || undefined,
         receiptFileId: form.receiptFileId || undefined,
+        remarks: form.remarks || undefined,
+        categoryRequest: form.categoryRequest || undefined,
         ignoreDuplicate,
       }),
     });
@@ -77,6 +131,8 @@ export default function ExpenseForm() {
       project: "",
       receiptUrl: "",
       receiptFileId: "",
+      remarks: "",
+      categoryRequest: "",
     });
     router.refresh();
   }
@@ -114,6 +170,18 @@ export default function ExpenseForm() {
           value={form.category}
           onChange={(value) => setForm({ ...form, category: value })}
         />
+        <div className="md:col-span-2 text-xs text-gray-600">
+          {categoriesLoading ? (
+            "Loading category limits..."
+          ) : selectedCategory?.maxAmount ? (
+            <>
+              Limit: PKR {selectedCategory.maxAmount}{" "}
+              {selectedCategory.enforceStrict ? "(strict)" : "(guideline)"}
+            </>
+          ) : (
+            "No category limit set."
+          )}
+        </div>
         <PaymentModeAutoComplete
           value={form.paymentMode}
           onChange={(value) => setForm({ ...form, paymentMode: value })}
@@ -156,6 +224,19 @@ export default function ExpenseForm() {
           placeholder="Receipt File ID (optional)"
           value={form.receiptFileId}
           onChange={(e) => setForm({ ...form, receiptFileId: e.target.value })}
+        />
+        <textarea
+          className="rounded-md border px-3 py-2 md:col-span-2"
+          placeholder="Remarks (optional)"
+          value={form.remarks}
+          onChange={(e) => setForm({ ...form, remarks: e.target.value })}
+          rows={3}
+        />
+        <input
+          className="rounded-md border px-3 py-2 md:col-span-2"
+          placeholder="Request new category (if not in the list)"
+          value={form.categoryRequest}
+          onChange={(e) => setForm({ ...form, categoryRequest: e.target.value })}
         />
       </div>
       <button

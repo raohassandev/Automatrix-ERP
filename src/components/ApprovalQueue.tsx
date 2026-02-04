@@ -13,6 +13,8 @@ interface Approval {
   date: Date;
   category: string;
   description: string;
+  remarks?: string | null;
+  categoryRequest?: string | null;
   amount: number | string;
   project?: string;
   submittedBy: { id: string; email: string; name?: string | null };
@@ -302,6 +304,16 @@ export default function ApprovalQueue({
                     <div className="max-w-xs truncate" title={expense.description}>
                       {expense.description}
                     </div>
+                    {expense.categoryRequest && (
+                      <div className="mt-1 text-xs text-amber-700">
+                        Category request: {expense.categoryRequest}
+                      </div>
+                    )}
+                    {expense.remarks && (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        Remarks: {expense.remarks}
+                      </div>
+                    )}
                     {expense.project && (
                       <div className="mt-1 text-xs text-muted-foreground">
                         Project: {expense.project}

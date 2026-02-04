@@ -13,6 +13,8 @@ interface Approval {
   date: Date;
   category: string;
   description: string;
+  remarks?: string | null;
+  categoryRequest?: string | null;
   amount: number | string;
   project?: string;
   submittedBy: { id: string; email: string; name?: string | null };
@@ -87,6 +89,8 @@ export default async function ApprovalsPage() {
             date: expense.date,
             category: expense.category,
             description: expense.description,
+            remarks: expense.remarks,
+            categoryRequest: expense.categoryRequest,
             amount: parseFloat(expense.amount.toString()),
             project: expense.project || undefined,
             submittedBy: { 
@@ -110,6 +114,8 @@ export default async function ApprovalsPage() {
       date: income.date,
       category: income.category,
       description: income.source, // Use source as description for income
+      remarks: null,
+      categoryRequest: null,
       amount: parseFloat(income.amount.toString()),
       project: income.project || undefined,
       submittedBy: { 

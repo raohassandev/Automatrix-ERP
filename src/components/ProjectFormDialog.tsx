@@ -8,6 +8,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { ClientFormDialog } from "./ClientFormDialog";
 import { toast } from "sonner";
+import ClientAutoComplete from "./ClientAutoComplete";
 
 interface ProjectFormDialogProps {
   open: boolean;
@@ -31,7 +32,7 @@ export function ProjectFormDialog({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
-  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
+  const [clientRefreshKey, setClientRefreshKey] = useState(0);
   const [form, setForm] = useState({
     projectId: "",
     name: "",
@@ -41,23 +42,11 @@ export function ProjectFormDialog({
     contractValue: "",
   });
 
-  const loadClients = async () => {
-    try {
-      const res = await fetch("/api/clients");
-      const data = await res.json();
-      if (res.ok) {
-        setClients(data.data || []);
-      } else {
-        throw new Error(data.error || "Failed to fetch clients");
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load clients");
-    }
-  };
-
   useEffect(() => {
-    loadClients();
-  }, []);
+    if (open) {
+      setClientRefreshKey((prev) => prev + 1);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open || !initialData) return;
@@ -155,20 +144,12 @@ export function ProjectFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="clientId">Client</Label>
-            <select
-              id="clientId"
+            <ClientAutoComplete
               value={form.clientId}
-              onChange={(e) => setForm({ ...form, clientId: e.target.value })}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-              required
-            >
-              <option value="">Select a client</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setForm({ ...form, clientId: value })}
+              refreshKey={clientRefreshKey}
+              placeholder="Select a client"
+            />
             <Button type="button" variant="outline" size="sm" onClick={() => setClientDialogOpen(true)}>
               Create Client
             </Button>
@@ -226,7 +207,7 @@ export function ProjectFormDialog({
       <ClientFormDialog
         open={clientDialogOpen}
         onOpenChange={setClientDialogOpen}
-        onCreated={loadClients}
+        onCreated={() => setClientRefreshKey((prev) => prev + 1)}
       />
     </FormDialog>
   );

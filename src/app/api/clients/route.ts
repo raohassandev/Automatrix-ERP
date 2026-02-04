@@ -35,46 +35,58 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const parsed = clientSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, error: "Validation failed", details: parsed.error.flatten() },
-      { status: 400 }
-    );
+  try {
+    const body = await req.json();
+    const parsed = clientSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const sanitized = {
+      ...parsed.data,
+      name: sanitizeString(parsed.data.name),
+      description: parsed.data.description ? sanitizeString(parsed.data.description) : undefined,
+      address: parsed.data.address ? sanitizeString(parsed.data.address) : undefined,
+      contacts:
+        parsed.data.contacts?.map((contact) => ({
+          name: sanitizeString(contact.name),
+          phone: contact.phone ? sanitizeString(contact.phone) : undefined,
+          designation: contact.designation ? sanitizeString(contact.designation) : undefined,
+          email: contact.email ? sanitizeString(contact.email) : undefined,
+        })) ?? [],
+    };
+
+    const created = await prisma.client.create({
+      data: {
+        name: sanitized.name,
+        description: sanitized.description,
+        address: sanitized.address,
+        contacts: sanitized.contacts.length ? { create: sanitized.contacts } : undefined,
+      },
+      include: { contacts: true },
+    });
+
+    await logAudit({
+      action: "CREATE_CLIENT",
+      entity: "Client",
+      entityId: created.id,
+      newValue: JSON.stringify(sanitized),
+      userId: session.user.id,
+    });
+
+    return NextResponse.json({ success: true, data: created });
+  } catch (error: unknown) {
+    const prismaError = error as { code?: string };
+    if (prismaError?.code === "P2002") {
+      return NextResponse.json(
+        { success: false, error: "Client name already exists" },
+        { status: 400 }
+      );
+    }
+    console.error("Error creating client:", error);
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
-
-  const sanitized = {
-    ...parsed.data,
-    name: sanitizeString(parsed.data.name),
-    description: parsed.data.description ? sanitizeString(parsed.data.description) : undefined,
-    address: parsed.data.address ? sanitizeString(parsed.data.address) : undefined,
-    contacts:
-      parsed.data.contacts?.map((contact) => ({
-        name: sanitizeString(contact.name),
-        phone: contact.phone ? sanitizeString(contact.phone) : undefined,
-        designation: contact.designation ? sanitizeString(contact.designation) : undefined,
-        email: contact.email ? sanitizeString(contact.email) : undefined,
-      })) ?? [],
-  };
-
-  const created = await prisma.client.create({
-    data: {
-      name: sanitized.name,
-      description: sanitized.description,
-      address: sanitized.address,
-      contacts: sanitized.contacts.length ? { create: sanitized.contacts } : undefined,
-    },
-    include: { contacts: true },
-  });
-
-  await logAudit({
-    action: "CREATE_CLIENT",
-    entity: "Client",
-    entityId: created.id,
-    newValue: JSON.stringify(sanitized),
-    userId: session.user.id,
-  });
-
-  return NextResponse.json({ success: true, data: created });
 }

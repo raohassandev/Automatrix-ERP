@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import Modal from "@/components/Modal";
 import { format } from "date-fns";
 import ProjectAutoComplete from "./ProjectAutoComplete";
+import { Textarea } from "./ui/textarea";
+import PaymentModeAutoComplete from "./PaymentModeAutoComplete";
 
 type DuplicateExpense = {
   id: string;
@@ -19,6 +21,12 @@ type DuplicateExpense = {
   description: string;
   amount: number;
   status: string;
+};
+
+type CategoryMeta = {
+  name: string;
+  maxAmount: number | null;
+  enforceStrict: boolean;
 };
 
 interface ExpenseFormDialogProps {
@@ -38,9 +46,46 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     project: "",
     receiptUrl: "",
     receiptFileId: "",
+    remarks: "",
+    categoryRequest: "",
   });
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [duplicateItems, setDuplicateItems] = useState<DuplicateExpense[]>([]);
+  const [categories, setCategories] = useState<CategoryMeta[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setCategoriesLoading(true);
+      try {
+        const res = await fetch("/api/categories?type=expense");
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load categories");
+        }
+        const list = Array.isArray(data.categories) ? data.categories : [];
+        setCategories(
+          list.map((item: { name: string; maxAmount?: number | null; enforceStrict?: boolean }) => ({
+            name: item.name,
+            maxAmount: typeof item.maxAmount === "number" ? item.maxAmount : null,
+            enforceStrict: Boolean(item.enforceStrict),
+          }))
+        );
+      } catch (error) {
+        console.error("Error loading categories:", error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.name === form.category),
+    [categories, form.category]
+  );
+  const parsedAmount = Number(form.amount);
 
   async function submit(ignoreDuplicate = false) {
     if (!date) {
@@ -51,6 +96,15 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     try {
       if (!form.project) {
         toast.error("Project is required");
+        return;
+      }
+      if (
+        selectedCategory?.enforceStrict &&
+        typeof selectedCategory.maxAmount === "number" &&
+        Number.isFinite(parsedAmount) &&
+        parsedAmount > selectedCategory.maxAmount
+      ) {
+        toast.error(`Amount exceeds the allowed limit of PKR ${selectedCategory.maxAmount} for this category.`);
         return;
       }
       const res = await fetch("/api/expenses", {
@@ -65,6 +119,8 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           project: form.project,
           receiptUrl: form.receiptUrl || undefined,
           receiptFileId: form.receiptFileId || undefined,
+          remarks: form.remarks || undefined,
+          categoryRequest: form.categoryRequest || undefined,
           ignoreDuplicate,
         }),
       });
@@ -103,6 +159,8 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
         project: "",
         receiptUrl: "",
         receiptFileId: "",
+        remarks: "",
+        categoryRequest: "",
       });
       
       // Close dialog
@@ -167,37 +225,39 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Travel">Travel</SelectItem>
-                  <SelectItem value="Meals">Meals</SelectItem>
-                  <SelectItem value="Office Supplies">Office Supplies</SelectItem>
-                  <SelectItem value="Equipment">Equipment</SelectItem>
-                  <SelectItem value="Software">Software</SelectItem>
-                  <SelectItem value="Marketing">Marketing</SelectItem>
-                  <SelectItem value="Utilities">Utilities</SelectItem>
-                  <SelectItem value="Rent">Rent</SelectItem>
-                  <SelectItem value="Salaries">Salaries</SelectItem>
-                  <SelectItem value="Professional Services">Professional Services</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
+                  {categories.length === 0 ? (
+                    <SelectItem value="__loading" disabled>
+                      {categoriesLoading ? "Loading..." : "No categories"}
+                    </SelectItem>
+                  ) : (
+                    categories.map((category) => (
+                      <SelectItem key={category.name} value={category.name}>
+                        {category.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
+              <div className="text-xs text-muted-foreground">
+                {categoriesLoading ? (
+                  "Loading category limits..."
+                ) : selectedCategory?.maxAmount ? (
+                  <>
+                    Limit: PKR {selectedCategory.maxAmount}{" "}
+                    {selectedCategory.enforceStrict ? "(strict)" : "(guideline)"}
+                  </>
+                ) : (
+                  "No category limit set."
+                )}
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="paymentMode">Payment Mode</Label>
-              <Select value={form.paymentMode} onValueChange={(value) => setForm({ ...form, paymentMode: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select payment mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="Credit Card">Credit Card</SelectItem>
-                  <SelectItem value="Debit Card">Debit Card</SelectItem>
-                  <SelectItem value="Check">Check</SelectItem>
-                  <SelectItem value="Mobile Payment">Mobile Payment</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <PaymentModeAutoComplete
+                value={form.paymentMode}
+                onChange={(value) => setForm({ ...form, paymentMode: value })}
+              />
             </div>
 
             <div className="space-y-2">
@@ -251,6 +311,27 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
                 placeholder="File ID from upload"
                 value={form.receiptFileId}
                 onChange={(e) => setForm({ ...form, receiptFileId: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="remarks">Remarks (Optional)</Label>
+              <Textarea
+                id="remarks"
+                placeholder="Add notes or details"
+                value={form.remarks}
+                onChange={(e) => setForm({ ...form, remarks: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="categoryRequest">Request New Category (Optional)</Label>
+              <Input
+                id="categoryRequest"
+                placeholder="If the category is missing, request a new one"
+                value={form.categoryRequest}
+                onChange={(e) => setForm({ ...form, categoryRequest: e.target.value })}
               />
             </div>
           </div>

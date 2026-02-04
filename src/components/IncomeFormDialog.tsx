@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { DatePicker } from "./ui/date-picker";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import ProjectAutoComplete from "./ProjectAutoComplete";
 
 interface IncomeFormDialogProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
     paymentMode: "",
     invoiceNumber: "",
     remarks: "",
+    project: "",
   });
 
   async function submit() {
@@ -43,6 +45,7 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
           source: form.source,
           amount: parseFloat(form.amount),
           paymentMode: form.paymentMode,
+          project: form.project || undefined,
           invoiceId: form.invoiceNumber || null,
           remarks: form.remarks || null,
         }),
@@ -64,6 +67,7 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
         paymentMode: "",
         invoiceNumber: "",
         remarks: "",
+        project: "",
       });
       
       // Close dialog
@@ -158,6 +162,15 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
               placeholder="INV-001"
               value={form.invoiceNumber}
               onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="project">Project (Optional)</Label>
+            <ProjectAutoComplete
+              value={form.project}
+              onChange={(value) => setForm({ ...form, project: value })}
+              placeholder="Select project"
             />
           </div>
 

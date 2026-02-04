@@ -10,6 +10,8 @@ export const expenseSchema = z.object({
   project: z.string().min(1),
   receiptUrl: z.string().url().optional(),
   receiptFileId: z.string().optional(),
+  remarks: z.string().optional(),
+  categoryRequest: z.string().optional(),
 });
 
 export const expenseUpdateSchema = expenseSchema.partial();

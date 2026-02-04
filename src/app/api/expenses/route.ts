@@ -177,6 +177,8 @@ export async function POST(req: Request) {
     project: sanitizeString(parsed.data.project),
     receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
     receiptFileId: parsed.data.receiptFileId ? sanitizeString(parsed.data.receiptFileId) : undefined,
+    remarks: parsed.data.remarks ? sanitizeString(parsed.data.remarks) : undefined,
+    categoryRequest: parsed.data.categoryRequest ? sanitizeString(parsed.data.categoryRequest) : undefined,
   };
 
   const category = await prisma.category.findFirst({
@@ -321,6 +323,8 @@ export async function POST(req: Request) {
         submittedById: session.user.id,
         receiptUrl: sanitizedData.receiptUrl,
         receiptFileId: sanitizedData.receiptFileId,
+        remarks: sanitizedData.remarks,
+        categoryRequest: sanitizedData.categoryRequest,
       },
     });
 
@@ -350,6 +354,22 @@ export async function POST(req: Request) {
     type: "EXPENSE_SUBMITTED",
     message: `Expense submitted for ${sanitizedData.amount}${paymentSource === "EMPLOYEE_WALLET" ? " (paid from wallet)" : ""}.`,
   });
+
+  if (sanitizedData.categoryRequest) {
+    const rolesToNotify = ["Owner", "CEO", "Admin", "CFO", "Finance Manager", "Accountant"];
+    const adminUsers = await prisma.user.findMany({
+      where: { role: { name: { in: rolesToNotify } } },
+      select: { id: true, email: true },
+    });
+    await prisma.notification.createMany({
+      data: adminUsers.map((user) => ({
+        userId: user.id,
+        type: "CATEGORY_REQUEST",
+        message: `Expense category request: "${sanitizedData.categoryRequest}" by ${session.user.email || "user"} (category: ${sanitizedData.category}).`,
+        status: "NEW",
+      })),
+    });
+  }
 
   return NextResponse.json({ success: true, data: result.created });
 }

@@ -96,6 +96,8 @@ export const expenseSchema = z.object({
   paymentSource: z.enum(['EMPLOYEE_WALLET', 'COMPANY_DIRECT', 'COMPANY_ACCOUNT'])
     .default('COMPANY_DIRECT'),
   receiptUrl: urlSchema,
+  remarks: z.string().max(1000, 'Remarks too long').optional(),
+  categoryRequest: z.string().max(200, 'Category request too long').optional(),
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'PAID'])
     .default('PENDING'),
 }).refine((data) => {
@@ -116,6 +118,8 @@ export const updateExpenseSchema = z.object({
   paymentMode: z.enum(['Cash', 'Bank Transfer', 'Credit Card', 'Other']).optional(),
   receiptUrl: urlSchema,
   status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'PAID']).optional(),
+  remarks: z.string().max(1000).optional(),
+  categoryRequest: z.string().max(200).optional(),
 });
 
 export const bulkExpenseSchema = z.object({

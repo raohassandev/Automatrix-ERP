@@ -91,6 +91,8 @@ model Expense {
   receiptUrl      String?
   receiptFileId   String?
   walletLedgerId  String?       // Link to wallet transaction if paid from wallet
+  remarks         String?
+  categoryRequest String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

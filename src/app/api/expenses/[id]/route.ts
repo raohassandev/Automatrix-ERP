@@ -62,6 +62,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
   if (parsed.data.receiptUrl) data.receiptUrl = parsed.data.receiptUrl;
   if (parsed.data.receiptFileId) data.receiptFileId = parsed.data.receiptFileId;
+  if (parsed.data.remarks !== undefined) data.remarks = parsed.data.remarks;
+  if (parsed.data.categoryRequest !== undefined) data.categoryRequest = parsed.data.categoryRequest;
 
   const nextAmount = parsed.data.amount ?? Number(expense.amount);
 
