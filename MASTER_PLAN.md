@@ -115,10 +115,27 @@
 - Employee submits expense against project + category
 - Receipt attachment
 - Approval workflow
+- Owner Personal expense type (no project)
+- Company expense requires project
 
 **Inventory**
 - Items with purchase + selling price
 - Ledger (stock in/out, project reference)
+- Purchase price captured on stock-in
+- Project allocation moves cost from store to project
+
+**Material Purchase Flow (Simple, Required)**
+1) **Vendor Payment (Expense)**
+   - Category: *Material (Stock/Inventory)* or *Material (Project Direct)*
+   - Payment Source: Company/Wallet
+2) **Inventory Stock-In**
+   - Item, quantity, unit cost, vendor reference
+3) **Project Allocation (Stock-Out)**
+   - Move quantity to project (actual project cost)
+
+**Rule**
+- If material is for a project and should be tracked by store, **always** do stock-in + project allocation.
+- If material is direct-to-project and not stored, use *Material (Project Direct)* and skip stock allocation.
 
 **Employee Wallet**
 - Finance credits wallet
@@ -165,4 +182,3 @@
 - No UI without validation & permission checks in API.
 - All monetary changes must have audit logs.
 - Keep workflows simple before adding automation.
-
