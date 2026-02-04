@@ -9,6 +9,7 @@ import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import QuerySelect from "@/components/QuerySelect";
 import DateRangePicker from "@/components/DateRangePicker";
+import { PageCreateButton } from "@/components/PageCreateButton";
 
 export default async function IncomePage({
   searchParams,
@@ -26,6 +27,7 @@ export default async function IncomePage({
 
   const canViewAll = await requirePermission(userId, "income.view_all");
   const canViewOwn = await requirePermission(userId, "income.view_own");
+  const canCreate = await requirePermission(userId, "income.add");
   const canExport = canViewAll || canViewOwn;
 
   const params = await searchParams;
@@ -109,6 +111,7 @@ export default async function IncomePage({
                 Export CSV
               </Link>
             ) : null}
+            {canCreate ? <PageCreateButton label="Log Income" formType="income" /> : null}
           </div>
         </div>
       </div>

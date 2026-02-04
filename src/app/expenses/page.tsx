@@ -13,6 +13,9 @@ import { MobileCard } from "@/components/MobileCard";
 import QuerySelect from "@/components/QuerySelect";
 import { Badge } from "@/components/ui/badge";
 import { DeleteButton, QuickEditButton } from "@/components/TableActions";
+import { PageCreateButton } from "@/components/PageCreateButton";
+import { useSession } from "next-auth/react";
+import { hasPermission, type RoleName } from "@/lib/permissions";
 
 const COLUMNS = [
   { key: 'date', label: 'Date', visible: true },
@@ -49,9 +52,12 @@ export default function ExpensesPage() {
 
 function ExpensesPageContent() {
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
+  const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [columns, setColumns] = useState(COLUMNS);
+  const canCreate = hasPermission(roleName, "expenses.submit");
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "APPROVED":
@@ -75,6 +81,7 @@ function ExpensesPageContent() {
     };
     fetchExpenses();
   }, [searchParams]);
+
 
   return (
     <div className="grid gap-6">
@@ -106,6 +113,9 @@ function ExpensesPageContent() {
             >
               Export CSV
             </Link>
+            {canCreate ? (
+              <PageCreateButton label="Submit Expense" formType="expense" />
+            ) : null}
           </div>
         </div>
       </div>

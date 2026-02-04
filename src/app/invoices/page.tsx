@@ -6,10 +6,10 @@ import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { MobileCard } from "@/components/MobileCard";
 import { Badge } from "@/components/ui/badge";
-import InvoiceForm from "@/components/InvoiceForm";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import QuerySelect from "@/components/QuerySelect";
+import { PageCreateButton } from "@/components/PageCreateButton";
 
 export default async function InvoicesPage({
   searchParams,
@@ -24,6 +24,7 @@ export default async function InvoicesPage({
   }
 
   const canView = await requirePermission(session.user.id, "invoices.view_all");
+  const canCreate = await requirePermission(session.user.id, "invoices.create");
   if (!canView) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -41,7 +42,6 @@ export default async function InvoicesPage({
   const skip = (page - 1) * take;
 
   let invoices = [];
-  let projects = [];
   let total = 0;
   let totalInvoiced = 0;
   let totalReceived = 0;
@@ -63,21 +63,18 @@ export default async function InvoicesPage({
     const [
       invoicesResult,
       totalResult,
-      projectsResult,
       totalSum,
       receivedSum,
       overdueTotal,
     ] = await Promise.all([
       prisma.invoice.findMany({ where, orderBy: { createdAt: "desc" }, skip, take }),
       prisma.invoice.count({ where }),
-      prisma.project.findMany({ orderBy: { name: "asc" }, include: { client: true } }),
       prisma.invoice.aggregate({ where, _sum: { amount: true } }),
       prisma.invoice.aggregate({ where: { ...where, status: "PAID" }, _sum: { amount: true } }),
       prisma.invoice.count({ where: { ...where, status: "OVERDUE" } }),
     ]);
     invoices = invoicesResult;
     total = totalResult;
-    projects = projectsResult;
     totalInvoiced = Number(totalSum._sum.amount || 0);
     totalReceived = Number(receivedSum._sum.amount || 0);
     overdueCount = overdueTotal;
@@ -126,6 +123,7 @@ export default async function InvoicesPage({
                 { label: "Overdue", value: "OVERDUE" },
               ]}
             />
+            {canCreate ? <PageCreateButton label="Create Invoice" formType="invoice" /> : null}
           </div>
         </div>
         
@@ -149,16 +147,6 @@ export default async function InvoicesPage({
           </div>
         </div>
       </div>
-
-      {/* Invoice Form */}
-      <InvoiceForm projects={projects.map(p => ({
-        id: p.id,
-        projectId: p.projectId,
-        name: p.name,
-        clientName: p.client?.name || "",
-        contractValue: Number(p.contractValue),
-        costToDate: Number(p.costToDate)
-      }))} />
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="hidden md:block overflow-x-auto">
