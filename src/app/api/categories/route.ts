@@ -5,16 +5,16 @@ import { requirePermission } from "@/lib/rbac";
 
 export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-  }
+  const hasSession = Boolean(session?.user?.id);
 
-  const canManage = await requirePermission(session.user.id, "categories.manage");
-  const canUseExpense = await requirePermission(session.user.id, "expenses.submit");
-  const canUseInventory = await requirePermission(session.user.id, "inventory.view");
-  const canUseIncome = await requirePermission(session.user.id, "income.add");
-  if (!canManage && !canUseExpense && !canUseInventory && !canUseIncome) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  if (hasSession) {
+    const canManage = await requirePermission(session.user.id, "categories.manage");
+    const canUseExpense = await requirePermission(session.user.id, "expenses.submit");
+    const canUseInventory = await requirePermission(session.user.id, "inventory.view");
+    const canUseIncome = await requirePermission(session.user.id, "income.add");
+    if (!canManage && !canUseExpense && !canUseInventory && !canUseIncome) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const { searchParams } = new URL(req.url);
