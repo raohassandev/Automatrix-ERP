@@ -184,16 +184,26 @@ export async function POST(req: Request) {
     category: sanitizeString(parsed.data.category),
     paymentMode: sanitizeString(parsed.data.paymentMode),
     project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
+    inventoryItemId: parsed.data.inventoryItemId ? sanitizeString(parsed.data.inventoryItemId) : undefined,
     receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
     receiptFileId: parsed.data.receiptFileId ? sanitizeString(parsed.data.receiptFileId) : undefined,
     remarks: parsed.data.remarks ? sanitizeString(parsed.data.remarks) : undefined,
     categoryRequest: parsed.data.categoryRequest ? sanitizeString(parsed.data.categoryRequest) : undefined,
   };
   const expenseType = parsed.data.expenseType || "COMPANY";
+  const inventoryQuantity = parsed.data.inventoryQuantity;
+  const inventoryUnitCost = parsed.data.inventoryUnitCost;
 
   if (expenseType !== "OWNER_PERSONAL" && !sanitizedData.project) {
     return NextResponse.json(
       { success: false, error: "Project is required for company expenses" },
+      { status: 400 }
+    );
+  }
+
+  if (sanitizedData.inventoryItemId && !inventoryQuantity) {
+    return NextResponse.json(
+      { success: false, error: "Inventory quantity is required when linking material purchase" },
       { status: 400 }
     );
   }
@@ -353,6 +363,50 @@ export async function POST(req: Request) {
         data: {
           walletHold: new Prisma.Decimal(Number(employeeRecord.walletHold) + sanitizedData.amount),
         },
+      });
+    }
+
+    if (sanitizedData.inventoryItemId && inventoryQuantity) {
+      const item = await tx.inventoryItem.findUnique({
+        where: { id: sanitizedData.inventoryItemId },
+      });
+      if (!item) {
+        throw new Error("Inventory item not found");
+      }
+      const unitCost = inventoryUnitCost ?? Number(item.unitCost);
+      const qtyChange = Math.abs(inventoryQuantity);
+      const newQty = Number(item.quantity) + qtyChange;
+      const total = qtyChange * unitCost;
+
+      const ledger = await tx.inventoryLedger.create({
+        data: {
+          date: new Date(),
+          itemId: item.id,
+          type: "PURCHASE",
+          quantity: new Prisma.Decimal(qtyChange),
+          unitCost: new Prisma.Decimal(unitCost),
+          total: new Prisma.Decimal(total),
+          reference: `Expense ${created.id}`,
+          project: resolvedProjectId || undefined,
+          userId: session.user.id,
+          runningBalance: new Prisma.Decimal(newQty),
+        },
+      });
+
+      await tx.inventoryItem.update({
+        where: { id: item.id },
+        data: {
+          quantity: new Prisma.Decimal(newQty),
+          totalValue: new Prisma.Decimal(newQty * unitCost),
+          availableQty: new Prisma.Decimal(newQty - Number(item.reservedQty)),
+          lastUpdated: new Date(),
+          lastPurchaseDate: new Date(),
+        },
+      });
+
+      await tx.expense.update({
+        where: { id: created.id },
+        data: { inventoryLedgerId: ledger.id },
       });
     }
 

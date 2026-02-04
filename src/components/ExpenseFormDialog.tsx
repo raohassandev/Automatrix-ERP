@@ -28,6 +28,12 @@ type CategoryMeta = {
   enforceStrict: boolean;
 };
 
+type InventoryItem = {
+  id: string;
+  name: string;
+  unit?: string | null;
+};
+
 interface ExpenseFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,11 +54,17 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     remarks: "",
     categoryRequest: "",
     expenseType: "COMPANY",
+    addToInventory: false,
+    inventoryItemId: "",
+    inventoryQuantity: "",
+    inventoryUnitCost: "",
   });
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [duplicateItems, setDuplicateItems] = useState<DuplicateExpense[]>([]);
   const [categories, setCategories] = useState<CategoryMeta[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -81,6 +93,28 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    const fetchInventory = async () => {
+      setInventoryLoading(true);
+      try {
+        const res = await fetch("/api/inventory");
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load inventory");
+        }
+        const list = Array.isArray(data.data) ? data.data : [];
+        setInventoryItems(list.map((item: InventoryItem) => ({ id: item.id, name: item.name, unit: item.unit })));
+      } catch (error) {
+        console.error("Error loading inventory:", error);
+        setInventoryItems([]);
+      } finally {
+        setInventoryLoading(false);
+      }
+    };
+
+    fetchInventory();
+  }, []);
+
   const selectedCategory = useMemo(
     () => categories.find((category) => category.name === form.category),
     [categories, form.category]
@@ -97,6 +131,16 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
       if (!form.project) {
         if (form.expenseType !== "OWNER_PERSONAL") {
           toast.error("Project is required for company expenses");
+          return;
+        }
+      }
+      if (form.addToInventory) {
+        if (form.expenseType !== "COMPANY") {
+          toast.error("Only company expenses can add inventory");
+          return;
+        }
+        if (!form.inventoryItemId || !form.inventoryQuantity) {
+          toast.error("Inventory item and quantity are required");
           return;
         }
       }
@@ -124,6 +168,11 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           receiptFileId: form.receiptFileId || undefined,
           remarks: form.remarks || undefined,
           categoryRequest: form.categoryRequest || undefined,
+          inventoryItemId: form.addToInventory ? form.inventoryItemId : undefined,
+          inventoryQuantity: form.addToInventory ? parseFloat(form.inventoryQuantity) : undefined,
+          inventoryUnitCost: form.addToInventory && form.inventoryUnitCost
+            ? parseFloat(form.inventoryUnitCost)
+            : undefined,
           ignoreDuplicate,
         }),
       });
@@ -167,6 +216,10 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
         remarks: "",
         categoryRequest: "",
         expenseType: "COMPANY",
+        addToInventory: false,
+        inventoryItemId: "",
+        inventoryQuantity: "",
+        inventoryUnitCost: "",
       });
       
       // Close dialog
@@ -280,6 +333,10 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
                     ...prev,
                     expenseType: value,
                     project: value === "OWNER_PERSONAL" ? "" : prev.project,
+                    addToInventory: value === "OWNER_PERSONAL" ? false : prev.addToInventory,
+                    inventoryItemId: value === "OWNER_PERSONAL" ? "" : prev.inventoryItemId,
+                    inventoryQuantity: value === "OWNER_PERSONAL" ? "" : prev.inventoryQuantity,
+                    inventoryUnitCost: value === "OWNER_PERSONAL" ? "" : prev.inventoryUnitCost,
                   }))
                 }
               >
@@ -326,6 +383,81 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
                 disabled={form.expenseType === "OWNER_PERSONAL"}
               />
             </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-sm font-medium">Material Purchase (Add to Inventory)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="addToInventory"
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={form.addToInventory}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      addToInventory: e.target.checked,
+                      inventoryItemId: e.target.checked ? prev.inventoryItemId : "",
+                      inventoryQuantity: e.target.checked ? prev.inventoryQuantity : "",
+                      inventoryUnitCost: e.target.checked ? prev.inventoryUnitCost : "",
+                    }))
+                  }
+                />
+                <label htmlFor="addToInventory" className="text-sm text-muted-foreground">
+                  Use this when you purchased material and want stock updated.
+                </label>
+              </div>
+            </div>
+
+            {form.addToInventory ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="inventoryItem">Inventory Item</Label>
+                  <Select
+                    value={form.inventoryItemId}
+                    onValueChange={(value) => setForm({ ...form, inventoryItemId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={inventoryLoading ? "Loading..." : "Select item"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {inventoryItems.length === 0 ? (
+                        <SelectItem value="__none" disabled>
+                          {inventoryLoading ? "Loading..." : "No inventory items"}
+                        </SelectItem>
+                      ) : (
+                        inventoryItems.map((item) => (
+                          <SelectItem key={item.id} value={item.id}>
+                            {item.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inventoryQuantity">Quantity</Label>
+                  <Input
+                    id="inventoryQuantity"
+                    type="number"
+                    step="0.01"
+                    placeholder="0"
+                    value={form.inventoryQuantity}
+                    onChange={(e) => setForm({ ...form, inventoryQuantity: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="inventoryUnitCost">Unit Cost (Optional)</Label>
+                  <Input
+                    id="inventoryUnitCost"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={form.inventoryUnitCost}
+                    onChange={(e) => setForm({ ...form, inventoryUnitCost: e.target.value })}
+                  />
+                </div>
+              </>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="receiptUrl">Receipt URL (Optional)</Label>
