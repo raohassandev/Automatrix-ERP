@@ -108,6 +108,23 @@ function ExpensesPageContent() {
                 { label: "Paid", value: "PAID" },
               ]}
             />
+            <QuerySelect
+              param="expenseType"
+              placeholder="All types"
+              options={[
+                { label: "Company", value: "COMPANY" },
+                { label: "Owner Personal", value: "OWNER_PERSONAL" },
+              ]}
+            />
+            <QuerySelect
+              param="paymentSource"
+              placeholder="All sources"
+              options={[
+                { label: "Company Direct", value: "COMPANY_DIRECT" },
+                { label: "Company Account", value: "COMPANY_ACCOUNT" },
+                { label: "Employee Wallet", value: "EMPLOYEE_WALLET" },
+              ]}
+            />
             <ColumnVisibilityToggle columns={columns} onVisibilityChange={setColumns} />
             <Link
               href={`/api/expenses/export?${searchParams.toString()}`}

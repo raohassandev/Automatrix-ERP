@@ -59,6 +59,8 @@ export async function GET(req: Request) {
     const search = searchParams.get('search') || '';
     const category = searchParams.get('category') || '';
     const status = searchParams.get('status') || '';
+    const expenseType = searchParams.get('expenseType') || '';
+    const paymentSource = searchParams.get('paymentSource') || '';
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     const sortBy = searchParams.get('sortBy') || 'date';
@@ -93,6 +95,12 @@ export async function GET(req: Request) {
 
     if (status) {
       where.status = status;
+    }
+    if (expenseType) {
+      where.expenseType = expenseType;
+    }
+    if (paymentSource) {
+      where.paymentSource = paymentSource;
     }
 
     if (from || to) {
