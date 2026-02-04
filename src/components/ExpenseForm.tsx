@@ -119,7 +119,7 @@ export default function ExpenseForm() {
         setDuplicateModalOpen(true);
         return;
       }
-      alert(data.error || "Failed to submit expense");
+      alert(data.details || data.error || "Failed to submit expense");
       return;
     }
 

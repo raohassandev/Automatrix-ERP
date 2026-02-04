@@ -7,7 +7,6 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { DatePicker } from "./ui/date-picker";
 import { toast } from "sonner";
 import Modal from "@/components/Modal";
 import { format } from "date-fns";
@@ -140,7 +139,6 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
       }
 
       if (!res.ok) {
-        // If backend provided zod details, surface them to the user.
         const fieldErrors: Record<string, string[] | undefined> | undefined = data?.details?.fieldErrors;
         const fieldErrorMsg = fieldErrors
           ? Object.entries(fieldErrors)
@@ -148,8 +146,10 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
               .map(([k, v]) => `${k}: ${(v || []).join(", ")}`)
               .join(" | ")
           : "";
+        const detailsMsg =
+          typeof data?.details === "string" ? data.details : "";
 
-        throw new Error(fieldErrorMsg || data.error || "Failed to submit expense");
+        throw new Error(fieldErrorMsg || detailsMsg || data.error || "Failed to submit expense");
       }
 
       toast.success("Expense submitted successfully!");
@@ -217,10 +217,15 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
-              <DatePicker
-                date={date}
-                onDateChange={setDate}
-                placeholder="Select date"
+              <Input
+                id="date"
+                type="date"
+                value={date ? format(date, "yyyy-MM-dd") : ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setDate(value ? new Date(value) : undefined);
+                }}
+                required
               />
             </div>
 
