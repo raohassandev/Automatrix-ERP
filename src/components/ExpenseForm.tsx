@@ -110,7 +110,8 @@ export default function ExpenseForm() {
       }),
     });
 
-    const data = await res.json();
+    const contentType = res.headers.get("content-type") || "";
+    const data = contentType.includes("application/json") ? await res.json() : {};
 
     if (!data.success) {
       if (data.requiresConfirmation && data.duplicates) {

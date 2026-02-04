@@ -149,24 +149,25 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
 
-  const canSubmit = await requirePermission(session.user.id, "expenses.submit");
-  if (!canSubmit) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-  }
+    const canSubmit = await requirePermission(session.user.id, "expenses.submit");
+    if (!canSubmit) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
 
-  const body = await req.json();
-  const parsed = expenseSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, error: "Validation failed", details: parsed.error.flatten() },
-      { status: 400 }
-    );
-  }
+    const body = await req.json();
+    const parsed = expenseSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
 
   // Sanitize string inputs after validation
   const sanitizedData = {
@@ -380,5 +381,13 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ success: true, data: result.created });
+    return NextResponse.json({ success: true, data: result.created });
+  } catch (error) {
+    console.error("Expense POST error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json(
+      { success: false, error: "Internal server error", details: message },
+      { status: 500 }
+    );
+  }
 }

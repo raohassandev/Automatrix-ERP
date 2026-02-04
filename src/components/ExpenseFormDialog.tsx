@@ -129,7 +129,8 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
         }),
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await res.json() : {};
 
       if (res.status === 409 && data.duplicates) {
         // Show duplicate warning
