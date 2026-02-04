@@ -21,6 +21,9 @@ export default async function InventoryPage({
   }
 
   const canView = await requirePermission(session.user.id, "inventory.view");
+  const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
+  const canViewSelling = await requirePermission(session.user.id, "inventory.view_selling");
+  const canAdjust = await requirePermission(session.user.id, "inventory.adjust");
   if (!canView) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -53,7 +56,12 @@ export default async function InventoryPage({
       prisma.inventoryItem.findMany({ where, orderBy: { createdAt: "desc" }, skip, take }),
       prisma.inventoryItem.count({ where }),
     ]);
-    items = itemsResult;
+    items = itemsResult.map((item) => ({
+      ...item,
+      unitCost: canViewCost ? item.unitCost : null,
+      sellingPrice: canViewSelling ? item.sellingPrice : null,
+      totalValue: canViewCost ? item.totalValue : null,
+    }));
     total = totalResult;
   } catch (error) {
     console.error("Error fetching inventory items:", error);
@@ -80,7 +88,12 @@ export default async function InventoryPage({
         </div>
       </div>
 
-      <InventoryTable items={items} />
+      <InventoryTable
+        items={items}
+        canViewCost={canViewCost}
+        canViewSelling={canViewSelling}
+        canAdjust={canAdjust}
+      />
 
       {items.length === 0 && (
         <div className="rounded-xl border bg-card p-6 text-center text-muted-foreground shadow-sm">

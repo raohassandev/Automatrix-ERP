@@ -13,12 +13,22 @@ interface InventoryItemRow {
   sku: string | null;
   category: string;
   quantity: number | string;
-  unitCost: number | string;
-  sellingPrice: number | string;
-  totalValue: number | string;
+  unitCost: number | string | null;
+  sellingPrice: number | string | null;
+  totalValue: number | string | null;
 }
 
-export function InventoryTable({ items }: { items: InventoryItemRow[] }) {
+export function InventoryTable({
+  items,
+  canViewCost,
+  canViewSelling,
+  canAdjust,
+}: {
+  items: InventoryItemRow[];
+  canViewCost: boolean;
+  canViewSelling: boolean;
+  canAdjust: boolean;
+}) {
   const [ledgerDialog, setLedgerDialog] = useState<{
     open: boolean;
     itemId: string;
@@ -35,10 +45,10 @@ export function InventoryTable({ items }: { items: InventoryItemRow[] }) {
               <th className="py-2">SKU</th>
               <th className="py-2">Category</th>
               <th className="py-2">Qty</th>
-              <th className="py-2">Unit Cost</th>
-              <th className="py-2">Selling Price</th>
-              <th className="py-2">Total</th>
-              <th className="py-2">Actions</th>
+              {canViewCost ? <th className="py-2">Unit Cost</th> : null}
+              {canViewSelling ? <th className="py-2">Selling Price</th> : null}
+              {canViewCost ? <th className="py-2">Total</th> : null}
+              {canAdjust ? <th className="py-2">Actions</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -48,32 +58,46 @@ export function InventoryTable({ items }: { items: InventoryItemRow[] }) {
                 <td className="py-2">{item.sku || "-"}</td>
                 <td className="py-2">{item.category}</td>
                 <td className="py-2">{Number(item.quantity)}</td>
-                <td className="py-2">{formatMoney(Number(item.unitCost))}</td>
-                <td className="py-2">{formatMoney(Number(item.sellingPrice))}</td>
-                <td className="py-2">{formatMoney(Number(item.totalValue))}</td>
-                <td className="py-2">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setLedgerDialog({ open: true, itemId: item.id, itemName: item.name })
-                      }
-                    >
-                      Stock In/Out
-                    </Button>
-                    <QuickEditButton
-                      url={`/api/inventory/${item.id}`}
-                      fields={{
-                        unitCost: "Unit Cost",
-                        sellingPrice: "Selling Price",
-                        minStock: "Min Stock",
-                        reorderQty: "Reorder Qty",
-                      }}
-                    />
-                    <DeleteButton url={`/api/inventory/${item.id}`} />
-                  </div>
-                </td>
+                {canViewCost ? (
+                  <td className="py-2">
+                    {item.unitCost === null ? "-" : formatMoney(Number(item.unitCost))}
+                  </td>
+                ) : null}
+                {canViewSelling ? (
+                  <td className="py-2">
+                    {item.sellingPrice === null ? "-" : formatMoney(Number(item.sellingPrice))}
+                  </td>
+                ) : null}
+                {canViewCost ? (
+                  <td className="py-2">
+                    {item.totalValue === null ? "-" : formatMoney(Number(item.totalValue))}
+                  </td>
+                ) : null}
+                {canAdjust ? (
+                  <td className="py-2">
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          setLedgerDialog({ open: true, itemId: item.id, itemName: item.name })
+                        }
+                      >
+                        Stock In/Out
+                      </Button>
+                      <QuickEditButton
+                        url={`/api/inventory/${item.id}`}
+                        fields={{
+                          ...(canViewCost ? { unitCost: "Unit Cost" } : {}),
+                          ...(canViewSelling ? { sellingPrice: "Selling Price" } : {}),
+                          minStock: "Min Stock",
+                          reorderQty: "Reorder Qty",
+                        }}
+                      />
+                      <DeleteButton url={`/api/inventory/${item.id}`} />
+                    </div>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>
@@ -89,33 +113,41 @@ export function InventoryTable({ items }: { items: InventoryItemRow[] }) {
             fields={[
               { label: "SKU", value: item.sku || "-" },
               { label: "Quantity", value: Number(item.quantity) },
-              { label: "Unit Cost", value: formatMoney(Number(item.unitCost)) },
-              { label: "Selling Price", value: formatMoney(Number(item.sellingPrice)) },
-              { label: "Total Value", value: formatMoney(Number(item.totalValue)) },
+              ...(canViewCost
+                ? [{ label: "Unit Cost", value: item.unitCost === null ? "-" : formatMoney(Number(item.unitCost)) }]
+                : []),
+              ...(canViewSelling
+                ? [{ label: "Selling Price", value: item.sellingPrice === null ? "-" : formatMoney(Number(item.sellingPrice)) }]
+                : []),
+              ...(canViewCost
+                ? [{ label: "Total Value", value: item.totalValue === null ? "-" : formatMoney(Number(item.totalValue)) }]
+                : []),
             ]}
             actions={
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() =>
-                    setLedgerDialog({ open: true, itemId: item.id, itemName: item.name })
-                  }
-                >
-                  Stock In/Out
-                </Button>
-                <QuickEditButton
-                  url={`/api/inventory/${item.id}`}
-                  fields={{
-                    unitCost: "Unit Cost",
-                    sellingPrice: "Selling Price",
-                    minStock: "Min Stock",
-                    reorderQty: "Reorder Qty",
-                  }}
-                />
-                <DeleteButton url={`/api/inventory/${item.id}`} />
-              </>
+              canAdjust ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() =>
+                      setLedgerDialog({ open: true, itemId: item.id, itemName: item.name })
+                    }
+                  >
+                    Stock In/Out
+                  </Button>
+                  <QuickEditButton
+                    url={`/api/inventory/${item.id}`}
+                    fields={{
+                      ...(canViewCost ? { unitCost: "Unit Cost" } : {}),
+                      ...(canViewSelling ? { sellingPrice: "Selling Price" } : {}),
+                      minStock: "Min Stock",
+                      reorderQty: "Reorder Qty",
+                    }}
+                  />
+                  <DeleteButton url={`/api/inventory/${item.id}`} />
+                </>
+              ) : null
             }
           />
         ))}
@@ -126,6 +158,7 @@ export function InventoryTable({ items }: { items: InventoryItemRow[] }) {
         onOpenChange={(open) => setLedgerDialog({ ...ledgerDialog, open })}
         itemId={ledgerDialog.itemId}
         itemName={ledgerDialog.itemName}
+        canViewCost={canViewCost}
       />
     </div>
   );

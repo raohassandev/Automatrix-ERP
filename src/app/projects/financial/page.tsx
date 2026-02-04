@@ -18,6 +18,9 @@ interface Project {
   clientName: string;
   contractValue: number;
   costToDate: number;
+  receivedAmount: number;
+  invoicedAmount: number;
+  pendingRecovery: number;
   grossMargin: number;
   marginPercent: number;
   status: string;
@@ -54,6 +57,8 @@ export default function ProjectFinancialPage() {
 
   const totalContractValue = projects.reduce((sum, p) => sum + Number(p.contractValue), 0);
   const totalCostToDate = projects.reduce((sum, p) => sum + Number(p.costToDate), 0);
+  const totalReceived = projects.reduce((sum, p) => sum + Number(p.receivedAmount), 0);
+  const totalPendingRecovery = projects.reduce((sum, p) => sum + Number(p.pendingRecovery), 0);
   const totalGrossMargin = projects.reduce((sum, p) => sum + Number(p.grossMargin), 0);
 
   const statusOptions = useMemo(() => {
@@ -119,7 +124,7 @@ export default function ProjectFinancialPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Total Contract Value</CardTitle>
@@ -138,6 +143,28 @@ export default function ProjectFinancialPage() {
           <CardContent>
             <p className="text-2xl font-bold text-red-600">
               {formatMoney(totalCostToDate)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Received</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-blue-600">
+              {formatMoney(totalReceived)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Recovery</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={`text-2xl font-bold ${totalPendingRecovery > 0 ? 'text-amber-600' : 'text-foreground'}`}>
+              {formatMoney(totalPendingRecovery)}
             </p>
           </CardContent>
         </Card>
@@ -167,6 +194,9 @@ export default function ProjectFinancialPage() {
             ? Math.min((project.costToDate / project.contractValue) * 100, 100)
             : 0;
           const isOverBudget = project.contractValue > 0 && project.costToDate > project.contractValue;
+          const recoveryPercent = project.invoicedAmount > 0
+            ? Math.min((project.receivedAmount / project.invoicedAmount) * 100, 100)
+            : 0;
           
           return (
             <Card key={project.id} className={isOverBudget ? 'border-red-200' : ''}>
@@ -216,7 +246,7 @@ export default function ProjectFinancialPage() {
                 </div>
 
                 {/* Financial Metrics */}
-                <div className="grid gap-4 md:grid-cols-3 text-sm">
+                <div className="grid gap-4 md:grid-cols-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Contract Value</p>
                     <p className="font-semibold text-green-600">
@@ -230,6 +260,15 @@ export default function ProjectFinancialPage() {
                     </p>
                   </div>
                   <div>
+                    <p className="text-muted-foreground">Received</p>
+                    <p className="font-semibold text-blue-600">
+                      {formatMoney(project.receivedAmount)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Pending: {formatMoney(project.pendingRecovery)}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-muted-foreground">Gross Margin</p>
                     <p className={`font-semibold ${project.grossMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {formatMoney(project.grossMargin)}
@@ -237,6 +276,28 @@ export default function ProjectFinancialPage() {
                     <p className="text-xs text-muted-foreground">
                       {project.marginPercent.toFixed(1)}%
                     </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Recovery Progress</span>
+                    <span>{formatMoney(project.receivedAmount)} / {formatMoney(project.invoicedAmount)}</span>
+                  </div>
+                  {project.invoicedAmount > 0 ? (
+                    <Progress value={recoveryPercent} />
+                  ) : (
+                    <div className="bg-gray-100 h-2 rounded">
+                      <div className="text-xs text-center text-muted-foreground pt-0.5">
+                        No invoices yet
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{recoveryPercent.toFixed(1)}% recovered</span>
+                    {project.pendingRecovery > 0 && (
+                      <span className="text-amber-600 font-medium">Pending recovery</span>
+                    )}
                   </div>
                 </div>
 

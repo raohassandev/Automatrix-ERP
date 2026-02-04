@@ -15,6 +15,7 @@ interface InventoryLedgerDialogProps {
   onOpenChange: (open: boolean) => void;
   itemId: string;
   itemName: string;
+  canViewCost?: boolean;
 }
 
 export function InventoryLedgerDialog({
@@ -22,6 +23,7 @@ export function InventoryLedgerDialog({
   onOpenChange,
   itemId,
   itemName,
+  canViewCost = true,
 }: InventoryLedgerDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -116,17 +118,19 @@ export function InventoryLedgerDialog({
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="unitCost">Unit Cost (Optional)</Label>
-            <Input
-              id="unitCost"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.unitCost}
-              onChange={(e) => setForm({ ...form, unitCost: e.target.value })}
-            />
-          </div>
+          {canViewCost ? (
+            <div className="space-y-2">
+              <Label htmlFor="unitCost">Unit Cost (Optional)</Label>
+              <Input
+                id="unitCost"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={form.unitCost}
+                onChange={(e) => setForm({ ...form, unitCost: e.target.value })}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-2">

@@ -22,6 +22,7 @@ export async function GET(req: Request) {
   }
 
   const canView = await requirePermission(session.user.id, "inventory.view");
+  const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
   if (!canView) {
     return new Response("Forbidden", { status: 403 });
   }
@@ -63,18 +64,32 @@ export async function GET(req: Request) {
     orderBy: { date: "desc" },
   });
 
+  const header = canViewCost
+    ? ["Date", "Item", "Type", "Quantity", "Unit Cost", "Total", "Project", "Reference"]
+    : ["Date", "Item", "Type", "Quantity", "Project", "Reference"];
   const rows = [
-    ["Date", "Item", "Type", "Quantity", "Unit Cost", "Total", "Project", "Reference"],
-    ...entries.map((entry) => [
-      entry.date.toISOString(),
-      entry.item?.name || "",
-      entry.type,
-      entry.quantity.toString(),
-      entry.unitCost.toString(),
-      entry.total.toString(),
-      entry.project || "",
-      entry.reference || "",
-    ]),
+    header,
+    ...entries.map((entry) =>
+      canViewCost
+        ? [
+            entry.date.toISOString(),
+            entry.item?.name || "",
+            entry.type,
+            entry.quantity.toString(),
+            entry.unitCost.toString(),
+            entry.total.toString(),
+            entry.project || "",
+            entry.reference || "",
+          ]
+        : [
+            entry.date.toISOString(),
+            entry.item?.name || "",
+            entry.type,
+            entry.quantity.toString(),
+            entry.project || "",
+            entry.reference || "",
+          ]
+    ),
   ];
 
   const csv = toCsv(rows);

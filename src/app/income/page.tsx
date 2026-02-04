@@ -122,6 +122,7 @@ export default async function IncomePage({
                 <th className="py-2">Date</th>
                 <th className="py-2">Source</th>
                 <th className="py-2">Category</th>
+                <th className="py-2">Project</th>
                 <th className="py-2">Amount</th>
                 <th className="py-2">Status</th>
               </tr>
@@ -132,6 +133,7 @@ export default async function IncomePage({
                   <td className="py-2">{new Date(entry.date).toLocaleDateString()}</td>
                   <td className="py-2">{entry.source}</td>
                   <td className="py-2">{entry.category}</td>
+                  <td className="py-2">{entry.project || "-"}</td>
                   <td className="py-2">{formatMoney(Number(entry.amount))}</td>
                   <td className="py-2">{entry.status}</td>
                 </tr>
@@ -150,6 +152,7 @@ export default async function IncomePage({
               fields={[
                 { label: "Amount", value: formatMoney(Number(entry.amount)) },
                 { label: "Category", value: entry.category },
+                { label: "Project", value: entry.project || "-" },
                 { label: "Status", value: entry.status },
                 { label: "Date", value: new Date(entry.date).toLocaleDateString() },
               ]}

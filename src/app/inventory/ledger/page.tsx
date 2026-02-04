@@ -18,6 +18,7 @@ export default async function InventoryLedgerPage({
   }
 
   const canView = await requirePermission(session.user.id, "inventory.view");
+  const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
   if (!canView) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -129,8 +130,8 @@ export default async function InventoryLedgerPage({
                 <th className="py-2">Item</th>
                 <th className="py-2">Type</th>
                 <th className="py-2">Qty</th>
-                <th className="py-2">Unit Cost</th>
-                <th className="py-2">Total</th>
+                {canViewCost ? <th className="py-2">Unit Cost</th> : null}
+                {canViewCost ? <th className="py-2">Total</th> : null}
                 <th className="py-2">Project</th>
                 <th className="py-2">Reference</th>
               </tr>
@@ -142,8 +143,12 @@ export default async function InventoryLedgerPage({
                   <td className="py-2">{entry.item?.name || "-"}</td>
                   <td className="py-2">{entry.type}</td>
                   <td className="py-2">{Number(entry.quantity)}</td>
-                  <td className="py-2">{formatMoney(Number(entry.unitCost))}</td>
-                  <td className="py-2">{formatMoney(Number(entry.total))}</td>
+                  {canViewCost ? (
+                    <td className="py-2">{formatMoney(Number(entry.unitCost))}</td>
+                  ) : null}
+                  {canViewCost ? (
+                    <td className="py-2">{formatMoney(Number(entry.total))}</td>
+                  ) : null}
                   <td className="py-2">{entry.project || "-"}</td>
                   <td className="py-2">{entry.reference || "-"}</td>
                 </tr>
@@ -159,8 +164,12 @@ export default async function InventoryLedgerPage({
               <div>Date: {new Date(entry.date).toLocaleDateString()}</div>
               <div>Type: {entry.type}</div>
               <div>Qty: {Number(entry.quantity)}</div>
-              <div>Unit Cost: {formatMoney(Number(entry.unitCost))}</div>
-              <div>Total: {formatMoney(Number(entry.total))}</div>
+              {canViewCost ? (
+                <div>Unit Cost: {formatMoney(Number(entry.unitCost))}</div>
+              ) : null}
+              {canViewCost ? (
+                <div>Total: {formatMoney(Number(entry.total))}</div>
+              ) : null}
               <div>Project: {entry.project || "-"}</div>
               <div>Ref: {entry.reference || "-"}</div>
             </div>
