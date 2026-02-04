@@ -9,8 +9,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canView = await requirePermission(session.user.id, "categories.manage");
-  if (!canView) {
+  const canManage = await requirePermission(session.user.id, "categories.manage");
+  const canUseExpense = await requirePermission(session.user.id, "expenses.submit");
+  const canUseInventory = await requirePermission(session.user.id, "inventory.view");
+  const canUseIncome = await requirePermission(session.user.id, "income.add");
+  if (!canManage && !canUseExpense && !canUseInventory && !canUseIncome) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
