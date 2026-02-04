@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { isGoogleAuthConfigured } from "@/lib/env";
 
 export default function LoginPage() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [googleChecked, setGoogleChecked] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "admin@automatrix.local",
@@ -41,12 +42,27 @@ export default function LoginPage() {
 
   async function handleGoogleLogin() {
     setMessage(null);
-    if (!isGoogleAuthConfigured) {
+    if (!googleEnabled) {
       setMessage('Google authentication is not configured.');
       return;
     }
     await signIn("google", { callbackUrl: "/dashboard" });
   }
+
+  useEffect(() => {
+    const loadProviders = async () => {
+      try {
+        const res = await fetch("/api/auth/providers");
+        const providers = await res.json();
+        setGoogleEnabled(Boolean(providers?.google));
+      } catch {
+        setGoogleEnabled(false);
+      } finally {
+        setGoogleChecked(true);
+      }
+    };
+    loadProviders();
+  }, []);
 
   async function handleRegister() {
     setMessage(null);
@@ -90,7 +106,7 @@ export default function LoginPage() {
       <p className="mt-2 text-muted-foreground">Use Google or your email/password.</p>
 
       <div className="mt-6 grid gap-3">
-        {isGoogleAuthConfigured ? (
+        {googleEnabled ? (
           <button 
             type="button"
             className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-white hover:bg-gray-800"
@@ -100,7 +116,9 @@ export default function LoginPage() {
             {pending ? "Working..." : "Sign in with Google"}
           </button>
         ) : (
-          <p className="text-sm text-muted-foreground">Google auth is disabled in this environment.</p>
+          <p className="text-sm text-muted-foreground">
+            {googleChecked ? "Google auth is disabled in this environment." : "Checking Google auth..."}
+          </p>
         )}
 
         <div className="border-t pt-4">
