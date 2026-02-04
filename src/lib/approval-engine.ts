@@ -1,4 +1,4 @@
-import { Expense, Income } from '@prisma/client';
+import { Expense, Income, Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { createAuditLog } from './audit';
 
@@ -99,7 +99,7 @@ export async function approveExpense(params: {
     throw new Error('Expense not found');
   }
 
-  if (expense.status !== 'PENDING') {
+  if (!expense.status.startsWith('PENDING')) {
     throw new Error(`Cannot approve expense with status: ${expense.status}`);
   }
 
@@ -114,21 +114,8 @@ export async function approveExpense(params: {
     throw new Error(approvalReason || 'User cannot approve this expense');
   }
 
-  // Get employee
-  const employee = await prisma.employee.findUnique({
-    where: { email: expense.submittedBy.email },
-  });
-
-  if (!employee) {
-    throw new Error('Employee not found');
-  }
-
-  // Check wallet balance
-  const currentBalance = parseFloat(employee.walletBalance.toString());
-  if (currentBalance < finalAmount) {
-    throw new Error(
-      `Insufficient wallet balance. Available: ${currentBalance}, Required: ${finalAmount}`,
-    );
+  if (approvedAmount && approvedAmount > Number(expense.amount)) {
+    throw new Error('Approved amount cannot exceed submitted amount');
   }
 
   // Start transaction
@@ -137,29 +124,59 @@ export async function approveExpense(params: {
     const updatedExpense = await tx.expense.update({
       where: { id: expenseId },
       data: {
-        status: 'APPROVED',
+        status: finalAmount < Number(expense.amount) ? 'PARTIALLY_APPROVED' : 'APPROVED',
         approvedById: approverId,
+        approvedAmount: new Prisma.Decimal(finalAmount),
       },
     });
 
-    // Deduct from wallet
-    const newBalance = currentBalance - finalAmount;
-    await tx.employee.update({
-      where: { id: employee.id },
-      data: { walletBalance: newBalance },
-    });
+    let walletEntry = null;
+    let newBalance = null;
+    if (expense.paymentSource === 'EMPLOYEE_WALLET') {
+      const employee = await tx.employee.findUnique({
+        where: { email: expense.submittedBy.email },
+      });
+      if (!employee) {
+        throw new Error('Employee not found');
+      }
 
-    // Create wallet ledger entry (DEBIT)
-    const walletEntry = await tx.walletLedger.create({
-      data: {
-        employeeId: employee.id,
-        type: 'DEBIT',
-        amount: finalAmount,
-        date: new Date(),
-        reference: expenseId,
-        balance: newBalance,
-      },
-    });
+      const currentBalance = parseFloat(employee.walletBalance.toString());
+      const currentHold = parseFloat(employee.walletHold?.toString() || '0');
+
+      if (currentBalance < finalAmount) {
+        throw new Error(
+          `Insufficient wallet balance. Available: ${currentBalance}, Required: ${finalAmount}`,
+        );
+      }
+
+      // Release hold and deduct approved amount
+      newBalance = currentBalance - finalAmount;
+      const newHold = Math.max(0, currentHold - Number(expense.amount));
+
+      await tx.employee.update({
+        where: { id: employee.id },
+        data: {
+          walletBalance: newBalance,
+          walletHold: newHold,
+        },
+      });
+
+      walletEntry = await tx.walletLedger.create({
+        data: {
+          employeeId: employee.id,
+          type: 'DEBIT',
+          amount: finalAmount,
+          date: new Date(),
+          reference: expenseId,
+          balance: newBalance,
+        },
+      });
+
+      await tx.expense.update({
+        where: { id: expenseId },
+        data: { walletLedgerId: walletEntry.id },
+      });
+    }
 
     // Create audit log
     await createAuditLog({
@@ -170,8 +187,8 @@ export async function approveExpense(params: {
       changes: {
         status: { from: 'PENDING', to: 'APPROVED' },
         approvedAmount: finalAmount,
-        walletDeduction: finalAmount,
-        newWalletBalance: newBalance,
+        walletDeduction: expense.paymentSource === 'EMPLOYEE_WALLET' ? finalAmount : 0,
+        newWalletBalance: newBalance ?? undefined,
       },
     });
 
@@ -180,7 +197,7 @@ export async function approveExpense(params: {
       data: {
         userId: expense.submittedById,
         type: 'SUCCESS',
-        message: `Your expense of PKR  ${finalAmount} has been approved and deducted from your wallet.`,
+        message: `Your expense of PKR  ${finalAmount} has been approved${expense.paymentSource === 'EMPLOYEE_WALLET' ? ' and deducted from your wallet' : ''}.`,
         status: 'UNREAD',
       },
     });
@@ -210,7 +227,7 @@ export async function rejectExpense(params: {
     throw new Error('Expense not found');
   }
 
-  if (expense.status !== 'PENDING') {
+  if (!expense.status.startsWith('PENDING')) {
     throw new Error(`Cannot reject expense with status: ${expense.status}`);
   }
 
@@ -231,6 +248,20 @@ export async function rejectExpense(params: {
         approvedById: approverId,
       },
     });
+
+    if (expense.paymentSource === 'EMPLOYEE_WALLET') {
+      const employee = await tx.employee.findUnique({
+        where: { email: expense.submittedBy.email },
+      });
+      if (employee) {
+        const currentHold = parseFloat(employee.walletHold?.toString() || '0');
+        const newHold = Math.max(0, currentHold - Number(expense.amount));
+        await tx.employee.update({
+          where: { id: employee.id },
+          data: { walletHold: newHold },
+        });
+      }
+    }
 
     // Create audit log
     await createAuditLog({

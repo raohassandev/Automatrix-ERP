@@ -64,6 +64,24 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.receiptFileId) data.receiptFileId = parsed.data.receiptFileId;
 
   const nextAmount = parsed.data.amount ?? Number(expense.amount);
+
+  if (expense.paymentSource === "EMPLOYEE_WALLET") {
+    const nextCategory = parsed.data.category || expense.category;
+    const category = await prisma.category.findFirst({
+      where: { name: nextCategory, type: "expense" },
+    });
+    if (category?.enforceStrict && category.maxAmount) {
+      if (nextAmount > Number(category.maxAmount)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Amount exceeds allowed limit for ${nextCategory} (max ${category.maxAmount}).`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+  }
   if (
     nextAmount >= RECEIPT_REQUIRED_THRESHOLD &&
     !parsed.data.receiptUrl &&
@@ -83,10 +101,43 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     data.status = approvalLevel === "L1" ? "PENDING_L1" : approvalLevel === "L2" ? "PENDING_L2" : "PENDING_L3";
   }
 
-  const updated = await prisma.expense.update({
-    where: { id },
-    data,
-  });
+  let updated = expense;
+  try {
+    await prisma.$transaction(async (tx) => {
+      if (expense.paymentSource === "EMPLOYEE_WALLET" && parsed.data.amount !== undefined) {
+        const user = await tx.user.findUnique({
+          where: { id: expense.submittedById },
+          select: { email: true },
+        });
+        if (user?.email) {
+          const employee = await tx.employee.findUnique({ where: { email: user.email } });
+          if (employee) {
+            const delta = Number(parsed.data.amount) - Number(expense.amount);
+            if (delta > 0) {
+              const available = Number(employee.walletBalance) - Number(employee.walletHold || 0);
+              if (available < delta) {
+                throw new Error("Insufficient available wallet balance to increase expense.");
+              }
+            }
+            await tx.employee.update({
+              where: { id: employee.id },
+              data: { walletHold: new Prisma.Decimal(Number(employee.walletHold || 0) + delta) },
+            });
+          }
+        }
+      }
+
+      updated = await tx.expense.update({
+        where: { id },
+        data,
+      });
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Failed to update expense" },
+      { status: 400 }
+    );
+  }
 
   await logAudit({
     action: "UPDATE_EXPENSE",

@@ -15,6 +15,10 @@ export async function applyWalletTransactionByEmail(input: {
   const delta = input.type === "CREDIT" ? input.amount : -input.amount;
   const newBalance = Number(employee.walletBalance) + delta;
 
+  const currentHold = Number(employee.walletHold || 0);
+  if (input.type === "DEBIT" && newBalance < currentHold) {
+    return { applied: false, reason: "Insufficient available wallet balance" } as const;
+  }
   if (newBalance < 0) {
     return { applied: false, reason: "Insufficient wallet balance" } as const;
   }

@@ -14,6 +14,7 @@ interface Employee {
   email: string;
   role: string;
   walletBalance: number | string;
+  walletHold?: number | string;
   status: string;
 }
 
@@ -27,19 +28,24 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
     employeeId: string;
     employeeName: string;
     currentBalance: number;
+    availableBalance: number;
   }>({
     open: false,
     employeeId: "",
     employeeName: "",
     currentBalance: 0,
+    availableBalance: 0,
   });
 
   const openWalletDialog = (employee: Employee) => {
+    const currentBalance = Number(employee.walletBalance);
+    const availableBalance = currentBalance - Number(employee.walletHold || 0);
     setWalletDialog({
       open: true,
       employeeId: employee.id,
       employeeName: employee.name,
-      currentBalance: Number(employee.walletBalance),
+      currentBalance,
+      availableBalance,
     });
   };
 
@@ -64,7 +70,12 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
                 <td className="py-2">{employee.name}</td>
                 <td className="py-2">{employee.email}</td>
                 <td className="py-2">{employee.role}</td>
-                <td className="py-2">{formatMoney(Number(employee.walletBalance))}</td>
+                <td className="py-2">
+                  <div className="text-sm">{formatMoney(Number(employee.walletBalance))}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Available: {formatMoney(Number(employee.walletBalance) - Number(employee.walletHold || 0))}
+                  </div>
+                </td>
                 <td className="py-2">{employee.status}</td>
                 <td className="py-2">
                   <div className="flex gap-2">
@@ -97,11 +108,15 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
             key={employee.id}
             title={employee.name}
             subtitle={employee.email}
-            fields={[
-              { label: "Role", value: employee.role },
-              { label: "Wallet", value: formatMoney(Number(employee.walletBalance)) },
-              { label: "Status", value: employee.status },
-            ]}
+              fields={[
+                { label: "Role", value: employee.role },
+                { label: "Wallet", value: formatMoney(Number(employee.walletBalance)) },
+                {
+                  label: "Available",
+                  value: formatMoney(Number(employee.walletBalance) - Number(employee.walletHold || 0)),
+                },
+                { label: "Status", value: employee.status },
+              ]}
             actions={
               <>
                 <Button
@@ -131,6 +146,7 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
         employeeId={walletDialog.employeeId}
         employeeName={walletDialog.employeeName}
         currentBalance={walletDialog.currentBalance}
+        availableBalance={walletDialog.availableBalance}
       />
     </>
   );

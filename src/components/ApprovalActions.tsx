@@ -12,6 +12,8 @@ interface ApprovalActionsProps {
   employeeName: string;
   currentBalance: number;
   afterBalance: number;
+  categoryLimit?: number;
+  categoryStrict?: boolean;
   status: string;
 }
 
@@ -21,23 +23,33 @@ export default function ApprovalActions({
   employeeName,
   currentBalance,
   afterBalance,
+  categoryLimit,
+  categoryStrict,
   status,
 }: ApprovalActionsProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [approvedAmount, setApprovedAmount] = useState(String(amount));
 
   const isInsufficient = afterBalance < 0;
 
   async function handleApprove() {
-    const warningMessage = isInsufficient
-      ? `⚠️ WARNING: Insufficient wallet balance!\n\nCurrent Balance: PKR  ${currentBalance.toLocaleString()}\nExpense Amount: PKR  ${amount.toLocaleString()}\nShortfall: PKR  ${Math.abs(afterBalance).toLocaleString()}\n\nThis approval will be BLOCKED by the system.\n\nDo you want to proceed anyway?`
-      : `Approve expense of PKR  ${amount.toLocaleString()} for ${employeeName}?\n\nCurrent Balance: PKR  ${currentBalance.toLocaleString()}\nAfter Approval: PKR  ${afterBalance.toLocaleString()}\n\nThis will deduct the amount from their wallet.`;
-
-    const confirmed = window.confirm(warningMessage);
-
-    if (!confirmed) return;
+    const parsedApproved = Number(approvedAmount);
+    if (!approvedAmount || Number.isNaN(parsedApproved) || parsedApproved <= 0) {
+      toast.error('Please enter a valid approved amount');
+      return;
+    }
+    if (parsedApproved > amount) {
+      toast.error('Approved amount cannot exceed submitted amount');
+      return;
+    }
+    if (categoryStrict && categoryLimit && parsedApproved > categoryLimit) {
+      toast.error(`Approved amount exceeds category limit (${categoryLimit})`);
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -46,7 +58,8 @@ export default function ApprovalActions({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             expenseId,
-            action: 'APPROVE',
+            action: parsedApproved < amount ? 'PARTIAL_APPROVE' : 'APPROVE',
+            approvedAmount: parsedApproved,
           }),
         });
 
@@ -59,9 +72,10 @@ export default function ApprovalActions({
         toast.success(
           'Expense approved successfully!',
           {
-            description: `Wallet deducted: PKR ${amount.toLocaleString()}`,
+            description: `Approved: PKR ${parsedApproved.toLocaleString()}`,
           }
         );
+        setShowApproveModal(false);
         router.refresh();
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred';
@@ -127,12 +141,12 @@ export default function ApprovalActions({
     });
   }
 
-  if (status === 'PENDING') {
+  if (status.startsWith('PENDING')) {
     return (
       <>
         <div className='flex gap-2'>
           <Button
-            onClick={handleApprove}
+            onClick={() => setShowApproveModal(true)}
             disabled={pending}
             variant={isInsufficient ? 'destructive' : 'default'}
             size="sm"
@@ -194,6 +208,56 @@ export default function ApprovalActions({
                   disabled={pending || !rejectReason.trim()}
                 >
                   {pending ? "Rejecting..." : "Confirm Reject"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showApproveModal && (
+          <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50'>
+            <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+              <h3 className="mb-3 text-lg font-semibold text-foreground">Approve Expense</h3>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Submitted by {employeeName}. You can approve full or partial amount.
+              </p>
+              <div className="space-y-3">
+                <div className="text-sm text-muted-foreground">
+                  Submitted: PKR {amount.toLocaleString()}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Available balance: PKR {currentBalance.toLocaleString()}
+                </div>
+                {categoryLimit ? (
+                  <div className="text-sm text-muted-foreground">
+                    Category limit: PKR {categoryLimit.toLocaleString()}
+                    {categoryStrict ? " (strict)" : ""}
+                  </div>
+                ) : null}
+                <input
+                  type="number"
+                  className="w-full rounded border border-border bg-background p-2 text-sm"
+                  value={approvedAmount}
+                  onChange={(e) => setApprovedAmount(e.target.value)}
+                  min={0}
+                  max={amount}
+                />
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowApproveModal(false)}
+                  disabled={pending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={pending}
+                >
+                  {pending ? "Approving..." : "Approve"}
                 </Button>
               </div>
             </div>

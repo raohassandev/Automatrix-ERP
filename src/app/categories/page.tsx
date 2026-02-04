@@ -12,6 +12,8 @@ type Category = {
   name: string;
   type: string;
   description: string | null;
+  maxAmount?: number | null;
+  enforceStrict?: boolean;
 };
 
 export default function CategoriesPage() {
@@ -26,6 +28,8 @@ export default function CategoriesPage() {
     name: "",
     type: "expense",
     description: "",
+    maxAmount: "",
+    enforceStrict: false,
   });
 
   async function fetchCategories() {
@@ -55,16 +59,23 @@ export default function CategoriesPage() {
     }
 
     try {
+      const payload = {
+        name: form.name,
+        type: form.type,
+        description: form.description,
+        maxAmount: form.maxAmount ? parseFloat(form.maxAmount) : undefined,
+        enforceStrict: form.enforceStrict,
+      };
       const res = await fetch('/api/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (data.success) {
         toast.success('Category created successfully');
-        setForm({ name: "", type: "expense", description: "" });
+        setForm({ name: "", type: "expense", description: "", maxAmount: "", enforceStrict: false });
         setShowForm(false);
         fetchCategories();
       } else {
@@ -155,6 +166,27 @@ export default function CategoriesPage() {
                   placeholder="Optional description"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium">Max Amount (PKR)</label>
+                <Input
+                  type="number"
+                  value={form.maxAmount}
+                  onChange={(e) => setForm({ ...form, maxAmount: e.target.value })}
+                  placeholder="Optional limit"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="enforceStrict"
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={form.enforceStrict}
+                  onChange={(e) => setForm({ ...form, enforceStrict: e.target.checked })}
+                />
+                <label htmlFor="enforceStrict" className="text-sm font-medium">
+                  Enforce strict limit
+                </label>
+              </div>
             </div>
             <Button type="submit" className="w-full">Create Category</Button>
           </form>
@@ -184,6 +216,12 @@ export default function CategoriesPage() {
                         {category.description}
                       </div>
                     )}
+                    {(category as { maxAmount?: number | null }).maxAmount ? (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Limit: PKR {(category as { maxAmount?: number | null }).maxAmount}
+                        {(category as { enforceStrict?: boolean }).enforceStrict ? " (strict)" : ""}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               {categories

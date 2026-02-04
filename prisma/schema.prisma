@@ -54,6 +54,8 @@ model Category {
   name        String   @unique
   type        String   // 'expense' or 'inventory' or 'income'
   description String?
+  maxAmount   Decimal?
+  enforceStrict Boolean @default(false)
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -228,6 +230,7 @@ model Employee {
   phone         String?
   role          String
   walletBalance Decimal         @default(0)
+  walletHold    Decimal         @default(0)
   status        String @default("ACTIVE")
   wallets       WalletLedger[]
 }

@@ -37,6 +37,10 @@ export async function POST(req: Request) {
 
   const delta = type === "CREDIT" ? amount : -amount;
   const newBalance = Number(employee.walletBalance) + delta;
+  const currentHold = Number(employee.walletHold || 0);
+  if (type === "DEBIT" && newBalance < currentHold) {
+    return NextResponse.json({ success: false, error: "Insufficient available balance" }, { status: 400 });
+  }
   if (newBalance < 0) {
     return NextResponse.json({ success: false, error: "Insufficient balance" }, { status: 400 });
   }

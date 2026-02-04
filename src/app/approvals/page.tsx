@@ -16,7 +16,10 @@ interface Approval {
   amount: number | string;
   project?: string;
   submittedBy: { id: string; email: string; name?: string | null };
-  currentWalletBalance: number | string;
+  walletBalance: number | string;
+  walletHold: number | string;
+  categoryLimit?: number | null;
+  categoryStrict?: boolean;
   requiredApprovalLevel: string;
   status: string;
 }
@@ -54,6 +57,14 @@ export default async function ApprovalsPage() {
   let recentHistory: HistoryItem[] = [];
 
   try {
+    const expenseCategories = await prisma.category.findMany({
+      where: { type: "expense" },
+      select: { name: true, maxAmount: true, enforceStrict: true },
+    });
+    const categoryMap = new Map(
+      expenseCategories.map((cat) => [cat.name, { maxAmount: cat.maxAmount, enforceStrict: cat.enforceStrict }])
+    );
+
     // Fetch pending approvals for this user using our approval engine
     const pendingApprovals = await getPendingApprovalsForUser(session.user.id);
 
@@ -67,22 +78,26 @@ export default async function ApprovalsPage() {
         
         const employee = submitter ? await prisma.employee.findUnique({
           where: { email: submitter.email },
-          select: { walletBalance: true },
+          select: { walletBalance: true, walletHold: true },
         }) : null;
+        const categoryMeta = categoryMap.get(expense.category);
 
-        return {
-          id: expense.id,
-          date: expense.date,
-          category: expense.category,
-          description: expense.description,
-          amount: parseFloat(expense.amount.toString()),
-          project: expense.project || undefined,
-          submittedBy: { 
-            id: expense.submittedById, 
-            email: submitter?.email || '', 
-            name: submitter?.email?.split('@')[0] || null 
-          },
-          currentWalletBalance: employee?.walletBalance ? parseFloat(employee.walletBalance.toString()) : 0,
+          return {
+            id: expense.id,
+            date: expense.date,
+            category: expense.category,
+            description: expense.description,
+            amount: parseFloat(expense.amount.toString()),
+            project: expense.project || undefined,
+            submittedBy: { 
+              id: expense.submittedById, 
+              email: submitter?.email || '', 
+              name: submitter?.email?.split('@')[0] || null 
+            },
+          walletBalance: employee?.walletBalance ? parseFloat(employee.walletBalance.toString()) : 0,
+          walletHold: employee?.walletHold ? parseFloat(employee.walletHold.toString()) : 0,
+          categoryLimit: categoryMeta?.maxAmount ? parseFloat(categoryMeta.maxAmount.toString()) : null,
+          categoryStrict: categoryMeta?.enforceStrict || false,
           requiredApprovalLevel: 'MANAGER', // This should come from approval logic
           status: expense.status,
         };
@@ -102,7 +117,10 @@ export default async function ApprovalsPage() {
         email: 'income@example.com', // This should be fetched from user
         name: 'Income User' 
       },
-      currentWalletBalance: 0, // Income doesn't affect wallet
+      walletBalance: 0,
+      walletHold: 0,
+      categoryLimit: null,
+      categoryStrict: false,
       requiredApprovalLevel: 'MANAGER',
       status: income.status,
     }));

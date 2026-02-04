@@ -17,6 +17,7 @@ interface EmployeeWalletDialogProps {
   employeeId: string;
   employeeName: string;
   currentBalance: number;
+  availableBalance?: number;
 }
 
 export function EmployeeWalletDialog({
@@ -25,6 +26,7 @@ export function EmployeeWalletDialog({
   employeeId,
   employeeName,
   currentBalance,
+  availableBalance,
 }: EmployeeWalletDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -101,6 +103,9 @@ export function EmployeeWalletDialog({
         <div className="rounded-lg bg-muted p-4 mb-4">
           <div className="text-sm text-muted-foreground">Current Balance</div>
           <div className="text-2xl font-bold">{formatMoney(currentBalance)}</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Available after holds: {formatMoney(availableBalance ?? currentBalance)}
+          </div>
         </div>
 
         <div className="space-y-2">

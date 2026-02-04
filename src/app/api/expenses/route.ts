@@ -7,7 +7,6 @@ import { requirePermission } from "@/lib/rbac";
 import { DUPLICATE_CHECK_DAYS, RECEIPT_REQUIRED_THRESHOLD } from "@/lib/constants";
 import { getExpenseApprovalLevel } from "@/lib/approvals";
 import { createNotification } from "@/lib/notifications";
-import { applyWalletTransactionByEmail } from "@/lib/wallet";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { resolveProjectId } from "@/lib/projects";
@@ -180,6 +179,21 @@ export async function POST(req: Request) {
     receiptFileId: parsed.data.receiptFileId ? sanitizeString(parsed.data.receiptFileId) : undefined,
   };
 
+  const category = await prisma.category.findFirst({
+    where: { name: sanitizedData.category, type: "expense" },
+  });
+  if (category?.enforceStrict && category.maxAmount) {
+    if (sanitizedData.amount > Number(category.maxAmount)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Amount exceeds allowed limit for ${sanitizedData.category} (max ${category.maxAmount}).`,
+        },
+        { status: 400 }
+      );
+    }
+  }
+
   if (
     sanitizedData.amount >= RECEIPT_REQUIRED_THRESHOLD &&
     !sanitizedData.receiptUrl &&
@@ -249,6 +263,7 @@ export async function POST(req: Request) {
 
   // Check if payment source is EMPLOYEE_WALLET
   const paymentSource = sanitizedData.paymentSource || "COMPANY_DIRECT";
+  let employeeRecord: { id: string; walletBalance: Prisma.Decimal; walletHold: Prisma.Decimal } | null = null;
   
   if (paymentSource === "EMPLOYEE_WALLET") {
     // Validate that user has an employee record and sufficient wallet balance
@@ -266,7 +281,7 @@ export async function POST(req: Request) {
     
     const employee = await prisma.employee.findUnique({
       where: { email: user.email },
-      select: { id: true, walletBalance: true },
+      select: { id: true, walletBalance: true, walletHold: true },
     });
     
     if (!employee) {
@@ -276,15 +291,18 @@ export async function POST(req: Request) {
       );
     }
     
-    if (Number(employee.walletBalance) < sanitizedData.amount) {
+    const available = Number(employee.walletBalance) - Number(employee.walletHold || 0);
+    if (available < sanitizedData.amount) {
       return NextResponse.json(
         { 
           success: false, 
-          error: `Insufficient wallet balance. Available: ${employee.walletBalance}, Required: ${sanitizedData.amount}` 
+          error: `Insufficient available wallet balance. Available: ${available}, Required: ${sanitizedData.amount}` 
         },
         { status: 400 }
       );
     }
+
+    employeeRecord = employee;
   }
 
   // Create expense and deduct from wallet in a transaction
@@ -307,34 +325,16 @@ export async function POST(req: Request) {
     });
 
     // If paid from wallet, deduct the amount
-    let walletLedgerId: string | undefined;
-    if (paymentSource === "EMPLOYEE_WALLET") {
-      const user = await tx.user.findUnique({
-        where: { id: session.user.id },
-        select: { email: true },
+    if (paymentSource === "EMPLOYEE_WALLET" && employeeRecord) {
+      await tx.employee.update({
+        where: { id: employeeRecord.id },
+        data: {
+          walletHold: new Prisma.Decimal(Number(employeeRecord.walletHold) + sanitizedData.amount),
+        },
       });
-      
-      if (user) {
-        const walletResult = await applyWalletTransactionByEmail({
-          email: user.email,
-          type: "DEBIT",
-          amount: sanitizedData.amount,
-          reference: created.id,
-        });
-        
-        if (walletResult.applied && 'ledger' in walletResult) {
-          walletLedgerId = walletResult.ledger.id;
-          
-          // Update expense with wallet ledger link
-          await tx.expense.update({
-            where: { id: created.id },
-            data: { walletLedgerId },
-          });
-        }
-      }
     }
 
-    return { created, walletLedgerId };
+    return { created };
   });
 
   await logAudit({

@@ -16,7 +16,10 @@ interface Approval {
   amount: number | string;
   project?: string;
   submittedBy: { id: string; email: string; name?: string | null };
-  currentWalletBalance: number | string;
+  walletBalance: number | string;
+  walletHold: number | string;
+  categoryLimit?: number | null;
+  categoryStrict?: boolean;
   requiredApprovalLevel: string;
   status: string;
 }
@@ -260,11 +263,13 @@ export default function ApprovalQueue({
           </thead>
           <tbody className="divide-y divide-border bg-card">
             {approvals.map((expense) => {
-              const currentBalance = parseFloat(expense.currentWalletBalance.toString());
+              const walletBalance = parseFloat(expense.walletBalance.toString());
+              const walletHold = parseFloat(expense.walletHold.toString());
+              const availableBalance = walletBalance - walletHold;
               const amount = parseFloat(expense.amount.toString());
-              const afterBalance = currentBalance - amount;
-              const isInsufficient = afterBalance < 0;
-              const isLow = afterBalance < 10000 && afterBalance >= 0;
+              const afterBalance = availableBalance; // full approval keeps available unchanged
+              const isInsufficient = availableBalance < 0;
+              const isLow = availableBalance < 10000 && availableBalance >= 0;
 
               return (
                 <tr
@@ -309,7 +314,7 @@ export default function ApprovalQueue({
                   <td className="whitespace-nowrap px-6 py-4 text-sm">
                     <div className="space-y-1">
                       <div className="text-muted-foreground">
-                        Current: <span className="font-medium">{formatMoney(currentBalance)}</span>
+                        Available: <span className="font-medium">{formatMoney(availableBalance)}</span>
                       </div>
                       <div
                         className={`font-medium ${
@@ -320,7 +325,7 @@ export default function ApprovalQueue({
                             : "text-green-600"
                         }`}
                       >
-                        After: {formatMoney(afterBalance)}
+                        After (full): {formatMoney(afterBalance)}
                       </div>
                       {isInsufficient && (
                         <div className="flex items-center gap-1 text-xs text-red-600">
@@ -348,8 +353,10 @@ export default function ApprovalQueue({
                       expenseId={expense.id}
                       amount={amount}
                       employeeName={expense.submittedBy.name || expense.submittedBy.email}
-                      currentBalance={currentBalance}
+                      currentBalance={availableBalance}
                       afterBalance={afterBalance}
+                      categoryLimit={expense.categoryLimit ?? undefined}
+                      categoryStrict={expense.categoryStrict ?? undefined}
                       status={expense.status}
                     />
                   </td>

@@ -32,6 +32,8 @@ export async function GET(req: Request) {
       name: true,
       type: true,
       description: true,
+      maxAmount: true,
+      enforceStrict: true,
     },
     orderBy: {
       name: 'asc',
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { name, type, description } = body;
+    const { name, type, description, maxAmount, enforceStrict } = body;
 
     if (!name || !type) {
       return NextResponse.json({ success: false, error: "Name and type are required" }, { status: 400 });
@@ -70,6 +72,8 @@ export async function POST(req: Request) {
         name,
         type,
         description,
+        maxAmount: typeof maxAmount === "number" ? maxAmount : undefined,
+        enforceStrict: Boolean(enforceStrict),
       },
     });
 

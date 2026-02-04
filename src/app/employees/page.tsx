@@ -48,6 +48,7 @@ export default async function EmployeesPage({
     role: string;
     status: string;
     walletBalance: number;
+    walletHold: number;
   }> = [];
   let totalPages = 1;
   let hasError = false;
@@ -83,6 +84,7 @@ export default async function EmployeesPage({
     employees = employeesRaw.map((emp) => ({
       ...emp,
       walletBalance: parseFloat(emp.walletBalance.toString()),
+      walletHold: parseFloat(emp.walletHold.toString()),
     }));
   } catch (error) {
     console.error("Error fetching employees:", error);
