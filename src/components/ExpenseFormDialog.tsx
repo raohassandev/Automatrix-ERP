@@ -406,6 +406,11 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
                   Use this when you purchased material and want stock updated.
                 </label>
               </div>
+              {form.category.includes("Material") ? (
+                <p className="text-xs text-amber-700 mt-1">
+                  Tip: Material purchases should add to inventory so project costs stay accurate.
+                </p>
+              ) : null}
             </div>
 
             {form.addToInventory ? (

@@ -299,6 +299,11 @@ export default function ExpenseForm() {
               Use this when you purchased material and want stock updated.
             </label>
           </div>
+          {form.category.includes("Material") ? (
+            <p className="mt-1 text-xs text-amber-700">
+              Tip: Material purchases should add to inventory so project costs stay accurate.
+            </p>
+          ) : null}
         </div>
         {form.addToInventory ? (
           <>

@@ -6,6 +6,8 @@ import { formatMoney } from "@/lib/format";
 import PaginationControls from "@/components/PaginationControls";
 import DateRangePicker from "@/components/DateRangePicker";
 import Link from "next/link";
+import { InventoryLedgerDialog } from "@/components/InventoryLedgerDialog";
+import React from "react";
 
 export default async function InventoryLedgerPage({
   searchParams,
@@ -74,12 +76,21 @@ export default async function InventoryLedgerPage({
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / take));
+  const items = await prisma.inventoryItem.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
 
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Inventory Ledger</h1>
-        <p className="mt-2 text-muted-foreground">Stock movement history.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Inventory Ledger</h1>
+            <p className="mt-2 text-muted-foreground">Stock movement history.</p>
+          </div>
+          <InventoryLedgerActions items={items} canViewCost={canViewCost} />
+        </div>
       </div>
 
       <form className="rounded-xl border bg-card p-6 shadow-sm" method="get">
@@ -186,6 +197,80 @@ export default async function InventoryLedgerPage({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function InventoryLedgerActions({
+  items,
+  canViewCost,
+}: {
+  items: Array<{ id: string; name: string }>;
+  canViewCost: boolean;
+}) {
+  const [dialog, setDialog] = React.useState<{
+    open: boolean;
+    itemId: string;
+    itemName: string;
+    defaultType?: string;
+  }>({ open: false, itemId: "", itemName: "" });
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <select
+        className="rounded-md border px-3 py-2 text-sm"
+        value={dialog.itemId}
+        onChange={(e) => {
+          const item = items.find((i) => i.id === e.target.value);
+          setDialog((prev) => ({
+            ...prev,
+            itemId: e.target.value,
+            itemName: item?.name || "",
+          }));
+        }}
+      >
+        <option value="">Select item</option>
+        {items.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+      <button
+        className="rounded-md border px-3 py-2 text-sm"
+        onClick={() =>
+          setDialog((prev) => ({
+            ...prev,
+            open: true,
+            defaultType: "PURCHASE",
+          }))
+        }
+        disabled={!dialog.itemId}
+      >
+        Stock In/Out
+      </button>
+      <button
+        className="rounded-md border px-3 py-2 text-sm"
+        onClick={() =>
+          setDialog((prev) => ({
+            ...prev,
+            open: true,
+            defaultType: "PROJECT_ALLOCATION",
+          }))
+        }
+        disabled={!dialog.itemId}
+      >
+        Allocate to Project
+      </button>
+
+      <InventoryLedgerDialog
+        open={dialog.open}
+        onOpenChange={(open) => setDialog((prev) => ({ ...prev, open }))}
+        itemId={dialog.itemId}
+        itemName={dialog.itemName || "Inventory Item"}
+        canViewCost={canViewCost}
+        defaultType={dialog.defaultType}
+      />
     </div>
   );
 }

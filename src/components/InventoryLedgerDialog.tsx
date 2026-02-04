@@ -51,6 +51,10 @@ export function InventoryLedgerDialog({
       toast.error("Quantity must be greater than 0");
       return;
     }
+    if (form.type === "PROJECT_ALLOCATION" && !form.project) {
+      toast.error("Project is required for allocation");
+      return;
+    }
 
     try {
       const res = await fetch("/api/inventory/ledger", {
