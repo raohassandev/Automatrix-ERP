@@ -33,6 +33,7 @@ export function InventoryTable({
     open: boolean;
     itemId: string;
     itemName: string;
+    defaultType?: string;
   }>({ open: false, itemId: "", itemName: "" });
 
   return (
@@ -76,15 +77,24 @@ export function InventoryTable({
                 {canAdjust ? (
                   <td className="py-2">
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setLedgerDialog({ open: true, itemId: item.id, itemName: item.name })
-                        }
-                      >
-                        Stock In/Out
-                      </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "PURCHASE" })
+                      }
+                    >
+                      Stock In/Out
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "PROJECT_ALLOCATION" })
+                      }
+                    >
+                      Allocate to Project
+                    </Button>
                       <QuickEditButton
                         url={`/api/inventory/${item.id}`}
                         fields={{
@@ -131,10 +141,20 @@ export function InventoryTable({
                     variant="outline"
                     className="flex-1"
                     onClick={() =>
-                      setLedgerDialog({ open: true, itemId: item.id, itemName: item.name })
+                      setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "PURCHASE" })
                     }
                   >
                     Stock In/Out
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() =>
+                      setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "PROJECT_ALLOCATION" })
+                    }
+                  >
+                    Allocate
                   </Button>
                   <QuickEditButton
                     url={`/api/inventory/${item.id}`}
@@ -159,6 +179,7 @@ export function InventoryTable({
         itemId={ledgerDialog.itemId}
         itemName={ledgerDialog.itemName}
         canViewCost={canViewCost}
+        defaultType={ledgerDialog.defaultType}
       />
     </div>
   );

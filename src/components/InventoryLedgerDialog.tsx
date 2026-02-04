@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
@@ -16,6 +16,7 @@ interface InventoryLedgerDialogProps {
   itemId: string;
   itemName: string;
   canViewCost?: boolean;
+  defaultType?: string;
 }
 
 export function InventoryLedgerDialog({
@@ -24,16 +25,26 @@ export function InventoryLedgerDialog({
   itemId,
   itemName,
   canViewCost = true,
+  defaultType,
 }: InventoryLedgerDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
-    type: "PURCHASE",
+    type: defaultType || "PURCHASE",
     quantity: "",
     unitCost: "",
     reference: "",
     project: "",
   });
+
+  useEffect(() => {
+    if (open) {
+      setForm((prev) => ({
+        ...prev,
+        type: defaultType || "PURCHASE",
+      }));
+    }
+  }, [open, defaultType]);
 
   async function submit() {
     if (!form.quantity || Number(form.quantity) <= 0) {

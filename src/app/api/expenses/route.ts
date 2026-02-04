@@ -287,11 +287,26 @@ export async function POST(req: Request) {
   }
 
   const approvalLevel = getExpenseApprovalLevel(sanitizedData.amount);
-  const status =
+  let status =
     approvalLevel === "L1" ? "PENDING_L1" : approvalLevel === "L2" ? "PENDING_L2" : "PENDING_L3";
+  let approvedById: string | null = null;
+  let approvedAmount: number | null = null;
 
   // Check if payment source is EMPLOYEE_WALLET
   const paymentSource = sanitizedData.paymentSource || "COMPANY_DIRECT";
+
+  // Owner personal expenses auto-approve and cannot use employee wallet
+  if (expenseType === "OWNER_PERSONAL") {
+    status = "APPROVED";
+    approvedById = session.user.id;
+    approvedAmount = sanitizedData.amount;
+    if (paymentSource === "EMPLOYEE_WALLET") {
+      return NextResponse.json(
+        { success: false, error: "Owner personal expenses cannot be paid from employee wallet" },
+        { status: 400 }
+      );
+    }
+  }
   let employeeRecord: { id: string; walletBalance: Prisma.Decimal; walletHold: Prisma.Decimal } | null = null;
   
   if (paymentSource === "EMPLOYEE_WALLET") {
@@ -349,6 +364,8 @@ export async function POST(req: Request) {
         approvalLevel,
         status,
         submittedById: session.user.id,
+        approvedById,
+        approvedAmount: approvedAmount !== null ? new Prisma.Decimal(approvedAmount) : undefined,
         receiptUrl: sanitizedData.receiptUrl,
         receiptFileId: sanitizedData.receiptFileId,
         remarks: sanitizedData.remarks,
