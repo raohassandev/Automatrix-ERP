@@ -10,7 +10,6 @@ export default function LoginPage() {
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleChecked, setGoogleChecked] = useState(false);
   const [form, setForm] = useState({
-    name: "",
     email: "admin@automatrix.local",
     password: "admin123",
   });
@@ -64,42 +63,6 @@ export default function LoginPage() {
     loadProviders();
   }, []);
 
-  async function handleRegister() {
-    setMessage(null);
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name || undefined,
-        email: form.email,
-        password: form.password,
-      }),
-    });
-
-    if (!res.ok) {
-      const payload = await res.json().catch(() => ({}));
-      setMessage(payload?.error || "Unable to create account.");
-      return;
-    }
-
-    const signInRes = await signIn("credentials", {
-      email: form.email,
-      password: form.password,
-      redirect: false,
-      callbackUrl: "/dashboard",
-    });
-
-    if (signInRes?.error) {
-      setMessage(signInRes.error);
-      return;
-    }
-
-    if (signInRes?.ok) {
-      router.push("/dashboard");
-      router.refresh();
-    }
-  }
-
   return (
     <div className="mx-auto max-w-md rounded-xl border bg-card p-8 shadow-sm">
       <h1 className="text-2xl font-semibold">Sign in</h1>
@@ -123,12 +86,6 @@ export default function LoginPage() {
 
         <div className="border-t pt-4">
           <div className="grid gap-2">
-            <input
-              className="rounded-md border px-3 py-2"
-              placeholder="Name (for new account)"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
             <input
               className="rounded-md border px-3 py-2"
               placeholder="Email"
@@ -155,14 +112,6 @@ export default function LoginPage() {
               onClick={() => startTransition(handleEmailLogin)}
             >
               {pending ? "Working..." : "Sign in"}
-            </button>
-            <button
-              type="button"
-              className="rounded-md border px-4 py-2 hover:bg-accent"
-              disabled={pending}
-              onClick={() => startTransition(handleRegister)}
-            >
-              {pending ? "Working..." : "Create account"}
             </button>
           </div>
         </div>

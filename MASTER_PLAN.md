@@ -9,15 +9,15 @@
 
 **Summary:** Core modules exist but the system is **not production‑ready**. Audit V2 identified critical mismatches and security gaps that must be resolved before rollout.
 
-**Critical gaps to fix first**
-1. Invoice create UI/API mismatch (invoice form does not match API/schema).
-2. Approvals GET route lacks permission gate.
-3. Public self‑registration enabled in `/api/register`.
+**Critical gaps to fix first (status)**
+1. Invoice create UI/API mismatch — **Resolved** (Create/Edit forms aligned with API/schema).
+2. Approvals GET route lacks permission gate — **Resolved** (permission + assignment checks enforced).
+3. Public self‑registration enabled in `/api/register` — **Resolved** (admin‑only, login page no longer shows self‑register).
 
-**High‑priority gaps**
-- Dashboard API lacks permission/scope enforcement.
-- Project financials ignore assigned‑project scope.
-- Attachments API does not verify parent‑record authorization.
+**High‑priority gaps (status)**
+- Dashboard API lacks permission/scope enforcement — **Resolved** (role‑scoped metrics).
+- Project financials ignore assigned‑project scope — **Open**.
+- Attachments API does not verify parent‑record authorization — **Resolved** (type + ownership checks).
 
 **Medium gaps**
 - Categories list readable without auth.
