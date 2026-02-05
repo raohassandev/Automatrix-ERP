@@ -6,6 +6,10 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
+  allowedDevOrigins: ["http://localhost:3000", "http://127.0.0.1:3000"],
   // Performance optimizations
   experimental: {
     webpackBuildWorker: true, // Enable parallel builds

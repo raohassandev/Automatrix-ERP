@@ -17,8 +17,34 @@ export async function GET() {
   }
 
   try {
+    let where: Record<string, unknown> | undefined = undefined;
+    if (!canViewAll && canViewAssigned) {
+      const [expenseProjects, incomeProjects] = await Promise.all([
+        prisma.expense.findMany({
+          where: { submittedById: session.user.id, project: { not: null } },
+          select: { project: true },
+        }),
+        prisma.income.findMany({
+          where: { addedById: session.user.id, project: { not: null } },
+          select: { project: true },
+        }),
+      ]);
+      const refs = Array.from(
+        new Set(
+          [...expenseProjects, ...incomeProjects]
+            .map((p) => p.project)
+            .filter((p): p is string => Boolean(p))
+        )
+      );
+      if (refs.length === 0) {
+        return NextResponse.json({ success: true, projects: [] });
+      }
+      where = { OR: [{ projectId: { in: refs } }, { name: { in: refs } }] };
+    }
+
     // Get projects with financial data
     const projects = await prisma.project.findMany({
+      where,
       orderBy: [
         { costToDate: "desc" },
         { name: "asc" },

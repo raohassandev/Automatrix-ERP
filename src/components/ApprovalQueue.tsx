@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 interface Approval {
   id: string;
+  type: "EXPENSE" | "INCOME";
   date: Date;
   category: string;
   description: string;
@@ -50,13 +51,32 @@ export default function ApprovalQueue({
   const [showBulkReject, setShowBulkReject] = useState(false);
   const [bulkRejectReason, setBulkRejectReason] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "EXPENSE" | "INCOME">("ALL");
+
+  const filteredApprovals = approvals.filter((item) => {
+    if (typeFilter !== "ALL" && item.type !== typeFilter) return false;
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    return (
+      item.category.toLowerCase().includes(term) ||
+      item.description.toLowerCase().includes(term) ||
+      (item.project || "").toLowerCase().includes(term) ||
+      item.submittedBy.email.toLowerCase().includes(term) ||
+      (item.submittedBy.name || "").toLowerCase().includes(term)
+    );
+  });
 
   const handleSelectAll = () => {
-    if (selectedIds.size === approvals.length) {
-      setSelectedIds(new Set());
+    if (filteredApprovals.length === 0) return;
+    const allSelected = filteredApprovals.every((item) => selectedIds.has(item.id));
+    const nextSelected = new Set(selectedIds);
+    if (allSelected) {
+      filteredApprovals.forEach((item) => nextSelected.delete(item.id));
     } else {
-      setSelectedIds(new Set(approvals.map((a) => a.id)));
+      filteredApprovals.forEach((item) => nextSelected.add(item.id));
     }
+    setSelectedIds(nextSelected);
   };
 
   const handleSelectOne = (id: string) => {
@@ -72,35 +92,56 @@ export default function ApprovalQueue({
   const handleBulkApprove = async () => {
     if (selectedIds.size === 0) return;
 
+    const selected = approvals.filter((a) => selectedIds.has(a.id));
+    const expenseIds = selected.filter((a) => a.type === "EXPENSE").map((a) => a.id);
+    const incomeIds = selected.filter((a) => a.type === "INCOME").map((a) => a.id);
+
     const confirmed = window.confirm(
-      `Approve ${selectedIds.size} expense(s)?\n\nThis will deduct amounts from employee wallets.`
+      `Approve ${selectedIds.size} item(s)?\n\nExpenses: ${expenseIds.length}, Income: ${incomeIds.length}.`
     );
 
     if (!confirmed) return;
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/approvals", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            expenseIds: Array.from(selectedIds),
-            action: "APPROVE",
-          }),
-        });
+        const results = { successful: 0, failed: 0 };
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to bulk approve");
+        if (expenseIds.length > 0) {
+          const res = await fetch("/api/approvals", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              expenseIds,
+              action: "APPROVE",
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || "Failed to bulk approve expenses");
+          }
+          results.successful += data.results.successful.length;
+          results.failed += data.results.failed.length;
         }
 
-        toast.success(
-          "Bulk approval complete!",
-          {
-            description: `Successful: ${data.results.successful.length}, Failed: ${data.results.failed.length}`,
+        if (incomeIds.length > 0) {
+          const res = await fetch("/api/approvals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "APPROVE",
+              incomeIds,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || "Failed to approve income");
           }
-        );
+          results.successful += Array.isArray(data.data) ? data.data.length : 1;
+        }
+
+        toast.success("Bulk approval complete!", {
+          description: `Successful: ${results.successful}, Failed: ${results.failed}`,
+        });
         setSelectedIds(new Set());
         router.refresh();
       } catch (err) {
@@ -119,28 +160,51 @@ export default function ApprovalQueue({
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/approvals", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            expenseIds: Array.from(selectedIds),
-            action: "REJECT",
-            reason: bulkRejectReason,
-          }),
-        });
+        const selected = approvals.filter((a) => selectedIds.has(a.id));
+        const expenseIds = selected.filter((a) => a.type === "EXPENSE").map((a) => a.id);
+        const incomeIds = selected.filter((a) => a.type === "INCOME").map((a) => a.id);
+        const results = { successful: 0, failed: 0 };
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to bulk reject");
+        if (expenseIds.length > 0) {
+          const res = await fetch("/api/approvals", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              expenseIds,
+              action: "REJECT",
+              reason: bulkRejectReason,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || "Failed to bulk reject expenses");
+          }
+          results.successful += data.results.successful.length;
+          results.failed += data.results.failed.length;
         }
 
-        toast.success(
-          "Bulk rejection complete!",
-          {
-            description: `Successful: ${data.results.successful.length}, Failed: ${data.results.failed.length}`,
+        if (incomeIds.length > 0) {
+          for (const incomeId of incomeIds) {
+            const res = await fetch("/api/approvals", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "REJECT",
+                incomeId,
+                reason: bulkRejectReason,
+              }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+              throw new Error(data.error || "Failed to reject income");
+            }
+            results.successful += 1;
           }
-        );
+        }
+
+        toast.success("Bulk rejection complete!", {
+          description: `Successful: ${results.successful}, Failed: ${results.failed}`,
+        });
         setSelectedIds(new Set());
         setShowBulkReject(false);
         setBulkRejectReason("");
@@ -193,11 +257,48 @@ export default function ApprovalQueue({
 
   return (
     <>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-card p-4 shadow">
+        <div>
+          <div className="text-sm text-muted-foreground">Filters</div>
+          <div className="text-xs text-muted-foreground">
+            Showing {filteredApprovals.length} of {approvals.length}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            className="w-56 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+            placeholder="Search by category, project, employee..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <select
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as "ALL" | "EXPENSE" | "INCOME")}
+          >
+            <option value="ALL">All Types</option>
+            <option value="EXPENSE">Expense</option>
+            <option value="INCOME">Income</option>
+          </select>
+          {(search || typeFilter !== "ALL") && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSearch("");
+                setTypeFilter("ALL");
+              }}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Bulk Actions Bar */}
       {selectedIds.size > 0 && (
         <div className="mb-4 flex items-center justify-between rounded-lg bg-blue-50 p-4">
           <div className="text-sm font-medium text-blue-900">
-            {selectedIds.size} expense(s) selected
+            {selectedIds.size} item(s) selected
           </div>
           <div className="flex gap-2">
             <Button
@@ -232,7 +333,10 @@ export default function ApprovalQueue({
               <th className="px-6 py-3 text-left">
                 <input
                   type="checkbox"
-                  checked={selectedIds.size === approvals.length && approvals.length > 0}
+                  checked={
+                    filteredApprovals.length > 0 &&
+                    filteredApprovals.every((item) => selectedIds.has(item.id))
+                  }
                   onChange={handleSelectAll}
                   className="h-4 w-4 rounded border-border"
                 />
@@ -242,6 +346,9 @@ export default function ApprovalQueue({
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Employee
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Type
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Category
@@ -264,7 +371,7 @@ export default function ApprovalQueue({
             </tr>
           </thead>
           <tbody className="divide-y divide-border bg-card">
-            {approvals.map((expense) => {
+            {filteredApprovals.map((expense) => {
               const walletBalance = parseFloat(expense.walletBalance.toString());
               const walletHold = parseFloat(expense.walletHold.toString());
               const availableBalance = walletBalance - walletHold;
@@ -298,6 +405,17 @@ export default function ApprovalQueue({
                     <div className="text-muted-foreground">{expense.submittedBy.email}</div>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm text-foreground">
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-medium ${
+                        expense.type === "INCOME"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {expense.type}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-foreground">
                     {expense.category}
                   </td>
                   <td className="px-6 py-4 text-sm text-foreground">
@@ -324,53 +442,65 @@ export default function ApprovalQueue({
                     {formatMoney(amount)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm">
-                    <div className="space-y-1">
-                      <div className="text-muted-foreground">
-                        Available: <span className="font-medium">{formatMoney(availableBalance)}</span>
-                      </div>
-                      <div
-                        className={`font-medium ${
-                          isInsufficient
-                            ? "text-red-600"
-                            : isLow
-                            ? "text-yellow-600"
-                            : "text-green-600"
-                        }`}
-                      >
-                        After (full): {formatMoney(afterBalance)}
-                      </div>
-                      {isInsufficient && (
-                        <div className="flex items-center gap-1 text-xs text-red-600">
-                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                            />
-                          </svg>
-                          Insufficient
+                    {expense.type === "INCOME" ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="text-muted-foreground">
+                          Available: <span className="font-medium">{formatMoney(availableBalance)}</span>
                         </div>
-                      )}
-                      {isLow && !isInsufficient && (
-                        <div className="text-xs text-yellow-600">⚠️ Low balance</div>
-                      )}
-                    </div>
+                        <div
+                          className={`font-medium ${
+                            isInsufficient
+                              ? "text-red-600"
+                              : isLow
+                              ? "text-yellow-600"
+                              : "text-green-600"
+                          }`}
+                        >
+                          After (full): {formatMoney(afterBalance)}
+                        </div>
+                        {isInsufficient && (
+                          <div className="flex items-center gap-1 text-xs text-red-600">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                              />
+                            </svg>
+                            Insufficient
+                          </div>
+                        )}
+                        {isLow && !isInsufficient && (
+                          <div className="text-xs text-yellow-600">⚠️ Low balance</div>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4">
                     <ApprovalLevelBadge level={expense.requiredApprovalLevel} />
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-sm">
-                    <ApprovalActions
-                      expenseId={expense.id}
-                      amount={amount}
-                      employeeName={expense.submittedBy.name || expense.submittedBy.email}
-                      currentBalance={availableBalance}
-                      afterBalance={afterBalance}
-                      categoryLimit={expense.categoryLimit ?? undefined}
-                      categoryStrict={expense.categoryStrict ?? undefined}
-                      status={expense.status}
-                    />
+                    {expense.type === "INCOME" ? (
+                      <IncomeApprovalActions
+                        incomeId={expense.id}
+                        amount={amount}
+                        status={expense.status}
+                      />
+                    ) : (
+                      <ApprovalActions
+                        expenseId={expense.id}
+                        amount={amount}
+                        employeeName={expense.submittedBy.name || expense.submittedBy.email}
+                        currentBalance={availableBalance}
+                        afterBalance={afterBalance}
+                        categoryLimit={expense.categoryLimit ?? undefined}
+                        categoryStrict={expense.categoryStrict ?? undefined}
+                        status={expense.status}
+                      />
+                    )}
                   </td>
                 </tr>
               );
@@ -378,6 +508,12 @@ export default function ApprovalQueue({
           </tbody>
         </table>
       </div>
+
+      {filteredApprovals.length === 0 && approvals.length > 0 && (
+        <div className="rounded-lg bg-card p-6 text-center text-muted-foreground shadow">
+          No approvals match the current filters.
+        </div>
+      )}
 
       {/* Approval History Toggle */}
       {history.length > 0 && (
@@ -429,6 +565,144 @@ export default function ApprovalQueue({
               >
                 {pending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {pending ? "Rejecting..." : "Confirm Reject All"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function IncomeApprovalActions({
+  incomeId,
+  amount,
+  status,
+}: {
+  incomeId: string;
+  amount: number;
+  status: string;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  async function handleApprove() {
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/approvals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            incomeId,
+            action: "APPROVE",
+            approvedAmount: amount,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to approve income");
+        }
+
+        toast.success("Income approved successfully!");
+        router.refresh();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "An error occurred";
+        toast.error(message);
+      }
+    });
+  }
+
+  async function handleReject() {
+    if (!rejectReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/approvals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            incomeId,
+            action: "REJECT",
+            reason: rejectReason,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to reject income");
+        }
+
+        toast.success("Income rejected successfully!");
+        setShowRejectModal(false);
+        setRejectReason("");
+        router.refresh();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "An error occurred";
+        toast.error(message);
+      }
+    });
+  }
+
+  if (!status.startsWith("PENDING")) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  return (
+    <>
+      <div className="flex gap-2">
+        <Button onClick={handleApprove} disabled={pending} size="sm">
+          {pending ? "Processing..." : "Approve"}
+        </Button>
+        <Button
+          onClick={() => setShowRejectModal(true)}
+          disabled={pending}
+          variant="destructive"
+          size="sm"
+        >
+          Reject
+        </Button>
+      </div>
+
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+            <h3 className="mb-3 text-lg font-semibold text-foreground">Reject Income</h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Provide a reason for rejection.
+            </p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Reason for rejection..."
+              className="mb-4 w-full rounded border border-border bg-background p-2 text-sm"
+              rows={4}
+              disabled={pending}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason("");
+                }}
+                disabled={pending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleReject}
+                disabled={pending || !rejectReason.trim()}
+              >
+                {pending ? "Rejecting..." : "Confirm Reject"}
               </Button>
             </div>
           </div>

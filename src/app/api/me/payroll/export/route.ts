@@ -1,0 +1,59 @@
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { formatMoney } from "@/lib/format";
+
+function toCsv(rows: Array<Array<string | number | null | undefined>>) {
+  return rows
+    .map((row) =>
+      row
+        .map((field) => {
+          const value = field ?? "";
+          return `"${String(value).replace(/"/g, '""')}"`;
+        })
+        .join(",")
+    )
+    .join("\n");
+}
+
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id || !session.user.email) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const employee = await prisma.employee.findUnique({
+    where: { email: session.user.email },
+    select: { id: true },
+  });
+  if (!employee) {
+    return new Response("Employee not found", { status: 404 });
+  }
+
+  const rows = await prisma.payrollEntry.findMany({
+    where: { employeeId: employee.id },
+    orderBy: { createdAt: "desc" },
+    include: { payrollRun: true },
+  });
+
+  const csvRows: Array<Array<string | number | null | undefined>> = [
+    ["Period Start", "Period End", "Base Salary", "Incentives", "Deductions", "Net Pay", "Status"],
+    ...rows.map((row) => [
+      row.payrollRun?.periodStart.toISOString().slice(0, 10) || "",
+      row.payrollRun?.periodEnd.toISOString().slice(0, 10) || "",
+      formatMoney(Number(row.baseSalary)),
+      formatMoney(Number(row.incentiveTotal)),
+      formatMoney(Number(row.deductions)),
+      formatMoney(Number(row.netPay)),
+      row.status,
+    ]),
+  ];
+
+  const csv = toCsv(csvRows);
+  const filename = `my_salary_${new Date().toISOString().slice(0, 10)}.csv`;
+  return new Response(csv, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename=${filename}`,
+    },
+  });
+}

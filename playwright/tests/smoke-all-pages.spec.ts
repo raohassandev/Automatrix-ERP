@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 /**
  * Authenticated smoke test: visit all sidebar pages and fail on obvious runtime errors.
@@ -8,6 +8,36 @@ import { test, expect } from "@playwright/test";
  */
 
 test.describe("Smoke: authenticated user can load all pages", () => {
+  const safeGoto = async (page: Page, url: string, attempts = 3) => {
+    let lastError: unknown;
+    for (let i = 0; i < attempts; i += 1) {
+      try {
+        await page.goto(url, { waitUntil: "domcontentloaded" });
+        return;
+      } catch (error) {
+        lastError = error;
+        await page.waitForTimeout(1000);
+      }
+    }
+    throw lastError;
+  };
+
+  const loginWithRetry = async (page: Page, attempts = 2) => {
+    for (let i = 0; i < attempts; i += 1) {
+      await safeGoto(page, "/login");
+      await page.getByPlaceholder("Email").fill("admin@automatrix.local");
+      await page.getByPlaceholder(/Password/i).fill("admin123");
+      await page.getByRole("button", { name: "Sign in", exact: true }).click();
+      try {
+        await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+        return;
+      } catch {
+        await page.waitForTimeout(500);
+      }
+    }
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+  };
+
   const routes = [
     "/dashboard",
     "/expenses",
@@ -17,10 +47,13 @@ test.describe("Smoke: authenticated user can load all pages", () => {
     "/projects",
     "/projects/financial",
     "/inventory",
+    "/procurement/purchase-orders",
+    "/procurement/grn",
     "/invoices",
     "/approvals",
     "/notifications",
     "/reports/projects",
+    "/reports/procurement",
     "/reports",
     "/categories",
     "/admin/users",
@@ -30,13 +63,7 @@ test.describe("Smoke: authenticated user can load all pages", () => {
 
   test.beforeEach(async ({ page }) => {
     // Login via dev-bypass credentials (see src/lib/auth.ts)
-    await page.goto("/login");
-    await page.getByPlaceholder("Email").fill("admin@automatrix.local");
-    await page.getByPlaceholder(/Password/i).fill("admin123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-
-    // Ensure we land somewhere authenticated.
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+    await loginWithRetry(page);
   });
 
   for (const route of routes) {

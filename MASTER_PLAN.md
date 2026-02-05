@@ -5,6 +5,27 @@
 
 ---
 
+## 0) Current Status (Audit V2 baseline — Feb 5, 2026)
+
+**Summary:** Core modules exist but the system is **not production‑ready**. Audit V2 identified critical mismatches and security gaps that must be resolved before rollout.
+
+**Critical gaps to fix first**
+1. Invoice create UI/API mismatch (invoice form does not match API/schema).
+2. Approvals GET route lacks permission gate.
+3. Public self‑registration enabled in `/api/register`.
+
+**High‑priority gaps**
+- Dashboard API lacks permission/scope enforcement.
+- Project financials ignore assigned‑project scope.
+- Attachments API does not verify parent‑record authorization.
+
+**Medium gaps**
+- Categories list readable without auth.
+- Income UI missing edit/delete actions.
+- QuickEdit prompt‑based edits in finance‑critical tables.
+
+This section is the baseline for tracking what is fixed and what remains.
+
 ## 1) Vision & Principles
 
 **Vision:** One reliable system to manage projects, expenses, inventory, wallets, approvals, and reporting for engineering work.
@@ -141,6 +162,73 @@
 - Finance credits wallet
 - Employee logs expenses using wallet
 
+**Payroll & Incentives (Planned)**
+- Maintain role-based incentive defaults (Engineer/Technician/Helper) with per-employee overrides.
+- Record project-linked incentives per employee.
+- Allow deductions with reason + approval (quality/performance).
+- Monthly payroll run (previous month only): base salary + incentives − deductions.
+- Auto-credit wallet on payroll approval + salary ledger entry.
+- Salary advances with approval (credited to wallet).
+
+**Employee Self‑Service (Must Have)**
+- View salary history (base + incentive + deductions) by pay period.
+- View incentive history per project.
+- View wallet transfers (credits/debits), running balance, and holds.
+- View expenses paid from wallet with status (approved / pending / rejected).
+- Export own wallet and salary history (CSV).
+
+**Implementation Breakdown (Next)**
+1) Data Models
+   - CompensationPolicy (role default incentive)
+   - EmployeeCompensation (base salary + overrides)
+   - IncentiveEntry (project-linked incentive with approval)
+   - PayrollRun + PayrollEntry (pay period + payout lines)
+2) API + RBAC
+   - Incentives CRUD + approve
+   - Payroll runs CRUD + approve (wallet credit on approval)
+3) UI
+   - Incentive manager (Finance/HR)
+   - Payroll run builder + approval
+   - Employee self dashboard (salary/incentive/wallet history)
+4) Reporting
+   - Payroll summary by period
+   - Incentives by project/employee
+5) Audit
+   - Audit log on all incentive + payroll changes
+
+**Implementation Progress**
+- Data Models → Done
+- API + RBAC → Done
+- UI → Done (Incentives + Payroll + Employee Self exports)
+ - Salary Advances → Done
+
+---
+
+## 11) HR + Finance Flow (Required for ERP‑Correct Accounting)
+
+**Employee Master Profile (HR)**
+- Personal profile (CNIC, address, phone, education, experience).
+- Company profile: department, designation, reporting officer, join date, status.
+- Salary package: base salary, allowances, default incentive role.
+
+**Payroll Accounting (Finance)**
+- Payroll run creates **company expense** records (Salary Expense).
+- Wallet credit is the **payment** record, not the expense itself.
+- Each payroll entry must store deduction reason (required if > 0).
+- Payroll runs are **previous month only** and must not overlap.
+
+**Incentives Accounting (Project + Finance)**
+- Incentives are only allowed after project status is **Completed/Closed**.
+- Incentive approval creates **project expense** + wallet credit.
+- Deductions or adjustments require reason + approval history.
+
+**Commissions**
+- Commission entries are expenses with % basis and history.
+- Must link to project or sales reference and be auditable.
+
+**Role‑Assignable Approvals**
+- Incentive/deduction approvers must be assignable by role (future RBAC management UI).
+
 ---
 
 ## 6) Phase 2: Approvals & Reporting
@@ -182,3 +270,48 @@
 - No UI without validation & permission checks in API.
 - All monetary changes must have audit logs.
 - Keep workflows simple before adding automation.
+
+---
+
+## 10) Master Plan Status Tracker (Living)
+
+Update this as we ship changes. Format: **Item → Status → Evidence (PR/commit/notes)**.
+
+**Critical**
+- Invoice create alignment (UI/API/schema) → Done → `src/components/InvoiceFormDialog.tsx` aligned with API/schema
+- Approvals GET permission gate → Done → `src/app/api/approvals/route.ts` added role-based gate
+- Lock down `/api/register` → Done → `src/app/api/register/route.ts` now requires auth + elevated permission
+
+**High**
+- Dashboard API permission + scope → Done → `src/app/api/dashboard/route.ts` + scoped metrics in `src/lib/dashboard.ts`
+- Project financials scope filter → Done → `src/app/api/projects/financial/route.ts`
+- Attachment parent‑auth enforcement → Done → `src/app/api/attachments/route.ts` and `src/app/api/attachments/[id]/route.ts`
+
+**Medium**
+- Auth required for categories GET → Done → `src/app/api/categories/route.ts`
+- Income edit/delete UI → Done → `src/app/income/page.tsx` + `src/components/IncomeEditDialog.tsx`
+- Replace QuickEdit prompts with structured dialogs → Done → `src/components/*Actions.tsx` + edit dialogs (expenses/inventory/employees/clients/invoices/attachments/notifications)
+- Decimal serialization warnings (Prisma Decimal → number) → Done → `src/app/income/page.tsx` + `src/app/invoices/page.tsx` + `src/app/inventory/page.tsx`
+- Next config dev root/allowed origins → Done → `next.config.ts`
+- Inventory price field‑level access (view/edit) → Done → `src/app/api/inventory/route.ts` + `src/app/api/inventory/[id]/route.ts` + `src/components/InventoryFormDialog.tsx`
+- Add Store Keeper role permissions → Done → `src/lib/permissions.ts`
+- Employee expense summary report → Done → `src/app/reports/employee-expenses/page.tsx` + `src/app/reports/page.tsx`
+- Reports scope enforcement (expenses/projects/inventory/wallets) → Done → `src/app/reports/expenses/page.tsx` + `src/app/reports/projects/page.tsx` + `src/app/reports/inventory/page.tsx` + `src/app/reports/wallets/page.tsx`
+- Employee expense summary export → Done → `src/app/api/reports/employee-expenses/export/route.ts`
+- Project report export → Done → `src/app/api/reports/projects/export/route.ts` + `src/app/reports/projects/page.tsx`
+- Inventory report export → Done → `src/app/api/reports/inventory/export/route.ts` + `src/app/reports/inventory/page.tsx`
+- Low stock notifications → Done → `src/app/api/inventory/ledger/route.ts`
+- Overdue invoice notifications → Done → `src/app/api/invoices/[id]/route.ts`
+- Attachment edit preview + type select → Done → `src/components/AttachmentEditDialog.tsx`
+- Notifications UX (badges + mark read) → Done → `src/app/notifications/page.tsx` + `src/components/NotificationActions.tsx`
+- Approvals UX filters/search → Done → `src/components/ApprovalQueue.tsx`
+- Reports UX polish (badges/highlights) → Done → `src/app/reports/expenses/page.tsx` + `src/app/reports/inventory/page.tsx` + `src/app/reports/wallets/page.tsx`
+- Approval engine pending status handling + validation fix → Done → `src/lib/approval-engine.ts` + `src/lib/validation-schemas.ts`
+- Approval flow test (create expense → approve) → Done → `playwright/tests/approval-flow.spec.ts`
+- Phase 4 kickoff: Procurement summary report → Done → `src/app/reports/procurement/page.tsx` + `src/app/reports/page.tsx`
+- Procurement export + filters → Done → `src/app/api/reports/procurement/export/route.ts` + `src/app/reports/procurement/page.tsx`
+- Procurement export (PO/GRN CSV + project/vendor filters) → Done → `src/app/api/reports/procurement/po-export/route.ts` + `src/app/api/reports/procurement/grn-export/route.ts`
+- Procurement alerts (spend spike + missing stock-in) → Done → `src/app/api/expenses/route.ts`
+- PO/GRN module (schema + CRUD) → Done → `prisma/schema.prisma` + `src/app/procurement/purchase-orders/page.tsx` + `src/app/procurement/grn/page.tsx` + `src/app/api/procurement/*`
+- PO↔GRN linkage + inventory stock-in → Done → `src/app/api/procurement/grn/route.ts` + `src/app/api/procurement/grn/[id]/route.ts` + `prisma/schema.prisma`
+- Employee self dashboard (wallet + expenses) → Done → `src/app/me/page.tsx` + `src/components/Sidebar.tsx`

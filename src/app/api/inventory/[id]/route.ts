@@ -15,6 +15,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (!canEdit) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
+  const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
+  const canViewSelling = await requirePermission(session.user.id, "inventory.view_selling");
 
   const { id } = await context.params;
   const body = await req.json();
@@ -23,8 +25,18 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (body.sku !== undefined) data.sku = body.sku ? sanitizeString(body.sku) : null;
   if (body.category) data.category = sanitizeString(body.category);
   if (body.unit) data.unit = sanitizeString(body.unit);
-  if (body.unitCost !== undefined) data.unitCost = new Prisma.Decimal(body.unitCost);
-  if (body.sellingPrice !== undefined) data.sellingPrice = new Prisma.Decimal(body.sellingPrice);
+  if (body.unitCost !== undefined) {
+    if (!canViewCost) {
+      return NextResponse.json({ success: false, error: "Purchase price permission required" }, { status: 403 });
+    }
+    data.unitCost = new Prisma.Decimal(body.unitCost);
+  }
+  if (body.sellingPrice !== undefined) {
+    if (!canViewSelling) {
+      return NextResponse.json({ success: false, error: "Selling price permission required" }, { status: 403 });
+    }
+    data.sellingPrice = new Prisma.Decimal(body.sellingPrice);
+  }
   if (body.minStock !== undefined) data.minStock = new Prisma.Decimal(body.minStock);
   if (body.reorderQty !== undefined) data.reorderQty = new Prisma.Decimal(body.reorderQty);
 

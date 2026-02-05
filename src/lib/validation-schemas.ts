@@ -351,8 +351,8 @@ export const walletTopUpSchema = z.object({
 // ============================================================================
 
 export const approvalSchema = z.object({
-  expenseId: z.string().uuid('Invalid expense ID').optional(),
-  incomeId: z.string().uuid('Invalid income ID').optional(),
+  expenseId: z.string().min(1, 'Invalid expense ID').optional(),
+  incomeId: z.string().min(1, 'Invalid income ID').optional(),
   action: z.enum(['APPROVE', 'REJECT', 'PARTIAL_APPROVE']),
   reason: z.string().max(500, 'Reason too long').optional(),
   approvedAmount: positiveNumberSchema.optional(),

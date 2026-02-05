@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,18 +17,51 @@ type Contact = {
 
 interface ClientFormProps {
   onCreated?: () => void;
+  onSaved?: () => void;
   showHeader?: boolean;
+  initialData?: {
+    id: string;
+    name: string;
+    description?: string | null;
+    address?: string | null;
+    contacts?: Contact[];
+  };
 }
 
-export function ClientForm({ onCreated, showHeader = true }: ClientFormProps) {
+export function ClientForm({ onCreated, onSaved, showHeader = true, initialData }: ClientFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
+  const emptyForm = {
     name: "",
     description: "",
     address: "",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
   const [contacts, setContacts] = useState<Contact[]>([{ name: "", phone: "", designation: "", email: "" }]);
+  const isEdit = Boolean(initialData?.id);
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({
+        name: initialData.name || "",
+        description: initialData.description || "",
+        address: initialData.address || "",
+      });
+      setContacts(
+        initialData.contacts && initialData.contacts.length > 0
+          ? initialData.contacts.map((c) => ({
+              name: c.name || "",
+              phone: c.phone || "",
+              designation: c.designation || "",
+              email: c.email || "",
+            }))
+          : [{ name: "", phone: "", designation: "", email: "" }]
+      );
+    } else {
+      setForm(emptyForm);
+      setContacts([{ name: "", phone: "", designation: "", email: "" }]);
+    }
+  }, [initialData]);
 
   const updateContact = (index: number, key: keyof Contact, value: string) => {
     setContacts((prev) =>
@@ -58,8 +91,8 @@ export function ClientForm({ onCreated, showHeader = true }: ClientFormProps) {
           .filter((contact) => contact.name.length > 0),
       };
 
-      const res = await fetch("/api/clients", {
-        method: "POST",
+      const res = await fetch(isEdit ? `/api/clients/${initialData?.id}` : "/api/clients", {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -68,13 +101,14 @@ export function ClientForm({ onCreated, showHeader = true }: ClientFormProps) {
         throw new Error(data.error || "Failed to create client");
       }
 
-      toast.success("Client created");
-      setForm({ name: "", description: "", address: "" });
+      toast.success(isEdit ? "Client updated" : "Client created");
+      setForm(emptyForm);
       setContacts([{ name: "", phone: "", designation: "", email: "" }]);
       router.refresh();
       onCreated?.();
+      onSaved?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create client");
+      toast.error(error instanceof Error ? error.message : "Failed to save client");
     }
   }
 
@@ -82,8 +116,10 @@ export function ClientForm({ onCreated, showHeader = true }: ClientFormProps) {
     <div className="rounded-xl border bg-card p-6 shadow-sm">
       {showHeader ? (
         <>
-          <h2 className="text-lg font-semibold">Create Client</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Add a new client and contact persons.</p>
+          <h2 className="text-lg font-semibold">{isEdit ? "Edit Client" : "Create Client"}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isEdit ? "Update client and contact persons." : "Add a new client and contact persons."}
+          </p>
         </>
       ) : null}
 
@@ -162,7 +198,7 @@ export function ClientForm({ onCreated, showHeader = true }: ClientFormProps) {
 
       <div className="mt-6 flex justify-end">
         <Button onClick={() => startTransition(submit)} disabled={pending}>
-          {pending ? "Saving..." : "Save Client"}
+          {pending ? "Saving..." : isEdit ? "Save Changes" : "Save Client"}
         </Button>
       </div>
     </div>

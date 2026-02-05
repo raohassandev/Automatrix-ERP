@@ -20,6 +20,7 @@ export default async function ProjectExpensesReportPage({
   const canViewAll = await requirePermission(session.user.id, "reports.view_all");
   const canViewTeam = await requirePermission(session.user.id, "reports.view_team");
   const canViewOwn = await requirePermission(session.user.id, "reports.view_own");
+  const canExport = await requirePermission(session.user.id, "reports.export");
   const canView = canViewAll || canViewTeam || canViewOwn;
   if (!canView) {
     return (
@@ -36,16 +37,41 @@ export default async function ProjectExpensesReportPage({
   const take = 25;
   const skip = (page - 1) * take;
 
+  const ownProjectRefs =
+    !canViewAll && !canViewTeam && canViewOwn
+      ? await prisma.expense.findMany({
+          where: { submittedById: session.user.id, project: { not: null } },
+          select: { project: true },
+        })
+      : [];
+  const ownProjectValues =
+    !canViewAll && !canViewTeam && canViewOwn
+      ? Array.from(new Set(ownProjectRefs.map((entry) => entry.project).filter(Boolean))) as string[]
+      : [];
+  const baseWhere: Record<string, unknown> =
+    !canViewAll && !canViewTeam && canViewOwn
+      ? ownProjectValues.length > 0
+        ? {
+            OR: [{ projectId: { in: ownProjectValues } }, { name: { in: ownProjectValues } }],
+          }
+        : { id: "__none__" }
+      : {};
+
   const where = search
     ? {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { projectId: { contains: search, mode: "insensitive" } },
-          { status: { contains: search, mode: "insensitive" } },
-          { client: { name: { contains: search, mode: "insensitive" } } },
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { projectId: { contains: search, mode: "insensitive" } },
+              { status: { contains: search, mode: "insensitive" } },
+              { client: { name: { contains: search, mode: "insensitive" } } },
+            ],
+          },
         ],
       }
-    : {};
+    : baseWhere;
 
   // Get paged projects
   const [projects, total] = await Promise.all([
@@ -91,6 +117,16 @@ export default async function ProjectExpensesReportPage({
           <div className="min-w-[220px]">
             <SearchInput placeholder="Search projects..." />
           </div>
+          {canExport ? (
+            <Link
+              href={`/api/reports/projects/export?${new URLSearchParams({
+                ...(search ? { search } : {}),
+              }).toString()}`}
+              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              Export CSV
+            </Link>
+          ) : null}
         </div>
       </div>
 

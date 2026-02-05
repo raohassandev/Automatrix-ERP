@@ -125,6 +125,20 @@ export default async function ReportsPage() {
           <div className="text-sm text-muted-foreground">Wallet Summary</div>
           <div className="mt-2 text-lg font-semibold">Employee balances and holds</div>
         </a>
+        <a
+          href="/reports/employee-expenses"
+          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
+        >
+          <div className="text-sm text-muted-foreground">Employee Expense Summary</div>
+          <div className="mt-2 text-lg font-semibold">Approved expenses by employee</div>
+        </a>
+        <a
+          href="/reports/procurement"
+          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
+        >
+          <div className="text-sm text-muted-foreground">Procurement Summary</div>
+          <div className="mt-2 text-lg font-semibold">Material spend and stock-in</div>
+        </a>
       </div>
     </div>
   );

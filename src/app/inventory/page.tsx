@@ -40,7 +40,19 @@ export default async function InventoryPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  let items = [];
+  let items: Array<{
+    id: string;
+    name: string;
+    sku: string | null;
+    category: string;
+    quantity: number;
+    unit: string;
+    unitCost: number | null;
+    sellingPrice: number | null;
+    totalValue: number | null;
+    minStock: number | null;
+    reorderQty: number | null;
+  }> = [];
   let total = 0;
   try {
     const where = search
@@ -58,10 +70,17 @@ export default async function InventoryPage({
       prisma.inventoryItem.count({ where }),
     ]);
     items = itemsResult.map((item) => ({
-      ...item,
-      unitCost: canViewCost ? item.unitCost : null,
-      sellingPrice: canViewSelling ? item.sellingPrice : null,
-      totalValue: canViewCost ? item.totalValue : null,
+      id: item.id,
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      quantity: Number(item.quantity),
+      unit: item.unit,
+      unitCost: canViewCost ? Number(item.unitCost) : null,
+      sellingPrice: canViewSelling ? Number(item.sellingPrice) : null,
+      totalValue: canViewCost ? Number(item.totalValue) : null,
+      minStock: item.minStock !== null ? Number(item.minStock) : null,
+      reorderQty: item.reorderQty !== null ? Number(item.reorderQty) : null,
     }));
     total = totalResult;
   } catch (error) {
@@ -103,7 +122,12 @@ export default async function InventoryPage({
 
       {items.length === 0 && (
         <div className="rounded-xl border bg-card p-6 text-center text-muted-foreground shadow-sm">
-          No inventory items found.
+          <div>No inventory items found.</div>
+          {canAdjust ? (
+            <div className="mt-3">
+              <PageCreateButton label="Add Inventory" formType="inventory" />
+            </div>
+          ) : null}
         </div>
       )}
 

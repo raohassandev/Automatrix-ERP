@@ -29,6 +29,9 @@ model User {
   incomes         Income[]  @relation("IncomeAddedBy")
   incomeApprovals  Income[] @relation("IncomeApprovedBy")
   approvals       Approval[] @relation("ApprovalBy")
+  incentiveApprovals IncentiveEntry[] @relation("IncentiveApprovedBy")
+  payrollApprovals  PayrollEntry[] @relation("PayrollApprovedBy")
+  salaryAdvanceApprovals SalaryAdvance[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -237,6 +240,10 @@ model Employee {
   walletHold    Decimal         @default(0)
   status        String @default("ACTIVE")
   wallets       WalletLedger[]
+  compensation  EmployeeCompensation?
+  incentives    IncentiveEntry[]
+  payrollEntries PayrollEntry[]
+  salaryAdvances SalaryAdvance[]
 }
 
 model WalletLedger {
@@ -251,6 +258,92 @@ model WalletLedger {
   employee   Employee   @relation(fields: [employeeId], references: [id])
 }
 
+model CompensationPolicy {
+  id              String   @id @default(cuid())
+  roleName        String   @unique
+  defaultIncentive Decimal @default(0)
+  currency        String   @default("PKR")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model EmployeeCompensation {
+  id               String   @id @default(cuid())
+  employeeId       String   @unique
+  baseSalary       Decimal  @default(0)
+  incentiveOverride Decimal?
+  currency         String   @default("PKR")
+  effectiveFrom    DateTime?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  employee         Employee @relation(fields: [employeeId], references: [id])
+}
+
+model IncentiveEntry {
+  id           String   @id @default(cuid())
+  employeeId   String
+  projectRef   String?
+  amount       Decimal
+  status       String   @default("PENDING")
+  reason       String?
+  approvedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employee     Employee @relation(fields: [employeeId], references: [id])
+  approvedBy   User?    @relation("IncentiveApprovedBy", fields: [approvedById], references: [id])
+}
+
+model PayrollRun {
+  id          String   @id @default(cuid())
+  periodStart DateTime
+  periodEnd   DateTime
+  status      String   @default("DRAFT")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entries     PayrollEntry[]
+}
+
+model PayrollEntry {
+  id            String   @id @default(cuid())
+  payrollRunId  String
+  employeeId    String
+  baseSalary    Decimal
+  incentiveTotal Decimal @default(0)
+  deductions    Decimal  @default(0)
+  deductionReason String?
+  netPay        Decimal
+  status        String   @default("PENDING")
+  approvedById  String?
+  walletLedgerId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  payrollRun    PayrollRun @relation(fields: [payrollRunId], references: [id])
+  employee      Employee   @relation(fields: [employeeId], references: [id])
+  approvedBy    User?      @relation("PayrollApprovedBy", fields: [approvedById], references: [id])
+}
+
+model SalaryAdvance {
+  id            String   @id @default(cuid())
+  employeeId    String
+  amount        Decimal
+  reason        String
+  status        String   @default("PENDING")
+  approvedById  String?
+  walletLedgerId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee @relation(fields: [employeeId], references: [id])
+  approvedBy    User?    @relation(fields: [approvedById], references: [id])
+}
+
 model Invoice {
   id         String        @id @default(cuid())
   invoiceNo  String        @unique
@@ -263,6 +356,69 @@ model Invoice {
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model PurchaseOrder {
+  id           String   @id @default(cuid())
+  poNumber     String   @unique
+  vendorName   String
+  vendorContact String?
+  orderDate    DateTime
+  expectedDate DateTime?
+  status       String   @default("DRAFT")
+  currency     String   @default("PKR")
+  totalAmount  Decimal  @default(0)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items        PurchaseOrderItem[]
+  receipts     GoodsReceipt[]
+}
+
+model PurchaseOrderItem {
+  id              String   @id @default(cuid())
+  purchaseOrderId String
+  itemName        String
+  unit            String?
+  quantity        Decimal
+  receivedQty     Decimal   @default(0)
+  unitCost        Decimal
+  total           Decimal
+  project         String?
+  createdAt       DateTime @default(now())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  receiptItems    GoodsReceiptItem[]
+}
+
+model GoodsReceipt {
+  id             String   @id @default(cuid())
+  grnNumber      String   @unique
+  purchaseOrderId String?
+  receivedDate   DateTime
+  status         String   @default("RECEIVED")
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  purchaseOrder  PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  items          GoodsReceiptItem[]
+}
+
+model GoodsReceiptItem {
+  id            String   @id @default(cuid())
+  goodsReceiptId String
+  purchaseOrderItemId String?
+  itemName      String
+  unit          String?
+  quantity      Decimal
+  unitCost      Decimal
+  total         Decimal
+  createdAt     DateTime @default(now())
+
+  goodsReceipt  GoodsReceipt @relation(fields: [goodsReceiptId], references: [id])
+  purchaseOrderItem PurchaseOrderItem? @relation(fields: [purchaseOrderItemId], references: [id])
 }
 
 model Quotation {

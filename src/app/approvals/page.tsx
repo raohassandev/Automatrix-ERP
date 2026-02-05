@@ -10,6 +10,7 @@ import { Expense, Income } from "@prisma/client";
 // Types matching ApprovalQueue component expectations
 interface Approval {
   id: string;
+  type: "EXPENSE" | "INCOME";
   date: Date;
   category: string;
   description: string;
@@ -86,6 +87,7 @@ export default async function ApprovalsPage() {
 
           return {
             id: expense.id,
+            type: "EXPENSE",
             date: expense.date,
             category: expense.category,
             description: expense.description,
@@ -109,27 +111,38 @@ export default async function ApprovalsPage() {
     );
 
     // Combine expenses and income for display (income doesn't need wallet balance)
-    const incomeApprovals = pendingApprovals.income.map((income: Income) => ({
-      id: income.id,
-      date: income.date,
-      category: income.category,
-      description: income.source, // Use source as description for income
-      remarks: null,
-      categoryRequest: null,
-      amount: parseFloat(income.amount.toString()),
-      project: income.project || undefined,
-      submittedBy: { 
-        id: income.addedById, 
-        email: 'income@example.com', // This should be fetched from user
-        name: 'Income User' 
-      },
-      walletBalance: 0,
-      walletHold: 0,
-      categoryLimit: null,
-      categoryStrict: false,
-      requiredApprovalLevel: 'MANAGER',
-      status: income.status,
-    }));
+    const incomeApprovals = await Promise.all(
+      pendingApprovals.income.map(async (income: Income) => {
+        const submitter = income.addedById
+          ? await prisma.user.findUnique({
+              where: { id: income.addedById },
+              select: { email: true, name: true },
+            })
+          : null;
+        return {
+          id: income.id,
+          type: "INCOME",
+          date: income.date,
+          category: income.category,
+          description: income.source, // Use source as description for income
+          remarks: null,
+          categoryRequest: null,
+          amount: parseFloat(income.amount.toString()),
+          project: income.project || undefined,
+          submittedBy: {
+            id: income.addedById,
+            email: submitter?.email || "unknown",
+            name: submitter?.name || submitter?.email?.split("@")[0] || null,
+          },
+          walletBalance: 0,
+          walletHold: 0,
+          categoryLimit: null,
+          categoryStrict: false,
+          requiredApprovalLevel: "MANAGER",
+          status: income.status,
+        };
+      })
+    );
 
     approvalsWithWalletInfo = [
       ...expensesWithWalletInfo,

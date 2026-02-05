@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
-import { DeleteButton, QuickEditButton } from "@/components/TableActions";
+import { ClientActions } from "@/components/ClientActions";
 import PaginationControls from "@/components/PaginationControls";
 import { PageCreateButton } from "@/components/PageCreateButton";
 
@@ -107,13 +107,7 @@ export default async function ClientsPage({
                     <td className="py-2">{primaryContact?.phone || "-"}</td>
                     <td className="py-2">{client.address || "-"}</td>
                     <td className="py-2">
-                      <div className="flex gap-2">
-                        <QuickEditButton
-                          url={`/api/clients/${client.id}`}
-                          fields={{ name: "Business Name", address: "Address" }}
-                        />
-                        <DeleteButton url={`/api/clients/${client.id}`} />
-                      </div>
+                      <ClientActions client={client} canEdit={canCreate} />
                     </td>
                   </tr>
                 );
@@ -133,12 +127,8 @@ export default async function ClientsPage({
                   <div>Phone: {primaryContact?.phone || "-"}</div>
                   <div>Address: {client.address || "-"}</div>
                 </div>
-                <div className="mt-3 flex gap-2">
-                  <QuickEditButton
-                    url={`/api/clients/${client.id}`}
-                    fields={{ name: "Business Name", address: "Address" }}
-                  />
-                  <DeleteButton url={`/api/clients/${client.id}`} />
+                <div className="mt-3">
+                  <ClientActions client={client} canEdit={canCreate} />
                 </div>
               </div>
             );
@@ -146,7 +136,10 @@ export default async function ClientsPage({
         </div>
 
         {clients.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">No clients found.</div>
+          <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+            <div>No clients found.</div>
+            {canCreate ? <PageCreateButton label="Create Client" formType="client" /> : null}
+          </div>
         )}
 
         {totalPages > 1 && (

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
-import { DeleteButton, QuickEditButton } from "@/components/TableActions";
+import { InvoiceActions } from "@/components/InvoiceActions";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { MobileCard } from "@/components/MobileCard";
@@ -25,6 +25,7 @@ export default async function InvoicesPage({
 
   const canView = await requirePermission(session.user.id, "invoices.view_all");
   const canCreate = await requirePermission(session.user.id, "invoices.create");
+  const canEdit = await requirePermission(session.user.id, "invoices.edit");
   if (!canView) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -41,7 +42,17 @@ export default async function InvoicesPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  let invoices = [];
+  let invoices: Array<{
+    id: string;
+    invoiceNo: string;
+    projectId: string;
+    amount: number;
+    status: string;
+    date: string;
+    dueDate: string;
+    paymentDate: string | null;
+    notes: string | null;
+  }> = [];
   let total = 0;
   let totalInvoiced = 0;
   let totalReceived = 0;
@@ -73,7 +84,17 @@ export default async function InvoicesPage({
       prisma.invoice.aggregate({ where: { ...where, status: "PAID" }, _sum: { amount: true } }),
       prisma.invoice.count({ where: { ...where, status: "OVERDUE" } }),
     ]);
-    invoices = invoicesResult;
+    invoices = invoicesResult.map((invoice) => ({
+      id: invoice.id,
+      invoiceNo: invoice.invoiceNo,
+      projectId: invoice.projectId,
+      amount: Number(invoice.amount),
+      status: invoice.status,
+      date: invoice.date.toISOString(),
+      dueDate: invoice.dueDate.toISOString(),
+      paymentDate: invoice.paymentDate ? invoice.paymentDate.toISOString() : null,
+      notes: invoice.notes ?? null,
+    }));
     total = totalResult;
     totalInvoiced = Number(totalSum._sum.amount || 0);
     totalReceived = Number(receivedSum._sum.amount || 0);
@@ -174,13 +195,7 @@ export default async function InvoicesPage({
                   </td>
                   <td className="py-2">{new Date(invoice.dueDate).toLocaleDateString()}</td>
                   <td className="py-2">
-                    <div className="flex gap-2">
-                      <QuickEditButton
-                        url={`/api/invoices/${invoice.id}`}
-                        fields={{ status: "Status", paymentDate: "Payment Date", dueDate: "Due Date" }}
-                      />
-                      <DeleteButton url={`/api/invoices/${invoice.id}`} />
-                    </div>
+                    <InvoiceActions invoice={invoice} canEdit={canEdit} />
                   </td>
                 </tr>
               ))}
@@ -205,21 +220,16 @@ export default async function InvoicesPage({
                   </Badge> 
                 },
               ]}
-              actions={
-                <>
-                  <QuickEditButton
-                    url={`/api/invoices/${invoice.id}`}
-                    fields={{ status: "Status", paymentDate: "Payment Date", dueDate: "Due Date" }}
-                  />
-                  <DeleteButton url={`/api/invoices/${invoice.id}`} />
-                </>
-              }
+              actions={<InvoiceActions invoice={invoice} canEdit={canEdit} />}
             />
           ))}
         </div>
 
         {invoices.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">No invoices found.</div>
+          <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+            <div>No invoices found.</div>
+            {canCreate ? <PageCreateButton label="Create Invoice" formType="invoice" /> : null}
+          </div>
         )}
 
         {totalPages > 1 && (

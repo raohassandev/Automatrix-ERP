@@ -455,7 +455,7 @@ export async function getPendingApprovalsForUser(userId: string): Promise<{
 
   // Get all pending expenses
   const pendingExpenses = await prisma.expense.findMany({
-    where: { status: 'PENDING' },
+    where: { status: { startsWith: 'PENDING' } },
     include: {
       submittedBy: { select: { id: true, email: true, name: true } },
     },

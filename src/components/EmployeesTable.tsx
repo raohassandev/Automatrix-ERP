@@ -2,17 +2,19 @@
 
 import { useState } from "react";
 import { formatMoney } from "@/lib/format";
-import { DeleteButton, QuickEditButton } from "@/components/TableActions";
+import { DeleteButton } from "@/components/TableActions";
 import { MobileCard } from "@/components/MobileCard";
 import { EmployeeWalletDialog } from "@/components/EmployeeWalletDialog";
 import { Button } from "./ui/button";
 import { Wallet } from "lucide-react";
+import { EmployeeFormDialog } from "@/components/EmployeeFormDialog";
 
 interface Employee {
   id: string;
   name: string;
   email: string;
   role: string;
+  phone?: string | null;
   walletBalance: number | string;
   walletHold?: number | string;
   status: string;
@@ -20,9 +22,10 @@ interface Employee {
 
 interface EmployeesTableProps {
   employees: Employee[];
+  canEditEmployees: boolean;
 }
 
-export function EmployeesTable({ employees }: EmployeesTableProps) {
+export function EmployeesTable({ employees, canEditEmployees }: EmployeesTableProps) {
   const [walletDialog, setWalletDialog] = useState<{
     open: boolean;
     employeeId: string;
@@ -36,6 +39,7 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
     currentBalance: 0,
     availableBalance: 0,
   });
+  const [editEmployee, setEditEmployee] = useState<Employee | null>(null);
 
   const openWalletDialog = (employee: Employee) => {
     const currentBalance = Number(employee.walletBalance);
@@ -88,11 +92,12 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
                       <Wallet className="h-4 w-4" />
                       Wallet
                     </Button>
-                    <QuickEditButton
-                      url={`/api/employees/${employee.id}`}
-                      fields={{ role: "Role", status: "Status", phone: "Phone" }}
-                    />
-                    <DeleteButton url={`/api/employees/${employee.id}`} />
+                    {canEditEmployees ? (
+                      <Button size="sm" variant="outline" onClick={() => setEditEmployee(employee)}>
+                        Edit
+                      </Button>
+                    ) : null}
+                    {canEditEmployees ? <DeleteButton url={`/api/employees/${employee.id}`} /> : null}
                   </div>
                 </td>
               </tr>
@@ -128,11 +133,12 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
                   <Wallet className="h-4 w-4" />
                   Wallet
                 </Button>
-                <QuickEditButton
-                  url={`/api/employees/${employee.id}`}
-                  fields={{ role: "Role", status: "Status", phone: "Phone" }}
-                />
-                <DeleteButton url={`/api/employees/${employee.id}`} />
+                {canEditEmployees ? (
+                  <Button size="sm" variant="outline" onClick={() => setEditEmployee(employee)}>
+                    Edit
+                  </Button>
+                ) : null}
+                {canEditEmployees ? <DeleteButton url={`/api/employees/${employee.id}`} /> : null}
               </>
             }
           />
@@ -147,6 +153,24 @@ export function EmployeesTable({ employees }: EmployeesTableProps) {
         employeeName={walletDialog.employeeName}
         currentBalance={walletDialog.currentBalance}
         availableBalance={walletDialog.availableBalance}
+      />
+      <EmployeeFormDialog
+        open={Boolean(editEmployee)}
+        onOpenChange={(open) => {
+          if (!open) setEditEmployee(null);
+        }}
+        initialData={
+          editEmployee
+            ? {
+                id: editEmployee.id,
+                name: editEmployee.name,
+                email: editEmployee.email,
+                phone: editEmployee.phone,
+                role: editEmployee.role,
+                status: editEmployee.status,
+              }
+            : undefined
+        }
       />
     </>
   );

@@ -18,8 +18,18 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
+  const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
+  const canViewSelling = await requirePermission(session.user.id, "inventory.view_selling");
+
   const data = await prisma.inventoryItem.findMany({ orderBy: { createdAt: "desc" } });
-  return NextResponse.json({ success: true, data });
+  const sanitized = data.map((item) => ({
+    ...item,
+    unitCost: canViewCost ? item.unitCost : null,
+    totalValue: canViewCost ? item.totalValue : null,
+    sellingPrice: canViewSelling ? item.sellingPrice : null,
+  }));
+
+  return NextResponse.json({ success: true, data: sanitized });
 }
 
 export async function POST(req: Request) {
@@ -31,6 +41,14 @@ export async function POST(req: Request) {
   const canAdjust = await requirePermission(session.user.id, "inventory.adjust");
   if (!canAdjust) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
+  const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
+  const canViewSelling = await requirePermission(session.user.id, "inventory.view_selling");
+  if (!canViewCost) {
+    return NextResponse.json({ success: false, error: "Purchase price permission required" }, { status: 403 });
+  }
+  if (!canViewSelling) {
+    return NextResponse.json({ success: false, error: "Selling price permission required" }, { status: 403 });
   }
 
   const body = await req.json();

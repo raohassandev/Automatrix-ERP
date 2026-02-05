@@ -1,0 +1,317 @@
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { requirePermission } from "@/lib/rbac";
+import { redirect } from "next/navigation";
+import { formatMoney } from "@/lib/format";
+
+export default async function MyDashboardPage() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return redirect("/login");
+  }
+
+  const canViewOwn = await requirePermission(session.user.id, "employees.view_own");
+  const canViewAll = await requirePermission(session.user.id, "employees.view_all");
+  if (!canViewOwn && !canViewAll) {
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">My Dashboard</h1>
+        <p className="mt-2 text-muted-foreground">You do not have access to this page.</p>
+      </div>
+    );
+  }
+
+  if (!session.user.email) {
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">My Dashboard</h1>
+        <p className="mt-2 text-muted-foreground">No user email available.</p>
+      </div>
+    );
+  }
+
+  const employee = await prisma.employee.findUnique({
+    where: { email: session.user.email },
+  });
+  if (!employee) {
+    return (
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">My Dashboard</h1>
+        <p className="mt-2 text-muted-foreground">
+          No employee record found. Contact admin to link your account.
+        </p>
+      </div>
+    );
+  }
+
+  const [walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances] = await Promise.all([
+    prisma.walletLedger.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { date: "desc" },
+      take: 10,
+    }),
+    prisma.expense.findMany({
+      where: { submittedById: session.user.id },
+      orderBy: { date: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        date: true,
+        description: true,
+        category: true,
+        amount: true,
+        approvedAmount: true,
+        status: true,
+        project: true,
+      },
+    }),
+    prisma.expense.groupBy({
+      by: ["status"],
+      where: { submittedById: session.user.id },
+      _count: { _all: true },
+    }),
+    prisma.payrollEntry.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      include: { payrollRun: true },
+    }),
+    prisma.incentiveEntry.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    prisma.salaryAdvance.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+  ]);
+
+  const walletBalance = Number(employee.walletBalance || 0);
+  const walletHold = Number(employee.walletHold || 0);
+  const walletAvailable = walletBalance - walletHold;
+  const expenseStatusMap = new Map(expenseCounts.map((row) => [row.status, row._count._all]));
+
+  return (
+    <div className="grid gap-6">
+      <div className="rounded-xl border bg-card p-8 shadow-sm">
+        <h1 className="text-2xl font-semibold">My Dashboard</h1>
+        <p className="mt-2 text-muted-foreground">
+          Personal wallet, expenses, and approvals snapshot.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Wallet Balance</div>
+          <div className="mt-2 text-xl font-semibold">{formatMoney(walletBalance)}</div>
+        </div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">On Hold</div>
+          <div className="mt-2 text-xl font-semibold">{formatMoney(walletHold)}</div>
+        </div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Available</div>
+          <div className="mt-2 text-xl font-semibold">{formatMoney(walletAvailable)}</div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        {["PENDING_L1", "PENDING_L2", "PENDING_L3", "APPROVED"].map((status) => (
+          <div key={status} className="rounded-xl border bg-card p-6 shadow-sm">
+            <div className="text-sm text-muted-foreground">{status.replace("_", " ")}</div>
+            <div className="mt-2 text-xl font-semibold">
+              {expenseStatusMap.get(status) || 0}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Recent Wallet Activity</h2>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Date</th>
+                  <th className="py-2">Type</th>
+                  <th className="py-2">Amount</th>
+                  <th className="py-2">Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                {walletEntries.map((entry) => (
+                  <tr key={entry.id} className="border-b">
+                    <td className="py-2">{new Date(entry.date).toLocaleDateString()}</td>
+                    <td className="py-2">{entry.type}</td>
+                    <td className="py-2">{formatMoney(Number(entry.amount))}</td>
+                    <td className="py-2">{entry.reference || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {walletEntries.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">No wallet activity yet.</div>
+          )}
+          <div className="pt-4">
+            <a
+              href="/api/me/wallet/export"
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              Export Wallet CSV
+            </a>
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Recent Expenses</h2>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Date</th>
+                  <th className="py-2">Description</th>
+                  <th className="py-2">Project</th>
+                  <th className="py-2">Amount</th>
+                  <th className="py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((exp) => {
+                  const usedAmount =
+                    exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount
+                      ? Number(exp.approvedAmount)
+                      : Number(exp.amount);
+                  return (
+                    <tr key={exp.id} className="border-b">
+                      <td className="py-2">{new Date(exp.date).toLocaleDateString()}</td>
+                      <td className="py-2">{exp.description}</td>
+                      <td className="py-2">{exp.project || "-"}</td>
+                      <td className="py-2">{formatMoney(usedAmount)}</td>
+                      <td className="py-2">{exp.status}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {expenses.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">No expenses submitted yet.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Salary History</h2>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Period</th>
+                  <th className="py-2">Net Pay</th>
+                  <th className="py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payrollEntries.map((entry) => (
+                  <tr key={entry.id} className="border-b">
+                    <td className="py-2">
+                      {entry.payrollRun
+                        ? `${new Date(entry.payrollRun.periodStart).toLocaleDateString()} - ${new Date(
+                            entry.payrollRun.periodEnd
+                          ).toLocaleDateString()}`
+                        : "-"}
+                    </td>
+                    <td className="py-2">{formatMoney(Number(entry.netPay))}</td>
+                    <td className="py-2">{entry.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {payrollEntries.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">No salary records yet.</div>
+          )}
+          <div className="pt-4">
+            <a
+              href="/api/me/payroll/export"
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              Export Salary CSV
+            </a>
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Incentive History</h2>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Date</th>
+                  <th className="py-2">Project</th>
+                  <th className="py-2">Amount</th>
+                  <th className="py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {incentiveEntries.map((entry) => (
+                  <tr key={entry.id} className="border-b">
+                    <td className="py-2">{new Date(entry.createdAt).toLocaleDateString()}</td>
+                    <td className="py-2">{entry.projectRef || "-"}</td>
+                    <td className="py-2">{formatMoney(Number(entry.amount))}</td>
+                    <td className="py-2">{entry.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {incentiveEntries.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">No incentives recorded yet.</div>
+          )}
+          <div className="pt-4">
+            <a
+              href="/api/me/incentives/export"
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              Export Incentives CSV
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Salary Advances</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2">Date</th>
+                <th className="py-2">Amount</th>
+                <th className="py-2">Reason</th>
+                <th className="py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {salaryAdvances.map((entry) => (
+                <tr key={entry.id} className="border-b">
+                  <td className="py-2">{new Date(entry.createdAt).toLocaleDateString()}</td>
+                  <td className="py-2">{formatMoney(Number(entry.amount))}</td>
+                  <td className="py-2">{entry.reason}</td>
+                  <td className="py-2">{entry.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {salaryAdvances.length === 0 && (
+          <div className="py-6 text-center text-muted-foreground">No salary advances.</div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,23 +1,40 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
 import CategoryAutoComplete from "./CategoryAutoComplete";
+import { hasPermission, type RoleName } from "@/lib/permissions";
 
 interface InventoryFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: {
+    id: string;
+    name: string;
+    sku?: string | null;
+    category?: string | null;
+    unit: string;
+    unitCost?: number | null;
+    sellingPrice?: number | null;
+    minStock?: number | null;
+    reorderQty?: number | null;
+  };
 }
 
-export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogProps) {
+export function InventoryFormDialog({ open, onOpenChange, initialData }: InventoryFormDialogProps) {
   const router = useRouter();
+  const { data: session } = useSession();
+  const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
+  const canViewCost = hasPermission(roleName, "inventory.view_cost");
+  const canViewSelling = hasPermission(roleName, "inventory.view_selling");
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
+  const emptyForm = {
     name: "",
     sku: "",
     category: "",
@@ -27,23 +44,67 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
     initialQuantity: "",
     minStock: "",
     reorderQty: "",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
+  const isEdit = Boolean(initialData?.id);
+
+  function applyInitialData() {
+    if (initialData) {
+      setForm({
+        name: initialData.name || "",
+        sku: initialData.sku || "",
+        category: initialData.category || "",
+        unit: initialData.unit || "",
+        unitCost: initialData.unitCost !== null && initialData.unitCost !== undefined ? String(initialData.unitCost) : "",
+        sellingPrice:
+          initialData.sellingPrice !== null && initialData.sellingPrice !== undefined
+            ? String(initialData.sellingPrice)
+            : "",
+        initialQuantity: "",
+        minStock: initialData.minStock !== null && initialData.minStock !== undefined ? String(initialData.minStock) : "",
+        reorderQty:
+          initialData.reorderQty !== null && initialData.reorderQty !== undefined
+            ? String(initialData.reorderQty)
+            : "",
+      });
+    } else {
+      setForm(emptyForm);
+    }
+  }
+
+  useEffect(() => {
+    if (open) {
+      applyInitialData();
+    }
+  }, [open, initialData]);
 
   async function submit() {
     try {
-      const res = await fetch("/api/inventory", {
-        method: "POST",
+      const res = await fetch(isEdit ? `/api/inventory/${initialData?.id}` : "/api/inventory", {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: form.name,
-          sku: form.sku || undefined,
-          category: form.category || undefined,
-          unit: form.unit,
-          unitCost: form.unitCost ? parseFloat(form.unitCost) : 0,
-          sellingPrice: form.sellingPrice ? parseFloat(form.sellingPrice) : 0,
-          initialQuantity: form.initialQuantity ? parseFloat(form.initialQuantity) : 0,
-          minStock: form.minStock ? parseFloat(form.minStock) : 0,
-          reorderQty: form.reorderQty ? parseFloat(form.reorderQty) : 0,
+          ...(isEdit
+            ? {
+                sku: form.sku ? form.sku : null,
+                category: form.category || undefined,
+                unit: form.unit || undefined,
+                unitCost: canViewCost ? (form.unitCost ? parseFloat(form.unitCost) : undefined) : undefined,
+                sellingPrice: canViewSelling ? (form.sellingPrice ? parseFloat(form.sellingPrice) : undefined) : undefined,
+                minStock: form.minStock ? parseFloat(form.minStock) : undefined,
+                reorderQty: form.reorderQty ? parseFloat(form.reorderQty) : undefined,
+              }
+            : {
+                name: form.name,
+                sku: form.sku || undefined,
+                category: form.category || undefined,
+                unit: form.unit,
+                unitCost: canViewCost ? (form.unitCost ? parseFloat(form.unitCost) : 0) : 0,
+                sellingPrice: canViewSelling ? (form.sellingPrice ? parseFloat(form.sellingPrice) : 0) : 0,
+                initialQuantity: form.initialQuantity ? parseFloat(form.initialQuantity) : 0,
+                minStock: form.minStock ? parseFloat(form.minStock) : 0,
+                reorderQty: form.reorderQty ? parseFloat(form.reorderQty) : 0,
+              }),
         }),
       });
 
@@ -53,20 +114,10 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
         throw new Error(data.error || "Failed to add inventory item");
       }
 
-      toast.success("Inventory item added successfully!");
+      toast.success(isEdit ? "Inventory item updated successfully!" : "Inventory item added successfully!");
       
       // Reset form
-      setForm({
-        name: "",
-        sku: "",
-        category: "",
-        unit: "",
-        unitCost: "",
-        sellingPrice: "",
-        initialQuantity: "",
-        minStock: "",
-        reorderQty: "",
-      });
+      setForm(emptyForm);
       
       // Close dialog
       onOpenChange(false);
@@ -83,8 +134,8 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Add Inventory Item"
-      description="Add a new item to the inventory system"
+      title={isEdit ? "Edit Inventory Item" : "Add Inventory Item"}
+      description={isEdit ? "Update inventory item details" : "Add a new item to the inventory system"}
     >
       <form
         onSubmit={(e) => {
@@ -102,6 +153,7 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
+              disabled={isEdit}
             />
           </div>
 
@@ -135,43 +187,49 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="unitCost">Purchase Price (Unit Cost)</Label>
-            <Input
-              id="unitCost"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.unitCost}
-              onChange={(e) => setForm({ ...form, unitCost: e.target.value })}
-              required
-            />
-          </div>
+          {canViewCost ? (
+            <div className="space-y-2">
+              <Label htmlFor="unitCost">Purchase Price (Unit Cost)</Label>
+              <Input
+                id="unitCost"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={form.unitCost}
+                onChange={(e) => setForm({ ...form, unitCost: e.target.value })}
+                required
+              />
+            </div>
+          ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="sellingPrice">Selling Price (PKR)</Label>
-            <Input
-              id="sellingPrice"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.sellingPrice}
-              onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })}
-              required
-            />
-          </div>
+          {canViewSelling ? (
+            <div className="space-y-2">
+              <Label htmlFor="sellingPrice">Selling Price (PKR)</Label>
+              <Input
+                id="sellingPrice"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={form.sellingPrice}
+                onChange={(e) => setForm({ ...form, sellingPrice: e.target.value })}
+                required
+              />
+            </div>
+          ) : null}
 
-          <div className="space-y-2">
-            <Label htmlFor="initialQuantity">Initial Quantity (Optional)</Label>
-            <Input
-              id="initialQuantity"
-              type="number"
-              step="0.01"
-              placeholder="0"
-              value={form.initialQuantity}
-              onChange={(e) => setForm({ ...form, initialQuantity: e.target.value })}
-            />
-          </div>
+          {!isEdit ? (
+            <div className="space-y-2">
+              <Label htmlFor="initialQuantity">Initial Quantity (Optional)</Label>
+              <Input
+                id="initialQuantity"
+                type="number"
+                step="0.01"
+                placeholder="0"
+                value={form.initialQuantity}
+                onChange={(e) => setForm({ ...form, initialQuantity: e.target.value })}
+              />
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="minStock">Minimum Stock Level</Label>
@@ -206,7 +264,7 @@ export function InventoryFormDialog({ open, onOpenChange }: InventoryFormDialogP
             Cancel
           </Button>
           <Button type="submit" disabled={pending}>
-            {pending ? "Adding..." : "Add Item"}
+            {pending ? "Saving..." : isEdit ? "Save Changes" : "Add Item"}
           </Button>
         </div>
       </form>

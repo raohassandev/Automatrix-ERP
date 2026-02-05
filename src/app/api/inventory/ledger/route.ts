@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   if (!canAdjust) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
+  const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
 
   const body = await req.json();
   const parsed = inventoryLedgerSchema.safeParse(body);
@@ -28,6 +29,9 @@ export async function POST(req: Request) {
   }
 
   const { itemId, type, quantity, unitCost, reference, project } = parsed.data;
+  if (unitCost !== undefined && !canViewCost) {
+    return NextResponse.json({ success: false, error: "Purchase price permission required" }, { status: 403 });
+  }
 
   let resolvedProjectId: string | null = null;
   if (project) {
@@ -92,5 +96,38 @@ export async function POST(req: Request) {
     userId: session.user.id,
   });
 
-  return NextResponse.json({ success: true, data: result });
+  const minStock = Number(result.updatedItem.minStock);
+  if (minStock > 0 && newQty <= minStock) {
+    const rolesToNotify = ["Owner", "CEO", "Admin", "Procurement", "Store Keeper"];
+    const users = await prisma.user.findMany({
+      where: { role: { name: { in: rolesToNotify } } },
+      select: { id: true },
+    });
+    if (users.length > 0) {
+      await prisma.notification.createMany({
+        data: users.map((user) => ({
+          userId: user.id,
+          type: "LOW_STOCK",
+          message: `Low stock alert: ${result.updatedItem.name} is at ${newQty} ${result.updatedItem.unit} (min ${minStock}).`,
+          status: "NEW",
+        })),
+      });
+    }
+  }
+
+  const sanitized = {
+    ...result,
+    ledger: {
+      ...result.ledger,
+      unitCost: canViewCost ? result.ledger.unitCost : null,
+      total: canViewCost ? result.ledger.total : null,
+    },
+    updatedItem: {
+      ...result.updatedItem,
+      unitCost: canViewCost ? result.updatedItem.unitCost : null,
+      totalValue: canViewCost ? result.updatedItem.totalValue : null,
+    },
+  };
+
+  return NextResponse.json({ success: true, data: sanitized });
 }

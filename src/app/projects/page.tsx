@@ -94,6 +94,17 @@ export default async function ProjectsPage({
 
       <ProjectsTable projects={serializedProjects} canEdit={canEdit} />
 
+      {serializedProjects.length === 0 && (
+        <div className="rounded-xl border bg-card p-6 text-center text-muted-foreground shadow-sm">
+          <div>No projects found.</div>
+          {canEdit ? (
+            <div className="mt-3">
+              <PageCreateButton label="Create Project" formType="project" />
+            </div>
+          ) : null}
+        </div>
+      )}
+
       {totalPages > 1 && (
         <div className="mt-4">
           <PaginationControls totalPages={totalPages} currentPage={page} />

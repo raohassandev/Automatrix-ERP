@@ -34,15 +34,25 @@ export default async function WalletReportPage({
   const take = 25;
   const skip = (page - 1) * take;
 
+  const baseWhere =
+    !canViewAll && !canViewTeam
+      ? { email: session.user.email || "__none__" }
+      : {};
+
   const where = search
     ? {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { role: { contains: search, mode: "insensitive" } },
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { email: { contains: search, mode: "insensitive" } },
+              { role: { contains: search, mode: "insensitive" } },
+            ],
+          },
         ],
       }
-    : {};
+    : baseWhere;
 
   const [employees, total] = await Promise.all([
     prisma.employee.findMany({ where, orderBy: { name: "asc" }, skip, take }),
@@ -107,13 +117,34 @@ export default async function WalletReportPage({
               {employees.map((emp) => {
                 const balance = Number(emp.walletBalance);
                 const hold = Number(emp.walletHold || 0);
+                const available = balance - hold;
+                const isNegative = available < 0;
+                const isLow = available >= 0 && available < 1000;
                 return (
-                  <tr key={emp.id} className="border-b">
+                  <tr key={emp.id} className={`border-b ${isNegative ? "bg-red-50/60" : ""}`}>
                     <td className="py-2">{emp.name}</td>
                     <td className="py-2">{emp.role}</td>
                     <td className="py-2">{formatMoney(balance)}</td>
                     <td className="py-2">{formatMoney(hold)}</td>
-                    <td className="py-2">{formatMoney(balance - hold)}</td>
+                    <td className="py-2">
+                      <span
+                        className={`font-medium ${
+                          isNegative ? "text-red-700" : isLow ? "text-amber-700" : "text-foreground"
+                        }`}
+                      >
+                        {formatMoney(available)}
+                      </span>
+                      {isLow ? (
+                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                          Low
+                        </span>
+                      ) : null}
+                      {isNegative ? (
+                        <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">
+                          Overdrawn
+                        </span>
+                      ) : null}
+                    </td>
                   </tr>
                 );
               })}

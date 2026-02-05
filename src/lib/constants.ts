@@ -1,5 +1,6 @@
 export const RECEIPT_REQUIRED_THRESHOLD = 5000;
 export const DUPLICATE_CHECK_DAYS = 3;
+export const PROCUREMENT_SPIKE_THRESHOLD = 100000;
 
 export const EXPENSE_APPROVAL_LEVELS = [
   { max: 5000, level: "L1" },

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import NotificationForm from "@/components/NotificationForm";
-import { DeleteButton, QuickEditButton } from "@/components/TableActions";
+import { NotificationActions } from "@/components/NotificationActions";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from 'next/navigation';
 import SearchInput from "@/components/SearchInput";
@@ -24,6 +24,7 @@ export default async function NotificationsPage({
     (await requirePermission(session.user.id, "notifications.view_all")) ||
     (await requirePermission(session.user.id, "dashboard.view")) ||
     (await requirePermission(session.user.id, "reports.view_all"));
+  const canEdit = await requirePermission(session.user.id, "notifications.edit");
   if (!canView) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -57,7 +58,7 @@ export default async function NotificationsPage({
       ];
     }
     if (status) {
-      where.status = status;
+      where.status = status === "UNREAD" ? { in: ["UNREAD", "NEW"] } : status;
     }
 
     const [notificationsResult, totalResult] = await Promise.all([
@@ -102,11 +103,19 @@ export default async function NotificationsPage({
                 { label: "Read", value: "READ" },
               ]}
             />
+            {(search || status) && (
+              <a
+                href="/notifications"
+                className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+              >
+                Reset
+              </a>
+            )}
           </div>
         </div>
       </div>
 
-      <NotificationForm />
+      {canEdit ? <NotificationForm /> : null}
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="overflow-x-auto">
@@ -121,29 +130,45 @@ export default async function NotificationsPage({
               </tr>
             </thead>
             <tbody>
-              {notifications.map((note) => (
-                <tr key={note.id} className="border-b">
-                  <td className="py-2">{note.type}</td>
-                  <td className="py-2">{note.message}</td>
-                  <td className="py-2">{note.status}</td>
-                  <td className="py-2">{new Date(note.createdAt).toLocaleString()}</td>
-                  <td className="py-2">
-                    <div className="flex gap-2">
-                      <QuickEditButton
-                        url={`/api/notifications/${note.id}`}
-                        fields={{ status: "Status", message: "Message", type: "Type" }}
-                      />
-                      <DeleteButton url={`/api/notifications/${note.id}`} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {notifications.map((note) => {
+                const isUnread = note.status === "UNREAD" || note.status === "NEW";
+                const displayStatus = isUnread ? "UNREAD" : note.status;
+                return (
+                  <tr key={note.id} className={`border-b ${isUnread ? "bg-amber-50/60" : ""}`}>
+                    <td className="py-2">
+                      <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-foreground">
+                        {note.type}
+                      </span>
+                    </td>
+                    <td className="py-2">
+                      <div className="max-w-xl truncate" title={note.message}>
+                        {note.message}
+                      </div>
+                    </td>
+                    <td className="py-2">
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                          isUnread ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {displayStatus}
+                      </span>
+                    </td>
+                    <td className="py-2">{new Date(note.createdAt).toLocaleString()}</td>
+                    <td className="py-2">
+                      <NotificationActions notification={note} canEdit={canEdit} />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         {notifications.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">No notifications found.</div>
+          <div className="text-center py-8 text-muted-foreground">
+            No notifications found. {search || status ? "Try resetting filters." : null}
+          </div>
         )}
 
         {totalPages > 1 && (

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import AttachmentForm from "@/components/AttachmentForm";
-import { DeleteButton, QuickEditButton } from "@/components/TableActions";
+import { AttachmentActions } from "@/components/AttachmentActions";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import SearchInput from "@/components/SearchInput";
@@ -23,6 +23,7 @@ export default async function AttachmentsPage({
   const canViewAll =
     (await requirePermission(session.user.id, "attachments.view_all")) ||
     (await requirePermission(session.user.id, "reports.view_all"));
+  const canEdit = await requirePermission(session.user.id, "attachments.edit");
   if (!canViewAll) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -38,7 +39,14 @@ export default async function AttachmentsPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  let attachments = [];
+  let attachments: Array<{
+    id: string;
+    type: string;
+    recordId: string;
+    fileName: string;
+    fileUrl: string;
+    createdAt: Date;
+  }> = [];
   let total = 0;
   try {
     const where = search
@@ -88,7 +96,7 @@ export default async function AttachmentsPage({
         </div>
       </div>
 
-      <AttachmentForm />
+      {canEdit ? <AttachmentForm /> : null}
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="overflow-x-auto">
@@ -98,6 +106,7 @@ export default async function AttachmentsPage({
                 <th className="py-2">Type</th>
                 <th className="py-2">Record</th>
                 <th className="py-2">File</th>
+                <th className="py-2">Preview</th>
                 <th className="py-2">URL</th>
                 <th className="py-2">Actions</th>
               </tr>
@@ -109,18 +118,23 @@ export default async function AttachmentsPage({
                   <td className="py-2">{item.recordId}</td>
                   <td className="py-2">{item.fileName}</td>
                   <td className="py-2">
+                    {/\.(png|jpe?g|gif|webp)$/i.test(item.fileUrl) ? (
+                      <img
+                        src={item.fileUrl}
+                        alt={item.fileName}
+                        className="h-10 w-10 rounded border object-cover"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="py-2">
                     <a className="text-blue-600" href={item.fileUrl} target="_blank" rel="noreferrer">
                       Open
                     </a>
                   </td>
                   <td className="py-2">
-                    <div className="flex gap-2">
-                      <QuickEditButton
-                        url={`/api/attachments/${item.id}`}
-                        fields={{ fileName: "File Name", fileUrl: "File URL", type: "Type" }}
-                      />
-                      <DeleteButton url={`/api/attachments/${item.id}`} />
-                    </div>
+                    <AttachmentActions attachment={item} canEdit={canEdit} />
                   </td>
                 </tr>
               ))}

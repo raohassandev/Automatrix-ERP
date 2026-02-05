@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { formatMoney } from "@/lib/format";
-import { DeleteButton, QuickEditButton } from "@/components/TableActions";
+import { DeleteButton } from "@/components/TableActions";
 import { MobileCard } from "@/components/MobileCard";
 import { InventoryLedgerDialog } from "@/components/InventoryLedgerDialog";
 import { Button } from "@/components/ui/button";
+import { InventoryFormDialog } from "@/components/InventoryFormDialog";
 
 interface InventoryItemRow {
   id: string;
@@ -13,9 +14,12 @@ interface InventoryItemRow {
   sku: string | null;
   category: string;
   quantity: number | string;
+  unit: string;
   unitCost: number | string | null;
   sellingPrice: number | string | null;
   totalValue: number | string | null;
+  minStock?: number | string | null;
+  reorderQty?: number | string | null;
 }
 
 export function InventoryTable({
@@ -35,6 +39,7 @@ export function InventoryTable({
     itemName: string;
     defaultType?: string;
   }>({ open: false, itemId: "", itemName: "" });
+  const [editItem, setEditItem] = useState<InventoryItemRow | null>(null);
 
   return (
     <div className="rounded-xl border bg-card p-6 shadow-sm">
@@ -95,15 +100,11 @@ export function InventoryTable({
                     >
                       Allocate to Project
                     </Button>
-                      <QuickEditButton
-                        url={`/api/inventory/${item.id}`}
-                        fields={{
-                          ...(canViewCost ? { unitCost: "Unit Cost" } : {}),
-                          ...(canViewSelling ? { sellingPrice: "Selling Price" } : {}),
-                          minStock: "Min Stock",
-                          reorderQty: "Reorder Qty",
-                        }}
-                      />
+                      {canAdjust ? (
+                        <Button size="sm" variant="outline" onClick={() => setEditItem(item)}>
+                          Edit
+                        </Button>
+                      ) : null}
                       <DeleteButton url={`/api/inventory/${item.id}`} />
                     </div>
                   </td>
@@ -156,15 +157,9 @@ export function InventoryTable({
                   >
                     Allocate
                   </Button>
-                  <QuickEditButton
-                    url={`/api/inventory/${item.id}`}
-                    fields={{
-                      ...(canViewCost ? { unitCost: "Unit Cost" } : {}),
-                      ...(canViewSelling ? { sellingPrice: "Selling Price" } : {}),
-                      minStock: "Min Stock",
-                      reorderQty: "Reorder Qty",
-                    }}
-                  />
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditItem(item)}>
+                    Edit
+                  </Button>
                   <DeleteButton url={`/api/inventory/${item.id}`} />
                 </>
               ) : null
@@ -180,6 +175,27 @@ export function InventoryTable({
         itemName={ledgerDialog.itemName}
         canViewCost={canViewCost}
         defaultType={ledgerDialog.defaultType}
+      />
+      <InventoryFormDialog
+        open={Boolean(editItem)}
+        onOpenChange={(open) => {
+          if (!open) setEditItem(null);
+        }}
+        initialData={
+          editItem
+            ? {
+                id: editItem.id,
+                name: editItem.name,
+                sku: editItem.sku,
+                category: editItem.category,
+                unit: editItem.unit,
+                unitCost: editItem.unitCost === null ? null : Number(editItem.unitCost),
+                sellingPrice: editItem.sellingPrice === null ? null : Number(editItem.sellingPrice),
+                minStock: editItem.minStock === undefined ? null : Number(editItem.minStock),
+                reorderQty: editItem.reorderQty === undefined ? null : Number(editItem.reorderQty),
+              }
+            : undefined
+        }
       />
     </div>
   );

@@ -114,6 +114,83 @@ export const invoiceSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const incentiveSchema = z.object({
+  employeeId: z.string().min(1),
+  projectRef: z.string().min(1),
+  amount: z.number().positive(),
+  reason: z.string().optional(),
+  status: z.string().optional(),
+});
+
+export const incentiveUpdateSchema = incentiveSchema.partial();
+
+export const payrollRunSchema = z.object({
+  periodStart: z.string().min(1),
+  periodEnd: z.string().min(1),
+  status: z.string().optional(),
+  notes: z.string().optional(),
+  entries: z.array(
+    z.object({
+      employeeId: z.string().min(1),
+      baseSalary: z.number().nonnegative(),
+      incentiveTotal: z.number().nonnegative().optional(),
+      deductions: z.number().nonnegative().optional(),
+      deductionReason: z.string().optional(),
+    })
+  ).min(1),
+});
+
+export const payrollRunUpdateSchema = payrollRunSchema.partial();
+
+export const salaryAdvanceSchema = z.object({
+  employeeId: z.string().min(1),
+  amount: z.number().positive(),
+  reason: z.string().min(1),
+});
+
+export const salaryAdvanceUpdateSchema = salaryAdvanceSchema.partial();
+
+export const purchaseOrderSchema = z.object({
+  poNumber: z.string().min(1),
+  vendorName: z.string().min(1),
+  vendorContact: z.string().optional(),
+  orderDate: z.string().min(1),
+  expectedDate: z.string().optional(),
+  status: z.string().optional(),
+  currency: z.string().optional(),
+  notes: z.string().optional(),
+  items: z.array(
+    z.object({
+      itemName: z.string().min(1),
+      unit: z.string().optional(),
+      quantity: z.number().positive(),
+      unitCost: z.number().nonnegative(),
+      project: z.string().optional(),
+    })
+  ).min(1),
+});
+
+export const purchaseOrderUpdateSchema = purchaseOrderSchema.partial();
+
+export const goodsReceiptSchema = z.object({
+  grnNumber: z.string().min(1),
+  purchaseOrderId: z.string().optional(),
+  receivedDate: z.string().min(1),
+  status: z.string().optional(),
+  notes: z.string().optional(),
+  items: z.array(
+    z.object({
+      purchaseOrderItemId: z.string().optional(),
+      itemName: z.string().min(1),
+      unit: z.string().optional(),
+      quantity: z.number().positive(),
+      unitCost: z.number().nonnegative(),
+    })
+  ).min(1),
+});
+
+export const goodsReceiptUpdateSchema = goodsReceiptSchema.partial();
+
 export const attachmentSchema = z.object({
   type: z.string().min(1),
   recordId: z.string().min(1),

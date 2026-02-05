@@ -10,6 +10,7 @@ import PaginationControls from "@/components/PaginationControls";
 import QuerySelect from "@/components/QuerySelect";
 import DateRangePicker from "@/components/DateRangePicker";
 import { PageCreateButton } from "@/components/PageCreateButton";
+import { IncomeActions } from "@/components/IncomeActions";
 
 export default async function IncomePage({
   searchParams,
@@ -28,6 +29,7 @@ export default async function IncomePage({
   const canViewAll = await requirePermission(userId, "income.view_all");
   const canViewOwn = await requirePermission(userId, "income.view_own");
   const canCreate = await requirePermission(userId, "income.add");
+  const canEditAny = await requirePermission(userId, "income.edit");
   const canExport = canViewAll || canViewOwn;
 
   const params = await searchParams;
@@ -37,7 +39,19 @@ export default async function IncomePage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  let entries = [];
+  let entries: Array<{
+    id: string;
+    date: string;
+    source: string;
+    category: string;
+    project: string | null;
+    amount: number;
+    status: string;
+    paymentMode: string;
+    invoiceId: string | null;
+    remarks: string | null;
+    addedById: string | null;
+  }> = [];
   let total = 0;
   try {
     const baseWhere = canViewAll ? {} : canViewOwn ? { addedById: userId } : { id: "__none__" };
@@ -68,7 +82,19 @@ export default async function IncomePage({
       }),
       prisma.income.count({ where }),
     ]);
-    entries = entriesResult;
+    entries = entriesResult.map((entry) => ({
+      id: entry.id,
+      date: entry.date.toISOString(),
+      source: entry.source,
+      category: entry.category,
+      project: entry.project,
+      amount: Number(entry.amount),
+      status: entry.status,
+      paymentMode: entry.paymentMode,
+      invoiceId: entry.invoiceId,
+      remarks: entry.remarks,
+      addedById: entry.addedById,
+    }));
     total = totalResult;
   } catch (error) {
     console.error("Error fetching income entries:", error);
@@ -128,6 +154,7 @@ export default async function IncomePage({
                 <th className="py-2">Project</th>
                 <th className="py-2">Amount</th>
                 <th className="py-2">Status</th>
+                <th className="py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -139,6 +166,9 @@ export default async function IncomePage({
                   <td className="py-2">{entry.project || "-"}</td>
                   <td className="py-2">{formatMoney(Number(entry.amount))}</td>
                   <td className="py-2">{entry.status}</td>
+                  <td className="py-2">
+                    <IncomeActions entry={entry} canEditAny={canEditAny} currentUserId={userId} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -159,12 +189,16 @@ export default async function IncomePage({
                 { label: "Status", value: entry.status },
                 { label: "Date", value: new Date(entry.date).toLocaleDateString() },
               ]}
+              actions={<IncomeActions entry={entry} canEditAny={canEditAny} currentUserId={userId} />}
             />
           ))}
         </div>
 
         {entries.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">No income entries found.</div>
+          <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+            <div>No income entries found.</div>
+            {canCreate ? <PageCreateButton label="Log Income" formType="income" /> : null}
+          </div>
         )}
 
         {totalPages > 1 && (

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
@@ -6,9 +6,20 @@ test.describe('Authentication', () => {
   const testEmail = `testuser${Date.now()}@example.com`;
   const testPassword = 'TestPass123!';
   const testName = 'Test User';
+  const adminEmail = 'admin@automatrix.local';
+  const adminPassword = 'admin123';
+
+  const loginAsAdmin = async (page: Page) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email').fill(adminEmail);
+    await page.getByPlaceholder(/Password/i).fill(adminPassword);
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
+  };
 
   test('should register a new user and login', async ({ page }) => {
-    // Navigate to login page
+    // Registration requires an authenticated admin session
+    await loginAsAdmin(page);
     await page.goto('/login');
     
     // Fill in registration form
@@ -27,8 +38,9 @@ test.describe('Authentication', () => {
   });
 
   test('should login with existing credentials', async ({ page }) => {
-    // First create a user via API
-    const response = await page.request.post('http://localhost:3000/api/register', {
+    // First create a user via API as admin
+    await loginAsAdmin(page);
+    const response = await page.request.post('/api/register', {
       data: {
         email: `existing${Date.now()}@example.com`,
         password: testPassword,
@@ -40,14 +52,15 @@ test.describe('Authentication', () => {
     const data = await response.json();
     const email = data.data.email;
     
-    // Now test login
+    // Now test login as that user
+    await page.context().clearCookies();
     await page.goto('/login');
     
     await page.fill('input[placeholder="Email"]', email);
     await page.fill('input[placeholder*="Password"]', testPassword);
     
     // Click sign in button
-    await page.click('button:has-text("Sign in")');
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     
     // Should redirect to dashboard
     await expect(page).toHaveURL(/.*dashboard/, { timeout: 10000 });
@@ -59,7 +72,7 @@ test.describe('Authentication', () => {
     await page.fill('input[placeholder="Email"]', 'nonexistent@example.com');
     await page.fill('input[placeholder*="Password"]', 'wrongpassword');
     
-    await page.click('button:has-text("Sign in")');
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     
     // Should show error message
     await expect(page.locator('text=/Invalid credentials|Unable to sign in|CredentialsSignin/i')).toBeVisible({ timeout: 5000 });
@@ -68,8 +81,9 @@ test.describe('Authentication', () => {
   test('should show error for duplicate email registration', async ({ page }) => {
     const duplicateEmail = `duplicate${Date.now()}@example.com`;
     
-    // Create user via API first
-    await page.request.post('http://localhost:3000/api/register', {
+    // Create user via API first (admin session required)
+    await loginAsAdmin(page);
+    await page.request.post('/api/register', {
       data: {
         email: duplicateEmail,
         password: testPassword,
@@ -91,6 +105,7 @@ test.describe('Authentication', () => {
   });
 
   test('should validate email format', async ({ page }) => {
+    await loginAsAdmin(page);
     await page.goto('/login');
     
     await page.fill('input[placeholder="Name (for new account)"]', 'Test User');
@@ -104,6 +119,7 @@ test.describe('Authentication', () => {
   });
 
   test('should validate password length', async ({ page }) => {
+    await loginAsAdmin(page);
     await page.goto('/login');
     
     await page.fill('input[placeholder="Name (for new account)"]', 'Test User');

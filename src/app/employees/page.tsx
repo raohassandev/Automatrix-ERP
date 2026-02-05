@@ -49,6 +49,7 @@ export default async function EmployeesPage({
     email: string;
     role: string;
     status: string;
+    phone?: string | null;
     walletBalance: number;
     walletHold: number;
   }> = [];
@@ -122,10 +123,13 @@ export default async function EmployeesPage({
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <EmployeesTable employees={employees} />
+      <EmployeesTable employees={employees} canEditEmployees={canViewAll} />
 
         {employees.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">No employees found.</div>
+          <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+            <div>No employees found.</div>
+            {canCreate ? <PageCreateButton label="Add Employee" formType="employee" /> : null}
+          </div>
         )}
 
         {totalPages > 1 && (

@@ -29,6 +29,7 @@ import { UserNav } from "./UserNav";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permissions: ["dashboard.view"] },
+  { name: "My Dashboard", href: "/me", icon: LayoutDashboard, permissions: ["employees.view_own", "employees.view_all"] },
   { name: "Expenses", href: "/expenses", icon: CreditCard, permissions: ["expenses.view_all", "expenses.view_own"] },
   { name: "By Project", href: "/expenses/by-project", icon: FolderKanban, permissions: ["expenses.view_all", "expenses.view_own"] },
   { name: "Income", href: "/income", icon: TrendingUp, permissions: ["income.view_all", "income.view_own"] },
@@ -40,6 +41,11 @@ const navigation = [
   { name: "Project Financials", href: "/projects/financial", icon: FileBarChart, permissions: ["projects.view_financials", "reports.view_all"] },
   { name: "Inventory", href: "/inventory", icon: Package, permissions: ["inventory.view"] },
   { name: "Inventory Ledger", href: "/inventory/ledger", icon: FileBarChart, permissions: ["inventory.view"] },
+  { name: "Incentives", href: "/incentives", icon: FileBarChart, permissions: ["incentives.view_all", "employees.view_own"] },
+  { name: "Payroll", href: "/payroll", icon: FileBarChart, permissions: ["payroll.view_all"] },
+  { name: "Salary Advances", href: "/salary-advances", icon: FileBarChart, permissions: ["salary_advance.view_all", "employees.view_own"] },
+  { name: "Purchase Orders", href: "/procurement/purchase-orders", icon: FileText, permissions: ["procurement.view_all", "procurement.edit"] },
+  { name: "Goods Receipts", href: "/procurement/grn", icon: FileCheck, permissions: ["procurement.view_all", "procurement.edit"] },
   { name: "Invoices", href: "/invoices", icon: FileText, permissions: ["invoices.view_all"] },
   {
     name: "Approvals",

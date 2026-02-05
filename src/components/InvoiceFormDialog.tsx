@@ -1,48 +1,92 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
+import ProjectAutoComplete from "./ProjectAutoComplete";
+import { ProjectFormDialog } from "./ProjectFormDialog";
 
 interface InvoiceFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: {
+    id: string;
+    invoiceNo: string;
+    projectId: string;
+    date: string | Date;
+    dueDate: string | Date;
+    amount: number;
+    status: string;
+    notes?: string | null;
+    paymentDate?: string | Date | null;
+  };
 }
 
-export function InvoiceFormDialog({ open, onOpenChange }: InvoiceFormDialogProps) {
+export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
-    invoiceNumber: "",
-    clientName: "",
-    clientEmail: "",
-    issueDate: "",
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [projectRefreshKey, setProjectRefreshKey] = useState(0);
+  const emptyForm = {
+    invoiceNo: "",
+    projectId: "",
+    date: "",
     dueDate: "",
     amount: "",
-    taxAmount: "",
-    description: "",
-    status: "PENDING",
-  });
+    status: "DRAFT",
+    notes: "",
+    paymentDate: "",
+  };
+  const [form, setForm] = useState(emptyForm);
+  const isEdit = Boolean(initialData?.id);
+
+  useEffect(() => {
+    if (!open) return;
+    if (initialData) {
+      setForm({
+        invoiceNo: initialData.invoiceNo || "",
+        projectId: initialData.projectId || "",
+        date: initialData.date ? new Date(initialData.date).toISOString().slice(0, 10) : "",
+        dueDate: initialData.dueDate ? new Date(initialData.dueDate).toISOString().slice(0, 10) : "",
+        amount: initialData.amount !== null && initialData.amount !== undefined ? String(initialData.amount) : "",
+        status: initialData.status || "DRAFT",
+        notes: initialData.notes || "",
+        paymentDate: initialData.paymentDate
+          ? new Date(initialData.paymentDate).toISOString().slice(0, 10)
+          : "",
+      });
+    } else {
+      setForm(emptyForm);
+    }
+  }, [open, initialData]);
 
   async function submit() {
     try {
-      const res = await fetch("/api/invoices", {
-        method: "POST",
+      const res = await fetch(isEdit ? `/api/invoices/${initialData?.id}` : "/api/invoices", {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          invoiceNumber: form.invoiceNumber,
-          clientName: form.clientName,
-          clientEmail: form.clientEmail || null,
-          issueDate: form.issueDate,
-          dueDate: form.dueDate,
-          amount: parseFloat(form.amount),
-          taxAmount: form.taxAmount ? parseFloat(form.taxAmount) : 0,
-          description: form.description || null,
-          status: form.status,
+          ...(isEdit
+            ? {
+                dueDate: form.dueDate || undefined,
+                amount: parseFloat(form.amount),
+                status: form.status,
+                notes: form.notes || undefined,
+                paymentDate: form.paymentDate || undefined,
+              }
+            : {
+                invoiceNo: form.invoiceNo,
+                projectId: form.projectId,
+                date: form.date,
+                dueDate: form.dueDate,
+                amount: parseFloat(form.amount),
+                status: form.status,
+                notes: form.notes || undefined,
+              }),
         }),
       });
 
@@ -52,20 +96,10 @@ export function InvoiceFormDialog({ open, onOpenChange }: InvoiceFormDialogProps
         throw new Error(data.error || "Failed to create invoice");
       }
 
-      toast.success("Invoice created successfully!");
+      toast.success(isEdit ? "Invoice updated successfully!" : "Invoice created successfully!");
       
       // Reset form
-      setForm({
-        invoiceNumber: "",
-        clientName: "",
-        clientEmail: "",
-        issueDate: "",
-        dueDate: "",
-        amount: "",
-        taxAmount: "",
-        description: "",
-        status: "PENDING",
-      });
+      setForm(emptyForm);
       
       // Close dialog
       onOpenChange(false);
@@ -82,8 +116,8 @@ export function InvoiceFormDialog({ open, onOpenChange }: InvoiceFormDialogProps
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Create Invoice"
-      description="Generate a new invoice for a client"
+      title={isEdit ? "Edit Invoice" : "Create Invoice"}
+      description={isEdit ? "Update invoice details" : "Generate a new invoice for a client"}
     >
       <form
         onSubmit={(e) => {
@@ -94,61 +128,47 @@ export function InvoiceFormDialog({ open, onOpenChange }: InvoiceFormDialogProps
       >
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="invoiceNumber">Invoice Number</Label>
+            <Label htmlFor="invoiceNo">Invoice Number</Label>
             <Input
-              id="invoiceNumber"
+              id="invoiceNo"
               placeholder="INV-2026-001"
-              value={form.invoiceNumber}
-              onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
+              value={form.invoiceNo}
+              onChange={(e) => setForm({ ...form, invoiceNo: e.target.value })}
               required
+              disabled={isEdit}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="clientName">Client Name</Label>
-            <Input
-              id="clientName"
-              placeholder="Acme Corporation"
-              value={form.clientName}
-              onChange={(e) => setForm({ ...form, clientName: e.target.value })}
-              required
+            <Label htmlFor="projectId">Project</Label>
+            <ProjectAutoComplete
+              value={form.projectId}
+              onChange={(value) => setForm({ ...form, projectId: value })}
+              placeholder="Select project"
+              refreshKey={projectRefreshKey}
             />
+            {!isEdit ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setProjectDialogOpen(true)}
+                className="mt-2"
+              >
+                Create Project
+              </Button>
+            ) : null}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="clientEmail">Client Email (Optional)</Label>
+            <Label htmlFor="date">Issue Date</Label>
             <Input
-              id="clientEmail"
-              type="email"
-              placeholder="client@acme.com"
-              value={form.clientEmail}
-              onChange={(e) => setForm({ ...form, clientEmail: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <select
-              id="status"
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-            >
-              <option value="PENDING">Pending</option>
-              <option value="PAID">Paid</option>
-              <option value="OVERDUE">Overdue</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="issueDate">Issue Date</Label>
-            <Input
-              id="issueDate"
+              id="date"
               type="date"
-              value={form.issueDate}
-              onChange={(e) => setForm({ ...form, issueDate: e.target.value })}
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
               required
+              disabled={isEdit}
             />
           </div>
 
@@ -177,26 +197,41 @@ export function InvoiceFormDialog({ open, onOpenChange }: InvoiceFormDialogProps
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="taxAmount">Tax Amount (PKR)</Label>
-            <Input
-              id="taxAmount"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.taxAmount}
-              onChange={(e) => setForm({ ...form, taxAmount: e.target.value })}
-            />
+            <Label htmlFor="status">Status</Label>
+            <select
+              id="status"
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+            >
+              <option value="DRAFT">Draft</option>
+              <option value="SENT">Sent</option>
+              <option value="PAID">Paid</option>
+              <option value="OVERDUE">Overdue</option>
+            </select>
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="description">Description (Optional)</Label>
+            <Label htmlFor="notes">Notes (Optional)</Label>
             <Input
-              id="description"
-              placeholder="Invoice description or notes"
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              id="notes"
+              placeholder="Invoice notes or description"
+              value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
           </div>
+
+          {isEdit ? (
+            <div className="space-y-2">
+              <Label htmlFor="paymentDate">Payment Date (Optional)</Label>
+              <Input
+                id="paymentDate"
+                type="date"
+                value={form.paymentDate}
+                onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div className="flex justify-end gap-3 pt-4">
@@ -213,6 +248,11 @@ export function InvoiceFormDialog({ open, onOpenChange }: InvoiceFormDialogProps
           </Button>
         </div>
       </form>
+      <ProjectFormDialog
+        open={projectDialogOpen}
+        onOpenChange={setProjectDialogOpen}
+        onCreated={() => setProjectRefreshKey((prev) => prev + 1)}
+      />
     </FormDialog>
   );
 }

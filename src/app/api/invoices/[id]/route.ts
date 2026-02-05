@@ -41,6 +41,33 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     userId: session.user.id,
   });
 
+  if (body.status === "OVERDUE" && existing.status !== "OVERDUE") {
+    const rolesToNotify = [
+      "Owner",
+      "CEO",
+      "Admin",
+      "CFO",
+      "Finance Manager",
+      "Accountant",
+      "Sales",
+      "Marketing",
+    ];
+    const users = await prisma.user.findMany({
+      where: { role: { name: { in: rolesToNotify } } },
+      select: { id: true },
+    });
+    if (users.length > 0) {
+      await prisma.notification.createMany({
+        data: users.map((user) => ({
+          userId: user.id,
+          type: "INVOICE_OVERDUE",
+          message: `Invoice ${updated.invoiceNo} is marked OVERDUE for ${updated.amount.toString()}.`,
+          status: "NEW",
+        })),
+      });
+    }
+  }
+
   await recalculateProjectFinancials(updated.projectId);
 
   return NextResponse.json({ success: true, data: updated });

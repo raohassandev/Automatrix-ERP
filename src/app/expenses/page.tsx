@@ -12,7 +12,7 @@ import ColumnVisibilityToggle from "@/components/ColumnVisibilityToggle";
 import { MobileCard } from "@/components/MobileCard";
 import QuerySelect from "@/components/QuerySelect";
 import { Badge } from "@/components/ui/badge";
-import { DeleteButton, QuickEditButton } from "@/components/TableActions";
+import { ExpenseActions } from "@/components/ExpenseActions";
 import { PageCreateButton } from "@/components/PageCreateButton";
 import { useSession } from "next-auth/react";
 import { hasPermission, type RoleName } from "@/lib/permissions";
@@ -40,6 +40,10 @@ interface Expense {
   project: string;
   amount: number;
   status: string;
+  paymentMode?: string;
+  receiptUrl?: string | null;
+  receiptFileId?: string | null;
+  submittedById?: string | null;
 
   // Add other properties as needed based on your API response
 }
@@ -55,11 +59,13 @@ export default function ExpensesPage() {
 function ExpensesPageContent() {
   const searchParams = useSearchParams();
   const { data: session } = useSession();
+  const currentUserId = session?.user?.id;
   const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [columns, setColumns] = useState(COLUMNS);
   const canCreate = hasPermission(roleName, "expenses.submit");
+  const canEditAny = hasPermission(roleName, "expenses.edit");
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "APPROVED":
@@ -152,6 +158,7 @@ function ExpensesPageContent() {
                     </th>
                   ) : null
                 )}
+                <th className="py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -186,6 +193,13 @@ function ExpensesPageContent() {
                       </td>
                     ) : null
                   )}
+                  <td className="py-2">
+                    <ExpenseActions
+                      expense={expense}
+                      canEditAny={canEditAny}
+                      currentUserId={currentUserId}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -193,7 +207,10 @@ function ExpensesPageContent() {
         </div>
 
         {expenses.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">No expenses found.</div>
+          <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+            <div>No expenses found.</div>
+            {canCreate ? <PageCreateButton label="Submit Expense" formType="expense" /> : null}
+          </div>
         )}
 
         {/* Mobile: Cards */}
@@ -214,13 +231,11 @@ function ExpensesPageContent() {
                 { label: "Date", value: new Date(expense.date).toLocaleDateString() },
               ]}
               actions={
-                <>
-                  <QuickEditButton
-                    url={`/api/expenses/${expense.id}`}
-                    fields={{ status: "Status", paymentMode: "Payment Mode", description: "Description" }}
-                  />
-                  <DeleteButton url={`/api/expenses/${expense.id}`} />
-                </>
+                <ExpenseActions
+                  expense={expense}
+                  canEditAny={canEditAny}
+                  currentUserId={currentUserId}
+                />
               }
             />
           ))}

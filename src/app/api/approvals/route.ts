@@ -33,6 +33,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
+  const canView =
+    hasPermission(roleName, "approvals.view_all") ||
+    hasPermission(roleName, "approvals.view_pending") ||
+    canApproveWithRole(roleName);
+  if (!canView) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type"); // 'pending' or 'stats'
@@ -119,19 +128,33 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle income approval
-    if (validated.incomeId) {
+    if (validated.incomeId || Array.isArray((body as { incomeIds?: string[] }).incomeIds)) {
+      const incomeIds = validated.incomeId
+        ? [validated.incomeId]
+        : Array.isArray((body as { incomeIds?: string[] }).incomeIds)
+          ? (body as { incomeIds: string[] }).incomeIds
+          : [];
+
+      if (incomeIds.length === 0) {
+        return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+      }
+
       if (validated.action === "APPROVE" || validated.action === "PARTIAL_APPROVE") {
-        const result = await approveIncome({
-          incomeId: validated.incomeId,
-          approverId: session.user.id,
-          reason: validated.reason,
-          approvedAmount: validated.approvedAmount,
-        });
+        const results = await Promise.all(
+          incomeIds.map((incomeId) =>
+            approveIncome({
+              incomeId,
+              approverId: session.user.id,
+              reason: validated.reason,
+              approvedAmount: validated.approvedAmount,
+            })
+          )
+        );
 
         return NextResponse.json({
           success: true,
           message: "Income approved successfully",
-          data: result,
+          data: results,
         });
       } else if (validated.action === "REJECT") {
         if (!validated.reason) {
@@ -141,16 +164,20 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const result = await rejectIncome({
-          incomeId: validated.incomeId,
-          approverId: session.user.id,
-          reason: validated.reason,
-        });
+        const results = await Promise.all(
+          incomeIds.map((incomeId) =>
+            rejectIncome({
+              incomeId,
+              approverId: session.user.id,
+              reason: validated.reason,
+            })
+          )
+        );
 
         return NextResponse.json({
           success: true,
           message: "Income rejected successfully",
-          data: result,
+          data: results,
         });
       }
     }

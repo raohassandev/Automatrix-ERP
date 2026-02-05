@@ -29,6 +29,7 @@ export default async function InventoryReportPage({
   }
 
   const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
+  const canExport = await requirePermission(session.user.id, "reports.export");
 
   const params = await searchParams;
   const search = (params.search || "").trim();
@@ -36,15 +37,35 @@ export default async function InventoryReportPage({
   const take = 25;
   const skip = (page - 1) * take;
 
+  const ledgerItemIds =
+    !canViewAll && !canViewTeam && canViewOwn
+      ? await prisma.inventoryLedger.findMany({
+          where: { userId: session.user.id },
+          select: { itemId: true },
+        })
+      : [];
+  const scopedItemIds =
+    !canViewAll && !canViewTeam && canViewOwn
+      ? Array.from(new Set(ledgerItemIds.map((entry) => entry.itemId)))
+      : null;
+
+  const baseWhere: Record<string, unknown> =
+    scopedItemIds && scopedItemIds.length > 0 ? { id: { in: scopedItemIds } } : scopedItemIds ? { id: "__none__" } : {};
+
   const where = search
     ? {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { category: { contains: search, mode: "insensitive" } },
-          { sku: { contains: search, mode: "insensitive" } },
+        AND: [
+          baseWhere,
+          {
+            OR: [
+              { name: { contains: search, mode: "insensitive" } },
+              { category: { contains: search, mode: "insensitive" } },
+              { sku: { contains: search, mode: "insensitive" } },
+            ],
+          },
         ],
       }
-    : {};
+    : baseWhere;
 
   const [items, total] = await Promise.all([
     prisma.inventoryItem.findMany({ where, orderBy: { name: "asc" }, skip, take }),
@@ -64,8 +85,18 @@ export default async function InventoryReportPage({
             <h1 className="text-2xl font-semibold">Inventory Report</h1>
             <p className="mt-2 text-muted-foreground">Stock valuation and low stock view.</p>
           </div>
-          <div className="min-w-[220px]">
-            <SearchInput placeholder="Search inventory..." />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="min-w-[220px]">
+              <SearchInput placeholder="Search inventory..." />
+            </div>
+            {canExport ? (
+              <a
+                href="/api/reports/inventory/export"
+                className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+              >
+                Export CSV
+              </a>
+            ) : null}
           </div>
         </div>
       </div>
@@ -102,15 +133,25 @@ export default async function InventoryReportPage({
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-b">
-                  <td className="py-2">{item.name}</td>
-                  <td className="py-2">{item.category}</td>
-                  <td className="py-2">{Number(item.quantity)}</td>
-                  {canViewCost ? <td className="py-2">{formatMoney(Number(item.unitCost))}</td> : null}
-                  {canViewCost ? <td className="py-2">{formatMoney(Number(item.totalValue))}</td> : null}
-                </tr>
-              ))}
+              {items.map((item) => {
+                const isLow = Number(item.quantity) <= Number(item.minStock);
+                return (
+                  <tr key={item.id} className={`border-b ${isLow ? "bg-amber-50/60" : ""}`}>
+                    <td className="py-2">{item.name}</td>
+                    <td className="py-2">{item.category}</td>
+                    <td className="py-2">
+                      {Number(item.quantity)}{" "}
+                      {isLow ? (
+                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                          Low
+                        </span>
+                      ) : null}
+                    </td>
+                    {canViewCost ? <td className="py-2">{formatMoney(Number(item.unitCost))}</td> : null}
+                    {canViewCost ? <td className="py-2">{formatMoney(Number(item.totalValue))}</td> : null}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

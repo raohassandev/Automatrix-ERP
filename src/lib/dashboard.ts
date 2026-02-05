@@ -1,7 +1,32 @@
 import { prisma } from "./prisma";
 import { auth } from "./auth";
+import { requirePermission } from "./rbac";
+
+async function getDashboardAccess() {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+
+  const canViewDashboard = await requirePermission(userId, "dashboard.view");
+  if (!canViewDashboard) return null;
+
+  const canViewAllMetrics = await requirePermission(userId, "dashboard.view_all_metrics");
+  const canViewInventory = await requirePermission(userId, "inventory.view");
+  const canViewWallet =
+    (await requirePermission(userId, "employees.view_all")) ||
+    (await requirePermission(userId, "employees.view_own"));
+
+  return {
+    userId,
+    canViewAllMetrics,
+    canViewInventory,
+    canViewWallet,
+  };
+}
 
 export async function getChartData() {
+  const access = await getDashboardAccess();
+  if (!access) return [];
 
   const months = Array.from({ length: 12 }, (_, i) => {
     const d = new Date();
@@ -16,6 +41,8 @@ export async function getChartData() {
 
   const data = await Promise.all(
     months.map(async (m) => {
+      const incomeWhere = access.canViewAllMetrics ? {} : { addedById: access.userId };
+      const expenseWhere = access.canViewAllMetrics ? {} : { submittedById: access.userId };
       const income = await prisma.income.aggregate({
         _sum: { amount: true },
         where: {
@@ -23,6 +50,7 @@ export async function getChartData() {
             gte: m.startDate,
             lte: m.endDate,
           },
+          ...incomeWhere,
         },
       });
       const expense = await prisma.expense.aggregate({
@@ -32,6 +60,7 @@ export async function getChartData() {
             gte: m.startDate,
             lte: m.endDate,
           },
+          ...expenseWhere,
         },
       });
       return {
@@ -50,15 +79,15 @@ export async function getDashboardDataEnhanced(
   customStartDate: Date | null = null,
   customEndDate: Date | null = null
 ) {
-  const session = await auth();
-  const userId = session?.user?.id;
-
-  if (!userId) {
+  const access = await getDashboardAccess();
+  if (!access) {
     return null;
   }
+  const { userId, canViewAllMetrics, canViewInventory } = access;
 
   // Prefer session email (works for dev-bypass users that do not exist in the User table).
-  let email: string | null = (session.user as { email?: string | null } | undefined)?.email ?? null;
+  const session = await auth();
+  let email: string | null = (session?.user as { email?: string | null } | undefined)?.email ?? null;
 
   if (!email) {
     const user = await prisma.user.findUnique({
@@ -124,6 +153,9 @@ export async function getDashboardDataEnhanced(
     },
   } : {};
 
+  const expenseWhere = canViewAllMetrics ? {} : { submittedById: userId };
+  const incomeWhere = canViewAllMetrics ? {} : { addedById: userId };
+
   const [
     expenseSum,
     incomeSum,
@@ -138,33 +170,40 @@ export async function getDashboardDataEnhanced(
   ] = await Promise.all([
     prisma.expense.aggregate({ 
       _sum: { amount: true },
-      where: dateFilter,
+      where: { ...dateFilter, ...expenseWhere },
     }),
     prisma.income.aggregate({ 
       _sum: { amount: true },
-      where: dateFilter,
+      where: { ...dateFilter, ...incomeWhere },
     }),
     prisma.expense.count({ 
       where: { 
         status: { in: ["PENDING", "PENDING_L1", "PENDING_L2", "PENDING_L3"] },
         ...dateFilter,
+        ...expenseWhere,
       } 
     }),
     prisma.income.count({ 
       where: { 
         status: "PENDING",
         ...dateFilter,
+        ...incomeWhere,
       } 
     }),
-    prisma.inventoryItem.findMany({
-      where: { minStock: { gt: 0 } },
-      select: { quantity: true, minStock: true },
-    }),
-    prisma.project.aggregate({ _sum: { pendingRecovery: true } }),
+    canViewAllMetrics || canViewInventory
+      ? prisma.inventoryItem.findMany({
+          where: { minStock: { gt: 0 } },
+          select: { quantity: true, minStock: true },
+        })
+      : Promise.resolve([]),
+    canViewAllMetrics
+      ? prisma.project.aggregate({ _sum: { pendingRecovery: true } })
+      : Promise.resolve({ _sum: { pendingRecovery: 0 } }),
     prisma.expense.aggregate({ 
       where: { 
         status: "APPROVED",
         ...dateFilter,
+        ...expenseWhere,
       }, 
       _sum: { amount: true } 
     }),
@@ -172,11 +211,12 @@ export async function getDashboardDataEnhanced(
       where: { 
         status: "REJECTED",
         ...dateFilter,
+        ...expenseWhere,
       }, 
       _sum: { amount: true } 
     }),
-    prisma.expense.count({ where: dateFilter }),
-    prisma.income.count({ where: dateFilter }),
+    prisma.expense.count({ where: { ...dateFilter, ...expenseWhere } }),
+    prisma.income.count({ where: { ...dateFilter, ...incomeWhere } }),
   ]);
 
   const totalExpenses = Number(expenseSum._sum.amount || 0);
@@ -209,12 +249,16 @@ export async function getDashboardDataEnhanced(
 }
 
 export async function getExpenseByCategoryData() {
+  const access = await getDashboardAccess();
+  if (!access) return [];
+  const where = access.canViewAllMetrics ? {} : { submittedById: access.userId };
 
   const data = await prisma.expense.groupBy({
     by: ['category'],
     _sum: {
       amount: true,
     },
+    where,
   });
 
   return data.map((item) => ({
@@ -224,18 +268,53 @@ export async function getExpenseByCategoryData() {
 }
 
 export async function getProjectProfitabilityData() {
+  const access = await getDashboardAccess();
+  if (!access) return [];
 
-  const projects = await prisma.project.findMany(); // Fetch projects first
+  let projects = [];
+  if (access.canViewAllMetrics) {
+    projects = await prisma.project.findMany();
+  } else {
+    const [expenseProjects, incomeProjects] = await Promise.all([
+      prisma.expense.findMany({
+        where: { submittedById: access.userId, project: { not: null } },
+        select: { project: true },
+      }),
+      prisma.income.findMany({
+        where: { addedById: access.userId, project: { not: null } },
+        select: { project: true },
+      }),
+    ]);
+    const refs = Array.from(
+      new Set(
+        [...expenseProjects, ...incomeProjects]
+          .map((p) => p.project)
+          .filter((p): p is string => Boolean(p))
+      )
+    );
+    if (refs.length === 0) return [];
+    projects = await prisma.project.findMany({
+      where: {
+        OR: [{ projectId: { in: refs } }, { name: { in: refs } }],
+      },
+    });
+  }
 
   const projectData = await Promise.all(
     projects.map(async (project) => {
+      const incomeWhere = access.canViewAllMetrics
+        ? {}
+        : { addedById: access.userId };
+      const expenseWhere = access.canViewAllMetrics
+        ? {}
+        : { submittedById: access.userId };
       const incomes = await prisma.income.aggregate({
         _sum: { amount: true },
-        where: { project: project.name, status: 'APPROVED' },
+        where: { project: { in: [project.projectId, project.name] }, status: 'APPROVED', ...incomeWhere },
       });
       const expenses = await prisma.expense.aggregate({
         _sum: { amount: true },
-        where: { project: project.name, status: 'APPROVED' },
+        where: { project: { in: [project.projectId, project.name] }, status: 'APPROVED', ...expenseWhere },
       });
 
       const totalIncome = Number(incomes._sum.amount || 0);
@@ -253,12 +332,12 @@ export async function getProjectProfitabilityData() {
 }
 
 export async function getWalletBalanceData() {
-  const session = await auth();
-  const userId = session?.user?.id;
-
-  if (!userId) {
+  const access = await getDashboardAccess();
+  if (!access?.userId || !access.canViewWallet) {
     return [];
   }
+  const userId = access.userId;
+  const session = await auth();
 
   // Prefer session email (works for dev-bypass users that do not exist in the User table).
   let email: string | null = (session.user as { email?: string | null } | undefined)?.email ?? null;

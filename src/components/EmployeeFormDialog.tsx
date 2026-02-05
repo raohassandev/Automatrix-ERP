@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
@@ -12,32 +12,68 @@ import { ROLE_OPTIONS } from "@/lib/permissions";
 interface EmployeeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string | null;
+    role: string;
+    status?: string | null;
+  };
 }
 
-export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogProps) {
+export function EmployeeFormDialog({ open, onOpenChange, initialData }: EmployeeFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
+  const emptyForm = {
     name: "",
     email: "",
     phone: "",
     role: "Staff",
     initialWalletBalance: "",
-  });
+    status: "ACTIVE",
+  };
+  const [form, setForm] = useState(emptyForm);
+  const isEdit = Boolean(initialData?.id);
+
+  useEffect(() => {
+    if (!open) return;
+    if (initialData) {
+      setForm({
+        name: initialData.name || "",
+        email: initialData.email || "",
+        phone: initialData.phone || "",
+        role: initialData.role || "Staff",
+        initialWalletBalance: "",
+        status: initialData.status || "ACTIVE",
+      });
+    } else {
+      setForm(emptyForm);
+    }
+  }, [open, initialData]);
 
   async function submit() {
     try {
-      const res = await fetch("/api/employees", {
-        method: "POST",
+      const res = await fetch(isEdit ? `/api/employees/${initialData?.id}` : "/api/employees", {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          phone: form.phone || null,
-          role: form.role,
-          initialWalletBalance: form.initialWalletBalance
-            ? parseFloat(form.initialWalletBalance)
-            : 0,
+          ...(isEdit
+            ? {
+                name: form.name,
+                phone: form.phone || null,
+                role: form.role,
+                status: form.status,
+              }
+            : {
+                name: form.name,
+                email: form.email,
+                phone: form.phone || null,
+                role: form.role,
+                initialWalletBalance: form.initialWalletBalance
+                  ? parseFloat(form.initialWalletBalance)
+                  : 0,
+              }),
         }),
       });
 
@@ -47,16 +83,10 @@ export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogPro
         throw new Error(data.error || "Failed to add employee");
       }
 
-      toast.success("Employee added successfully!");
+      toast.success(isEdit ? "Employee updated successfully!" : "Employee added successfully!");
       
       // Reset form
-      setForm({
-        name: "",
-        email: "",
-        phone: "",
-        role: "Staff",
-        initialWalletBalance: "",
-      });
+      setForm(emptyForm);
       
       // Close dialog
       onOpenChange(false);
@@ -73,8 +103,8 @@ export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogPro
     <FormDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Add Employee"
-      description="Create a new employee record in the system"
+      title={isEdit ? "Edit Employee" : "Add Employee"}
+      description={isEdit ? "Update employee record" : "Create a new employee record in the system"}
     >
       <form
         onSubmit={(e) => {
@@ -104,6 +134,7 @@ export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogPro
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
+              disabled={isEdit}
             />
           </div>
 
@@ -134,17 +165,32 @@ export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogPro
             </select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="initialWalletBalance">Initial Wallet Balance (Optional)</Label>
-            <Input
-              id="initialWalletBalance"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.initialWalletBalance}
-              onChange={(e) => setForm({ ...form, initialWalletBalance: e.target.value })}
-            />
-          </div>
+          {!isEdit ? (
+            <div className="space-y-2">
+              <Label htmlFor="initialWalletBalance">Initial Wallet Balance (Optional)</Label>
+              <Input
+                id="initialWalletBalance"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={form.initialWalletBalance}
+                onChange={(e) => setForm({ ...form, initialWalletBalance: e.target.value })}
+              />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                className="rounded-md border px-3 py-2"
+                value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+              >
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="INACTIVE">INACTIVE</option>
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 pt-4">
@@ -157,7 +203,7 @@ export function EmployeeFormDialog({ open, onOpenChange }: EmployeeFormDialogPro
             Cancel
           </Button>
           <Button type="submit" disabled={pending}>
-            {pending ? "Adding..." : "Add Employee"}
+            {pending ? "Saving..." : isEdit ? "Save Changes" : "Add Employee"}
           </Button>
         </div>
       </form>
