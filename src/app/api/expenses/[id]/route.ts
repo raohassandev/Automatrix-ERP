@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { expenseUpdateSchema } from "@/lib/validation";
+import { expenseUpdateSchema } from "@/lib/validation";1
 import { logAudit } from "@/lib/audit";
-import { requirePermission } => "@/lib/rbac";
+import { requirePermission } from "@/lib/rbac";
 import { RECEIPT_REQUIRED_THRESHOLD } from "@/lib/constants";
 import { getExpenseApprovalLevel, isPendingExpenseStatus } from "@/lib/approvals";
 import { Prisma } from "@prisma/client";

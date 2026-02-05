@@ -1,0 +1,76 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run TypeScript check
+      run: npm run typecheck
+    
+    - name: Run tests
+      run: npm run test
+    
+    - name: Run E2E tests
+      run: npm run test:e2e
+      continue-on-error: true
+    
+    - name: Build application
+      run: npm run build
+    
+    - name: Deploy to production server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        port: 22
+        script: |
+          echo "🚀 Starting deployment to production..."
+          
+          # Navigate to production directory
+          cd /var/www/automatrix-erp-prod || exit 1
+          
+          # Pull latest code
+          echo "📦 Pulling latest code..."
+          git fetch --all
+          git reset --hard origin/main
+          
+          # Install dependencies
+          echo "📦 Installing dependencies..."
+          npm ci --production
+          
+          # Build the application
+          echo "🏗️ Building application..."
+          npm run build
+          
+          # Run database migrations
+          echo "🗄️ Running database migrations..."
+          npx prisma generate
+          npx prisma migrate deploy
+          
+          # Restart PM2 process
+          echo "🔄 Restarting PM2 process..."
+          pm2 restart automatrix-erp-prod || pm2 start ecosystem.config.js
+          
+          # Check if process is running
+          pm2 status automatrix-erp-prod
+          
+          echo "✅ Production deployment completed!"

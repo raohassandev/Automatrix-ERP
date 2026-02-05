@@ -20,7 +20,11 @@
     "security:check": "node scripts/verify-env.js",
     "analyze": "ANALYZE=true pnpm build",
     "perf:audit": "lighthouse http://localhost:3000 --output=json --output-path=./performance-report.json",
-    "build:optimized": "pnpm typecheck && pnpm lint && pnpm build"
+    "build:optimized": "pnpm typecheck && pnpm lint && pnpm build",
+    "deploy:staging": "npm run typecheck && npm run build",
+    "deploy:prod": "npm run typecheck && npm run test && npm run build",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:db:push": "prisma db push"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",

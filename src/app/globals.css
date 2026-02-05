@@ -101,11 +101,11 @@
   --border: hsl(217 33% 20%);
   --input: hsl(217 33% 20%);
   --ring: hsl(210 60% 55%);
-  --chart-1: hsl(200 60% 50%);
-  --chart-2: hsl(140 60% 50%);
-  --chart-3: hsl(60 60% 50%);
-  --chart-4: hsl(0 60% 50%);
-  --chart-5: hsl(280 60% 50%);
+  --chart-1: hsl(205 70% 65%); /* Blue */
+  --chart-2: hsl(145 65% 55%); /* Green */
+  --chart-3: hsl(55 70% 60%);  /* Yellow */
+  --chart-4: hsl(0 75% 70%);   /* Red */
+  --chart-5: hsl(275 70% 70%); /* Purple */
   --sidebar: hsl(222 47% 8%);
   --sidebar-foreground: hsl(210 40% 98%);
   --sidebar-primary: hsl(210 60% 55%);
