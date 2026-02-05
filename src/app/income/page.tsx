@@ -61,10 +61,10 @@ export default async function IncomePage({
         baseWhere,
         {
           OR: [
-            { source: { contains: search, mode: "insensitive" } },
-            { category: { contains: search, mode: "insensitive" } },
-            { project: { contains: search, mode: "insensitive" } },
-            { status: { contains: search, mode: "insensitive" } },
+            { source: { contains: search, mode: "insensitive" as const } },
+            { category: { contains: search, mode: "insensitive" as const } },
+            { project: { contains: search, mode: "insensitive" as const } },
+            { status: { contains: search, mode: "insensitive" as const } },
           ],
         },
       ];

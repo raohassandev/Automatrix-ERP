@@ -40,7 +40,7 @@ interface Expense {
   project: string;
   amount: number;
   status: string;
-  paymentMode?: string;
+  paymentMode: string;
   receiptUrl?: string | null;
   receiptFileId?: string | null;
   submittedById?: string | null;

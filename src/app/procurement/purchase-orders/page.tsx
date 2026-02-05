@@ -35,11 +35,11 @@ export default async function PurchaseOrdersPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  const where = search
+  const where: import("@prisma/client").Prisma.PurchaseOrderWhereInput = search
     ? {
         OR: [
-          { poNumber: { contains: search, mode: "insensitive" } },
-          { vendorName: { contains: search, mode: "insensitive" } },
+          { poNumber: { contains: search, mode: "insensitive" as const } },
+          { vendorName: { contains: search, mode: "insensitive" as const } },
         ],
       }
     : {};
@@ -55,21 +55,30 @@ export default async function PurchaseOrdersPage({
     prisma.purchaseOrder.count({ where }),
   ]);
 
-  const orders = ordersRaw.map((order) => ({
-    ...order,
-    orderDate: order.orderDate.toISOString(),
-    expectedDate: order.expectedDate ? order.expectedDate.toISOString() : null,
-    totalAmount: Number(order.totalAmount),
-    vendorId: order.vendorId,
-    items: order.items.map((item) => ({
+  const orders = ordersRaw.map((order) => {
+    const items = order.items.map((item) => ({
       itemName: item.itemName,
       unit: item.unit,
       quantity: Number(item.quantity),
       receivedQty: Number(item.receivedQty || 0),
       unitCost: Number(item.unitCost),
       project: item.project,
-    })),
-  }));
+    }));
+
+    const receivedTotal = items.reduce((sum: number, item) => sum + Number(item.receivedQty || 0), 0);
+    const quantityTotal = items.reduce((sum: number, item) => sum + Number(item.quantity || 0), 0);
+
+    return {
+      ...order,
+      orderDate: order.orderDate.toISOString(),
+      expectedDate: order.expectedDate ? order.expectedDate.toISOString() : null,
+      totalAmount: Number(order.totalAmount),
+      vendorId: order.vendorId,
+      items,
+      receivedTotal,
+      quantityTotal,
+    };
+  });
 
   const totalPages = Math.max(1, Math.ceil(total / take));
 
@@ -111,8 +120,7 @@ export default async function PurchaseOrdersPage({
                   <td className="py-2">{order.vendorName}</td>
                   <td className="py-2">{new Date(order.orderDate).toLocaleDateString()}</td>
                   <td className="py-2">
-                    {order.items.reduce((sum, item) => sum + Number(item.receivedQty || 0), 0)} /
-                    {order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)}
+                    {order.receivedTotal} / {order.quantityTotal}
                   </td>
                   <td className="py-2">{order.status}</td>
                   <td className="py-2">{formatMoney(order.totalAmount)}</td>

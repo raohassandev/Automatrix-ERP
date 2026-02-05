@@ -33,14 +33,14 @@ export default async function ClientsPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  const where =
+  const where: import("@prisma/client").Prisma.ClientWhereInput =
     query.length > 0
       ? {
           OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { description: { contains: query, mode: "insensitive" } },
-            { address: { contains: query, mode: "insensitive" } },
-            { contacts: { some: { name: { contains: query, mode: "insensitive" } } } },
+            { name: { contains: query, mode: "insensitive" as const } },
+            { description: { contains: query, mode: "insensitive" as const } },
+            { address: { contains: query, mode: "insensitive" as const } },
+            { contacts: { some: { name: { contains: query, mode: "insensitive" as const } } } },
           ],
         }
       : {};

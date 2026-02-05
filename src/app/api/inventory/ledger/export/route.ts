@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   let itemFilterIds: string[] | undefined = undefined;
   if (query) {
     const items = await prisma.inventoryItem.findMany({
-      where: { name: { contains: query, mode: "insensitive" } },
+      where: { name: { contains: query, mode: "insensitive" as const } },
       select: { id: true },
     });
     itemFilterIds = items.map((item) => item.id);
@@ -46,8 +46,8 @@ export async function GET(req: Request) {
   if (type) where.type = type;
   if (query) {
     where.OR = [
-      { reference: { contains: query, mode: "insensitive" } },
-      { project: { contains: query, mode: "insensitive" } },
+      { reference: { contains: query, mode: "insensitive" as const } },
+      { project: { contains: query, mode: "insensitive" as const } },
       ...(itemFilterIds && itemFilterIds.length > 0 ? [{ itemId: { in: itemFilterIds } }] : []),
     ];
   }

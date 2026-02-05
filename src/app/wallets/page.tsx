@@ -12,7 +12,7 @@ import Link from "next/link";
 export default async function WalletLedgerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; type?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; type?: string; from?: string; to?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -41,7 +41,7 @@ export default async function WalletLedgerPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  let baseWhere: Record<string, unknown> = {};
+  let baseWhere: import("@prisma/client").Prisma.WalletLedgerWhereInput = {};
   if (!canViewAll && !canEdit && session.user.email) {
     const employee = await prisma.employee.findUnique({ where: { email: session.user.email } });
     if (employee) {
@@ -51,15 +51,15 @@ export default async function WalletLedgerPage({
     }
   }
 
-  const where: Record<string, unknown> = { ...baseWhere };
+  const where: import("@prisma/client").Prisma.WalletLedgerWhereInput = { ...baseWhere };
   if (search) {
     where.AND = [
       baseWhere,
       {
         OR: [
-          { reference: { contains: search, mode: "insensitive" } },
-          { employee: { name: { contains: search, mode: "insensitive" } } },
-          { employee: { email: { contains: search, mode: "insensitive" } } },
+          { reference: { contains: search, mode: "insensitive" as const } },
+          { employee: { name: { contains: search, mode: "insensitive" as const } } },
+          { employee: { email: { contains: search, mode: "insensitive" as const } } },
         ],
       },
     ];

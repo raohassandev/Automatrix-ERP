@@ -38,7 +38,7 @@ export default async function ProjectsPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  let scopeWhere: Record<string, unknown> = {};
+  let scopeWhere: import("@prisma/client").Prisma.ProjectWhereInput = {};
   if (!canViewAll && canViewAssigned) {
     const assignments = await prisma.projectAssignment.findMany({
       where: { userId: session.user.id },
@@ -56,18 +56,18 @@ export default async function ProjectsPage({
     scopeWhere = { id: { in: projectIds } };
   }
 
-  const searchWhere = search
+  const searchWhere: import("@prisma/client").Prisma.ProjectWhereInput = search
     ? {
         OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { projectId: { contains: search, mode: "insensitive" } },
-          { status: { contains: search, mode: "insensitive" } },
-          { client: { name: { contains: search, mode: "insensitive" } } },
+          { name: { contains: search, mode: "insensitive" as const } },
+          { projectId: { contains: search, mode: "insensitive" as const } },
+          { status: { contains: search, mode: "insensitive" as const } },
+          { client: { name: { contains: search, mode: "insensitive" as const } } },
         ],
       }
     : {};
 
-  const where =
+  const where: import("@prisma/client").Prisma.ProjectWhereInput =
     Object.keys(searchWhere).length > 0
       ? Object.keys(scopeWhere).length > 0
         ? { AND: [scopeWhere, searchWhere] }

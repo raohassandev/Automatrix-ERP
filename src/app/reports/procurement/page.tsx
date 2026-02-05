@@ -58,7 +58,7 @@ export default async function ProcurementReportPage({
 
   const expenseWhere: Record<string, unknown> = {
     status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
-    category: { contains: "material", mode: "insensitive" },
+    category: { contains: "material", mode: "insensitive" as const },
   };
   if (projectFilter) {
     const resolvedProject = await resolveProjectId(projectFilter);
@@ -79,9 +79,9 @@ export default async function ProcurementReportPage({
   }
   if (search) {
     expenseWhere.OR = [
-      { description: { contains: search, mode: "insensitive" } },
-      { category: { contains: search, mode: "insensitive" } },
-      { project: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" as const } },
+      { category: { contains: search, mode: "insensitive" as const } },
+      { project: { contains: search, mode: "insensitive" as const } },
     ];
   }
 
@@ -105,8 +105,8 @@ export default async function ProcurementReportPage({
   }
   if (search) {
     ledgerWhere.OR = [
-      { reference: { contains: search, mode: "insensitive" } },
-      { project: { contains: search, mode: "insensitive" } },
+      { reference: { contains: search, mode: "insensitive" as const } },
+      { project: { contains: search, mode: "insensitive" as const } },
     ];
   }
 

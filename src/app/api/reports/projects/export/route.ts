@@ -57,10 +57,10 @@ export async function GET(req: Request) {
           baseWhere,
           {
             OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { projectId: { contains: search, mode: "insensitive" } },
-              { status: { contains: search, mode: "insensitive" } },
-              { client: { name: { contains: search, mode: "insensitive" } } },
+              { name: { contains: search, mode: "insensitive" as const } },
+              { projectId: { contains: search, mode: "insensitive" as const } },
+              { status: { contains: search, mode: "insensitive" as const } },
+              { client: { name: { contains: search, mode: "insensitive" as const } } },
             ],
           },
         ],

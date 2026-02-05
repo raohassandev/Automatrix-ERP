@@ -103,6 +103,7 @@ export const employeeSchema = z.object({
   reportingOfficerId: z.string().optional(),
   joinDate: z.string().optional(),
   role: z.string().min(1),
+  status: z.enum(["ACTIVE", "INACTIVE", "ON_HOLD"]).optional(),
 });
 
 export const employeeUpdateSchema = employeeSchema.partial();
@@ -172,6 +173,7 @@ export const salaryAdvanceSchema = z.object({
   employeeId: z.string().min(1),
   amount: z.number().positive(),
   reason: z.string().min(1),
+  status: z.enum(["PENDING", "APPROVED", "PAID", "REJECTED"]).optional(),
 });
 
 export const salaryAdvanceUpdateSchema = salaryAdvanceSchema.partial();

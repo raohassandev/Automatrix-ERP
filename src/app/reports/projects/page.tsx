@@ -48,23 +48,23 @@ export default async function ProjectExpensesReportPage({
     !canViewAll && !canViewTeam && canViewOwn
       ? ownProjectAssignments.map((entry) => entry.projectId)
       : [];
-  const baseWhere: Record<string, unknown> =
+  const baseWhere: import("@prisma/client").Prisma.ProjectWhereInput =
     !canViewAll && !canViewTeam && canViewOwn
       ? ownProjectIds.length > 0
         ? { id: { in: ownProjectIds } }
         : { id: "__none__" }
       : {};
 
-  const where = search
+  const where: import("@prisma/client").Prisma.ProjectWhereInput = search
     ? {
         AND: [
           baseWhere,
           {
             OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { projectId: { contains: search, mode: "insensitive" } },
-              { status: { contains: search, mode: "insensitive" } },
-              { client: { name: { contains: search, mode: "insensitive" } } },
+              { name: { contains: search, mode: "insensitive" as const } },
+              { projectId: { contains: search, mode: "insensitive" as const } },
+              { status: { contains: search, mode: "insensitive" as const } },
+              { client: { name: { contains: search, mode: "insensitive" as const } } },
             ],
           },
         ],

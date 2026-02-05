@@ -55,14 +55,14 @@ export async function GET(req: Request) {
     where.orderDate = range;
   }
   if (vendor) {
-    where.vendorName = { contains: vendor, mode: "insensitive" };
+    where.vendorName = { contains: vendor, mode: "insensitive" as const };
   }
   if (projectValues?.length) {
     where.items = {
       some: {
         OR: [
           { project: { in: projectValues } },
-          { project: { contains: projectFilter || "", mode: "insensitive" } },
+          { project: { contains: projectFilter || "", mode: "insensitive" as const } },
         ],
       },
     };

@@ -52,14 +52,14 @@ export async function GET(req: Request) {
 
   const purchaseOrderWhere: Record<string, unknown> = {};
   if (vendor) {
-    purchaseOrderWhere.vendorName = { contains: vendor, mode: "insensitive" };
+    purchaseOrderWhere.vendorName = { contains: vendor, mode: "insensitive" as const };
   }
   if (projectValues?.length) {
     purchaseOrderWhere.items = {
       some: {
         OR: [
           { project: { in: projectValues } },
-          { project: { contains: projectFilter || "", mode: "insensitive" } },
+          { project: { contains: projectFilter || "", mode: "insensitive" as const } },
         ],
       },
     };

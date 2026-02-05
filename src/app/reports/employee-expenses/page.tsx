@@ -48,7 +48,7 @@ export default async function EmployeeExpenseReportPage({
   const from = params.from;
   const to = params.to;
 
-  const where: Record<string, unknown> = {
+  const where: import("@prisma/client").Prisma.ExpenseWhereInput = {
     status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
   };
   if (!canViewAll && !canViewTeam) {
@@ -61,7 +61,7 @@ export default async function EmployeeExpenseReportPage({
     where.date = range;
   }
 
-  const expenses = await prisma.expense.findMany({
+  const expensesRaw = await prisma.expense.findMany({
     where,
     select: {
       submittedById: true,
@@ -75,6 +75,12 @@ export default async function EmployeeExpenseReportPage({
     },
     orderBy: { date: "desc" },
   });
+
+  const expenses: ExpenseRow[] = expensesRaw.map((exp) => ({
+    ...exp,
+    amount: Number(exp.amount),
+    approvedAmount: exp.approvedAmount ? Number(exp.approvedAmount) : null,
+  }));
 
   const filtered = search
     ? expenses.filter((exp) => {

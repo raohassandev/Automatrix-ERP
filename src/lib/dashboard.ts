@@ -340,7 +340,7 @@ export async function getWalletBalanceData() {
   const session = await auth();
 
   // Prefer session email (works for dev-bypass users that do not exist in the User table).
-  let email: string | null = (session.user as { email?: string | null } | undefined)?.email ?? null;
+  let email: string | null = (session?.user as { email?: string | null } | undefined)?.email ?? null;
 
   if (!email) {
     const user = await prisma.user.findUnique({

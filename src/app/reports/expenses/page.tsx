@@ -54,9 +54,9 @@ export default async function ExpenseReportPage({
   }
   if (search) {
     where.OR = [
-      { description: { contains: search, mode: "insensitive" } },
-      { category: { contains: search, mode: "insensitive" } },
-      { project: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" as const } },
+      { category: { contains: search, mode: "insensitive" as const } },
+      { project: { contains: search, mode: "insensitive" as const } },
     ];
   }
 

@@ -37,9 +37,9 @@ export default async function QuotationsPage({
   const where: Record<string, unknown> = {};
   if (query) {
     where.OR = [
-      { quoteNumber: { contains: query, mode: "insensitive" } },
-      { clientName: { contains: query, mode: "insensitive" } },
-      { projectRef: { contains: query, mode: "insensitive" } },
+      { quoteNumber: { contains: query, mode: "insensitive" as const } },
+      { clientName: { contains: query, mode: "insensitive" as const } },
+      { projectRef: { contains: query, mode: "insensitive" as const } },
     ];
   }
   if (status) {

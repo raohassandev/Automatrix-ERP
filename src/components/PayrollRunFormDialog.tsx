@@ -15,7 +15,7 @@ type PayrollEntry = {
   baseSalary: number | string;
   incentiveTotal: number | string;
   deductions: number | string;
-  deductionReason: string;
+  deductionReason?: string;
 };
 
 type PayrollRun = {

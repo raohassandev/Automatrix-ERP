@@ -58,9 +58,9 @@ export default async function InventoryReportPage({
           baseWhere,
           {
             OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { category: { contains: search, mode: "insensitive" } },
-              { sku: { contains: search, mode: "insensitive" } },
+              { name: { contains: search, mode: "insensitive" as const } },
+              { category: { contains: search, mode: "insensitive" as const } },
+              { sku: { contains: search, mode: "insensitive" as const } },
             ],
           },
         ],

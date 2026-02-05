@@ -34,20 +34,20 @@ export default async function WalletReportPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  const baseWhere =
+  const baseWhere: import("@prisma/client").Prisma.EmployeeWhereInput =
     !canViewAll && !canViewTeam
       ? { email: session.user.email || "__none__" }
       : {};
 
-  const where = search
+  const where: import("@prisma/client").Prisma.EmployeeWhereInput = search
     ? {
         AND: [
           baseWhere,
           {
             OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              { email: { contains: search, mode: "insensitive" } },
-              { role: { contains: search, mode: "insensitive" } },
+              { name: { contains: search, mode: "insensitive" as const } },
+              { email: { contains: search, mode: "insensitive" as const } },
+              { role: { contains: search, mode: "insensitive" as const } },
             ],
           },
         ],

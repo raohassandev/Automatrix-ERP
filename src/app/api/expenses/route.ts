@@ -69,13 +69,7 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: {
-      submittedById?: string;
-      OR?: Array<{ description?: { contains: string } } | { category?: { contains: string } }>;
-      category?: string;
-      status?: string;
-      date?: { gte?: Date; lte?: Date };
-    } = {};
+    const where: Prisma.ExpenseWhereInput = {};
     
     // Check if user can view all expenses or only their own
     if (!canViewAll) {
@@ -84,8 +78,8 @@ export async function GET(req: Request) {
 
     if (search) {
       where.OR = [
-        { description: { contains: search } },
-        { category: { contains: search } },
+        { description: { contains: search, mode: "insensitive" as const } },
+        { category: { contains: search, mode: "insensitive" as const } },
       ];
     }
 
@@ -111,8 +105,10 @@ export async function GET(req: Request) {
     }
 
     // Build orderBy
-    const orderBy: Record<string, string> = {};
-    orderBy[sortBy] = sortOrder;
+    const orderDirection = sortOrder === "asc" ? "asc" : "desc";
+    const orderBy: Prisma.ExpenseOrderByWithRelationInput = {
+      [sortBy]: orderDirection,
+    };
 
     const [expenses, total] = await Promise.all([
       prisma.expense.findMany({

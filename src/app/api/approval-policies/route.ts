@@ -51,7 +51,9 @@ export async function POST(request: Request) {
 
   const body = await request.json();
   const policyId = typeof body?.policyId === "string" ? body.policyId : null;
-  const roleIds = Array.isArray(body?.roleIds) ? body.roleIds.filter((id) => typeof id === "string") : null;
+  const roleIds = Array.isArray(body?.roleIds)
+    ? (body.roleIds as unknown[]).filter((id): id is string => typeof id === "string")
+    : null;
 
   if (!policyId || !roleIds) {
     return NextResponse.json({ error: "policyId and roleIds are required" }, { status: 400 });
@@ -69,7 +71,7 @@ export async function POST(request: Request) {
     ...(uniqueRoleIds.length > 0
       ? [
           prisma.approvalPolicyRole.createMany({
-            data: uniqueRoleIds.map((roleId) => ({ policyId, roleId })),
+            data: uniqueRoleIds.map((roleId: string) => ({ policyId, roleId })),
           }),
         ]
       : []),

@@ -33,16 +33,16 @@ export default async function VendorsPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  const where =
+  const where: import("@prisma/client").Prisma.VendorWhereInput =
     query.length > 0
       ? {
           OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { contactName: { contains: query, mode: "insensitive" } },
-            { phone: { contains: query, mode: "insensitive" } },
-            { email: { contains: query, mode: "insensitive" } },
-            { address: { contains: query, mode: "insensitive" } },
-            { notes: { contains: query, mode: "insensitive" } },
+            { name: { contains: query, mode: "insensitive" as const } },
+            { contactName: { contains: query, mode: "insensitive" as const } },
+            { phone: { contains: query, mode: "insensitive" as const } },
+            { email: { contains: query, mode: "insensitive" as const } },
+            { address: { contains: query, mode: "insensitive" as const } },
+            { notes: { contains: query, mode: "insensitive" as const } },
           ],
         }
       : {};

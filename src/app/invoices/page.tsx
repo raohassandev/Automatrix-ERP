@@ -62,9 +62,9 @@ export default async function InvoicesPage({
     const where: Record<string, unknown> = {};
     if (search) {
       where.OR = [
-        { invoiceNo: { contains: search, mode: "insensitive" } },
-        { projectId: { contains: search, mode: "insensitive" } },
-        { status: { contains: search, mode: "insensitive" } },
+        { invoiceNo: { contains: search, mode: "insensitive" as const } },
+        { projectId: { contains: search, mode: "insensitive" as const } },
+        { status: { contains: search, mode: "insensitive" as const } },
       ];
     }
     if (status) {

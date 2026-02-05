@@ -71,11 +71,11 @@ export default async function EmployeesPage({
             baseWhere,
             {
               OR: [
-                { name: { contains: search, mode: "insensitive" } },
-                { email: { contains: search, mode: "insensitive" } },
-                { role: { contains: search, mode: "insensitive" } },
-                { department: { contains: search, mode: "insensitive" } },
-                { designation: { contains: search, mode: "insensitive" } },
+                { name: { contains: search, mode: "insensitive" as const } },
+                { email: { contains: search, mode: "insensitive" as const } },
+                { role: { contains: search, mode: "insensitive" as const } },
+                { department: { contains: search, mode: "insensitive" as const } },
+                { designation: { contains: search, mode: "insensitive" as const } },
               ],
             },
           ],

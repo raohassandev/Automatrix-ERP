@@ -102,7 +102,7 @@ export default async function ApprovalsPage() {
 
           return {
             id: expense.id,
-            type: "EXPENSE",
+            type: "EXPENSE" as const,
             date: expense.date,
             category: expense.category,
             description: expense.description,
@@ -136,7 +136,7 @@ export default async function ApprovalsPage() {
           : null;
         return {
           id: income.id,
-          type: "INCOME",
+          type: "INCOME" as const,
           date: income.date,
           category: income.category,
           description: income.source, // Use source as description for income

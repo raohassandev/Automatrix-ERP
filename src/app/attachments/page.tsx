@@ -49,13 +49,13 @@ export default async function AttachmentsPage({
   }> = [];
   let total = 0;
   try {
-    const where = search
+    const where: import("@prisma/client").Prisma.AttachmentWhereInput = search
       ? {
           OR: [
-            { type: { contains: search, mode: "insensitive" } },
-            { recordId: { contains: search, mode: "insensitive" } },
-            { fileName: { contains: search, mode: "insensitive" } },
-            { fileUrl: { contains: search, mode: "insensitive" } },
+            { type: { contains: search, mode: "insensitive" as const } },
+            { recordId: { contains: search, mode: "insensitive" as const } },
+            { fileName: { contains: search, mode: "insensitive" as const } },
+            { fileUrl: { contains: search, mode: "insensitive" as const } },
           ],
         }
       : {};

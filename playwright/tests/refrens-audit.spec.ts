@@ -22,6 +22,7 @@ test.describe("Refrens portal - feature inventory (navigation crawl)", () => {
 
     if (!email || !password) {
       testInfo.skip(true, "Missing REFRENS_EMAIL/REFRENS_PASSWORD env vars");
+      return;
     }
 
     const base = "https://www.refrens.com";

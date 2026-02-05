@@ -59,9 +59,9 @@ export default async function InventoryPage({
     const where = search
       ? {
           OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { category: { contains: search, mode: "insensitive" } },
-            { sku: { contains: search, mode: "insensitive" } },
+            { name: { contains: search, mode: "insensitive" as const } },
+            { category: { contains: search, mode: "insensitive" as const } },
+            { sku: { contains: search, mode: "insensitive" as const } },
           ],
         }
       : {};

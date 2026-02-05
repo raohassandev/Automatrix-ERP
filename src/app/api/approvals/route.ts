@@ -165,7 +165,8 @@ export async function POST(request: NextRequest) {
           data: results,
         });
       } else if (validated.action === "REJECT") {
-        if (!validated.reason) {
+        const reason = validated.reason;
+        if (!reason) {
           return NextResponse.json(
             { error: "Reason is required for rejection" },
             { status: 400 }
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest) {
             rejectIncome({
               incomeId,
               approverId: session.user.id,
-              reason: validated.reason,
+              reason,
             })
           )
         );

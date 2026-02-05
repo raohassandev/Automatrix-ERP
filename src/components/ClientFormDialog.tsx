@@ -12,7 +12,7 @@ interface ClientFormDialogProps {
     name: string;
     description?: string | null;
     address?: string | null;
-    contacts?: { name: string; phone?: string; designation?: string; email?: string }[];
+    contacts?: { name: string; phone?: string | null; designation?: string | null; email?: string | null }[];
   };
 }
 

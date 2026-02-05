@@ -10,9 +10,9 @@ import { toast } from "sonner";
 
 type Contact = {
   name: string;
-  phone?: string;
-  designation?: string;
-  email?: string;
+  phone?: string | null;
+  designation?: string | null;
+  email?: string | null;
 };
 
 interface ClientFormProps {

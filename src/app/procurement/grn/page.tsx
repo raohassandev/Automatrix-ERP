@@ -38,8 +38,8 @@ export default async function GoodsReceiptPage({
   const where = search
     ? {
         OR: [
-          { grnNumber: { contains: search, mode: "insensitive" } },
-          { purchaseOrderId: { contains: search, mode: "insensitive" } },
+          { grnNumber: { contains: search, mode: "insensitive" as const } },
+          { purchaseOrderId: { contains: search, mode: "insensitive" as const } },
         ],
       }
     : {};

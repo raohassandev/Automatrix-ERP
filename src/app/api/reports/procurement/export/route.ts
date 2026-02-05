@@ -92,7 +92,7 @@ export async function GET(req: Request) {
 
   const expenseWhere: Record<string, unknown> = {
     status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
-    category: { contains: "material", mode: "insensitive" },
+    category: { contains: "material", mode: "insensitive" as const },
   };
   if (!canViewAll && !canViewTeam) {
     expenseWhere.submittedById = session.user.id;

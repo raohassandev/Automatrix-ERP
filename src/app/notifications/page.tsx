@@ -50,9 +50,9 @@ export default async function NotificationsPage({
         { userId: session.user.id },
         {
           OR: [
-            { type: { contains: search, mode: "insensitive" } },
-            { message: { contains: search, mode: "insensitive" } },
-            { status: { contains: search, mode: "insensitive" } },
+            { type: { contains: search, mode: "insensitive" as const } },
+            { message: { contains: search, mode: "insensitive" as const } },
+            { status: { contains: search, mode: "insensitive" as const } },
           ],
         },
       ];

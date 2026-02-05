@@ -36,15 +36,15 @@ export default async function AuditPage({
   let logs = [];
   let total = 0;
   try {
-    const where = search
-      ? {
-          OR: [
-            { action: { contains: search, mode: "insensitive" } },
-            { entity: { contains: search, mode: "insensitive" } },
-            { entityId: { contains: search, mode: "insensitive" } },
-            { reason: { contains: search, mode: "insensitive" } },
-          ],
-        }
+  const where: import("@prisma/client").Prisma.AuditLogWhereInput = search
+    ? {
+        OR: [
+          { action: { contains: search, mode: "insensitive" as const } },
+          { entity: { contains: search, mode: "insensitive" as const } },
+          { entityId: { contains: search, mode: "insensitive" as const } },
+          { reason: { contains: search, mode: "insensitive" as const } },
+        ],
+      }
       : {};
 
     const [logsResult, totalResult] = await Promise.all([

@@ -52,9 +52,9 @@ export default async function IncentivesPage({
   }
   if (search) {
     where.OR = [
-      { projectRef: { contains: search, mode: "insensitive" } },
-      { employee: { name: { contains: search, mode: "insensitive" } } },
-      { employee: { email: { contains: search, mode: "insensitive" } } },
+      { projectRef: { contains: search, mode: "insensitive" as const } },
+      { employee: { name: { contains: search, mode: "insensitive" as const } } },
+      { employee: { email: { contains: search, mode: "insensitive" as const } } },
     ];
   }
 

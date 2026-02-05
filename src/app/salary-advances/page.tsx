@@ -52,9 +52,9 @@ export default async function SalaryAdvancesPage({
   }
   if (search) {
     where.OR = [
-      { reason: { contains: search, mode: "insensitive" } },
-      { employee: { name: { contains: search, mode: "insensitive" } } },
-      { employee: { email: { contains: search, mode: "insensitive" } } },
+      { reason: { contains: search, mode: "insensitive" as const } },
+      { employee: { name: { contains: search, mode: "insensitive" as const } } },
+      { employee: { email: { contains: search, mode: "insensitive" as const } } },
     ];
   }
 

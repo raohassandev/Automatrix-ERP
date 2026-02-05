@@ -47,9 +47,9 @@ export async function GET(req: Request) {
       baseWhere,
       {
         OR: [
-          { reference: { contains: search, mode: "insensitive" } },
-          { employee: { name: { contains: search, mode: "insensitive" } } },
-          { employee: { email: { contains: search, mode: "insensitive" } } },
+          { reference: { contains: search, mode: "insensitive" as const } },
+          { employee: { name: { contains: search, mode: "insensitive" as const } } },
+          { employee: { email: { contains: search, mode: "insensitive" as const } } },
         ],
       },
     ];

@@ -42,7 +42,9 @@ export default async function ExpensesByProjectPage({
   });
 
   // Group expenses by project
-  const projectIds = Array.from(new Set(expenses.map((expense) => expense.project)));
+  const projectIds = Array.from(
+    new Set(expenses.map((expense) => expense.project).filter((project): project is string => Boolean(project)))
+  );
   const projects = await prisma.project.findMany({
     where: { projectId: { in: projectIds } },
     include: { client: true },

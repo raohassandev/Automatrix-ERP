@@ -138,7 +138,7 @@ async function applyInventoryStockIn(
 
   const inventoryItems = await tx.inventoryItem.findMany({
     where: {
-      OR: uniqueNames.map((name) => ({ name: { equals: name, mode: "insensitive" } })),
+      OR: uniqueNames.map((name) => ({ name: { equals: name, mode: "insensitive" as const } })),
     },
   });
   const inventoryByName = new Map(
