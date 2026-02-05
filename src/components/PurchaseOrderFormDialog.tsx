@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import VendorAutoComplete from "@/components/VendorAutoComplete";
+import { VendorFormDialog } from "@/components/VendorFormDialog";
 
 type PurchaseOrderItem = {
   itemName: string;
@@ -19,6 +21,7 @@ type PurchaseOrderItem = {
 type PurchaseOrder = {
   id: string;
   poNumber: string;
+  vendorId?: string | null;
   vendorName: string;
   vendorContact?: string | null;
   orderDate: string;
@@ -48,8 +51,11 @@ export function PurchaseOrderFormDialog({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
+  const [vendorRefreshKey, setVendorRefreshKey] = useState(0);
   const [form, setForm] = useState({
     poNumber: "",
+    vendorId: "",
     vendorName: "",
     vendorContact: "",
     orderDate: new Date().toISOString().slice(0, 10),
@@ -62,9 +68,11 @@ export function PurchaseOrderFormDialog({
 
   useEffect(() => {
     if (open) {
+      setVendorRefreshKey((prev) => prev + 1);
       if (purchaseOrder) {
         setForm({
           poNumber: purchaseOrder.poNumber || "",
+          vendorId: purchaseOrder.vendorId || "",
           vendorName: purchaseOrder.vendorName || "",
           vendorContact: purchaseOrder.vendorContact || "",
           orderDate: purchaseOrder.orderDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
@@ -87,6 +95,7 @@ export function PurchaseOrderFormDialog({
       } else {
         setForm({
           poNumber: "",
+          vendorId: "",
           vendorName: "",
           vendorContact: "",
           orderDate: new Date().toISOString().slice(0, 10),
@@ -135,6 +144,7 @@ export function PurchaseOrderFormDialog({
       ...form,
       expectedDate: form.expectedDate || undefined,
       notes: form.notes || undefined,
+      vendorId: form.vendorId || undefined,
       vendorContact: form.vendorContact || undefined,
       items: cleanedItems,
     };
@@ -183,12 +193,35 @@ export function PurchaseOrderFormDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="vendorName">Vendor Name</Label>
+            <Label htmlFor="vendorName">Vendor</Label>
+            <VendorAutoComplete
+              value={form.vendorId}
+              onChange={(value) => setForm({ ...form, vendorId: value })}
+              onSelectVendor={(vendor) => {
+                if (vendor) {
+                  setForm((prev) => ({
+                    ...prev,
+                    vendorId: vendor.id,
+                    vendorName: vendor.name,
+                    vendorContact: vendor.contactName || prev.vendorContact,
+                  }));
+                } else {
+                  setForm((prev) => ({ ...prev, vendorId: "" }));
+                }
+              }}
+              refreshKey={vendorRefreshKey}
+              placeholder="Select vendor (optional)"
+            />
+            <Button type="button" variant="outline" size="sm" onClick={() => setVendorDialogOpen(true)}>
+              Create Vendor
+            </Button>
             <Input
               id="vendorName"
+              placeholder="Vendor name"
               value={form.vendorName}
               onChange={(e) => setForm({ ...form, vendorName: e.target.value })}
               required
+              disabled={Boolean(form.vendorId)}
             />
           </div>
           <div className="space-y-2">
@@ -324,6 +357,11 @@ export function PurchaseOrderFormDialog({
           </Button>
         </div>
       </form>
+      <VendorFormDialog
+        open={vendorDialogOpen}
+        onOpenChange={setVendorDialogOpen}
+        onSaved={() => setVendorRefreshKey((prev) => prev + 1)}
+      />
     </FormDialog>
   );
 }

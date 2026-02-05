@@ -30,5 +30,6 @@ logs/
 *.pyc
 # Generated
 test-results/
+*.tsbuildinfo
 # Imported data
 data/Refrens/

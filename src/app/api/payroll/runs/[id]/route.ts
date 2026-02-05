@@ -107,32 +107,67 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
     if (run.status === "APPROVED") {
       for (const entry of run.entries) {
-        if (entry.walletLedgerId) continue;
         const employee = await tx.employee.findUnique({ where: { id: entry.employeeId } });
         if (!employee) continue;
-        const newBalance = Number(employee.walletBalance) + Number(entry.netPay);
-        const ledger = await tx.walletLedger.create({
-          data: {
-            date: new Date(),
-            employeeId: entry.employeeId,
-            type: "CREDIT",
-            amount: new Prisma.Decimal(entry.netPay),
-            reference: `PAYROLL:${run.id}:${entry.id}`,
-            balance: new Prisma.Decimal(newBalance),
-          },
-        });
-        await tx.employee.update({
-          where: { id: entry.employeeId },
-          data: { walletBalance: new Prisma.Decimal(newBalance) },
-        });
-        await tx.payrollEntry.update({
-          where: { id: entry.id },
-          data: {
-            walletLedgerId: ledger.id,
-            approvedById: entry.approvedById || session.user.id,
-            status: "PAID",
-          },
-        });
+
+        let expenseId = entry.expenseId;
+        if (!expenseId) {
+          const periodLabel = `${run.periodStart.toISOString().slice(0, 10)} to ${run.periodEnd.toISOString().slice(0, 10)}`;
+          const expense = await tx.expense.create({
+            data: {
+              date: run.periodEnd,
+              description: `Salary for ${employee.name} (${periodLabel})`,
+              category: "Salary",
+              amount: new Prisma.Decimal(entry.netPay),
+              paymentMode: "Payroll Transfer",
+              paymentSource: "COMPANY_ACCOUNT",
+              expenseType: "COMPANY",
+              status: "APPROVED",
+              approvalLevel: "PAYROLL",
+              submittedById: session.user.id,
+              approvedById: session.user.id,
+              approvedAmount: new Prisma.Decimal(entry.netPay),
+              remarks: entry.deductionReason || undefined,
+            },
+          });
+          expenseId = expense.id;
+        }
+
+        if (!entry.walletLedgerId) {
+          const newBalance = Number(employee.walletBalance) + Number(entry.netPay);
+          const ledger = await tx.walletLedger.create({
+            data: {
+              date: new Date(),
+              employeeId: entry.employeeId,
+              type: "CREDIT",
+              amount: new Prisma.Decimal(entry.netPay),
+              reference: `PAYROLL:${run.id}:${entry.id}`,
+              balance: new Prisma.Decimal(newBalance),
+            },
+          });
+          await tx.employee.update({
+            where: { id: entry.employeeId },
+            data: { walletBalance: new Prisma.Decimal(newBalance) },
+          });
+          await tx.payrollEntry.update({
+            where: { id: entry.id },
+            data: {
+              walletLedgerId: ledger.id,
+              expenseId,
+              approvedById: entry.approvedById || session.user.id,
+              status: "PAID",
+            },
+          });
+        } else if (!entry.expenseId) {
+          await tx.payrollEntry.update({
+            where: { id: entry.id },
+            data: {
+              expenseId,
+              approvedById: entry.approvedById || session.user.id,
+              status: "PAID",
+            },
+          });
+        }
       }
     }
 

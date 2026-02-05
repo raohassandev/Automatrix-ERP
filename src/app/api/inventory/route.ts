@@ -26,6 +26,7 @@ export async function GET() {
     ...item,
     unitCost: canViewCost ? item.unitCost : null,
     totalValue: canViewCost ? item.totalValue : null,
+    lastPurchasePrice: canViewCost ? item.lastPurchasePrice : null,
     sellingPrice: canViewSelling ? item.sellingPrice : null,
   }));
 
@@ -79,6 +80,7 @@ export async function POST(req: Request) {
       category: sanitizedData.category,
       unit: sanitizedData.unit,
       unitCost: new Prisma.Decimal(sanitizedData.unitCost),
+      lastPurchasePrice: new Prisma.Decimal(sanitizedData.unitCost),
       sellingPrice: new Prisma.Decimal(sanitizedData.sellingPrice),
       quantity: new Prisma.Decimal(initialQuantity),
       totalValue: new Prisma.Decimal(totalValue),

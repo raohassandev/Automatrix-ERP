@@ -94,8 +94,34 @@ export const employeeSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1),
   phone: z.string().optional(),
+  cnic: z.string().optional(),
+  address: z.string().optional(),
+  education: z.string().optional(),
+  experience: z.string().optional(),
+  department: z.string().optional(),
+  designation: z.string().optional(),
+  reportingOfficerId: z.string().optional(),
+  joinDate: z.string().optional(),
   role: z.string().min(1),
 });
+
+export const employeeUpdateSchema = employeeSchema.partial();
+
+export const departmentSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const departmentUpdateSchema = departmentSchema.partial();
+
+export const designationSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const designationUpdateSchema = designationSchema.partial();
 
 export const walletSchema = z.object({
   employeeId: z.string().min(1),
@@ -152,6 +178,7 @@ export const salaryAdvanceUpdateSchema = salaryAdvanceSchema.partial();
 
 export const purchaseOrderSchema = z.object({
   poNumber: z.string().min(1),
+  vendorId: z.string().optional(),
   vendorName: z.string().min(1),
   vendorContact: z.string().optional(),
   orderDate: z.string().min(1),
@@ -171,6 +198,31 @@ export const purchaseOrderSchema = z.object({
 });
 
 export const purchaseOrderUpdateSchema = purchaseOrderSchema.partial();
+
+export const vendorSchema = z.object({
+  name: z.string().min(1),
+  contactName: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+  address: z.string().optional(),
+  notes: z.string().optional(),
+  status: z.string().optional(),
+});
+
+export const vendorUpdateSchema = vendorSchema.partial();
+
+export const commissionSchema = z.object({
+  employeeId: z.string().min(1),
+  projectRef: z.string().min(1),
+  basisType: z.string().optional(),
+  basisAmount: z.number().nonnegative().optional(),
+  percent: z.number().nonnegative().optional(),
+  amount: z.number().positive().optional(),
+  reason: z.string().optional(),
+  status: z.string().optional(),
+});
+
+export const commissionUpdateSchema = commissionSchema.partial();
 
 export const goodsReceiptSchema = z.object({
   grnNumber: z.string().min(1),

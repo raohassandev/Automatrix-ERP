@@ -455,3 +455,10 @@ Update this as we ship changes. Format: **Item → Status → Evidence (PR/commi
 - PO/GRN module (schema + CRUD) → Done → `prisma/schema.prisma` + `src/app/procurement/purchase-orders/page.tsx` + `src/app/procurement/grn/page.tsx` + `src/app/api/procurement/*`
 - PO↔GRN linkage + inventory stock-in → Done → `src/app/api/procurement/grn/route.ts` + `src/app/api/procurement/grn/[id]/route.ts` + `prisma/schema.prisma`
 - Employee self dashboard (wallet + expenses) → Done → `src/app/me/page.tsx` + `src/components/Sidebar.tsx`
+- Formal project assignments (schema + API + UI) → Done → `prisma/schema.prisma` + `src/app/api/projects/[id]/assignments/route.ts` + `src/components/ProjectFormDialog.tsx`
+- Employee master profile fields (HR) → Done → `prisma/schema.prisma` + `src/components/EmployeeFormDialog.tsx` + `src/app/api/employees/*`
+- Vendor master module → Done → `prisma/schema.prisma` + `src/app/vendors/page.tsx` + `src/app/api/vendors/*` + `src/components/VendorFormDialog.tsx`
+- Commissions module (CRM) → Done → `prisma/schema.prisma` + `src/app/commissions/page.tsx` + `src/app/api/commissions/*`
+- Inventory last purchase price + avg cost updates → Done → `prisma/schema.prisma` + `src/app/api/inventory/ledger/route.ts`
+- Payroll/Incentive accounting integration (expense + wallet) → Done → `src/app/api/payroll/runs/[id]/route.ts` + `src/app/api/incentives/*` + `src/app/api/commissions/*`
+- Department/Designation master data (CRUD + UI + permissions) → Done → `prisma/schema.prisma` + `src/app/departments/page.tsx` + `src/app/designations/page.tsx` + `src/app/api/departments/*` + `src/app/api/designations/*`

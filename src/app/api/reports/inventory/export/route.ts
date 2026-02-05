@@ -56,7 +56,7 @@ export async function GET() {
   });
 
   const header = canViewCost
-    ? ["Item", "Category", "Quantity", "Min Stock", "Unit Cost", "Total Value"]
+    ? ["Item", "Category", "Quantity", "Min Stock", "Avg Cost", "Last Purchase", "Total Value"]
     : ["Item", "Category", "Quantity", "Min Stock"];
   const rows: Array<Array<string | number | null | undefined>> = [
     header,
@@ -68,6 +68,7 @@ export async function GET() {
             Number(item.quantity),
             Number(item.minStock),
             formatMoney(Number(item.unitCost)),
+            formatMoney(Number(item.lastPurchasePrice ?? item.unitCost)),
             formatMoney(Number(item.totalValue)),
           ]
         : [item.name, item.category, Number(item.quantity), Number(item.minStock)]

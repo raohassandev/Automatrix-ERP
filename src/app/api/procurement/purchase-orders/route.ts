@@ -20,7 +20,7 @@ export async function GET() {
 
   const data = await prisma.purchaseOrder.findMany({
     orderBy: { orderDate: "desc" },
-    include: { items: true },
+    include: { items: true, vendor: true },
   });
   return NextResponse.json({ success: true, data });
 }
@@ -48,6 +48,7 @@ export async function POST(req: Request) {
   const sanitized = {
     ...parsed.data,
     poNumber: sanitizeString(parsed.data.poNumber),
+    vendorId: parsed.data.vendorId ? sanitizeString(parsed.data.vendorId) : undefined,
     vendorName: sanitizeString(parsed.data.vendorName),
     vendorContact: parsed.data.vendorContact ? sanitizeString(parsed.data.vendorContact) : undefined,
     status: parsed.data.status ? sanitizeString(parsed.data.status) : "DRAFT",
@@ -62,6 +63,20 @@ export async function POST(req: Request) {
     })),
   };
 
+  if (sanitized.vendorId) {
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: sanitized.vendorId },
+      select: { id: true, name: true, contactName: true },
+    });
+    if (!vendor) {
+      return NextResponse.json({ success: false, error: "Vendor not found" }, { status: 400 });
+    }
+    sanitized.vendorName = vendor.name;
+    if (!sanitized.vendorContact && vendor.contactName) {
+      sanitized.vendorContact = vendor.contactName;
+    }
+  }
+
   const totalAmount = sanitized.items.reduce(
     (sum, item) => sum + item.quantity * item.unitCost,
     0
@@ -70,6 +85,7 @@ export async function POST(req: Request) {
   const created = await prisma.purchaseOrder.create({
     data: {
       poNumber: sanitized.poNumber,
+      vendorId: sanitized.vendorId,
       vendorName: sanitized.vendorName,
       vendorContact: sanitized.vendorContact,
       orderDate: new Date(sanitized.orderDate),

@@ -15,6 +15,14 @@ interface Employee {
   email: string;
   role: string;
   phone?: string | null;
+  department?: string | null;
+  designation?: string | null;
+  cnic?: string | null;
+  address?: string | null;
+  education?: string | null;
+  experience?: string | null;
+  reportingOfficerId?: string | null;
+  joinDate?: string | null;
   walletBalance: number | string;
   walletHold?: number | string;
   status: string;
@@ -63,6 +71,8 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
               <th className="py-2">Name</th>
               <th className="py-2">Email</th>
               <th className="py-2">Role</th>
+              <th className="py-2">Department</th>
+              <th className="py-2">Designation</th>
               <th className="py-2">Wallet</th>
               <th className="py-2">Status</th>
               <th className="py-2">Actions</th>
@@ -74,6 +84,8 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
                 <td className="py-2">{employee.name}</td>
                 <td className="py-2">{employee.email}</td>
                 <td className="py-2">{employee.role}</td>
+                <td className="py-2">{employee.department || "-"}</td>
+                <td className="py-2">{employee.designation || "-"}</td>
                 <td className="py-2">
                   <div className="text-sm">{formatMoney(Number(employee.walletBalance))}</div>
                   <div className="text-xs text-muted-foreground">
@@ -115,6 +127,8 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
             subtitle={employee.email}
               fields={[
                 { label: "Role", value: employee.role },
+                { label: "Department", value: employee.department || "-" },
+                { label: "Designation", value: employee.designation || "-" },
                 { label: "Wallet", value: formatMoney(Number(employee.walletBalance)) },
                 {
                   label: "Available",
@@ -168,6 +182,14 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
                 phone: editEmployee.phone,
                 role: editEmployee.role,
                 status: editEmployee.status,
+                department: editEmployee.department,
+                designation: editEmployee.designation,
+                cnic: editEmployee.cnic,
+                address: editEmployee.address,
+                education: editEmployee.education,
+                experience: editEmployee.experience,
+                reportingOfficerId: editEmployee.reportingOfficerId,
+                joinDate: editEmployee.joinDate,
               }
             : undefined
         }

@@ -2,7 +2,18 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
-type FormType = "expense" | "income" | "employee" | "project" | "inventory" | "invoice" | null;
+type FormType =
+  | "expense"
+  | "income"
+  | "employee"
+  | "project"
+  | "client"
+  | "inventory"
+  | "invoice"
+  | "vendor"
+  | "department"
+  | "designation"
+  | null;
 
 interface FormDialogContextType {
   openForm: FormType;

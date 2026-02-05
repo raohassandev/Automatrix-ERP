@@ -20,6 +20,8 @@ mindmap
         Designation
         Reporting Officer
         Salary Package
+      Departments (Master Data)
+      Designations (Master Data)
       Salary Advances
       Roles & Permissions (future)
     Finance
@@ -38,6 +40,7 @@ mindmap
       Approvals
     Projects/Engineering
       Projects
+        Assignments (Team)
         Status: Not Started/Upcoming
         Status: Active
         Status: On Hold
@@ -48,7 +51,7 @@ mindmap
     Procurement/Store
       Purchase Orders
       Goods Receipts (GRN)
-      Vendor Records (future)
+      Vendor Records
     Inventory
       Items
       Ledger (Stock In/Out)

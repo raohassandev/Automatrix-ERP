@@ -6,7 +6,12 @@ import { formatMoney } from "@/lib/format";
 import PaginationControls from "@/components/PaginationControls";
 import DateRangePicker from "@/components/DateRangePicker";
 import Link from "next/link";
-import { InventoryLedgerActions } from "@/components/InventoryLedgerActions";
+import dynamic from "next/dynamic";
+
+const InventoryLedgerActions = dynamic(
+  () => import("@/components/InventoryLedgerActions").then((mod) => mod.InventoryLedgerActions),
+  { ssr: false }
+);
 
 export default async function InventoryLedgerPage({
   searchParams,

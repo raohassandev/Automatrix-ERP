@@ -37,23 +37,21 @@ export default async function ProjectExpensesReportPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  const ownProjectRefs =
+  const ownProjectAssignments =
     !canViewAll && !canViewTeam && canViewOwn
-      ? await prisma.expense.findMany({
-          where: { submittedById: session.user.id, project: { not: null } },
-          select: { project: true },
+      ? await prisma.projectAssignment.findMany({
+          where: { userId: session.user.id },
+          select: { projectId: true },
         })
       : [];
-  const ownProjectValues =
+  const ownProjectIds =
     !canViewAll && !canViewTeam && canViewOwn
-      ? Array.from(new Set(ownProjectRefs.map((entry) => entry.project).filter(Boolean))) as string[]
+      ? ownProjectAssignments.map((entry) => entry.projectId)
       : [];
   const baseWhere: Record<string, unknown> =
     !canViewAll && !canViewTeam && canViewOwn
-      ? ownProjectValues.length > 0
-        ? {
-            OR: [{ projectId: { in: ownProjectValues } }, { name: { in: ownProjectValues } }],
-          }
+      ? ownProjectIds.length > 0
+        ? { id: { in: ownProjectIds } }
         : { id: "__none__" }
       : {};
 

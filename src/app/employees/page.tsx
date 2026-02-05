@@ -50,6 +50,14 @@ export default async function EmployeesPage({
     role: string;
     status: string;
     phone?: string | null;
+    department?: string | null;
+    designation?: string | null;
+    cnic?: string | null;
+    address?: string | null;
+    education?: string | null;
+    experience?: string | null;
+    reportingOfficerId?: string | null;
+    joinDate?: string | null;
     walletBalance: number;
     walletHold: number;
   }> = [];
@@ -66,6 +74,8 @@ export default async function EmployeesPage({
                 { name: { contains: search, mode: "insensitive" } },
                 { email: { contains: search, mode: "insensitive" } },
                 { role: { contains: search, mode: "insensitive" } },
+                { department: { contains: search, mode: "insensitive" } },
+                { designation: { contains: search, mode: "insensitive" } },
               ],
             },
           ],
@@ -86,6 +96,7 @@ export default async function EmployeesPage({
     // Convert Decimal to number for component compatibility
     employees = employeesRaw.map((emp) => ({
       ...emp,
+      joinDate: emp.joinDate ? emp.joinDate.toISOString().slice(0, 10) : null,
       walletBalance: parseFloat(emp.walletBalance.toString()),
       walletHold: parseFloat(emp.walletHold.toString()),
     }));

@@ -180,7 +180,7 @@ export const projectSchema = z.object({
     .max(200, 'Client name too long'),
   startDate: dateSchema,
   endDate: dateSchema.optional(),
-  status: z.enum(['ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'])
+  status: z.enum(['NOT_STARTED', 'UPCOMING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CLOSED'])
     .default('ACTIVE'),
   contractValue: z.number().finite('Contract value must be a valid number').default(0),
   invoicedAmount: z.number().finite('Invoiced amount must be a valid number').default(0),
@@ -206,7 +206,7 @@ export const updateProjectSchema = z.object({
   client: z.string().min(2).max(200).optional(),
   startDate: dateSchema.optional(),
   endDate: dateSchema.optional(),
-  status: z.enum(['ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED']).optional(),
+  status: z.enum(['NOT_STARTED', 'UPCOMING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CLOSED']).optional(),
   contractValue: z.number().finite().optional(),
   invoicedAmount: z.number().finite().optional(),
   receivedAmount: z.number().finite().optional(),

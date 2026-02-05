@@ -35,6 +35,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   const data: Record<string, unknown> = {};
   if (parsed.data.poNumber) data.poNumber = sanitizeString(parsed.data.poNumber);
+  if (parsed.data.vendorId !== undefined) {
+    data.vendorId = parsed.data.vendorId ? sanitizeString(parsed.data.vendorId) : null;
+  }
   if (parsed.data.vendorName) data.vendorName = sanitizeString(parsed.data.vendorName);
   if (parsed.data.vendorContact !== undefined) {
     data.vendorContact = parsed.data.vendorContact ? sanitizeString(parsed.data.vendorContact) : null;
@@ -47,6 +50,20 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.currency) data.currency = sanitizeString(parsed.data.currency);
   if (parsed.data.notes !== undefined) {
     data.notes = parsed.data.notes ? sanitizeString(parsed.data.notes) : null;
+  }
+
+  if (data.vendorId) {
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: data.vendorId as string },
+      select: { id: true, name: true, contactName: true },
+    });
+    if (!vendor) {
+      return NextResponse.json({ success: false, error: "Vendor not found" }, { status: 400 });
+    }
+    data.vendorName = vendor.name;
+    if (!data.vendorContact && vendor.contactName) {
+      data.vendorContact = vendor.contactName;
+    }
   }
 
   let updated = existing;

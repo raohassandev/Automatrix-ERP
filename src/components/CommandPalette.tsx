@@ -71,6 +71,8 @@ export function CommandPalette() {
             { href: "/expenses", label: "Expenses", icon: CreditCard, permissions: ["expenses.view_all", "expenses.view_own"] },
             { href: "/income", label: "Income", icon: TrendingUp, permissions: ["income.view_all", "income.view_own"] },
             { href: "/employees", label: "Employees", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
+            { href: "/departments", label: "Departments", icon: Tags, permissions: ["departments.view_all"] },
+            { href: "/designations", label: "Designations", icon: Tags, permissions: ["designations.view_all"] },
             { href: "/wallets", label: "Wallet Ledger", icon: Wallet, permissions: ["employees.view_all", "employees.view_own", "employees.edit_wallet"] },
             { href: "/clients", label: "Clients", icon: Building2, permissions: ["clients.view_all"] },
             { href: "/quotations", label: "Quotations", icon: FileSignature, permissions: ["quotations.view_all"] },
@@ -78,6 +80,8 @@ export function CommandPalette() {
             { href: "/inventory", label: "Inventory", icon: Package, permissions: ["inventory.view"] },
             { href: "/inventory/ledger", label: "Inventory Ledger", icon: FileBarChart, permissions: ["inventory.view"] },
             { href: "/invoices", label: "Invoices", icon: FileText, permissions: ["invoices.view_all"] },
+            { href: "/vendors", label: "Vendors", icon: Building2, permissions: ["vendors.view_all"] },
+            { href: "/commissions", label: "Commissions", icon: FileBarChart, permissions: ["commissions.view_all"] },
             {
               href: "/approvals",
               label: "Approvals",

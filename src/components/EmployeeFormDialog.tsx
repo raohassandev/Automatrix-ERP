@@ -6,6 +6,7 @@ import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
 import { ROLE_OPTIONS } from "@/lib/permissions";
 
@@ -19,16 +20,35 @@ interface EmployeeFormDialogProps {
     phone?: string | null;
     role: string;
     status?: string | null;
+    cnic?: string | null;
+    address?: string | null;
+    education?: string | null;
+    experience?: string | null;
+    department?: string | null;
+    designation?: string | null;
+    reportingOfficerId?: string | null;
+    joinDate?: string | null;
   };
 }
 
 export function EmployeeFormDialog({ open, onOpenChange, initialData }: EmployeeFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [reportingOptions, setReportingOptions] = useState<Array<{ id: string; name: string }>>([]);
+  const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
+  const [designations, setDesignations] = useState<Array<{ id: string; name: string }>>([]);
   const emptyForm = {
     name: "",
     email: "",
     phone: "",
+    cnic: "",
+    address: "",
+    education: "",
+    experience: "",
+    department: "",
+    designation: "",
+    reportingOfficerId: "",
+    joinDate: "",
     role: "Staff",
     initialWalletBalance: "",
     status: "ACTIVE",
@@ -38,11 +58,68 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
 
   useEffect(() => {
     if (!open) return;
+    const loadEmployees = async () => {
+      try {
+        const [employeeRes, departmentRes, designationRes] = await Promise.all([
+          fetch("/api/employees"),
+          fetch("/api/departments"),
+          fetch("/api/designations"),
+        ]);
+
+        const employeeData = await employeeRes.json();
+        if (employeeRes.ok) {
+          const options = Array.isArray(employeeData.data)
+            ? employeeData.data.map((employee: { id: string; name: string }) => ({
+                id: employee.id,
+                name: employee.name,
+              }))
+            : [];
+          setReportingOptions(options);
+        }
+
+        const departmentData = await departmentRes.json();
+        if (departmentRes.ok) {
+          const list = Array.isArray(departmentData.data)
+            ? departmentData.data.map((department: { id: string; name: string }) => ({
+                id: department.id,
+                name: department.name,
+              }))
+            : [];
+          setDepartments(list);
+        }
+
+        const designationData = await designationRes.json();
+        if (designationRes.ok) {
+          const list = Array.isArray(designationData.data)
+            ? designationData.data.map((designation: { id: string; name: string }) => ({
+                id: designation.id,
+                name: designation.name,
+              }))
+            : [];
+          setDesignations(list);
+        }
+      } catch (error) {
+        console.error("Failed to load reporting officers", error);
+      }
+    };
+    loadEmployees();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
     if (initialData) {
       setForm({
         name: initialData.name || "",
         email: initialData.email || "",
         phone: initialData.phone || "",
+        cnic: initialData.cnic || "",
+        address: initialData.address || "",
+        education: initialData.education || "",
+        experience: initialData.experience || "",
+        department: initialData.department || "",
+        designation: initialData.designation || "",
+        reportingOfficerId: initialData.reportingOfficerId || "",
+        joinDate: initialData.joinDate || "",
         role: initialData.role || "Staff",
         initialWalletBalance: "",
         status: initialData.status || "ACTIVE",
@@ -64,11 +141,27 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
                 phone: form.phone || null,
                 role: form.role,
                 status: form.status,
+                cnic: form.cnic,
+                address: form.address,
+                education: form.education,
+                experience: form.experience,
+                department: form.department,
+                designation: form.designation,
+                reportingOfficerId: form.reportingOfficerId,
+                joinDate: form.joinDate,
               }
             : {
                 name: form.name,
                 email: form.email,
                 phone: form.phone || null,
+                cnic: form.cnic || undefined,
+                address: form.address || undefined,
+                education: form.education || undefined,
+                experience: form.experience || undefined,
+                department: form.department || undefined,
+                designation: form.designation || undefined,
+                reportingOfficerId: form.reportingOfficerId || undefined,
+                joinDate: form.joinDate || undefined,
                 role: form.role,
                 initialWalletBalance: form.initialWalletBalance
                   ? parseFloat(form.initialWalletBalance)
@@ -163,6 +256,107 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="department">Department</Label>
+            <Input
+              id="department"
+              list="department-options"
+              placeholder="Engineering / Sales"
+              value={form.department}
+              onChange={(e) => setForm({ ...form, department: e.target.value })}
+            />
+            <datalist id="department-options">
+              {departments.map((department) => (
+                <option key={department.id} value={department.name} />
+              ))}
+            </datalist>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="designation">Designation</Label>
+            <Input
+              id="designation"
+              list="designation-options"
+              placeholder="Engineer / Technician"
+              value={form.designation}
+              onChange={(e) => setForm({ ...form, designation: e.target.value })}
+            />
+            <datalist id="designation-options">
+              {designations.map((designation) => (
+                <option key={designation.id} value={designation.name} />
+              ))}
+            </datalist>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="reportingOfficerId">Reporting Officer</Label>
+            <select
+              id="reportingOfficerId"
+              className="rounded-md border px-3 py-2"
+              value={form.reportingOfficerId}
+              onChange={(e) => setForm({ ...form, reportingOfficerId: e.target.value })}
+            >
+              <option value="">None</option>
+              {reportingOptions
+                .filter((employee) => employee.id !== initialData?.id)
+                .map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="joinDate">Join Date</Label>
+            <Input
+              id="joinDate"
+              type="date"
+              value={form.joinDate}
+              onChange={(e) => setForm({ ...form, joinDate: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cnic">CNIC (Optional)</Label>
+            <Input
+              id="cnic"
+              placeholder="35202-1234567-1"
+              value={form.cnic}
+              onChange={(e) => setForm({ ...form, cnic: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="address">Address (Optional)</Label>
+            <Textarea
+              id="address"
+              placeholder="House #, Street, City"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="education">Education (Optional)</Label>
+            <Textarea
+              id="education"
+              placeholder="Degree, certifications"
+              value={form.education}
+              onChange={(e) => setForm({ ...form, education: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="experience">Experience (Optional)</Label>
+            <Textarea
+              id="experience"
+              placeholder="Relevant experience summary"
+              value={form.experience}
+              onChange={(e) => setForm({ ...form, experience: e.target.value })}
+            />
           </div>
 
           {!isEdit ? (

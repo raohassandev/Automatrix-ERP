@@ -7,6 +7,9 @@ import { ProjectFormDialog } from "./ProjectFormDialog";
 import { ClientFormDialog } from "./ClientFormDialog";
 import { InventoryFormDialog } from "./InventoryFormDialog";
 import { InvoiceFormDialog } from "./InvoiceFormDialog";
+import { VendorFormDialog } from "./VendorFormDialog";
+import { DepartmentFormDialog } from "./DepartmentFormDialog";
+import { DesignationFormDialog } from "./DesignationFormDialog";
 
 export type FormType =
   | "expense"
@@ -16,6 +19,9 @@ export type FormType =
   | "client"
   | "inventory"
   | "invoice"
+  | "vendor"
+  | "department"
+  | "designation"
   | null;
 
 interface FormDialogManagerProps {
@@ -53,6 +59,18 @@ export function FormDialogManager({ openForm, onClose }: FormDialogManagerProps)
       <InvoiceFormDialog 
         open={openForm === "invoice"} 
         onOpenChange={(open) => !open && onClose()} 
+      />
+      <VendorFormDialog
+        open={openForm === "vendor"}
+        onOpenChange={(open) => !open && onClose()}
+      />
+      <DepartmentFormDialog
+        open={openForm === "department"}
+        onOpenChange={(open) => !open && onClose()}
+      />
+      <DesignationFormDialog
+        open={openForm === "designation"}
+        onOpenChange={(open) => !open && onClose()}
       />
     </>
   );

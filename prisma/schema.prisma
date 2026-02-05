@@ -30,8 +30,10 @@ model User {
   incomeApprovals  Income[] @relation("IncomeApprovedBy")
   approvals       Approval[] @relation("ApprovalBy")
   incentiveApprovals IncentiveEntry[] @relation("IncentiveApprovedBy")
+  commissionApprovals CommissionEntry[] @relation("CommissionApprovedBy")
   payrollApprovals  PayrollEntry[] @relation("PayrollApprovedBy")
   salaryAdvanceApprovals SalaryAdvance[]
+  projectAssignments ProjectAssignment[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -60,6 +62,24 @@ model Category {
   description String?
   maxAmount   Decimal?
   enforceStrict Boolean @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Designation {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -203,6 +223,7 @@ model Project {
   name           String
   clientId       String
   client         Client   @relation(fields: [clientId], references: [id])
+  assignments    ProjectAssignment[]
   startDate      DateTime
   endDate        DateTime?
   status         String
@@ -225,6 +246,7 @@ model InventoryItem {
   quantity       Decimal  
   unit           String
   unitCost       Decimal  
+  lastPurchasePrice Decimal?
   sellingPrice   Decimal @default(0)
   totalValue     Decimal  
   minStock       Decimal   @default(0)
@@ -259,6 +281,16 @@ model Employee {
   email         String         @unique
   name          String
   phone         String?
+  cnic          String?
+  address       String?
+  education     String?
+  experience    String?
+  department    String?
+  designation   String?
+  reportingOfficerId String?
+  reportingOfficer Employee? @relation("EmployeeReporting", fields: [reportingOfficerId], references: [id])
+  directReports Employee[] @relation("EmployeeReporting")
+  joinDate      DateTime?
   role          String
   walletBalance Decimal         @default(0)
   walletHold    Decimal         @default(0)
@@ -266,6 +298,7 @@ model Employee {
   wallets       WalletLedger[]
   compensation  EmployeeCompensation?
   incentives    IncentiveEntry[]
+  commissions   CommissionEntry[]
   payrollEntries PayrollEntry[]
   salaryAdvances SalaryAdvance[]
 }
@@ -314,6 +347,8 @@ model IncentiveEntry {
   status       String   @default("PENDING")
   reason       String?
   approvedById String?
+  expenseId    String?
+  walletLedgerId String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -345,6 +380,7 @@ model PayrollEntry {
   status        String   @default("PENDING")
   approvedById  String?
   walletLedgerId String?
+  expenseId     String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -385,6 +421,7 @@ model Invoice {
 model PurchaseOrder {
   id           String   @id @default(cuid())
   poNumber     String   @unique
+  vendorId     String?
   vendorName   String
   vendorContact String?
   orderDate    DateTime
@@ -396,6 +433,7 @@ model PurchaseOrder {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  vendor       Vendor?  @relation(fields: [vendorId], references: [id])
   items        PurchaseOrderItem[]
   receipts     GoodsReceipt[]
 }
@@ -443,6 +481,54 @@ model GoodsReceiptItem {
 
   goodsReceipt  GoodsReceipt @relation(fields: [goodsReceiptId], references: [id])
   purchaseOrderItem PurchaseOrderItem? @relation(fields: [purchaseOrderItemId], references: [id])
+}
+
+model Vendor {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  contactName String?
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  purchaseOrders PurchaseOrder[]
+}
+
+model CommissionEntry {
+  id            String   @id @default(cuid())
+  employeeId    String
+  projectRef    String?
+  basisType     String?
+  basisAmount   Decimal?
+  percent       Decimal?
+  amount        Decimal
+  status        String   @default("PENDING")
+  reason        String?
+  approvedById  String?
+  expenseId     String?
+  walletLedgerId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  employee      Employee @relation(fields: [employeeId], references: [id])
+  approvedBy    User?    @relation("CommissionApprovedBy", fields: [approvedById], references: [id])
+}
+
+model ProjectAssignment {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("MEMBER")
+  createdAt DateTime @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
 }
 
 model Quotation {

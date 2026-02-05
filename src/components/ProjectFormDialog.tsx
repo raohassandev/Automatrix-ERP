@@ -10,6 +10,8 @@ import { ClientFormDialog } from "./ClientFormDialog";
 import { toast } from "sonner";
 import ClientAutoComplete from "./ClientAutoComplete";
 
+type UserOption = { id: string; name: string | null; email: string; role: string | null };
+
 interface ProjectFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -36,6 +38,8 @@ export function ProjectFormDialog({
   const [pending, startTransition] = useTransition();
   const [clientDialogOpen, setClientDialogOpen] = useState(false);
   const [clientRefreshKey, setClientRefreshKey] = useState(0);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [form, setForm] = useState({
     projectId: "",
     name: "",
@@ -54,6 +58,41 @@ export function ProjectFormDialog({
   }, [open]);
 
   useEffect(() => {
+    if (!open) return;
+    const loadUsers = async () => {
+      try {
+        const res = await fetch("/api/users/list");
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load users");
+        }
+        setUsers(Array.isArray(data.data) ? data.data : []);
+      } catch (error) {
+        console.error("Failed to load users", error);
+      }
+    };
+    loadUsers();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !initialData?.id) return;
+    const loadAssignments = async () => {
+      try {
+        const res = await fetch(`/api/projects/${initialData.id}/assignments`);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load assignments");
+        }
+        const ids = Array.isArray(data.data) ? data.data.map((assignment: { userId: string }) => assignment.userId) : [];
+        setSelectedUsers(ids);
+      } catch (error) {
+        console.error("Failed to load assignments", error);
+      }
+    };
+    loadAssignments();
+  }, [open, initialData?.id]);
+
+  useEffect(() => {
     if (!open || !initialData) return;
     setForm((prev) => ({
       ...prev,
@@ -66,6 +105,11 @@ export function ProjectFormDialog({
       status: initialData.status ?? prev.status,
     }));
   }, [open, initialData]);
+
+  useEffect(() => {
+    if (!open || initialData?.id) return;
+    setSelectedUsers([]);
+  }, [open, initialData?.id]);
 
   async function submit() {
     try {
@@ -97,6 +141,21 @@ export function ProjectFormDialog({
 
       if (!res.ok) {
         throw new Error(data.error || `Failed to ${isEdit ? "update" : "create"} project`);
+      }
+
+      const projectId = isEdit ? initialData?.id : data?.data?.id;
+      if (projectId) {
+        try {
+          await fetch(`/api/projects/${projectId}/assignments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              assignments: selectedUsers.map((userId) => ({ userId })),
+            }),
+          });
+        } catch (assignmentError) {
+          console.error("Failed to save assignments", assignmentError);
+        }
       }
 
       toast.success(`Project ${isEdit ? "updated" : "created"} successfully!`);
@@ -218,11 +277,41 @@ export function ProjectFormDialog({
               onChange={(e) => setForm({ ...form, status: e.target.value })}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
             >
+              <option value="NOT_STARTED">NOT_STARTED</option>
+              <option value="UPCOMING">UPCOMING</option>
               <option value="ACTIVE">ACTIVE</option>
               <option value="ON_HOLD">ON_HOLD</option>
               <option value="COMPLETED">COMPLETED</option>
-              <option value="CANCELLED">CANCELLED</option>
+              <option value="CLOSED">CLOSED</option>
             </select>
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label>Project Team (Assigned Users)</Label>
+            <div className="rounded-md border px-3 py-2 max-h-40 overflow-y-auto space-y-2">
+              {users.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No users found.</p>
+              ) : (
+                users.map((user) => (
+                  <label key={user.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedUsers((prev) => [...prev, user.id]);
+                        } else {
+                          setSelectedUsers((prev) => prev.filter((id) => id !== user.id));
+                        }
+                      }}
+                    />
+                    <span>
+                      {user.name || user.email} {user.role ? `(${user.role})` : ""}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
           </div>
         </div>
 

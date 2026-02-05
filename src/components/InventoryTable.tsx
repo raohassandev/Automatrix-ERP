@@ -16,6 +16,7 @@ interface InventoryItemRow {
   quantity: number | string;
   unit: string;
   unitCost: number | string | null;
+  lastPurchasePrice?: number | string | null;
   sellingPrice: number | string | null;
   totalValue: number | string | null;
   minStock?: number | string | null;
@@ -51,7 +52,8 @@ export function InventoryTable({
               <th className="py-2">SKU</th>
               <th className="py-2">Category</th>
               <th className="py-2">Qty</th>
-              {canViewCost ? <th className="py-2">Unit Cost</th> : null}
+              {canViewCost ? <th className="py-2">Avg Cost</th> : null}
+              {canViewCost ? <th className="py-2">Last Purchase</th> : null}
               {canViewSelling ? <th className="py-2">Selling Price</th> : null}
               {canViewCost ? <th className="py-2">Total</th> : null}
               {canAdjust ? <th className="py-2">Actions</th> : null}
@@ -67,6 +69,13 @@ export function InventoryTable({
                 {canViewCost ? (
                   <td className="py-2">
                     {item.unitCost === null ? "-" : formatMoney(Number(item.unitCost))}
+                  </td>
+                ) : null}
+                {canViewCost ? (
+                  <td className="py-2">
+                    {item.lastPurchasePrice === null || item.lastPurchasePrice === undefined
+                      ? "-"
+                      : formatMoney(Number(item.lastPurchasePrice))}
                   </td>
                 ) : null}
                 {canViewSelling ? (
@@ -125,7 +134,16 @@ export function InventoryTable({
               { label: "SKU", value: item.sku || "-" },
               { label: "Quantity", value: Number(item.quantity) },
               ...(canViewCost
-                ? [{ label: "Unit Cost", value: item.unitCost === null ? "-" : formatMoney(Number(item.unitCost)) }]
+                ? [
+                    { label: "Avg Cost", value: item.unitCost === null ? "-" : formatMoney(Number(item.unitCost)) },
+                    {
+                      label: "Last Purchase",
+                      value:
+                        item.lastPurchasePrice === null || item.lastPurchasePrice === undefined
+                          ? "-"
+                          : formatMoney(Number(item.lastPurchasePrice)),
+                    },
+                  ]
                 : []),
               ...(canViewSelling
                 ? [{ label: "Selling Price", value: item.sellingPrice === null ? "-" : formatMoney(Number(item.sellingPrice)) }]

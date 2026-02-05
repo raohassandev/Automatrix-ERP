@@ -189,7 +189,7 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
 
           {canViewCost ? (
             <div className="space-y-2">
-              <Label htmlFor="unitCost">Purchase Price (Unit Cost)</Label>
+              <Label htmlFor="unitCost">Avg Cost (Initial)</Label>
               <Input
                 id="unitCost"
                 type="number"

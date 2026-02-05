@@ -390,10 +390,14 @@ export async function POST(req: Request) {
       if (!item) {
         throw new Error("Inventory item not found");
       }
-      const unitCost = inventoryUnitCost ?? Number(item.unitCost);
+      const effectiveCost = inventoryUnitCost ?? Number(item.unitCost);
       const qtyChange = Math.abs(inventoryQuantity);
       const newQty = Number(item.quantity) + qtyChange;
-      const total = qtyChange * unitCost;
+      const prevQty = Number(item.quantity);
+      const prevAvgCost = Number(item.unitCost);
+      const totalCost = prevQty * prevAvgCost + qtyChange * effectiveCost;
+      const nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
+      const total = qtyChange * effectiveCost;
 
       const ledger = await tx.inventoryLedger.create({
         data: {
@@ -401,7 +405,7 @@ export async function POST(req: Request) {
           itemId: item.id,
           type: "PURCHASE",
           quantity: new Prisma.Decimal(qtyChange),
-          unitCost: new Prisma.Decimal(unitCost),
+          unitCost: new Prisma.Decimal(effectiveCost),
           total: new Prisma.Decimal(total),
           reference: `Expense ${created.id}`,
           project: resolvedProjectId || undefined,
@@ -414,7 +418,9 @@ export async function POST(req: Request) {
         where: { id: item.id },
         data: {
           quantity: new Prisma.Decimal(newQty),
-          totalValue: new Prisma.Decimal(newQty * unitCost),
+          unitCost: new Prisma.Decimal(nextAvgCost),
+          lastPurchasePrice: new Prisma.Decimal(effectiveCost),
+          totalValue: new Prisma.Decimal(newQty * nextAvgCost),
           availableQty: new Prisma.Decimal(newQty - Number(item.reservedQty)),
           lastUpdated: new Date(),
           lastPurchaseDate: new Date(),

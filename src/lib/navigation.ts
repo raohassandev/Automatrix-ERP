@@ -45,6 +45,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { name: "Employees", href: "/employees", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
       { name: "Salary Advances", href: "/salary-advances", icon: FileBarChart, permissions: ["salary_advance.view_all", "employees.view_own"] },
+      { name: "Departments", href: "/departments", icon: Tags, permissions: ["departments.view_all"] },
+      { name: "Designations", href: "/designations", icon: Tags, permissions: ["designations.view_all"] },
     ],
   },
   {
@@ -71,6 +73,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { name: "Purchase Orders", href: "/procurement/purchase-orders", icon: FileText, permissions: ["procurement.view_all", "procurement.edit"] },
       { name: "Goods Receipts", href: "/procurement/grn", icon: FileCheck, permissions: ["procurement.view_all", "procurement.edit"] },
+      { name: "Vendors", href: "/vendors", icon: Building2, permissions: ["vendors.view_all"] },
     ],
   },
   {
@@ -86,6 +89,7 @@ export const navGroups: NavGroup[] = [
       { name: "Clients", href: "/clients", icon: Building2, permissions: ["clients.view_all"] },
       { name: "Quotations", href: "/quotations", icon: FileSignature, permissions: ["quotations.view_all"] },
       { name: "Invoices", href: "/invoices", icon: FileText, permissions: ["invoices.view_all"] },
+      { name: "Commissions", href: "/commissions", icon: FileBarChart, permissions: ["commissions.view_all"] },
     ],
   },
   {

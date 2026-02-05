@@ -128,7 +128,8 @@ export default async function InventoryReportPage({
                 <th className="py-2">Item</th>
                 <th className="py-2">Category</th>
                 <th className="py-2">Qty</th>
-                {canViewCost ? <th className="py-2">Unit Cost</th> : null}
+                {canViewCost ? <th className="py-2">Avg Cost</th> : null}
+                {canViewCost ? <th className="py-2">Last Purchase</th> : null}
                 {canViewCost ? <th className="py-2">Total Value</th> : null}
               </tr>
             </thead>
@@ -148,6 +149,11 @@ export default async function InventoryReportPage({
                       ) : null}
                     </td>
                     {canViewCost ? <td className="py-2">{formatMoney(Number(item.unitCost))}</td> : null}
+                    {canViewCost ? (
+                      <td className="py-2">
+                        {formatMoney(Number(item.lastPurchasePrice ?? item.unitCost))}
+                      </td>
+                    ) : null}
                     {canViewCost ? <td className="py-2">{formatMoney(Number(item.totalValue))}</td> : null}
                   </tr>
                 );

@@ -48,10 +48,27 @@ export async function POST(req: Request) {
     email: sanitizeString(parsed.data.email),
     name: sanitizeString(parsed.data.name),
     phone: parsed.data.phone ? sanitizeString(parsed.data.phone) : undefined,
+    cnic: parsed.data.cnic ? sanitizeString(parsed.data.cnic) : undefined,
+    address: parsed.data.address ? sanitizeString(parsed.data.address) : undefined,
+    education: parsed.data.education ? sanitizeString(parsed.data.education) : undefined,
+    experience: parsed.data.experience ? sanitizeString(parsed.data.experience) : undefined,
+    department: parsed.data.department ? sanitizeString(parsed.data.department) : undefined,
+    designation: parsed.data.designation ? sanitizeString(parsed.data.designation) : undefined,
+    reportingOfficerId: parsed.data.reportingOfficerId ? sanitizeString(parsed.data.reportingOfficerId) : undefined,
+    joinDate: parsed.data.joinDate,
     role: sanitizeString(parsed.data.role),
   };
 
   const initialWalletBalance = body.initialWalletBalance || 0;
+  if (sanitizedData.reportingOfficerId) {
+    const officer = await prisma.employee.findUnique({
+      where: { id: sanitizedData.reportingOfficerId },
+      select: { id: true },
+    });
+    if (!officer) {
+      return NextResponse.json({ success: false, error: "Reporting officer not found" }, { status: 400 });
+    }
+  }
 
   // Create employee and initial wallet entry in a transaction
   const result = await prisma.$transaction(async (tx) => {
@@ -60,6 +77,14 @@ export async function POST(req: Request) {
         email: sanitizedData.email,
         name: sanitizedData.name,
         phone: sanitizedData.phone,
+        cnic: sanitizedData.cnic,
+        address: sanitizedData.address,
+        education: sanitizedData.education,
+        experience: sanitizedData.experience,
+        department: sanitizedData.department,
+        designation: sanitizedData.designation,
+        reportingOfficerId: sanitizedData.reportingOfficerId,
+        joinDate: sanitizedData.joinDate ? new Date(sanitizedData.joinDate) : null,
         role: sanitizedData.role,
         walletBalance: new Prisma.Decimal(initialWalletBalance),
       },

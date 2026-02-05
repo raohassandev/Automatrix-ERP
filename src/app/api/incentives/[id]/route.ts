@@ -8,6 +8,65 @@ import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { resolveProjectId } from "@/lib/projects";
 
+async function applyIncentiveApproval(
+  tx: Prisma.TransactionClient,
+  incentive: {
+    id: string;
+    employeeId: string;
+    amount: Prisma.Decimal;
+    projectRef?: string | null;
+    expenseId?: string | null;
+    walletLedgerId?: string | null;
+  },
+  approvedById: string
+) {
+  if (incentive.expenseId || incentive.walletLedgerId) {
+    return { expenseId: incentive.expenseId, walletLedgerId: incentive.walletLedgerId };
+  }
+
+  const employee = await tx.employee.findUnique({ where: { id: incentive.employeeId } });
+  if (!employee) {
+    throw new Error("Employee not found");
+  }
+
+  const projectRef = incentive.projectRef || null;
+  const expense = await tx.expense.create({
+    data: {
+      date: new Date(),
+      description: `Incentive for ${projectRef || "project"}`,
+      category: "Incentive",
+      amount: new Prisma.Decimal(incentive.amount),
+      paymentMode: "Wallet Credit",
+      paymentSource: "COMPANY_ACCOUNT",
+      expenseType: "COMPANY",
+      project: projectRef || undefined,
+      status: "APPROVED",
+      approvalLevel: "INCENTIVE",
+      submittedById: approvedById,
+      approvedById,
+      approvedAmount: new Prisma.Decimal(incentive.amount),
+    },
+  });
+
+  const newBalance = Number(employee.walletBalance) + Number(incentive.amount);
+  const ledger = await tx.walletLedger.create({
+    data: {
+      date: new Date(),
+      employeeId: employee.id,
+      type: "CREDIT",
+      amount: new Prisma.Decimal(incentive.amount),
+      reference: `INCENTIVE:${incentive.id}`,
+      balance: new Prisma.Decimal(newBalance),
+    },
+  });
+  await tx.employee.update({
+    where: { id: employee.id },
+    data: { walletBalance: new Prisma.Decimal(newBalance) },
+  });
+
+  return { expenseId: expense.id, walletLedgerId: ledger.id };
+}
+
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -75,10 +134,26 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     data.approvedById = nextStatus === "APPROVED" ? session.user.id : null;
   }
 
-  const updated = await prisma.incentiveEntry.update({
-    where: { id },
-    data,
-    include: { employee: true },
+  const updated = await prisma.$transaction(async (tx) => {
+    const entry = await tx.incentiveEntry.update({
+      where: { id },
+      data,
+      include: { employee: true },
+    });
+
+    if (entry.status === "APPROVED") {
+      const approval = await applyIncentiveApproval(tx, entry, session.user.id);
+      return tx.incentiveEntry.update({
+        where: { id: entry.id },
+        data: {
+          expenseId: approval.expenseId,
+          walletLedgerId: approval.walletLedgerId,
+        },
+        include: { employee: true },
+      });
+    }
+
+    return entry;
   });
 
   await logAudit({

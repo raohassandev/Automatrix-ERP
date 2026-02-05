@@ -48,6 +48,7 @@ export default async function InventoryPage({
     quantity: number;
     unit: string;
     unitCost: number | null;
+    lastPurchasePrice: number | null;
     sellingPrice: number | null;
     totalValue: number | null;
     minStock: number | null;
@@ -77,6 +78,7 @@ export default async function InventoryPage({
       quantity: Number(item.quantity),
       unit: item.unit,
       unitCost: canViewCost ? Number(item.unitCost) : null,
+      lastPurchasePrice: canViewCost ? Number(item.lastPurchasePrice ?? item.unitCost) : null,
       sellingPrice: canViewSelling ? Number(item.sellingPrice) : null,
       totalValue: canViewCost ? Number(item.totalValue) : null,
       minStock: item.minStock !== null ? Number(item.minStock) : null,

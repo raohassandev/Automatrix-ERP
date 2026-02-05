@@ -60,6 +60,7 @@ export default async function PurchaseOrdersPage({
     orderDate: order.orderDate.toISOString(),
     expectedDate: order.expectedDate ? order.expectedDate.toISOString() : null,
     totalAmount: Number(order.totalAmount),
+    vendorId: order.vendorId,
     items: order.items.map((item) => ({
       itemName: item.itemName,
       unit: item.unit,

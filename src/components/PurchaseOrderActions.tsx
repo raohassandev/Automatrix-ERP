@@ -8,6 +8,7 @@ import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
 type PurchaseOrder = {
   id: string;
   poNumber: string;
+  vendorId?: string | null;
   vendorName: string;
   vendorContact?: string | null;
   orderDate: string;

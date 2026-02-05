@@ -166,8 +166,12 @@ async function applyInventoryStockIn(
 
     const qtyChange = Math.abs(item.quantity);
     const newQty = Number(inventoryItem.quantity) + qtyChange;
-    const cost = Number(item.unitCost);
-    const total = qtyChange * cost;
+    const effectiveCost = Number(item.unitCost);
+    const prevQty = Number(inventoryItem.quantity);
+    const prevAvgCost = Number(inventoryItem.unitCost);
+    const totalCost = prevQty * prevAvgCost + qtyChange * effectiveCost;
+    const nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
+    const total = qtyChange * effectiveCost;
 
     const projectRef = item.purchaseOrderItemId
       ? projectByPoItemId.get(item.purchaseOrderItemId) || null
@@ -180,7 +184,7 @@ async function applyInventoryStockIn(
         itemId: inventoryItem.id,
         type: "PURCHASE",
         quantity: new Prisma.Decimal(qtyChange),
-        unitCost: new Prisma.Decimal(cost),
+        unitCost: new Prisma.Decimal(effectiveCost),
         total: new Prisma.Decimal(total),
         reference: `GRN:${receiptId}`,
         project: resolvedProject || undefined,
@@ -193,7 +197,9 @@ async function applyInventoryStockIn(
       where: { id: inventoryItem.id },
       data: {
         quantity: new Prisma.Decimal(newQty),
-        totalValue: new Prisma.Decimal(newQty * cost),
+        unitCost: new Prisma.Decimal(nextAvgCost),
+        lastPurchasePrice: new Prisma.Decimal(effectiveCost),
+        totalValue: new Prisma.Decimal(newQty * nextAvgCost),
         availableQty: new Prisma.Decimal(newQty - Number(inventoryItem.reservedQty)),
         lastUpdated: new Date(),
         lastPurchaseDate: new Date(receivedDate),

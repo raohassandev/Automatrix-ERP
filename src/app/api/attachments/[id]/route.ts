@@ -72,17 +72,11 @@ async function assertAttachmentAccess(userId: string, typeRaw: string, recordId:
     const project = await prisma.project.findUnique({ where: { id: recordId } });
     if (!project) return { ok: false, status: 404, error: "Project not found" } as const;
     if (!canViewAll) {
-      const [expenseHit, incomeHit] = await Promise.all([
-        prisma.expense.findFirst({
-          where: { submittedById: userId, project: { in: [project.projectId, project.name] } },
-          select: { id: true },
-        }),
-        prisma.income.findFirst({
-          where: { addedById: userId, project: { in: [project.projectId, project.name] } },
-          select: { id: true },
-        }),
-      ]);
-      if (!expenseHit && !incomeHit) {
+      const assigned = await prisma.projectAssignment.findFirst({
+        where: { projectId: project.id, userId },
+        select: { id: true },
+      });
+      if (!assigned) {
         return { ok: false, status: 403, error: "Forbidden" } as const;
       }
     }
