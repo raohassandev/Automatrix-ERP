@@ -123,5 +123,6 @@ export const config = {
     "/invoices/:path*",
     "/reports/:path*",
     "/settings/:path*",
+    "/ceo/:path*",
   ],
 };
