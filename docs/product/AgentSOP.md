@@ -67,3 +67,6 @@ Keep docs minimal:
 - `docs/README.md`
 - `docs/product/AgentSOP.md`
 
+**Diagram upkeep**
+- Keep `docs/ERP_DIAGRAMS.md` updated as we plan and implement changes.
+- CEO blueprint page must reflect the latest diagrams.
