@@ -6,6 +6,8 @@ import { getPendingApprovalsForUser } from "@/lib/approval-engine";
 import { prisma } from "@/lib/prisma";
 import ApprovalQueue from "@/components/ApprovalQueue";
 import { Expense, Income } from "@prisma/client";
+import { getExpenseApprovalLevel, getIncomeApprovalLevel } from "@/lib/approvals";
+import { userHasApprovalAssignment } from "@/lib/approval-policies";
 
 // Types matching ApprovalQueue component expectations
 interface Approval {
@@ -52,7 +54,12 @@ export default async function ApprovalsPage() {
     (await requirePermission(session.user.id, "approvals.approve_low")) ||
     (await requirePermission(session.user.id, "approvals.approve_high")) ||
     (await requirePermission(session.user.id, "approvals.partial_approve"));
-  if (!canApprove) {
+  const canView =
+    (await requirePermission(session.user.id, "approvals.view_all")) ||
+    (await requirePermission(session.user.id, "approvals.view_pending"));
+  const hasAssignments = await userHasApprovalAssignment(session.user.id);
+
+  if (!canApprove && !canView && !hasAssignments) {
     redirect("/dashboard?error=forbidden");
   }
 
@@ -69,7 +76,10 @@ export default async function ApprovalsPage() {
     );
 
     // Fetch pending approvals for this user using our approval engine
-    const pendingApprovals = await getPendingApprovalsForUser(session.user.id);
+    const canViewAll = await requirePermission(session.user.id, "approvals.view_all");
+    const pendingApprovals = await getPendingApprovalsForUser(session.user.id, {
+      viewAll: canViewAll,
+    });
 
     // Fetch employee wallet balances for each expense
     const expensesWithWalletInfo = await Promise.all(
@@ -84,6 +94,11 @@ export default async function ApprovalsPage() {
           select: { walletBalance: true, walletHold: true },
         }) : null;
         const categoryMeta = categoryMap.get(expense.category);
+        const amount = parseFloat(expense.amount.toString());
+        const requiredLevel =
+          expense.approvalLevel && ["L1", "L2", "L3"].includes(expense.approvalLevel)
+            ? (expense.approvalLevel as "L1" | "L2" | "L3")
+            : getExpenseApprovalLevel(amount);
 
           return {
             id: expense.id,
@@ -93,7 +108,7 @@ export default async function ApprovalsPage() {
             description: expense.description,
             remarks: expense.remarks,
             categoryRequest: expense.categoryRequest,
-            amount: parseFloat(expense.amount.toString()),
+            amount,
             project: expense.project || undefined,
             submittedBy: { 
               id: expense.submittedById, 
@@ -104,7 +119,7 @@ export default async function ApprovalsPage() {
           walletHold: employee?.walletHold ? parseFloat(employee.walletHold.toString()) : 0,
           categoryLimit: categoryMeta?.maxAmount ? parseFloat(categoryMeta.maxAmount.toString()) : null,
           categoryStrict: categoryMeta?.enforceStrict || false,
-          requiredApprovalLevel: 'MANAGER', // This should come from approval logic
+          requiredApprovalLevel: requiredLevel,
           status: expense.status,
         };
       })
@@ -138,7 +153,10 @@ export default async function ApprovalsPage() {
           walletHold: 0,
           categoryLimit: null,
           categoryStrict: false,
-          requiredApprovalLevel: "MANAGER",
+          requiredApprovalLevel:
+            income.approvalLevel && ["L1", "L2", "L3"].includes(income.approvalLevel)
+              ? (income.approvalLevel as "L1" | "L2" | "L3")
+              : getIncomeApprovalLevel(parseFloat(income.amount.toString())),
           status: income.status,
         };
       })
@@ -206,7 +224,7 @@ export default async function ApprovalsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="mb-6 grid gap-4 md:grid-cols-4">
+        <div className="mb-6 grid gap-4 md:grid-cols-5">
           <div className="rounded-lg bg-card p-4 shadow">
             <div className="text-sm font-medium text-muted-foreground">Total Pending</div>
             <div className="mt-2 text-3xl font-bold text-foreground">
@@ -225,21 +243,31 @@ export default async function ApprovalsPage() {
             </div>
           </div>
           <div className="rounded-lg bg-card p-4 shadow">
-            <div className="text-sm font-medium text-muted-foreground">Requires Manager</div>
-            <div className="mt-2 text-3xl font-bold text-blue-600">
+            <div className="text-sm font-medium text-muted-foreground">Level L1</div>
+            <div className="mt-2 text-3xl font-bold text-emerald-600">
               {
                 approvalsWithWalletInfo.filter(
-                  (exp: Approval) => exp.requiredApprovalLevel === "MANAGER"
+                  (exp: Approval) => exp.requiredApprovalLevel === "L1"
                 ).length
               }
             </div>
           </div>
           <div className="rounded-lg bg-card p-4 shadow">
-            <div className="text-sm font-medium text-muted-foreground">Requires CEO</div>
+            <div className="text-sm font-medium text-muted-foreground">Level L2</div>
+            <div className="mt-2 text-3xl font-bold text-amber-600">
+              {
+                approvalsWithWalletInfo.filter(
+                  (exp: Approval) => exp.requiredApprovalLevel === "L2"
+                ).length
+              }
+            </div>
+          </div>
+          <div className="rounded-lg bg-card p-4 shadow">
+            <div className="text-sm font-medium text-muted-foreground">Level L3</div>
             <div className="mt-2 text-3xl font-bold text-red-600">
               {
                 approvalsWithWalletInfo.filter(
-                  (exp: Approval) => exp.requiredApprovalLevel === "CEO"
+                  (exp: Approval) => exp.requiredApprovalLevel === "L3"
                 ).length
               }
             </div>

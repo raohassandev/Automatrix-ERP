@@ -12,6 +12,7 @@ import {
 import { ZodError } from "zod";
 import { approvalSchema } from "@/lib/validation-schemas";
 import { logger } from "@/lib/logger";
+import { userHasApprovalAssignment } from "@/lib/approval-policies";
 
 function canApproveWithRole(roleName: RoleName) {
   return (
@@ -34,11 +35,12 @@ export async function GET(request: NextRequest) {
   }
 
   const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
-  const canView =
-    hasPermission(roleName, "approvals.view_all") ||
-    hasPermission(roleName, "approvals.view_pending") ||
-    canApproveWithRole(roleName);
-  if (!canView) {
+  const canViewAll = hasPermission(roleName, "approvals.view_all");
+  const canViewPending =
+    hasPermission(roleName, "approvals.view_pending") || canApproveWithRole(roleName);
+  const hasAssignments = await userHasApprovalAssignment(session.user.id);
+
+  if (!canViewAll && !canViewPending && !hasAssignments) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -47,13 +49,18 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type"); // 'pending' or 'stats'
 
     if (type === "stats") {
+      if (!canViewAll) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
       // Get approval statistics
       const stats = await getApprovalStats();
       return NextResponse.json(stats);
     }
 
     // Get pending approvals for user
-    const pendingApprovals = await getPendingApprovalsForUser(session.user.id);
+    const pendingApprovals = await getPendingApprovalsForUser(session.user.id, {
+      viewAll: canViewAll,
+    });
 
     return NextResponse.json({
       data: pendingApprovals,
@@ -78,9 +85,10 @@ export async function POST(request: NextRequest) {
   }
 
   const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
+  const hasAssignments = await userHasApprovalAssignment(session.user.id);
   
   // Check if user has approval permissions
-  if (!canApproveWithRole(roleName)) {
+  if (!canApproveWithRole(roleName) && !hasAssignments) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -223,8 +231,9 @@ export async function PUT(request: NextRequest) {
   }
 
   const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
+  const hasAssignments = await userHasApprovalAssignment(session.user.id);
   
-  if (!canApproveWithRole(roleName)) {
+  if (!canApproveWithRole(roleName) && !hasAssignments) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

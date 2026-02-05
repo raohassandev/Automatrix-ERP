@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import RoleAssignForm from "@/components/RoleAssignForm";
+import ApprovalPolicyManager from "@/components/ApprovalPolicyManager";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 
@@ -29,6 +30,8 @@ export default async function SettingsPage() {
       </div>
 
       <RoleAssignForm />
+
+      <ApprovalPolicyManager />
     </div>
   );
 }

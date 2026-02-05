@@ -44,6 +44,7 @@ model Role {
   name        String           @unique
   users       User[]
   permissions RolePermission[]
+  approvalPolicyRoles ApprovalPolicyRole[]
 }
 
 model Permission {
@@ -149,6 +150,29 @@ model Approval {
   expense        Expense?       @relation(fields: [expenseId], references: [id])
   income         Income?        @relation(fields: [incomeId], references: [id])
   approvedBy     User?          @relation("ApprovalBy", fields: [approvedById], references: [id])
+}
+
+model ApprovalPolicy {
+  id        String   @id @default(cuid())
+  module    String
+  level     String
+  minAmount Decimal
+  maxAmount Decimal?
+  roles     ApprovalPolicyRole[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([module, level])
+}
+
+model ApprovalPolicyRole {
+  id       String         @id @default(cuid())
+  policyId String
+  roleId   String
+  policy   ApprovalPolicy @relation(fields: [policyId], references: [id])
+  role     Role           @relation(fields: [roleId], references: [id])
+
+  @@unique([policyId, roleId])
 }
 
 model Client {

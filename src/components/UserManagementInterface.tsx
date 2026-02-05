@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,13 @@ export function UserManagementInterface({ users, roles }: UserManagementInterfac
   const [selectedRole, setSelectedRole] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetStatus, setResetStatus] = useState<string | null>(null);
+  const [passwordState, setPasswordState] = useState<{
+    userId: string;
+    email: string;
+    password: string;
+  } | null>(null);
 
   const handleRoleChange = async () => {
     if (!selectedUser || !selectedRole) return;
@@ -63,6 +71,50 @@ export function UserManagementInterface({ users, roles }: UserManagementInterfac
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const resetPassword = async (user: User) => {
+    setIsResetting(true);
+    setResetStatus(null);
+    try {
+      const response = await fetch("/api/users/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setResetStatus(`Error: ${data.error || "Failed to reset password"}`);
+        return null;
+      }
+
+      setPasswordState({
+        userId: user.id,
+        email: user.email,
+        password: data.password,
+      });
+      setResetStatus(`New password generated for ${user.email}`);
+      return data.password as string;
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      setResetStatus("Error: Network error occurred");
+      return null;
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const loginAsUser = async () => {
+    if (!selectedUser) return;
+    const password = await resetPassword(selectedUser);
+    if (!password) return;
+
+    await signIn("credentials", {
+      email: selectedUser.email,
+      password,
+      callbackUrl: "/dashboard",
+    });
   };
 
   const getRoleDescription = (roleName: string) => {
@@ -218,6 +270,49 @@ export function UserManagementInterface({ users, roles }: UserManagementInterfac
             )}
           </div>
 
+          {selectedUser && (
+            <div className="rounded-lg border bg-muted/40 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">Account Access</p>
+                  <p className="text-xs text-muted-foreground">
+                    Resetting the password will override the current password.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Logging in as a user will end your current session.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => resetPassword(selectedUser)}
+                    disabled={isResetting}
+                  >
+                    {isResetting ? "Generating..." : "Generate Password"}
+                  </Button>
+                  <Button onClick={loginAsUser} disabled={isResetting}>
+                    {isResetting ? "Signing in..." : "Login as User"}
+                  </Button>
+                </div>
+              </div>
+
+              {passwordState?.userId === selectedUser.id && (
+                <div className="mt-3 rounded-md border bg-background p-3 text-sm">
+                  <div className="text-xs text-muted-foreground">Temporary password</div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <code className="rounded bg-muted px-2 py-1 text-sm">{passwordState.password}</code>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigator.clipboard?.writeText(passwordState.password)}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Last Update Status */}
           {lastUpdate && (
             <div className={`p-3 rounded-lg text-sm ${
@@ -226,6 +321,16 @@ export function UserManagementInterface({ users, roles }: UserManagementInterfac
                 : 'bg-green-50 text-green-700 border border-green-200'
             }`}>
               {lastUpdate}
+            </div>
+          )}
+
+          {resetStatus && (
+            <div className={`p-3 rounded-lg text-sm ${
+              resetStatus.startsWith('Error')
+                ? 'bg-red-50 text-red-700 border border-red-200'
+                : 'bg-green-50 text-green-700 border border-green-200'
+            }`}>
+              {resetStatus}
             </div>
           )}
         </CardContent>

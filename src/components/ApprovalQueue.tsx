@@ -714,13 +714,16 @@ function IncomeApprovalActions({
 
 function ApprovalLevelBadge({ level }: { level: string }) {
   const badges: Record<string, { color: string; text: string }> = {
+    L1: { color: "bg-emerald-100 text-emerald-800", text: "L1" },
+    L2: { color: "bg-amber-100 text-amber-800", text: "L2" },
+    L3: { color: "bg-red-100 text-red-800", text: "L3" },
     AUTO: { color: "bg-muted text-foreground", text: "Auto" },
     MANAGER: { color: "bg-blue-100 text-blue-800", text: "Manager" },
     FINANCE_MANAGER: { color: "bg-purple-100 text-purple-800", text: "Finance Mgr" },
     CEO: { color: "bg-red-100 text-red-800", text: "CEO" },
   };
 
-  const badge = badges[level] || badges.AUTO;
+  const badge = badges[level] || badges.L1;
 
   return (
     <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${badge.color}`}>

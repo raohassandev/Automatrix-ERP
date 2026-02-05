@@ -1,50 +1,32 @@
 import { Expense, Income, Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { createAuditLog } from './audit';
+import { getExpenseApprovalLevel, getIncomeApprovalLevel } from '@/lib/approvals';
+import {
+  type ApprovalModule,
+  getAllowedRolesForPolicy,
+  getApprovalPolicyRoleMap,
+} from '@/lib/approval-policies';
 
-// Approval thresholds in PKR
-export const APPROVAL_THRESHOLDS = {
-  AUTO_APPROVE: 0, // < 10,000: Auto-approve or Manager
-  MANAGER: 10000, // 10,000-50,000: Manager approval required
-  FINANCE_MANAGER: 50000, // 50,000-200,000: Finance Manager approval
-  CEO: 200000, // > 200,000: CEO/Owner approval required
-} as const;
-
-export type ApprovalLevel = 'AUTO' | 'MANAGER' | 'FINANCE_MANAGER' | 'CEO';
+export type ApprovalLevel = 'L1' | 'L2' | 'L3';
 export type ApprovalAction = 'APPROVE' | 'REJECT' | 'PARTIAL_APPROVE';
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAID';
 
-/**
- * Determine required approval level based on amount
- */
-export function getRequiredApprovalLevel(amount: number): ApprovalLevel {
-  if (amount < APPROVAL_THRESHOLDS.MANAGER) {
-    return 'AUTO';
-  } else if (amount < APPROVAL_THRESHOLDS.FINANCE_MANAGER) {
-    return 'MANAGER';
-  } else if (amount < APPROVAL_THRESHOLDS.CEO) {
-    return 'FINANCE_MANAGER';
-  } else {
-    return 'CEO';
-  }
+function normalizeApprovalLevel(level?: string | null): ApprovalLevel | null {
+  if (level === 'L1' || level === 'L2' || level === 'L3') return level;
+  return null;
 }
 
-/**
- * Get required role name for approval level
- */
-export function getRequiredRoleForLevel(level: ApprovalLevel): string[] {
-  switch (level) {
-    case 'AUTO':
-      return ['Manager', 'Finance Manager', 'CFO', 'CEO', 'Owner'];
-    case 'MANAGER':
-      return ['Manager', 'Finance Manager', 'CFO', 'CEO', 'Owner'];
-    case 'FINANCE_MANAGER':
-      return ['Finance Manager', 'CFO', 'CEO', 'Owner'];
-    case 'CEO':
-      return ['CEO', 'Owner'];
-    default:
-      return [];
-  }
+function resolveApprovalLevel(
+  module: ApprovalModule,
+  amount: number,
+  storedLevel?: string | null,
+): ApprovalLevel {
+  const normalized = normalizeApprovalLevel(storedLevel);
+  if (normalized) return normalized;
+  return module === 'income'
+    ? getIncomeApprovalLevel(amount)
+    : getExpenseApprovalLevel(amount);
 }
 
 /**
@@ -52,28 +34,30 @@ export function getRequiredRoleForLevel(level: ApprovalLevel): string[] {
  */
 export async function canUserApprove(
   userId: string,
-  amount: number,
-): Promise<{ canApprove: boolean; reason?: string }> {
+  params: { module: ApprovalModule; amount: number; level?: ApprovalLevel },
+): Promise<{ canApprove: boolean; reason?: string; requiredLevel: ApprovalLevel }> {
+  const { module, amount, level } = params;
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { role: true },
   });
 
   if (!user || !user.role) {
-    return { canApprove: false, reason: 'User or role not found' };
+    return { canApprove: false, reason: 'User or role not found', requiredLevel: 'L1' };
   }
 
-  const requiredLevel = getRequiredApprovalLevel(amount);
-  const allowedRoles = getRequiredRoleForLevel(requiredLevel);
+  const requiredLevel = level ?? resolveApprovalLevel(module, amount);
+  const allowedRoles = await getAllowedRolesForPolicy(module, requiredLevel);
 
   if (!allowedRoles.includes(user.role.name)) {
     return {
       canApprove: false,
       reason: `Amount ${amount} requires approval from: ${allowedRoles.join(' or ')}`,
+      requiredLevel,
     };
   }
 
-  return { canApprove: true };
+  return { canApprove: true, requiredLevel };
 }
 
 /**
@@ -105,9 +89,10 @@ export async function approveExpense(params: {
 
   // Check if user can approve this amount
   const finalAmount = approvedAmount || parseFloat(expense.amount.toString());
+  const requiredLevel = resolveApprovalLevel('expense', finalAmount, expense.approvalLevel);
   const { canApprove, reason: approvalReason } = await canUserApprove(
     approverId,
-    finalAmount,
+    { module: 'expense', amount: finalAmount, level: requiredLevel },
   );
 
   if (!canApprove) {
@@ -233,7 +218,12 @@ export async function rejectExpense(params: {
 
   // Check if user can approve (same permission for reject)
   const amount = parseFloat(expense.amount.toString());
-  const { canApprove } = await canUserApprove(approverId, amount);
+  const requiredLevel = resolveApprovalLevel('expense', amount, expense.approvalLevel);
+  const { canApprove } = await canUserApprove(approverId, {
+    module: 'expense',
+    amount,
+    level: requiredLevel,
+  });
 
   if (!canApprove) {
     throw new Error('User cannot reject this expense');
@@ -320,9 +310,10 @@ export async function approveIncome(params: {
 
   // Check if user can approve this amount
   const finalAmount = approvedAmount || parseFloat(income.amount.toString());
+  const requiredLevel = resolveApprovalLevel('income', finalAmount, income.approvalLevel);
   const { canApprove, reason: approvalReason } = await canUserApprove(
     approverId,
-    finalAmount,
+    { module: 'income', amount: finalAmount, level: requiredLevel },
   );
 
   if (!canApprove) {
@@ -393,7 +384,12 @@ export async function rejectIncome(params: {
 
   // Check if user can approve (same permission for reject)
   const amount = parseFloat(income.amount.toString());
-  const { canApprove } = await canUserApprove(approverId, amount);
+  const requiredLevel = resolveApprovalLevel('income', amount, income.approvalLevel);
+  const { canApprove } = await canUserApprove(approverId, {
+    module: 'income',
+    amount,
+    level: requiredLevel,
+  });
 
   if (!canApprove) {
     throw new Error('User cannot reject this income');
@@ -440,7 +436,10 @@ export async function rejectIncome(params: {
 /**
  * Get pending approvals for a user based on their role
  */
-export async function getPendingApprovalsForUser(userId: string): Promise<{
+export async function getPendingApprovalsForUser(
+  userId: string,
+  options?: { viewAll?: boolean },
+): Promise<{
   expenses: Expense[];
   income: Income[];
 }> {
@@ -452,6 +451,12 @@ export async function getPendingApprovalsForUser(userId: string): Promise<{
   if (!user || !user.role) {
     return { expenses: [], income: [] };
   }
+
+  const viewAll = options?.viewAll ?? false;
+  const roleName = user.role.name;
+  const policyMap = await getApprovalPolicyRoleMap();
+  const allowedRolesFor = (module: ApprovalModule, level: ApprovalLevel) =>
+    policyMap[module]?.[level] ?? [];
 
   // Get all pending expenses
   const pendingExpenses = await prisma.expense.findMany({
@@ -472,33 +477,39 @@ export async function getPendingApprovalsForUser(userId: string): Promise<{
   });
 
   // Filter based on user's approval authority
-  const approvableExpenses = pendingExpenses.filter((expense) => {
-    const amount = parseFloat(expense.amount.toString());
-    const requiredLevel = getRequiredApprovalLevel(amount);
-    const allowedRoles = getRequiredRoleForLevel(requiredLevel);
-    return allowedRoles.includes(user.role!.name);
-  });
+  const approvableExpenses = viewAll
+    ? pendingExpenses
+    : pendingExpenses.filter((expense) => {
+        const amount = parseFloat(expense.amount.toString());
+        const requiredLevel = resolveApprovalLevel('expense', amount, expense.approvalLevel);
+        const allowedRoles = allowedRolesFor('expense', requiredLevel);
+        return allowedRoles.includes(roleName);
+      });
 
-  const approvableIncome = pendingIncome.filter((income) => {
-    const amount = parseFloat(income.amount.toString());
-    const requiredLevel = getRequiredApprovalLevel(amount);
-    const allowedRoles = getRequiredRoleForLevel(requiredLevel);
-    return allowedRoles.includes(user.role!.name);
-  });
+  const approvableIncome = viewAll
+    ? pendingIncome
+    : pendingIncome.filter((income) => {
+        const amount = parseFloat(income.amount.toString());
+        const requiredLevel = resolveApprovalLevel('income', amount, income.approvalLevel);
+        const allowedRoles = allowedRolesFor('income', requiredLevel);
+        return allowedRoles.includes(roleName);
+      });
 
   return {
-    expenses: approvableExpenses.map((expense) => ({
-      ...expense,
-      requiredApprovalLevel: getRequiredApprovalLevel(
-        parseFloat(expense.amount.toString()),
-      ),
-    })),
-    income: approvableIncome.map((income) => ({
-      ...income,
-      requiredApprovalLevel: getRequiredApprovalLevel(
-        parseFloat(income.amount.toString()),
-      ),
-    })),
+    expenses: approvableExpenses.map((expense) => {
+      const amount = parseFloat(expense.amount.toString());
+      return {
+        ...expense,
+        requiredApprovalLevel: resolveApprovalLevel('expense', amount, expense.approvalLevel),
+      };
+    }),
+    income: approvableIncome.map((income) => {
+      const amount = parseFloat(income.amount.toString());
+      return {
+        ...income,
+        requiredApprovalLevel: resolveApprovalLevel('income', amount, income.approvalLevel),
+      };
+    }),
   };
 }
 
