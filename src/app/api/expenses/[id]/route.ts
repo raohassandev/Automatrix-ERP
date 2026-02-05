@@ -187,7 +187,27 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ success: false, error: "Only pending expenses can be deleted" }, { status: 400 });
   }
 
-  await prisma.expense.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    if (expense.paymentSource === "EMPLOYEE_WALLET") {
+      const user = await tx.user.findUnique({
+        where: { id: expense.submittedById },
+        select: { email: true },
+      });
+      if (user?.email) {
+        const employee = await tx.employee.findUnique({ where: { email: user.email } });
+        if (employee) {
+          const currentHold = Number(employee.walletHold || 0);
+          const nextHold = Math.max(0, currentHold - Number(expense.amount));
+          await tx.employee.update({
+            where: { id: employee.id },
+            data: { walletHold: new Prisma.Decimal(nextHold) },
+          });
+        }
+      }
+    }
+
+    await tx.expense.delete({ where: { id } });
+  });
 
   await logAudit({
     action: "DELETE_EXPENSE",
