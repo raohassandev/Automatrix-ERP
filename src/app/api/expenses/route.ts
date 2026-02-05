@@ -1,21 +1,21 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { expenseSchema } from "@/lib/validation";
-import { logAudit } from "@/lib/audit";
-import { requirePermission } from "@/lib/rbac";
-import { DUPLICATE_CHECK_DAYS, PROCUREMENT_SPIKE_THRESHOLD, RECEIPT_REQUIRED_THRESHOLD } from "@/lib/constants";
-import { getExpenseApprovalLevel } from "@/lib/approvals";
-import { createNotification } from "@/lib/notifications";
-import { Prisma } from "@prisma/client";
-import { sanitizeString } from "@/lib/sanitize";
-import { resolveProjectId } from "@/lib/projects";
+import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { expenseSchema } from '@/lib/validation';
+import { logAudit } from '@/lib/audit';
+import { requirePermission } from '@/lib/rbac';
+import {
+  DUPLICATE_CHECK_DAYS,
+  PROCUREMENT_SPIKE_THRESHOLD,
+  RECEIPT_REQUIRED_THRESHOLD,
+} from '@/lib/constants';
+import { getExpenseApprovalLevel } from '@/lib/approvals';
+import { createNotification } from '@/lib/notifications';
+import { Prisma } from '@prisma/client';
+import { sanitizeString } from '@/lib/sanitize';
+import { resolveProjectId } from '@/lib/projects';
 
-async function checkDuplicateExpense(input: {
-  amount: number;
-  description: string;
-  date: string;
-}) {
+async function checkDuplicateExpense(input: { amount: number; description: string; date: string }) {
   const date = new Date(input.date);
   const start = new Date(date);
   start.setDate(start.getDate() - DUPLICATE_CHECK_DAYS);
@@ -35,21 +35,21 @@ async function checkDuplicateExpense(input: {
 
   const descriptionLower = sanitizeString(input.description).toLowerCase();
   return matches.filter((match) =>
-    match.description.toLowerCase().includes(descriptionLower.slice(0, 20))
+    match.description.toLowerCase().includes(descriptionLower.slice(0, 20)),
   );
 }
 
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
-  const canViewAll = await requirePermission(session.user.id, "expenses.view_all");
-  const canViewOwn = await requirePermission(session.user.id, "expenses.view_own");
-  
+  const canViewAll = await requirePermission(session.user.id, 'expenses.view_all');
+  const canViewOwn = await requirePermission(session.user.id, 'expenses.view_own');
+
   if (!canViewAll && !canViewOwn) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
   try {
@@ -70,7 +70,7 @@ export async function GET(req: Request) {
 
     // Build where clause
     const where: Prisma.ExpenseWhereInput = {};
-    
+
     // Check if user can view all expenses or only their own
     if (!canViewAll) {
       where.submittedById = session.user.id;
@@ -78,8 +78,8 @@ export async function GET(req: Request) {
 
     if (search) {
       where.OR = [
-        { description: { contains: search, mode: "insensitive" as const } },
-        { category: { contains: search, mode: "insensitive" as const } },
+        { description: { contains: search, mode: 'insensitive' as const } },
+        { category: { contains: search, mode: 'insensitive' as const } },
       ];
     }
 
@@ -105,7 +105,7 @@ export async function GET(req: Request) {
     }
 
     // Build orderBy
-    const orderDirection = sortOrder === "asc" ? "asc" : "desc";
+    const orderDirection = sortOrder === 'asc' ? 'asc' : 'desc';
     const orderBy: Prisma.ExpenseOrderByWithRelationInput = {
       [sortBy]: orderDirection,
     };
@@ -125,7 +125,7 @@ export async function GET(req: Request) {
     ]);
 
     // Convert Decimal to number for JSON serialization
-    const serializedExpenses = expenses.map(expense => ({
+    const serializedExpenses = expenses.map((expense) => ({
       ...expense,
       amount: Number(expense.amount),
       approvedAmount: expense.approvedAmount ? Number(expense.approvedAmount) : null,
@@ -144,11 +144,8 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error("Error fetching expenses:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error('Error fetching expenses:', error);
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -156,356 +153,368 @@ export async function POST(req: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const canSubmit = await requirePermission(session.user.id, "expenses.submit");
+    const canSubmit = await requirePermission(session.user.id, 'expenses.submit');
     if (!canSubmit) {
-      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await req.json();
     const parsed = expenseSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Validation failed", details: parsed.error.flatten() },
-        { status: 400 }
+        { success: false, error: 'Validation failed', details: parsed.error.flatten() },
+        { status: 400 },
       );
     }
 
-  // Sanitize string inputs after validation
-  const sanitizedData = {
-    ...parsed.data,
-    description: sanitizeString(parsed.data.description),
-    category: sanitizeString(parsed.data.category),
-    paymentMode: sanitizeString(parsed.data.paymentMode),
-    project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
-    inventoryItemId: parsed.data.inventoryItemId ? sanitizeString(parsed.data.inventoryItemId) : undefined,
-    receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
-    receiptFileId: parsed.data.receiptFileId ? sanitizeString(parsed.data.receiptFileId) : undefined,
-    remarks: parsed.data.remarks ? sanitizeString(parsed.data.remarks) : undefined,
-    categoryRequest: parsed.data.categoryRequest ? sanitizeString(parsed.data.categoryRequest) : undefined,
-  };
-  const expenseType = parsed.data.expenseType || "COMPANY";
-  const inventoryQuantity = parsed.data.inventoryQuantity;
-  const inventoryUnitCost = parsed.data.inventoryUnitCost;
+    // Sanitize string inputs after validation
+    const sanitizedData = {
+      ...parsed.data,
+      description: sanitizeString(parsed.data.description),
+      category: sanitizeString(parsed.data.category),
+      paymentMode: sanitizeString(parsed.data.paymentMode),
+      project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
+      inventoryItemId: parsed.data.inventoryItemId
+        ? sanitizeString(parsed.data.inventoryItemId)
+        : undefined,
+      receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
+      receiptFileId: parsed.data.receiptFileId
+        ? sanitizeString(parsed.data.receiptFileId)
+        : undefined,
+      remarks: parsed.data.remarks ? sanitizeString(parsed.data.remarks) : undefined,
+      categoryRequest: parsed.data.categoryRequest
+        ? sanitizeString(parsed.data.categoryRequest)
+        : undefined,
+    };
+    const expenseType = parsed.data.expenseType || 'COMPANY';
+    const inventoryQuantity = parsed.data.inventoryQuantity;
+    const inventoryUnitCost = parsed.data.inventoryUnitCost;
 
-  if (expenseType !== "OWNER_PERSONAL" && !sanitizedData.project) {
-    return NextResponse.json(
-      { success: false, error: "Project is required for company expenses" },
-      { status: 400 }
-    );
-  }
-
-  if (sanitizedData.inventoryItemId && !inventoryQuantity) {
-    return NextResponse.json(
-      { success: false, error: "Inventory quantity is required when linking material purchase" },
-      { status: 400 }
-    );
-  }
-
-  const category = await prisma.category.findFirst({
-    where: { name: sanitizedData.category, type: "expense" },
-  });
-  if (category?.enforceStrict && category.maxAmount) {
-    if (sanitizedData.amount > Number(category.maxAmount)) {
+    if (expenseType !== 'OWNER_PERSONAL' && !sanitizedData.project) {
       return NextResponse.json(
-        {
-          success: false,
-          error: `Amount exceeds allowed limit for ${sanitizedData.category} (max ${category.maxAmount}).`,
-        },
-        { status: 400 }
+        { success: false, error: 'Project is required for company expenses' },
+        { status: 400 },
       );
     }
-  }
 
-  if (
-    sanitizedData.amount >= RECEIPT_REQUIRED_THRESHOLD &&
-    !sanitizedData.receiptUrl &&
-    !sanitizedData.receiptFileId
-  ) {
-    return NextResponse.json(
-      { success: false, error: "Receipt required for this amount" },
-      { status: 400 }
-    );
-  }
-
-  if (!body.ignoreDuplicate) {
-    const duplicates = await checkDuplicateExpense({
-      amount: sanitizedData.amount,
-      description: sanitizedData.description,
-      date: sanitizedData.date,
-    });
-
-    if (duplicates.length > 0) {
-      const sameUserDuplicates = duplicates.filter(
-        (dup) => dup.submittedById === session.user.id
+    if (sanitizedData.inventoryItemId && !inventoryQuantity) {
+      return NextResponse.json(
+        { success: false, error: 'Inventory quantity is required when linking material purchase' },
+        { status: 400 },
       );
+    }
 
-      if (sameUserDuplicates.length > 0) {
+    const category = await prisma.category.findFirst({
+      where: { name: sanitizedData.category, type: 'expense' },
+    });
+    if (category?.enforceStrict && category.maxAmount) {
+      if (sanitizedData.amount > Number(category.maxAmount)) {
         return NextResponse.json(
           {
             success: false,
-            error: "Possible duplicate expense detected (your previous entries)",
-            duplicates: sameUserDuplicates.map((dup) => ({
-              id: dup.id,
-              date: dup.date,
-              description: dup.description,
-              amount: Number(dup.amount),
-              status: dup.status,
-            })),
-            requiresConfirmation: true,
+            error: `Amount exceeds allowed limit for ${sanitizedData.category} (max ${category.maxAmount}).`,
           },
-          { status: 409 }
+          { status: 400 },
+        );
+      }
+    }
+
+    // TODO: This receipt validation is temporarily bypassed based on user request.
+    // It should ideally be moved to the frontend, configured by an Admin,
+    // to provide a better user experience and prevent unnecessary backend calls.
+    // if (
+    //   sanitizedData.amount >= RECEIPT_REQUIRED_THRESHOLD &&
+    //   !sanitizedData.receiptUrl &&
+    //   !sanitizedData.receiptFileId
+    // ) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Receipt required for this amount' },
+    //     { status: 400 },
+    //   );
+    // }
+
+    if (!body.ignoreDuplicate) {
+      const duplicates = await checkDuplicateExpense({
+        amount: sanitizedData.amount,
+        description: sanitizedData.description,
+        date: sanitizedData.date,
+      });
+
+      if (duplicates.length > 0) {
+        const sameUserDuplicates = duplicates.filter(
+          (dup) => dup.submittedById === session.user.id,
+        );
+
+        if (sameUserDuplicates.length > 0) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Possible duplicate expense detected (your previous entries)',
+              duplicates: sameUserDuplicates.map((dup) => ({
+                id: dup.id,
+                date: dup.date,
+                description: dup.description,
+                amount: Number(dup.amount),
+                status: dup.status,
+              })),
+              requiresConfirmation: true,
+            },
+            { status: 409 },
+          );
+        }
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'A similar expense already exists (submitted by another user).',
+            requiresConfirmation: false,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    let resolvedProjectId: string | null = null;
+    if (sanitizedData.project) {
+      resolvedProjectId = await resolveProjectId(sanitizedData.project);
+      if (!resolvedProjectId) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid project reference' },
+          { status: 400 },
+        );
+      }
+    }
+
+    const approvalLevel = getExpenseApprovalLevel(sanitizedData.amount);
+    let status =
+      approvalLevel === 'L1' ? 'PENDING_L1' : approvalLevel === 'L2' ? 'PENDING_L2' : 'PENDING_L3';
+    let approvedById: string | null = null;
+    let approvedAmount: number | null = null;
+
+    // Check if payment source is EMPLOYEE_WALLET
+    const paymentSource = sanitizedData.paymentSource || 'COMPANY_DIRECT';
+
+    // Owner personal expenses auto-approve and cannot use employee wallet
+    if (expenseType === 'OWNER_PERSONAL') {
+      status = 'APPROVED';
+      approvedById = session.user.id;
+      approvedAmount = sanitizedData.amount;
+      if (paymentSource === 'EMPLOYEE_WALLET') {
+        return NextResponse.json(
+          { success: false, error: 'Owner personal expenses cannot be paid from employee wallet' },
+          { status: 400 },
+        );
+      }
+    }
+    let employeeRecord: {
+      id: string;
+      walletBalance: Prisma.Decimal;
+      walletHold: Prisma.Decimal;
+    } | null = null;
+
+    if (paymentSource === 'EMPLOYEE_WALLET') {
+      // Validate that user has an employee record and sufficient wallet balance
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { email: true },
+      });
+
+      if (!user) {
+        return NextResponse.json({ success: false, error: 'User not found' }, { status: 400 });
+      }
+
+      const employee = await prisma.employee.findUnique({
+        where: { email: user.email },
+        select: { id: true, walletBalance: true, walletHold: true },
+      });
+
+      if (!employee) {
+        return NextResponse.json(
+          { success: false, error: 'Employee record not found. Cannot use wallet payment.' },
+          { status: 400 },
         );
       }
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: "A similar expense already exists (submitted by another user).",
-          requiresConfirmation: false,
-        },
-        { status: 409 }
-      );
-    }
-  }
-
-  let resolvedProjectId: string | null = null;
-  if (sanitizedData.project) {
-    resolvedProjectId = await resolveProjectId(sanitizedData.project);
-    if (!resolvedProjectId) {
-      return NextResponse.json(
-        { success: false, error: "Invalid project reference" },
-        { status: 400 }
-      );
-    }
-  }
-
-  const approvalLevel = getExpenseApprovalLevel(sanitizedData.amount);
-  let status =
-    approvalLevel === "L1" ? "PENDING_L1" : approvalLevel === "L2" ? "PENDING_L2" : "PENDING_L3";
-  let approvedById: string | null = null;
-  let approvedAmount: number | null = null;
-
-  // Check if payment source is EMPLOYEE_WALLET
-  const paymentSource = sanitizedData.paymentSource || "COMPANY_DIRECT";
-
-  // Owner personal expenses auto-approve and cannot use employee wallet
-  if (expenseType === "OWNER_PERSONAL") {
-    status = "APPROVED";
-    approvedById = session.user.id;
-    approvedAmount = sanitizedData.amount;
-    if (paymentSource === "EMPLOYEE_WALLET") {
-      return NextResponse.json(
-        { success: false, error: "Owner personal expenses cannot be paid from employee wallet" },
-        { status: 400 }
-      );
-    }
-  }
-  let employeeRecord: { id: string; walletBalance: Prisma.Decimal; walletHold: Prisma.Decimal } | null = null;
-  
-  if (paymentSource === "EMPLOYEE_WALLET") {
-    // Validate that user has an employee record and sufficient wallet balance
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { email: true },
-    });
-    
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "User not found" },
-        { status: 400 }
-      );
-    }
-    
-    const employee = await prisma.employee.findUnique({
-      where: { email: user.email },
-      select: { id: true, walletBalance: true, walletHold: true },
-    });
-    
-    if (!employee) {
-      return NextResponse.json(
-        { success: false, error: "Employee record not found. Cannot use wallet payment." },
-        { status: 400 }
-      );
-    }
-    
-    const available = Number(employee.walletBalance) - Number(employee.walletHold || 0);
-    if (available < sanitizedData.amount) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `Insufficient available wallet balance. Available: ${available}, Required: ${sanitizedData.amount}` 
-        },
-        { status: 400 }
-      );
-    }
-
-    employeeRecord = employee;
-  }
-
-  // Create expense and deduct from wallet in a transaction
-  const result = await prisma.$transaction(async (tx) => {
-    const created = await tx.expense.create({
-      data: {
-        date: new Date(sanitizedData.date),
-        description: sanitizedData.description,
-        category: sanitizedData.category,
-        amount: new Prisma.Decimal(sanitizedData.amount),
-        paymentMode: sanitizedData.paymentMode,
-        paymentSource: paymentSource as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
-        expenseType,
-        project: resolvedProjectId,
-        approvalLevel,
-        status,
-        submittedById: session.user.id,
-        approvedById,
-        approvedAmount: approvedAmount !== null ? new Prisma.Decimal(approvedAmount) : undefined,
-        receiptUrl: sanitizedData.receiptUrl,
-        receiptFileId: sanitizedData.receiptFileId,
-        remarks: sanitizedData.remarks,
-        categoryRequest: sanitizedData.categoryRequest,
-      },
-    });
-
-    // If paid from wallet, deduct the amount
-    if (paymentSource === "EMPLOYEE_WALLET" && employeeRecord) {
-      await tx.employee.update({
-        where: { id: employeeRecord.id },
-        data: {
-          walletHold: new Prisma.Decimal(Number(employeeRecord.walletHold) + sanitizedData.amount),
-        },
-      });
-    }
-
-    if (sanitizedData.inventoryItemId && inventoryQuantity) {
-      const item = await tx.inventoryItem.findUnique({
-        where: { id: sanitizedData.inventoryItemId },
-      });
-      if (!item) {
-        throw new Error("Inventory item not found");
+      const available = Number(employee.walletBalance) - Number(employee.walletHold || 0);
+      if (available < sanitizedData.amount) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Insufficient available wallet balance. Available: ${available}, Required: ${sanitizedData.amount}`,
+          },
+          { status: 400 },
+        );
       }
-      const effectiveCost = inventoryUnitCost ?? Number(item.unitCost);
-      const qtyChange = Math.abs(inventoryQuantity);
-      const newQty = Number(item.quantity) + qtyChange;
-      const prevQty = Number(item.quantity);
-      const prevAvgCost = Number(item.unitCost);
-      const totalCost = prevQty * prevAvgCost + qtyChange * effectiveCost;
-      const nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
-      const total = qtyChange * effectiveCost;
 
-      const ledger = await tx.inventoryLedger.create({
+      employeeRecord = employee;
+    }
+
+    // Create expense and deduct from wallet in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const created = await tx.expense.create({
         data: {
-          date: new Date(),
-          itemId: item.id,
-          type: "PURCHASE",
-          quantity: new Prisma.Decimal(qtyChange),
-          unitCost: new Prisma.Decimal(effectiveCost),
-          total: new Prisma.Decimal(total),
-          reference: `Expense ${created.id}`,
-          project: resolvedProjectId || undefined,
-          userId: session.user.id,
-          runningBalance: new Prisma.Decimal(newQty),
+          date: new Date(sanitizedData.date),
+          description: sanitizedData.description,
+          category: sanitizedData.category,
+          amount: new Prisma.Decimal(sanitizedData.amount),
+          paymentMode: sanitizedData.paymentMode,
+          paymentSource: paymentSource as 'EMPLOYEE_WALLET' | 'COMPANY_DIRECT' | 'COMPANY_ACCOUNT',
+          expenseType,
+          project: resolvedProjectId,
+          approvalLevel,
+          status,
+          submittedById: session.user.id,
+          approvedById,
+          approvedAmount: approvedAmount !== null ? new Prisma.Decimal(approvedAmount) : undefined,
+          receiptUrl: sanitizedData.receiptUrl,
+          receiptFileId: sanitizedData.receiptFileId,
+          remarks: sanitizedData.remarks,
+          categoryRequest: sanitizedData.categoryRequest,
         },
       });
 
-      await tx.inventoryItem.update({
-        where: { id: item.id },
-        data: {
-          quantity: new Prisma.Decimal(newQty),
-          unitCost: new Prisma.Decimal(nextAvgCost),
-          lastPurchasePrice: new Prisma.Decimal(effectiveCost),
-          totalValue: new Prisma.Decimal(newQty * nextAvgCost),
-          availableQty: new Prisma.Decimal(newQty - Number(item.reservedQty)),
-          lastUpdated: new Date(),
-          lastPurchaseDate: new Date(),
-        },
+      // If paid from wallet, deduct the amount
+      if (paymentSource === 'EMPLOYEE_WALLET' && employeeRecord) {
+        await tx.employee.update({
+          where: { id: employeeRecord.id },
+          data: {
+            walletHold: new Prisma.Decimal(
+              Number(employeeRecord.walletHold) + sanitizedData.amount,
+            ),
+          },
+        });
+      }
+
+      if (sanitizedData.inventoryItemId && inventoryQuantity) {
+        const item = await tx.inventoryItem.findUnique({
+          where: { id: sanitizedData.inventoryItemId },
+        });
+        if (!item) {
+          throw new Error('Inventory item not found');
+        }
+        const effectiveCost = inventoryUnitCost ?? Number(item.unitCost);
+        const qtyChange = Math.abs(inventoryQuantity);
+        const newQty = Number(item.quantity) + qtyChange;
+        const prevQty = Number(item.quantity);
+        const prevAvgCost = Number(item.unitCost);
+        const totalCost = prevQty * prevAvgCost + qtyChange * effectiveCost;
+        const nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
+        const total = qtyChange * effectiveCost;
+
+        const ledger = await tx.inventoryLedger.create({
+          data: {
+            date: new Date(),
+            itemId: item.id,
+            type: 'PURCHASE',
+            quantity: new Prisma.Decimal(qtyChange),
+            unitCost: new Prisma.Decimal(effectiveCost),
+            total: new Prisma.Decimal(total),
+            reference: `Expense ${created.id}`,
+            project: resolvedProjectId || undefined,
+            userId: session.user.id,
+            runningBalance: new Prisma.Decimal(newQty),
+          },
+        });
+
+        await tx.inventoryItem.update({
+          where: { id: item.id },
+          data: {
+            quantity: new Prisma.Decimal(newQty),
+            unitCost: new Prisma.Decimal(nextAvgCost),
+            lastPurchasePrice: new Prisma.Decimal(effectiveCost),
+            totalValue: new Prisma.Decimal(newQty * nextAvgCost),
+            availableQty: new Prisma.Decimal(newQty - Number(item.reservedQty)),
+            lastUpdated: new Date(),
+            lastPurchaseDate: new Date(),
+          },
+        });
+
+        await tx.expense.update({
+          where: { id: created.id },
+          data: { inventoryLedgerId: ledger.id },
+        });
+      }
+
+      return { created };
+    });
+
+    await logAudit({
+      action: 'SUBMIT_EXPENSE',
+      entity: 'Expense',
+      entityId: result.created.id,
+      newValue: JSON.stringify(sanitizedData),
+      userId: session.user.id,
+    });
+
+    await createNotification({
+      userId: session.user.id,
+      type: 'EXPENSE_SUBMITTED',
+      message: `Expense submitted for ${sanitizedData.amount}${paymentSource === 'EMPLOYEE_WALLET' ? ' (paid from wallet)' : ''}.`,
+    });
+
+    if (sanitizedData.categoryRequest) {
+      const rolesToNotify = ['Owner', 'CEO', 'Admin', 'CFO', 'Finance Manager', 'Accountant'];
+      const adminUsers = await prisma.user.findMany({
+        where: { role: { name: { in: rolesToNotify } } },
+        select: { id: true, email: true },
       });
-
-      await tx.expense.update({
-        where: { id: created.id },
-        data: { inventoryLedgerId: ledger.id },
-      });
-    }
-
-    return { created };
-  });
-
-  await logAudit({
-    action: "SUBMIT_EXPENSE",
-    entity: "Expense",
-    entityId: result.created.id,
-    newValue: JSON.stringify(sanitizedData),
-    userId: session.user.id,
-  });
-
-  await createNotification({
-    userId: session.user.id,
-    type: "EXPENSE_SUBMITTED",
-    message: `Expense submitted for ${sanitizedData.amount}${paymentSource === "EMPLOYEE_WALLET" ? " (paid from wallet)" : ""}.`,
-  });
-
-  if (sanitizedData.categoryRequest) {
-    const rolesToNotify = ["Owner", "CEO", "Admin", "CFO", "Finance Manager", "Accountant"];
-    const adminUsers = await prisma.user.findMany({
-      where: { role: { name: { in: rolesToNotify } } },
-      select: { id: true, email: true },
-    });
-    await prisma.notification.createMany({
-      data: adminUsers.map((user) => ({
-        userId: user.id,
-        type: "CATEGORY_REQUEST",
-        message: `Expense category request: "${sanitizedData.categoryRequest}" by ${session.user.email || "user"} (category: ${sanitizedData.category}).`,
-        status: "NEW",
-      })),
-    });
-  }
-
-  const isMaterialCategory = /material/i.test(sanitizedData.category);
-  if (isMaterialCategory && !sanitizedData.inventoryItemId) {
-    const rolesToNotify = ["Owner", "CEO", "Admin", "Procurement", "Store Keeper"];
-    const procurementUsers = await prisma.user.findMany({
-      where: { role: { name: { in: rolesToNotify } } },
-      select: { id: true },
-    });
-    if (procurementUsers.length > 0) {
       await prisma.notification.createMany({
-        data: procurementUsers.map((user) => ({
+        data: adminUsers.map((user) => ({
           userId: user.id,
-          type: "PROCUREMENT_MISSING_STOCKIN",
-          message: `Material expense recorded without inventory stock-in: ${sanitizedData.description} (${sanitizedData.category}, PKR ${sanitizedData.amount}).`,
-          status: "NEW",
+          type: 'CATEGORY_REQUEST',
+          message: `Expense category request: "${sanitizedData.categoryRequest}" by ${session.user.email || 'user'} (category: ${sanitizedData.category}).`,
+          status: 'NEW',
         })),
       });
     }
-  }
 
-  if (isMaterialCategory && sanitizedData.amount >= PROCUREMENT_SPIKE_THRESHOLD) {
-    const rolesToNotify = ["Owner", "CEO", "Admin", "CFO", "Finance Manager", "Procurement"];
-    const financeUsers = await prisma.user.findMany({
-      where: { role: { name: { in: rolesToNotify } } },
-      select: { id: true },
-    });
-    if (financeUsers.length > 0) {
-      await prisma.notification.createMany({
-        data: financeUsers.map((user) => ({
-          userId: user.id,
-          type: "PROCUREMENT_SPEND_SPIKE",
-          message: `High material spend detected: ${sanitizedData.description} (${sanitizedData.category}, PKR ${sanitizedData.amount}).`,
-          status: "NEW",
-        })),
+    const isMaterialCategory = /material/i.test(sanitizedData.category);
+    if (isMaterialCategory && !sanitizedData.inventoryItemId) {
+      const rolesToNotify = ['Owner', 'CEO', 'Admin', 'Procurement', 'Store Keeper'];
+      const procurementUsers = await prisma.user.findMany({
+        where: { role: { name: { in: rolesToNotify } } },
+        select: { id: true },
       });
+      if (procurementUsers.length > 0) {
+        await prisma.notification.createMany({
+          data: procurementUsers.map((user) => ({
+            userId: user.id,
+            type: 'PROCUREMENT_MISSING_STOCKIN',
+            message: `Material expense recorded without inventory stock-in: ${sanitizedData.description} (${sanitizedData.category}, PKR ${sanitizedData.amount}).`,
+            status: 'NEW',
+          })),
+        });
+      }
     }
-  }
+
+    if (isMaterialCategory && sanitizedData.amount >= PROCUREMENT_SPIKE_THRESHOLD) {
+      const rolesToNotify = ['Owner', 'CEO', 'Admin', 'CFO', 'Finance Manager', 'Procurement'];
+      const financeUsers = await prisma.user.findMany({
+        where: { role: { name: { in: rolesToNotify } } },
+        select: { id: true },
+      });
+      if (financeUsers.length > 0) {
+        await prisma.notification.createMany({
+          data: financeUsers.map((user) => ({
+            userId: user.id,
+            type: 'PROCUREMENT_SPEND_SPIKE',
+            message: `High material spend detected: ${sanitizedData.description} (${sanitizedData.category}, PKR ${sanitizedData.amount}).`,
+            status: 'NEW',
+          })),
+        });
+      }
+    }
 
     return NextResponse.json({ success: true, data: result.created });
   } catch (error) {
-    console.error("Expense POST error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error('Expense POST error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: "Internal server error", details: message },
-      { status: 500 }
+      { success: false, error: 'Internal server error', details: message },
+      { status: 500 },
     );
   }
 }

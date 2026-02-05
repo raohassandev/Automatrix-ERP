@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
@@ -32,58 +32,44 @@ const createItem = (): GoodsReceiptItem => ({
   unitCost: 0,
 });
 
-export function GoodsReceiptFormDialog({
-  open,
-  onOpenChange,
-  receipt,
-}: {
+type GoodsReceiptFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   receipt?: GoodsReceipt | null;
-}) {
+};
+
+const buildInitialForm = (receipt: GoodsReceipt | null | undefined) => ({
+  grnNumber: receipt?.grnNumber || "",
+  purchaseOrderId: receipt?.purchaseOrderId || "",
+  receivedDate: receipt?.receivedDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+  status: receipt?.status || "RECEIVED",
+  notes: receipt?.notes || "",
+});
+
+const buildInitialItems = (receipt: GoodsReceipt | null | undefined) =>
+  receipt?.items?.length
+    ? receipt.items.map((item) => ({
+        itemName: item.itemName || "",
+        unit: item.unit || "",
+        quantity: Number(item.quantity || 0),
+        unitCost: Number(item.unitCost || 0),
+      }))
+    : [createItem()];
+
+export function GoodsReceiptFormDialog(props: GoodsReceiptFormDialogProps) {
+  const key = `${props.open ? "open" : "closed"}-${props.receipt?.id || "new"}`;
+  return <GoodsReceiptFormDialogInner key={key} {...props} />;
+}
+
+function GoodsReceiptFormDialogInner({
+  open,
+  onOpenChange,
+  receipt,
+}: GoodsReceiptFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
-    grnNumber: "",
-    purchaseOrderId: "",
-    receivedDate: new Date().toISOString().slice(0, 10),
-    status: "RECEIVED",
-    notes: "",
-  });
-  const [items, setItems] = useState<GoodsReceiptItem[]>([createItem()]);
-
-  useEffect(() => {
-    if (open) {
-      if (receipt) {
-        setForm({
-          grnNumber: receipt.grnNumber || "",
-          purchaseOrderId: receipt.purchaseOrderId || "",
-          receivedDate: receipt.receivedDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-          status: receipt.status || "RECEIVED",
-          notes: receipt.notes || "",
-        });
-        setItems(
-          receipt.items?.length
-            ? receipt.items.map((item) => ({
-                itemName: item.itemName || "",
-                unit: item.unit || "",
-                quantity: Number(item.quantity || 0),
-                unitCost: Number(item.unitCost || 0),
-              }))
-            : [createItem()]
-        );
-      } else {
-        setForm({
-          grnNumber: "",
-          purchaseOrderId: "",
-          receivedDate: new Date().toISOString().slice(0, 10),
-          status: "RECEIVED",
-          notes: "",
-        });
-        setItems([createItem()]);
-      }
-    }
-  }, [open, receipt]);
+  const [form, setForm] = useState(() => buildInitialForm(receipt));
+  const [items, setItems] = useState<GoodsReceiptItem[]>(() => buildInitialItems(receipt));
 
   const updateItem = (index: number, key: keyof GoodsReceiptItem, value: string) => {
     setItems((prev) =>

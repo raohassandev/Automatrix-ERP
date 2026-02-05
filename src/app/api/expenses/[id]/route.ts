@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { expenseUpdateSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
-import { requirePermission } from "@/lib/rbac";
+import { requirePermission } => "@/lib/rbac";
 import { RECEIPT_REQUIRED_THRESHOLD } from "@/lib/constants";
 import { getExpenseApprovalLevel, isPendingExpenseStatus } from "@/lib/approvals";
 import { Prisma } from "@prisma/client";
@@ -97,18 +97,21 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       }
     }
   }
-  if (
-    nextAmount >= RECEIPT_REQUIRED_THRESHOLD &&
-    !parsed.data.receiptUrl &&
-    !parsed.data.receiptFileId &&
-    !expense.receiptUrl &&
-    !expense.receiptFileId
-  ) {
-    return NextResponse.json(
-      { success: false, error: "Receipt required for this amount" },
-      { status: 400 }
-    );
-  }
+  // TODO: This receipt validation is temporarily bypassed based on user request.
+  // It should ideally be moved to the frontend, configured by an Admin,
+  // to provide a better user experience and prevent unnecessary backend calls.
+  // if (
+  //   nextAmount >= RECEIPT_REQUIRED_THRESHOLD &&
+  //   !parsed.data.receiptUrl &&
+  //   !parsed.data.receiptFileId &&
+  //   !expense.receiptUrl &&
+  //   !expense.receiptFileId
+  // ) {
+  //   return NextResponse.json(
+  //     { success: false, error: "Receipt required for this amount" },
+  //     { status: 400 }
+  //   );
+  // }
 
   if (parsed.data.amount) {
     const approvalLevel = getExpenseApprovalLevel(parsed.data.amount);

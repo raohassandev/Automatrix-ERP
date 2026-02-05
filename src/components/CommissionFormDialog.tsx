@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
@@ -22,54 +22,38 @@ type Commission = {
   status?: string | null;
 };
 
-export function CommissionFormDialog({
-  open,
-  onOpenChange,
-  employees,
-  commission,
-}: {
+type CommissionFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employees: EmployeeOption[];
   commission?: Commission | null;
-}) {
+};
+
+const buildInitialForm = (commission: Commission | null | undefined, employees: EmployeeOption[]) => ({
+  employeeId: commission?.employeeId || employees[0]?.id || "",
+  projectRef: commission?.projectRef || "",
+  basisType: commission?.basisType || "SALES",
+  basisAmount:
+    commission?.basisAmount !== null && commission?.basisAmount !== undefined ? String(commission.basisAmount) : "",
+  percent: commission?.percent !== null && commission?.percent !== undefined ? String(commission.percent) : "",
+  amount: commission?.amount !== null && commission?.amount !== undefined ? String(commission.amount) : "",
+  reason: commission?.reason || "",
+});
+
+export function CommissionFormDialog(props: CommissionFormDialogProps) {
+  const key = `${props.open ? "open" : "closed"}-${props.commission?.id || "new"}`;
+  return <CommissionFormDialogInner key={key} {...props} />;
+}
+
+function CommissionFormDialogInner({
+  open,
+  onOpenChange,
+  employees,
+  commission,
+}: CommissionFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
-    employeeId: "",
-    projectRef: "",
-    basisType: "SALES",
-    basisAmount: "",
-    percent: "",
-    amount: "",
-    reason: "",
-  });
-
-  useEffect(() => {
-    if (open) {
-      if (commission) {
-        setForm({
-          employeeId: commission.employeeId || "",
-          projectRef: commission.projectRef || "",
-          basisType: commission.basisType || "SALES",
-          basisAmount: commission.basisAmount !== null && commission.basisAmount !== undefined ? String(commission.basisAmount) : "",
-          percent: commission.percent !== null && commission.percent !== undefined ? String(commission.percent) : "",
-          amount: commission.amount !== null && commission.amount !== undefined ? String(commission.amount) : "",
-          reason: commission.reason || "",
-        });
-      } else {
-        setForm({
-          employeeId: employees[0]?.id || "",
-          projectRef: "",
-          basisType: "SALES",
-          basisAmount: "",
-          percent: "",
-          amount: "",
-          reason: "",
-        });
-      }
-    }
-  }, [open, commission, employees]);
+  const [form, setForm] = useState(() => buildInitialForm(commission, employees));
 
   async function submit() {
     if (!form.employeeId || !form.projectRef) {

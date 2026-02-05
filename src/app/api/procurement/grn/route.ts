@@ -78,37 +78,6 @@ async function recalcPurchaseOrderReceipts(
   }
 }
 
-async function revertInventoryStockIn(tx: Prisma.TransactionClient, receiptId: string) {
-  const entries = await tx.inventoryLedger.findMany({
-    where: { reference: `GRN:${receiptId}` },
-  });
-
-  for (const entry of entries) {
-    const item = await tx.inventoryItem.findUnique({ where: { id: entry.itemId } });
-    if (!item) continue;
-
-    const newQty = Number(item.quantity) - Number(entry.quantity);
-    if (newQty < 0) {
-      throw new Error(`Cannot revert stock-in for ${item.name}`);
-    }
-
-    const cost = Number(entry.unitCost);
-    await tx.inventoryItem.update({
-      where: { id: item.id },
-      data: {
-        quantity: new Prisma.Decimal(newQty),
-        totalValue: new Prisma.Decimal(newQty * cost),
-        availableQty: new Prisma.Decimal(newQty - Number(item.reservedQty)),
-        lastUpdated: new Date(),
-      },
-    });
-  }
-
-  if (entries.length > 0) {
-    await tx.inventoryLedger.deleteMany({ where: { reference: `GRN:${receiptId}` } });
-  }
-}
-
 async function applyInventoryStockIn(
   tx: Prisma.TransactionClient,
   {

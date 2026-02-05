@@ -19,7 +19,7 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
-  let where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = {};
   if (!canViewAll) {
     if (!session.user.email) {
       return NextResponse.json({ success: false, error: "User email missing" }, { status: 400 });

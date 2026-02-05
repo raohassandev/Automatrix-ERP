@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
@@ -19,45 +19,34 @@ type Incentive = {
   status?: string | null;
 };
 
-export function IncentiveFormDialog({
-  open,
-  onOpenChange,
-  employees,
-  incentive,
-}: {
+type IncentiveFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employees: EmployeeOption[];
   incentive?: Incentive | null;
-}) {
+};
+
+const buildInitialForm = (incentive: Incentive | null | undefined, employees: EmployeeOption[]) => ({
+  employeeId: incentive?.employeeId || employees[0]?.id || "",
+  projectRef: incentive?.projectRef || "",
+  amount: incentive?.amount !== null && incentive?.amount !== undefined ? String(incentive.amount) : "",
+  reason: incentive?.reason || "",
+});
+
+export function IncentiveFormDialog(props: IncentiveFormDialogProps) {
+  const key = `${props.open ? "open" : "closed"}-${props.incentive?.id || "new"}`;
+  return <IncentiveFormDialogInner key={key} {...props} />;
+}
+
+function IncentiveFormDialogInner({
+  open,
+  onOpenChange,
+  employees,
+  incentive,
+}: IncentiveFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
-    employeeId: "",
-    projectRef: "",
-    amount: "",
-    reason: "",
-  });
-
-  useEffect(() => {
-    if (open) {
-      if (incentive) {
-        setForm({
-          employeeId: incentive.employeeId || "",
-          projectRef: incentive.projectRef || "",
-          amount: String(incentive.amount ?? ""),
-          reason: incentive.reason || "",
-        });
-      } else {
-        setForm({
-          employeeId: employees[0]?.id || "",
-          projectRef: "",
-          amount: "",
-          reason: "",
-        });
-      }
-    }
-  }, [open, incentive, employees]);
+  const [form, setForm] = useState(() => buildInitialForm(incentive, employees));
 
   async function submit() {
     if (!form.employeeId || !form.amount || !form.projectRef) {

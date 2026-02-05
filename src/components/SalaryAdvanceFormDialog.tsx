@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
@@ -18,42 +18,33 @@ type SalaryAdvance = {
   status?: string | null;
 };
 
-export function SalaryAdvanceFormDialog({
-  open,
-  onOpenChange,
-  employees,
-  advance,
-}: {
+type SalaryAdvanceFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employees: EmployeeOption[];
   advance?: SalaryAdvance | null;
-}) {
+};
+
+const buildInitialForm = (advance: SalaryAdvance | null | undefined, employees: EmployeeOption[]) => ({
+  employeeId: advance?.employeeId || employees[0]?.id || "",
+  amount: advance?.amount !== null && advance?.amount !== undefined ? String(advance.amount) : "",
+  reason: advance?.reason || "",
+});
+
+export function SalaryAdvanceFormDialog(props: SalaryAdvanceFormDialogProps) {
+  const key = `${props.open ? "open" : "closed"}-${props.advance?.id || "new"}`;
+  return <SalaryAdvanceFormDialogInner key={key} {...props} />;
+}
+
+function SalaryAdvanceFormDialogInner({
+  open,
+  onOpenChange,
+  employees,
+  advance,
+}: SalaryAdvanceFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
-    employeeId: "",
-    amount: "",
-    reason: "",
-  });
-
-  useEffect(() => {
-    if (open) {
-      if (advance) {
-        setForm({
-          employeeId: advance.employeeId || "",
-          amount: String(advance.amount ?? ""),
-          reason: advance.reason || "",
-        });
-      } else {
-        setForm({
-          employeeId: employees[0]?.id || "",
-          amount: "",
-          reason: "",
-        });
-      }
-    }
-  }, [open, advance, employees]);
+  const [form, setForm] = useState(() => buildInitialForm(advance, employees));
 
   async function submit() {
     if (!form.employeeId || !form.amount || !form.reason) {

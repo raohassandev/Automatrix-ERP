@@ -1,5 +1,7 @@
 import { describe, expect, test, vi } from "vitest";
 
+type MockFn = ReturnType<typeof vi.fn>;
+
 // We mock prisma so this remains a true unit test.
 vi.mock("@/lib/prisma", () => {
   return {
@@ -11,10 +13,12 @@ vi.mock("@/lib/prisma", () => {
       walletLedger: {
         create: vi.fn(),
       },
-      $transaction: vi.fn(async (fn: any) => fn({
-        employee: { update: vi.fn() },
-        walletLedger: { create: vi.fn() },
-      })),
+      $transaction: vi.fn(async (fn: (tx: { employee: { update: MockFn }; walletLedger: { create: MockFn } }) => unknown) =>
+        fn({
+          employee: { update: vi.fn() },
+          walletLedger: { create: vi.fn() },
+        })
+      ),
     },
   };
 });
@@ -22,9 +26,20 @@ vi.mock("@/lib/prisma", () => {
 import { prisma } from "@/lib/prisma";
 import { applyWalletTransactionByEmail } from "../wallet";
 
+const prismaMock = prisma as unknown as {
+  employee: {
+    findUnique: MockFn;
+    update: MockFn;
+  };
+  walletLedger: {
+    create: MockFn;
+  };
+  $transaction: MockFn;
+};
+
 describe("wallet (business rules)", () => {
   test("returns Employee not found when email does not match", async () => {
-    (prisma.employee.findUnique as any).mockResolvedValueOnce(null);
+    prismaMock.employee.findUnique.mockResolvedValueOnce(null);
 
     const res = await applyWalletTransactionByEmail({
       email: "missing@example.com",
@@ -37,7 +52,7 @@ describe("wallet (business rules)", () => {
   });
 
   test("rejects debit that would make balance negative", async () => {
-    (prisma.employee.findUnique as any).mockResolvedValueOnce({
+    prismaMock.employee.findUnique.mockResolvedValueOnce({
       id: "e1",
       walletBalance: 50,
       walletHold: 0,
@@ -54,7 +69,7 @@ describe("wallet (business rules)", () => {
   });
 
   test("rejects debit that would breach walletHold (available balance)", async () => {
-    (prisma.employee.findUnique as any).mockResolvedValueOnce({
+    prismaMock.employee.findUnique.mockResolvedValueOnce({
       id: "e1",
       walletBalance: 100,
       walletHold: 90,
@@ -71,7 +86,7 @@ describe("wallet (business rules)", () => {
   });
 
   test("applies credit by increasing balance via transaction", async () => {
-    (prisma.employee.findUnique as any).mockResolvedValueOnce({
+    prismaMock.employee.findUnique.mockResolvedValueOnce({
       id: "e1",
       walletBalance: 100,
       walletHold: 0,
@@ -85,6 +100,6 @@ describe("wallet (business rules)", () => {
     });
 
     expect(res.applied).toBe(true);
-    expect(prisma.$transaction).toHaveBeenCalled();
+    expect(prismaMock.$transaction).toHaveBeenCalled();
   });
 });

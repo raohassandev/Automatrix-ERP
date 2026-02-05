@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
@@ -35,55 +35,45 @@ const emptyEntry = (employeeId?: string): PayrollEntry => ({
   deductionReason: "",
 });
 
-export function PayrollRunFormDialog({
-  open,
-  onOpenChange,
-  employees,
-  run,
-}: {
+type PayrollRunFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employees: EmployeeOption[];
   run?: PayrollRun | null;
-}) {
+};
+
+const buildInitialForm = (run: PayrollRun | null | undefined) => ({
+  periodStart: run?.periodStart?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+  periodEnd: run?.periodEnd?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+  notes: run?.notes || "",
+});
+
+const buildInitialEntries = (run: PayrollRun | null | undefined, employees: EmployeeOption[]) =>
+  run?.entries?.length
+    ? run.entries.map((entry) => ({
+        employeeId: entry.employeeId,
+        baseSalary: String(entry.baseSalary || ""),
+        incentiveTotal: String(entry.incentiveTotal || ""),
+        deductions: String(entry.deductions || ""),
+        deductionReason: String(entry.deductionReason || ""),
+      }))
+    : [emptyEntry(employees[0]?.id)];
+
+export function PayrollRunFormDialog(props: PayrollRunFormDialogProps) {
+  const key = `${props.open ? "open" : "closed"}-${props.run?.id || "new"}`;
+  return <PayrollRunFormDialogInner key={key} {...props} />;
+}
+
+function PayrollRunFormDialogInner({
+  open,
+  onOpenChange,
+  employees,
+  run,
+}: PayrollRunFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState({
-    periodStart: new Date().toISOString().slice(0, 10),
-    periodEnd: new Date().toISOString().slice(0, 10),
-    notes: "",
-  });
-  const [entries, setEntries] = useState<PayrollEntry[]>([emptyEntry(employees[0]?.id)]);
-
-  useEffect(() => {
-    if (open) {
-      if (run) {
-        setForm({
-          periodStart: run.periodStart?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-          periodEnd: run.periodEnd?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-          notes: run.notes || "",
-        });
-                setEntries(
-                  run.entries?.length
-                    ? run.entries.map((entry) => ({
-                        employeeId: entry.employeeId,
-                        baseSalary: String(entry.baseSalary || ""),
-                        incentiveTotal: String(entry.incentiveTotal || ""),
-                        deductions: String(entry.deductions || ""),
-                        deductionReason: String((entry as PayrollEntry).deductionReason || ""),
-                      }))
-                    : [emptyEntry(employees[0]?.id)]
-                );
-      } else {
-        setForm({
-          periodStart: new Date().toISOString().slice(0, 10),
-          periodEnd: new Date().toISOString().slice(0, 10),
-          notes: "",
-        });
-        setEntries([emptyEntry(employees[0]?.id)]);
-      }
-    }
-  }, [open, run, employees]);
+  const [form, setForm] = useState(() => buildInitialForm(run));
+  const [entries, setEntries] = useState<PayrollEntry[]>(() => buildInitialEntries(run, employees));
 
   const updateEntry = (index: number, key: keyof PayrollEntry, value: string) => {
     setEntries((prev) => prev.map((entry, idx) => (idx === index ? { ...entry, [key]: value } : entry)));

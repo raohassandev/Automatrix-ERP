@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
@@ -40,74 +40,51 @@ const createItem = (): PurchaseOrderItem => ({
   project: "",
 });
 
-export function PurchaseOrderFormDialog({
-  open,
-  onOpenChange,
-  purchaseOrder,
-}: {
+type PurchaseOrderFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   purchaseOrder?: PurchaseOrder | null;
-}) {
+};
+
+const buildInitialForm = (purchaseOrder: PurchaseOrder | null | undefined) => ({
+  poNumber: purchaseOrder?.poNumber || "",
+  vendorId: purchaseOrder?.vendorId || "",
+  vendorName: purchaseOrder?.vendorName || "",
+  vendorContact: purchaseOrder?.vendorContact || "",
+  orderDate: purchaseOrder?.orderDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+  expectedDate: purchaseOrder?.expectedDate?.slice(0, 10) || "",
+  status: purchaseOrder?.status || "DRAFT",
+  currency: purchaseOrder?.currency || "PKR",
+  notes: purchaseOrder?.notes || "",
+});
+
+const buildInitialItems = (purchaseOrder: PurchaseOrder | null | undefined) =>
+  purchaseOrder?.items?.length
+    ? purchaseOrder.items.map((item) => ({
+        itemName: item.itemName || "",
+        unit: item.unit || "",
+        quantity: Number(item.quantity || 0),
+        unitCost: Number(item.unitCost || 0),
+        project: item.project || "",
+      }))
+    : [createItem()];
+
+export function PurchaseOrderFormDialog(props: PurchaseOrderFormDialogProps) {
+  const key = `${props.open ? "open" : "closed"}-${props.purchaseOrder?.id || "new"}`;
+  return <PurchaseOrderFormDialogInner key={key} {...props} />;
+}
+
+function PurchaseOrderFormDialogInner({
+  open,
+  onOpenChange,
+  purchaseOrder,
+}: PurchaseOrderFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
   const [vendorRefreshKey, setVendorRefreshKey] = useState(0);
-  const [form, setForm] = useState({
-    poNumber: "",
-    vendorId: "",
-    vendorName: "",
-    vendorContact: "",
-    orderDate: new Date().toISOString().slice(0, 10),
-    expectedDate: "",
-    status: "DRAFT",
-    currency: "PKR",
-    notes: "",
-  });
-  const [items, setItems] = useState<PurchaseOrderItem[]>([createItem()]);
-
-  useEffect(() => {
-    if (open) {
-      setVendorRefreshKey((prev) => prev + 1);
-      if (purchaseOrder) {
-        setForm({
-          poNumber: purchaseOrder.poNumber || "",
-          vendorId: purchaseOrder.vendorId || "",
-          vendorName: purchaseOrder.vendorName || "",
-          vendorContact: purchaseOrder.vendorContact || "",
-          orderDate: purchaseOrder.orderDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-          expectedDate: purchaseOrder.expectedDate?.slice(0, 10) || "",
-          status: purchaseOrder.status || "DRAFT",
-          currency: purchaseOrder.currency || "PKR",
-          notes: purchaseOrder.notes || "",
-        });
-        setItems(
-          purchaseOrder.items?.length
-            ? purchaseOrder.items.map((item) => ({
-                itemName: item.itemName || "",
-                unit: item.unit || "",
-                quantity: Number(item.quantity || 0),
-                unitCost: Number(item.unitCost || 0),
-                project: item.project || "",
-              }))
-            : [createItem()]
-        );
-      } else {
-        setForm({
-          poNumber: "",
-          vendorId: "",
-          vendorName: "",
-          vendorContact: "",
-          orderDate: new Date().toISOString().slice(0, 10),
-          expectedDate: "",
-          status: "DRAFT",
-          currency: "PKR",
-          notes: "",
-        });
-        setItems([createItem()]);
-      }
-    }
-  }, [open, purchaseOrder]);
+  const [form, setForm] = useState(() => buildInitialForm(purchaseOrder));
+  const [items, setItems] = useState<PurchaseOrderItem[]>(() => buildInitialItems(purchaseOrder));
 
   const updateItem = (index: number, key: keyof PurchaseOrderItem, value: string) => {
     setItems((prev) =>
