@@ -32,9 +32,10 @@ export function ExpenseActions({
   currentUserId?: string | null;
 }) {
   const [editOpen, setEditOpen] = useState(false);
-  const canEdit =
-    canEditAny ||
-    (expense.submittedById && currentUserId && expense.submittedById === currentUserId && expense.status.startsWith("PENDING"));
+  const isPending = expense.status.startsWith("PENDING");
+  const isOwner = expense.submittedById && currentUserId && expense.submittedById === currentUserId;
+  const canEdit = isPending && (canEditAny || isOwner);
+  const canDelete = isPending && (canEditAny || isOwner);
 
   return (
     <>
@@ -44,7 +45,7 @@ export function ExpenseActions({
             Edit
           </Button>
         ) : null}
-        {canEdit ? <DeleteButton url={`/api/expenses/${expense.id}`} /> : null}
+        {canDelete ? <DeleteButton url={`/api/expenses/${expense.id}`} /> : null}
       </div>
       {canEdit ? (
         <ExpenseEditDialog open={editOpen} onOpenChange={setEditOpen} expense={expense} />
