@@ -231,6 +231,146 @@ This section is the baseline for tracking what is fixed and what remains.
 
 ---
 
+## 12) Comprehensive ERP Plan (Modular + Scalable)
+
+### A) Module Map (Primary)
+1. **HR & Admin**
+   - Employee Master Profile
+   - Department/Designation
+   - Reporting Officer
+   - Salary Package (base + allowances)
+   - Salary Advances
+2. **Finance & Accounts**
+   - Expenses (all types)
+   - Payroll (monthly, previous month only)
+   - Incentives (project‑based, completion‑only)
+   - Wallet Ledger (employee payments)
+   - Income/Receipts
+   - Approvals
+3. **Projects / Engineering**
+   - Projects (status: Not Started/Upcoming, Active, On Hold, Completed, Closed)
+   - Project Financials (budget vs actual)
+   - Project Income / Expense view
+4. **Procurement / Store**
+   - Purchase Orders (PO)
+   - Goods Receipts (GRN)
+   - Vendor records
+5. **Inventory**
+   - Inventory Items
+   - Stock In/Out (ledger)
+   - Last Purchase Price + Avg Cost + Stock Value
+6. **CRM / Sales**
+   - Clients
+   - Quotations
+   - Invoices
+   - Commissions (profit or sales %)
+
+---
+
+### B) Page & Form Structure (Nested + Modular)
+**Sidebar (Top‑level)**
+- Dashboard
+- HR
+- Finance
+- Projects
+- Procurement
+- Inventory
+- CRM
+- Reports
+- Settings
+
+**Nested Pages**
+**HR**
+- Employees
+- Departments/Designations
+- Salary Advances
+
+**Finance**
+- Expenses
+- Payroll
+- Incentives
+- Wallet Ledger
+- Income/Receipts
+- Approvals
+
+**Projects**
+- Projects
+- Project Financials
+
+**Procurement**
+- Purchase Orders
+- Goods Receipts
+
+**Inventory**
+- Items
+- Ledger
+
+**CRM**
+- Clients
+- Quotations
+- Invoices
+- Commissions
+
+---
+
+### C) Module Requirements (Key Rules)
+
+**HR**
+- Full employee profile: personal info, education, experience, department, designation, reporting officer.
+- Salary package stored per employee.
+- Employee status: Active/Inactive/On Hold.
+
+**Finance**
+- Expense form must handle: salary, incentive, commission, procurement, project costs.
+- Salary expense = company expense, always in ledger.
+- Incentive expense = project expense, only after project completion.
+- Deductions require **reason + approval**.
+
+**Projects**
+- Project status must be enforced: Not Started/Upcoming → Active → Completed/Closed.
+- Incentives only allowed after Completed/Closed.
+
+**Procurement & Inventory**
+- PO → GRN → Stock In (ledger).
+- Last purchase price and average cost updated on stock in.
+
+**CRM**
+- Commission entries must be linked to sales/project and be auditable.
+
+---
+
+### D) Cross‑Module Integrations (ERP Flow)
+
+1. **Payroll Approval**
+   - Creates company salary expense
+   - Credits employee wallet
+
+2. **Incentive Approval**
+   - Creates project expense
+   - Credits employee wallet
+
+3. **Salary Advance Approval**
+   - Credits wallet
+   - Logged separately, can be reconciled in payroll
+
+4. **Project Completion**
+   - Unlocks incentive creation
+
+5. **Procurement**
+   - PO → GRN → Inventory ledger updates → project cost allocation
+
+---
+
+### E) Scalability (200+ Employees)
+
+- Department‑level approvals (manager first, directors/CEO escalation).
+- Server‑side pagination/search/filter everywhere.
+- Indexes on employeeId, projectId, status, date.
+- Bulk payroll generation by department/role templates.
+
+
+---
+
 ## 6) Phase 2: Approvals & Reporting
 
 **Approvals**

@@ -6,32 +6,15 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
-
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/me', label: 'My Dashboard' },
-  { href: '/expenses', label: 'Expenses' },
-  { href: '/income', label: 'Income' },
-  { href: '/approvals', label: 'Approvals' },
-  { href: '/inventory', label: 'Inventory' },
-  { href: '/incentives', label: 'Incentives' },
-  { href: '/payroll', label: 'Payroll' },
-  { href: '/salary-advances', label: 'Salary Advances' },
-  { href: '/procurement/purchase-orders', label: 'Purchase Orders' },
-  { href: '/procurement/grn', label: 'Goods Receipts' },
-  { href: '/projects', label: 'Projects' },
-  { href: '/employees', label: 'Employees' },
-  { href: '/invoices', label: 'Invoices' },
-  { href: '/reports', label: 'Reports' },
-  { href: '/reports/procurement', label: 'Procurement Report' },
-  { href: '/attachments', label: 'Attachments' },
-  { href: '/notifications', label: 'Notifications' },
-  { href: '/audit', label: 'Audit' },
-];
+import { hasPermission, type RoleName } from '@/lib/permissions';
+import { navGroups } from '@/lib/navigation';
 
 export default function MobileMenu() {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
+  const roleName = ((session?.user as { role?: string })?.role || 'Guest') as RoleName;
+  const canAccess = (permissions?: string[]) =>
+    !permissions || permissions.some((permission) => hasPermission(roleName, permission));
 
   return (
     <>
@@ -54,16 +37,29 @@ export default function MobileMenu() {
               
               {/* Navigation Links */}
               <div className="flex-1 grid gap-4">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className="text-sm font-medium text-gray-600 hover:text-gray-900"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+                {navGroups.map((group) => {
+                  const visibleItems = group.items.filter((item) => canAccess(item.permissions));
+                  if (visibleItems.length === 0) return null;
+                  return (
+                    <div key={group.title} className="space-y-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group.title}
+                      </div>
+                      <div className="grid gap-2">
+                        {visibleItems.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setOpen(false)}
+                            className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                          >
+                            {item.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Logout Button */}
@@ -87,11 +83,14 @@ export default function MobileMenu() {
         </Sheet>
       </div>
       <nav className="hidden md:flex md:flex-wrap md:gap-4 md:text-sm md:text-gray-600">
-        {navItems.map((item) => (
-          <Link key={item.href} href={item.href} className="hover:text-gray-900">
-            {item.label}
-          </Link>
-        ))}
+        {navGroups
+          .flatMap((group) => group.items)
+          .filter((item) => canAccess(item.permissions))
+          .map((item) => (
+            <Link key={item.href} href={item.href} className="hover:text-gray-900">
+              {item.name}
+            </Link>
+          ))}
       </nav>
     </>
   );
