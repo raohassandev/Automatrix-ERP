@@ -16,7 +16,7 @@
 
 **High‑priority gaps (status)**
 - Dashboard API lacks permission/scope enforcement — **Resolved** (role‑scoped metrics).
-- Project financials ignore assigned‑project scope — **Open**.
+- Project financials ignore assigned‑project scope — **Resolved (interim)** using per‑user expense/income participation. Formal project assignments remain a Phase 1 enhancement.
 - Attachments API does not verify parent‑record authorization — **Resolved** (type + ownership checks).
 
 **Medium gaps**

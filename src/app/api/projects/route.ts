@@ -19,7 +19,33 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
+  let where: Record<string, unknown> | undefined = undefined;
+  if (!canViewAll && canViewAssigned) {
+    const [expenseProjects, incomeProjects] = await Promise.all([
+      prisma.expense.findMany({
+        where: { submittedById: session.user.id, project: { not: null } },
+        select: { project: true },
+      }),
+      prisma.income.findMany({
+        where: { addedById: session.user.id, project: { not: null } },
+        select: { project: true },
+      }),
+    ]);
+    const refs = Array.from(
+      new Set(
+        [...expenseProjects, ...incomeProjects]
+          .map((p) => p.project)
+          .filter((p): p is string => Boolean(p))
+      )
+    );
+    if (refs.length === 0) {
+      return NextResponse.json({ success: true, data: [] });
+    }
+    where = { OR: [{ projectId: { in: refs } }, { name: { in: refs } }] };
+  }
+
   const data = await prisma.project.findMany({
+    where,
     orderBy: { createdAt: "desc" },
     include: { client: true },
   });

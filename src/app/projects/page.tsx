@@ -38,7 +38,37 @@ export default async function ProjectsPage({
   const take = 25;
   const skip = (page - 1) * take;
 
-  const where = search
+  let scopeWhere: Record<string, unknown> = {};
+  if (!canViewAll && canViewAssigned) {
+    const [expenseProjects, incomeProjects] = await Promise.all([
+      prisma.expense.findMany({
+        where: { submittedById: session.user.id, project: { not: null } },
+        select: { project: true },
+      }),
+      prisma.income.findMany({
+        where: { addedById: session.user.id, project: { not: null } },
+        select: { project: true },
+      }),
+    ]);
+    const refs = Array.from(
+      new Set(
+        [...expenseProjects, ...incomeProjects]
+          .map((p) => p.project)
+          .filter((p): p is string => Boolean(p))
+      )
+    );
+    if (refs.length === 0) {
+      return (
+        <div className="rounded-xl border bg-card p-8 shadow-sm">
+          <h1 className="text-2xl font-semibold">Projects</h1>
+          <p className="mt-2 text-muted-foreground">No assigned projects yet.</p>
+        </div>
+      );
+    }
+    scopeWhere = { OR: [{ projectId: { in: refs } }, { name: { in: refs } }] };
+  }
+
+  const searchWhere = search
     ? {
         OR: [
           { name: { contains: search, mode: "insensitive" } },
@@ -48,6 +78,13 @@ export default async function ProjectsPage({
         ],
       }
     : {};
+
+  const where =
+    Object.keys(searchWhere).length > 0
+      ? Object.keys(scopeWhere).length > 0
+        ? { AND: [scopeWhere, searchWhere] }
+        : searchWhere
+      : scopeWhere;
 
   const [projects, total] = await Promise.all([
     prisma.project.findMany({
