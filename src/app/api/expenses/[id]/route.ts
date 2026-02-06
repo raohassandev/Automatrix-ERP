@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { expenseUpdateSchema } from "@/lib/validation";1
+import { expenseUpdateSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { RECEIPT_REQUIRED_THRESHOLD } from "@/lib/constants";
