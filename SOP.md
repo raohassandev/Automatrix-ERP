@@ -19,6 +19,7 @@ If two docs conflict: **appendices in `MASTER_PLAN_NEW.md` win** (LOCKED default
 ## 2) Non‑negotiables (ERP-grade)
 - All business documents follow lifecycle: `DRAFT → SUBMITTED → APPROVED → POSTED → LOCKED/CANCELLED`.
 - After `POSTED`: **no value-bearing edits**. Use cancel/reversal/adjustment docs.
+- All ledger/posting records must store: `sourceType`, `sourceId`, `postedBy`, `postedAt`.
 - Every API action enforces RBAC server-side (no UI-only checks).
 - Every finance/inventory critical action writes an audit log entry.
 - No prompt-based edits for finance/inventory in production UI.
@@ -32,7 +33,17 @@ If two docs conflict: **appendices in `MASTER_PLAN_NEW.md` win** (LOCKED default
 - Unknown emails must be denied at sign-in (do not auto-create users/employees in prod).
 - All provisioning and role changes must be audited.
 
-Domains + redirect URIs are locked in `MASTER_PLAN_NEW.md` Appendix B.
+Auth domains + redirect URIs (LOCKED):
+- `NEXTAUTH_URL`:
+  - prod: `https://erp.automatrix.pk`
+  - staging: `https://erp-staging.automatrix.pk`
+- Google OAuth redirect URIs (Google Console):
+  - `https://erp.automatrix.pk/api/auth/callback/google`
+  - `https://erp-staging.automatrix.pk/api/auth/callback/google`
+- Secrets (server env only, never committed):
+  - `NEXTAUTH_SECRET` (or `AUTH_SECRET`)
+  - `GOOGLE_CLIENT_ID`
+  - `GOOGLE_CLIENT_SECRET`
 
 ---
 
@@ -53,6 +64,13 @@ Must pass locally:
 - `pnpm typecheck`
 - `pnpm test`
 - `pnpm build`
+
+Conditional gates:
+- If `prisma/schema.prisma` changed:
+  - run `pnpm prisma:generate`
+  - run `pnpm prisma:migrate` (local only) and verify migrations
+- If a document chain was changed (Purchasing/Sales/Inventory postings):
+  - run Playwright for that chain (`pnpm test:e2e` or the specific spec)
 
 Any exception must be explicitly documented in a commit message and tracked as a Critical audit item.
 
@@ -84,3 +102,10 @@ This SOP does not override Appendix B; it references it.
 - Exports must be permission gated and audited.
 - PII fields (CNIC/address) must be permission-gated and auditable.
 
+---
+
+## 9) Codex cost guardrails (keep changes economical)
+- Before coding: output a short plan (<= 10 lines) + list exact files to touch.
+- Default limit: max 3 files changed per task (unless the user explicitly asks otherwise).
+- Avoid repo-wide refactors; do targeted, minimal changes.
+- Prefer patching existing code over rewriting modules.
