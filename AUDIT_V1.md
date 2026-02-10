@@ -670,3 +670,48 @@ Do not claim “production ready” or give scores unless you define a rubric an
 | Categories list readable without auth | Unauthenticated requests can fetch categories (taxonomy leak) | `src/app/api/categories/route.ts` | Require auth; return 401 when no session | `src/app/api/categories/route.ts:6-18` (auth optional; only checks perms when session exists) |
 | Income UI lacks edit/delete actions | Income can be edited/deleted via API but UI has no actions (operational gap) | `src/app/income/page.tsx`, `src/app/api/income/[id]/route.ts` | Add edit/delete UI with permission gates and form prefill | `src/app/income/page.tsx:119-145` (table has no actions) + `src/app/api/income/[id]/route.ts:11-148` (PATCH/DELETE exist) |
 | QuickEdit prompt used for finance‑critical edits | Prompt-based edits bypass structured validation UX | `src/components/TableActions.tsx`, `src/components/InventoryTable.tsx`, `src/components/EmployeesTable.tsx`, `src/app/clients/page.tsx` | Replace QuickEdit with structured edit dialogs and field validation | `src/components/TableActions.tsx:27-50` (prompt-based edit) + `src/components/InventoryTable.tsx:98-106` + `src/components/EmployeesTable.tsx:91-95` + `src/app/clients/page.tsx:111-115` |
+
+---
+
+## Audit V2 — Errata / Corrections (2026‑02‑10, after Hostinger deployment)
+
+### 1) Projects / financial scope claims (corrected)
+- `/api/projects` **does** apply assignment scoping when the caller lacks `projects.view_all`.  
+  Evidence: `src/app/api/projects/route.ts:22-36` (build `where` from `projectAssignment`, then pass `where` into `prisma.project.findMany`).
+- `/api/projects/financial` **does** apply assignment scoping when the caller lacks `projects.view_all`.  
+  Evidence: `src/app/api/projects/financial/route.ts:20-36` (build `where` from `projectAssignment`, then pass `where` into `prisma.project.findMany`).
+
+### 2) Invoices create UI/API mismatch claim (corrected)
+- Invoice create UI uses `invoiceNo`, `projectId`, `date`, `dueDate`, `amount`, `status` in POST payload (matches `invoiceSchema` + API).  
+  Evidence: `src/components/InvoiceFormDialog.tsx:68-91`.
+- Invoice POST API validates with `invoiceSchema` and persists `invoiceNo` + `projectId`.  
+  Evidence: `src/app/api/invoices/route.ts:37-65`.
+
+### 3) Income actions claim (corrected)
+- Income page renders an Actions column and wires actions via `IncomeActions` for both desktop and mobile.  
+  Evidence: `src/app/income/page.tsx:157-172` and `src/app/income/page.tsx:178-193`.
+- `IncomeActions` uses a structured edit dialog (`IncomeEditDialog`) and uses `DeleteButton` for deletion (not QuickEdit-only).  
+  Evidence: `src/components/IncomeActions.tsx:26-49`.
+
+### 4) Verification commands run (evidence)
+- `pnpm lint` (pass)
+  ```text
+  > automatrix-erp@0.1.0 lint
+  > eslint .
+  ```
+- `pnpm typecheck` (pass)
+  ```text
+  > automatrix-erp@0.1.0 typecheck
+  > tsc --noEmit
+  ```
+- `pnpm test` (pass)
+  ```text
+  Test Files  6 passed (6)
+       Tests  22 passed (22)
+  ```
+- `pnpm build` (pass) — financial route present
+  ```text
+  ✓ Compiled successfully in 6.9s
+  ├ ƒ /api/projects/financial
+  ├ ƒ /projects/financial
+  ```
