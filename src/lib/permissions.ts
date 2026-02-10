@@ -55,6 +55,8 @@ export const PERMISSIONS = {
     "commissions.view_all",
     "commissions.edit",
     "commissions.approve",
+    "company_accounts.view",
+    "company_accounts.manage",
   ],
   CFO: [
     "dashboard.view",
@@ -114,6 +116,8 @@ export const PERMISSIONS = {
     "commissions.view_all",
     "commissions.edit",
     "commissions.approve",
+    "company_accounts.view",
+    "company_accounts.manage",
   ],
   Accountant: [
     "dashboard.view",
@@ -159,6 +163,8 @@ export const PERMISSIONS = {
     "commissions.view_all",
     "commissions.edit",
     "commissions.approve",
+    "company_accounts.view",
+    "company_accounts.manage",
   ],
   Marketing: [
     "dashboard.view",
@@ -220,6 +226,7 @@ export const PERMISSIONS = {
     "attachments.view_all",
     "vendors.view_all",
     "vendors.edit",
+    "company_accounts.view",
   ],
   "Store Keeper": [
     "dashboard.view",
@@ -230,6 +237,7 @@ export const PERMISSIONS = {
     "procurement.view_all",
     "reports.view_own",
     "vendors.view_all",
+    "company_accounts.view",
   ],
   "Finance Manager": [
     "dashboard.view",
@@ -287,6 +295,8 @@ export const PERMISSIONS = {
     "commissions.view_all",
     "commissions.edit",
     "commissions.approve",
+    "company_accounts.view",
+    "company_accounts.manage",
   ],
   Manager: [
     "dashboard.view",
