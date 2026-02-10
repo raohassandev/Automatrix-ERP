@@ -274,3 +274,19 @@ For new InventoryLedger entries created via:
 - `src/app/api/expenses/route.ts` (expense-driven stock-in postings)
 - `src/app/api/inventory/ledger/route.ts` (manual ledger postings)
 - Added helper: `src/lib/warehouses.ts` (`ensureDefaultWarehouseId`)
+
+---
+
+## 12) Phase 1 (E) Reporting — AP Aging (truthful basics)
+
+Added a basic but truthful AP Aging report driven by:
+- `VendorBill` (status `POSTED`)
+- `VendorPaymentAllocation` joined to `VendorPayment` (status `POSTED`)
+
+### 12.1 UI page
+- `src/app/reports/ap/page.tsx`
+  - Filters: date range (`billDate`), vendor name contains, overdue-only
+  - KPIs: total posted bills, paid, outstanding, overdue outstanding
+
+### 12.2 Export API
+- `GET /api/reports/ap/export` (CSV)
