@@ -189,3 +189,29 @@ Added nullable fields to posting/ledger tables so we can migrate flows safely:
 Updated seed to ensure (only if missing):
 - Warehouse: `Main Warehouse (MAIN)` as default
 - Company accounts: `Cash`, `Bank`
+
+---
+
+## 9) Phase 1 (M1) foundation — Company Accounts API (RBAC + audit)
+
+Implemented the backend API for Company Accounts so procurement/finance flows can attribute receipts/payments to Cash/Bank accounts.
+
+### 9.1 RBAC permissions added
+- `company_accounts.view`
+- `company_accounts.manage`
+
+Mapped to roles:
+- Admin/CFO/Accountant/Finance Manager: view + manage
+- Procurement/Store Keeper: view only
+
+### 9.2 API routes added
+- `GET /api/company-accounts` (view)
+- `POST /api/company-accounts` (manage)
+- `PUT /api/company-accounts/[id]` (manage)
+- `DELETE /api/company-accounts/[id]` (manage; blocked if referenced by vendor payments)
+
+### 9.3 Audit logging
+All create/update/delete actions write audit log entries:
+- `CREATE_COMPANY_ACCOUNT`
+- `UPDATE_COMPANY_ACCOUNT`
+- `DELETE_COMPANY_ACCOUNT`
