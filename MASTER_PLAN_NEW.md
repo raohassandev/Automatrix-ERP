@@ -362,6 +362,11 @@ These defaults are locked for Phase 1 to prevent infra/security scope creep. Any
   - `NODE_ENV=production`
   - Separate database from production
 
+### B1.1) Domains + auth URLs (LOCKED)
+- Production domain: `https://erp.automatrix.pk`
+- Staging domain: `https://erp-staging.automatrix.pk`
+- `NEXTAUTH_URL` must match the environment domain above.
+
 ### B2) Deployment model (Hostinger VPS)
 - Reverse proxy: Nginx (HTTPS) → app on `127.0.0.1:3030`
 - Process manager: PM2
@@ -400,6 +405,13 @@ These defaults are locked for Phase 1 to prevent infra/security scope creep. Any
   - confirm app can boot and key reports render
 
 ### B5) Security hardening (explicit)
+- Phase 1 auth choice (LOCKED):
+  - Google OAuth only (no credentials login)
+  - No public signup
+  - Users must be Admin-provisioned / allowlisted
+- Google OAuth redirect URIs (LOCKED):
+  - `https://erp.automatrix.pk/api/auth/callback/google`
+  - `https://erp-staging.automatrix.pk/api/auth/callback/google`
 - Public registration disabled in production:
   - `/api/register` must be admin-only or disabled
 - Brute-force protection:
@@ -410,6 +422,8 @@ These defaults are locked for Phase 1 to prevent infra/security scope creep. Any
     - `DATABASE_URL`
     - `NEXTAUTH_SECRET` (or `AUTH_SECRET`)
     - `NEXTAUTH_URL`
+    - `GOOGLE_CLIENT_ID`
+    - `GOOGLE_CLIENT_SECRET`
 - Firewall:
   - Allow only 22/80/443
   - DB not exposed publicly

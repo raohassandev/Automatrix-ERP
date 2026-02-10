@@ -63,9 +63,11 @@ No exceptions.
 
 ## 7) Documentation
 Keep docs minimal:
-- `MASTER_PLAN.md`
+- `MASTER_PLAN_NEW.md`
+- `SOP.md`
+- `AUDIT_V1.md`
+- `docs/ERP_DIAGRAMS.md`
 - `docs/README.md`
-- `docs/product/AgentSOP.md`
 
 **Diagram upkeep**
 - Keep `docs/ERP_DIAGRAMS.md` updated as we plan and implement changes.
