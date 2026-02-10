@@ -44,6 +44,7 @@ interface Expense {
   receiptUrl?: string | null;
   receiptFileId?: string | null;
   submittedById?: string | null;
+  inventoryLedgerId?: string | null;
 
   // Add other properties as needed based on your API response
 }
@@ -185,9 +186,12 @@ function ExpensesPageContent() {
                           ? expense.project || "-"
                           : col.key === 'status'
                           ? (
-                              <Badge variant={getStatusVariant(expense.status)}>
-                                {expense.status}
-                              </Badge>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant={getStatusVariant(expense.status)}>{expense.status}</Badge>
+                                {expense.inventoryLedgerId ? (
+                                  <Badge variant="secondary">LEGACY</Badge>
+                                ) : null}
+                              </div>
                             )
                           : ''}
                       </td>
@@ -227,7 +231,7 @@ function ExpensesPageContent() {
                 { label: "Remarks", value: expense.remarks || "-" },
                 { label: "Project", value: expense.project || "-" },
                 { label: "Amount", value: formatMoney(Number(expense.amount)) },
-                { label: "Status", value: expense.status },
+                { label: "Status", value: `${expense.status}${expense.inventoryLedgerId ? " (LEGACY)" : ""}` },
                 { label: "Date", value: new Date(expense.date).toLocaleDateString() },
               ]}
               actions={

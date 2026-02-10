@@ -20,6 +20,7 @@ type Expense = {
   receiptFileId?: string | null;
   status: string;
   submittedById?: string | null;
+  inventoryLedgerId?: string | null;
 };
 
 export function ExpenseActions({
@@ -32,10 +33,11 @@ export function ExpenseActions({
   currentUserId?: string | null;
 }) {
   const [editOpen, setEditOpen] = useState(false);
+  const isLegacyInventoryExpense = Boolean(expense.inventoryLedgerId);
   const isPending = expense.status.startsWith("PENDING");
   const isOwner = expense.submittedById && currentUserId && expense.submittedById === currentUserId;
-  const canEdit = isPending && (canEditAny || isOwner);
-  const canDelete = isPending && (canEditAny || isOwner);
+  const canEdit = !isLegacyInventoryExpense && isPending && (canEditAny || isOwner);
+  const canDelete = !isLegacyInventoryExpense && isPending && (canEditAny || isOwner);
 
   return (
     <>

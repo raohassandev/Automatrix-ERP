@@ -10,7 +10,13 @@ import { createNotification } from '@/lib/notifications';
 import { Prisma } from '@prisma/client';
 import { sanitizeString } from '@/lib/sanitize';
 import { resolveProjectId } from '@/lib/projects';
-import { ensureDefaultWarehouseId } from "@/lib/warehouses";
+
+const STOCK_KEYS_BLOCKED_IN_EXPENSES = [
+  "addToInventory",
+  "inventoryItemId",
+  "inventoryQuantity",
+  "inventoryUnitCost",
+] as const;
 
 async function checkDuplicateExpense(input: { amount: number; description: string; date: string }) {
   const date = new Date(input.date);
@@ -159,6 +165,20 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
+    // Phase 1 (SUPER_MASTER_PLAN): expenses are non-stock only.
+    // Stock purchases must go through PO -> GRN -> Vendor Bill -> Vendor Payment.
+    for (const key of STOCK_KEYS_BLOCKED_IN_EXPENSES) {
+      if (key in body && body[key] != null && body[key] !== false && body[key] !== "") {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Stock purchases are not allowed in Expenses (Phase 1). Use Procurement -> PO/GRN/Vendor Bill.",
+          },
+          { status: 400 },
+        );
+      }
+    }
     const parsed = expenseSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
@@ -174,9 +194,6 @@ export async function POST(req: Request) {
       category: sanitizeString(parsed.data.category),
       paymentMode: sanitizeString(parsed.data.paymentMode),
       project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
-      inventoryItemId: parsed.data.inventoryItemId
-        ? sanitizeString(parsed.data.inventoryItemId)
-        : undefined,
       receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
       receiptFileId: parsed.data.receiptFileId
         ? sanitizeString(parsed.data.receiptFileId)
@@ -187,19 +204,10 @@ export async function POST(req: Request) {
         : undefined,
     };
     const expenseType = parsed.data.expenseType || 'COMPANY';
-    const inventoryQuantity = parsed.data.inventoryQuantity;
-    const inventoryUnitCost = parsed.data.inventoryUnitCost;
 
     if (expenseType !== 'OWNER_PERSONAL' && !sanitizedData.project) {
       return NextResponse.json(
         { success: false, error: 'Project is required for company expenses' },
-        { status: 400 },
-      );
-    }
-
-    if (sanitizedData.inventoryItemId && !inventoryQuantity) {
-      return NextResponse.json(
-        { success: false, error: 'Inventory quantity is required when linking material purchase' },
         { status: 400 },
       );
     }
@@ -385,62 +393,6 @@ export async function POST(req: Request) {
         });
       }
 
-      if (sanitizedData.inventoryItemId && inventoryQuantity) {
-        const item = await tx.inventoryItem.findUnique({
-          where: { id: sanitizedData.inventoryItemId },
-        });
-        if (!item) {
-          throw new Error('Inventory item not found');
-        }
-        const effectiveCost = inventoryUnitCost ?? Number(item.unitCost);
-        const qtyChange = Math.abs(inventoryQuantity);
-        const newQty = Number(item.quantity) + qtyChange;
-        const prevQty = Number(item.quantity);
-        const prevAvgCost = Number(item.unitCost);
-        const totalCost = prevQty * prevAvgCost + qtyChange * effectiveCost;
-        const nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
-        const total = qtyChange * effectiveCost;
-
-        const defaultWarehouseId = await ensureDefaultWarehouseId(tx);
-        const ledger = await tx.inventoryLedger.create({
-          data: {
-            date: new Date(),
-            itemId: item.id,
-            warehouseId: defaultWarehouseId,
-            type: 'PURCHASE',
-            quantity: new Prisma.Decimal(qtyChange),
-            unitCost: new Prisma.Decimal(effectiveCost),
-            total: new Prisma.Decimal(total),
-            reference: `Expense ${created.id}`,
-            project: resolvedProjectId || undefined,
-            userId: session.user.id,
-            runningBalance: new Prisma.Decimal(newQty),
-            sourceType: "EXPENSE_INVENTORY",
-            sourceId: created.id,
-            postedById: session.user.id,
-            postedAt: new Date(),
-          },
-        });
-
-        await tx.inventoryItem.update({
-          where: { id: item.id },
-          data: {
-            quantity: new Prisma.Decimal(newQty),
-            unitCost: new Prisma.Decimal(nextAvgCost),
-            lastPurchasePrice: new Prisma.Decimal(effectiveCost),
-            totalValue: new Prisma.Decimal(newQty * nextAvgCost),
-            availableQty: new Prisma.Decimal(newQty - Number(item.reservedQty)),
-            lastUpdated: new Date(),
-            lastPurchaseDate: new Date(),
-          },
-        });
-
-        await tx.expense.update({
-          where: { id: created.id },
-          data: { inventoryLedgerId: ledger.id },
-        });
-      }
-
       return { created };
     });
 
@@ -475,24 +427,6 @@ export async function POST(req: Request) {
     }
 
     const isMaterialCategory = /material/i.test(sanitizedData.category);
-    if (isMaterialCategory && !sanitizedData.inventoryItemId) {
-      const rolesToNotify = ['Owner', 'CEO', 'Admin', 'Procurement', 'Store Keeper'];
-      const procurementUsers = await prisma.user.findMany({
-        where: { role: { name: { in: rolesToNotify } } },
-        select: { id: true },
-      });
-      if (procurementUsers.length > 0) {
-        await prisma.notification.createMany({
-          data: procurementUsers.map((user) => ({
-            userId: user.id,
-            type: 'PROCUREMENT_MISSING_STOCKIN',
-            message: `Material expense recorded without inventory stock-in: ${sanitizedData.description} (${sanitizedData.category}, PKR ${sanitizedData.amount}).`,
-            status: 'NEW',
-          })),
-        });
-      }
-    }
-
     if (isMaterialCategory && sanitizedData.amount >= PROCUREMENT_SPIKE_THRESHOLD) {
       const rolesToNotify = ['Owner', 'CEO', 'Admin', 'CFO', 'Finance Manager', 'Procurement'];
       const financeUsers = await prisma.user.findMany({
@@ -504,7 +438,7 @@ export async function POST(req: Request) {
           data: financeUsers.map((user) => ({
             userId: user.id,
             type: 'PROCUREMENT_SPEND_SPIKE',
-            message: `High material spend detected: ${sanitizedData.description} (${sanitizedData.category}, PKR ${sanitizedData.amount}).`,
+            message: `High material expense recorded: ${sanitizedData.description} (${sanitizedData.category}, PKR ${sanitizedData.amount}). If this is a stock purchase, use Procurement -> PO/GRN/Vendor Bill.`,
             status: 'NEW',
           })),
         });

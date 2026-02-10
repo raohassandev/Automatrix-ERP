@@ -303,3 +303,35 @@ Updated the executive blueprint diagrams to reflect the Phase 1 procurement/AP w
 
 ### 13.1 Diagram source
 - `docs/ERP_DIAGRAMS.md` (rendered at `/ceo/blueprint`)
+
+---
+
+## 14) Phase 1 guardrail — Disabled Expense -> Inventory stock-in (SUPER_MASTER_PLAN)
+
+To close the "hybrid prototype gap" and prevent inventory drift:
+- Expenses are now **non-stock only** in Phase 1.
+- Stock purchases must be recorded only through the procurement spine:
+  - `PO -> GRN -> Vendor Bill -> Vendor Payment`
+
+### 14.1 API hard-block (server-side)
+- `POST /api/expenses` rejects any payload attempting stock fields:
+  - `addToInventory`, `inventoryItemId`, `inventoryQuantity`, `inventoryUnitCost`
+- `PATCH /api/expenses/:id` rejects the same keys.
+- Legacy protection:
+  - Expenses with `inventoryLedgerId` are treated as **legacy inventory-affecting** and cannot be edited/deleted.
+
+Files:
+- `src/app/api/expenses/route.ts`
+- `src/app/api/expenses/[id]/route.ts`
+- `src/lib/validation.ts` (removed stock fields from the expense schema)
+
+### 14.2 UI removal + clarity
+- Removed "Add to Inventory" UI from expense forms.
+- Added a visible hint to direct users to Procurement for stock purchases.
+- Expense list shows a `LEGACY` badge when `inventoryLedgerId` is present, and actions are disabled for legacy rows.
+
+Files:
+- `src/components/ExpenseFormDialog.tsx`
+- `src/components/ExpenseForm.tsx`
+- `src/app/expenses/page.tsx`
+- `src/components/ExpenseActions.tsx`

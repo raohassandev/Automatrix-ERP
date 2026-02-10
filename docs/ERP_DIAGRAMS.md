@@ -26,11 +26,11 @@ mindmap
       Roles & Permissions (future)
     Finance
       Expenses
-        Salary Expense
-        Incentive Expense
-        Commission Expense
-        Procurement Expense
-        Project Direct Expense
+        Non-stock only (Phase 1)
+        Salary Expense (Phase 3)
+        Incentive Expense (Phase 3)
+        Commission Expense (Phase 3)
+        Project Direct (non-stock) Expense
       Payroll
         Monthly (Previous Month)
       Incentives
@@ -128,6 +128,8 @@ flowchart LR
 
   PO --> GRN --> INV
   GRN --> BILL --> VPAY --> CACCT
+
+  %% Phase 1 guardrail: stock purchases do NOT go through Expenses.
 
   QUO --> INVCE --> EXP
 

@@ -21,12 +21,6 @@ type CategoryMeta = {
   enforceStrict: boolean;
 };
 
-type InventoryItem = {
-  id: string;
-  name: string;
-  unit?: string | null;
-};
-
 export default function ExpenseForm() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -43,17 +37,11 @@ export default function ExpenseForm() {
     receiptFileId: "",
     remarks: "",
     categoryRequest: "",
-    addToInventory: false,
-    inventoryItemId: "",
-    inventoryQuantity: "",
-    inventoryUnitCost: "",
   });
   const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
   const [duplicateItems, setDuplicateItems] = useState<DuplicateExpense[]>([]);
   const [categories, setCategories] = useState<CategoryMeta[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
-  const [inventoryLoading, setInventoryLoading] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -82,27 +70,7 @@ export default function ExpenseForm() {
     fetchCategories();
   }, []);
 
-  useEffect(() => {
-    const fetchInventory = async () => {
-      setInventoryLoading(true);
-      try {
-        const res = await fetch("/api/inventory");
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to load inventory");
-        }
-        const list = Array.isArray(data.data) ? data.data : [];
-        setInventoryItems(list.map((item: InventoryItem) => ({ id: item.id, name: item.name, unit: item.unit })));
-      } catch (error) {
-        console.error("Error loading inventory:", error);
-        setInventoryItems([]);
-      } finally {
-        setInventoryLoading(false);
-      }
-    };
-
-    fetchInventory();
-  }, []);
+  // Phase 1: expenses are non-stock only (no Expense -> Inventory postings).
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.name === form.category),
@@ -114,16 +82,6 @@ export default function ExpenseForm() {
     if (form.expenseType !== "OWNER_PERSONAL" && !form.project) {
       alert("Project is required for company expenses");
       return;
-    }
-    if (form.addToInventory) {
-      if (form.expenseType !== "COMPANY") {
-        alert("Only company expenses can add inventory");
-        return;
-      }
-      if (!form.inventoryItemId || !form.inventoryQuantity) {
-        alert("Inventory item and quantity are required");
-        return;
-      }
     }
     if (
       selectedCategory?.enforceStrict &&
@@ -150,11 +108,6 @@ export default function ExpenseForm() {
         receiptFileId: form.receiptFileId || undefined,
         remarks: form.remarks || undefined,
         categoryRequest: form.categoryRequest || undefined,
-        inventoryItemId: form.addToInventory ? form.inventoryItemId : undefined,
-        inventoryQuantity: form.addToInventory ? parseFloat(form.inventoryQuantity) : undefined,
-        inventoryUnitCost: form.addToInventory && form.inventoryUnitCost
-          ? parseFloat(form.inventoryUnitCost)
-          : undefined,
         ignoreDuplicate,
       }),
     });
@@ -186,10 +139,6 @@ export default function ExpenseForm() {
       receiptFileId: "",
       remarks: "",
       categoryRequest: "",
-      addToInventory: false,
-      inventoryItemId: "",
-      inventoryQuantity: "",
-      inventoryUnitCost: "",
     });
     router.refresh();
   }
@@ -261,10 +210,6 @@ export default function ExpenseForm() {
               ...prev,
               expenseType: nextType,
               project: nextType === "OWNER_PERSONAL" ? "" : prev.project,
-              addToInventory: nextType === "OWNER_PERSONAL" ? false : prev.addToInventory,
-              inventoryItemId: nextType === "OWNER_PERSONAL" ? "" : prev.inventoryItemId,
-              inventoryQuantity: nextType === "OWNER_PERSONAL" ? "" : prev.inventoryQuantity,
-              inventoryUnitCost: nextType === "OWNER_PERSONAL" ? "" : prev.inventoryUnitCost,
             }));
           }}
         >
@@ -277,68 +222,12 @@ export default function ExpenseForm() {
           placeholder={form.expenseType === "OWNER_PERSONAL" ? "Personal expense (no project)" : "Select project"}
           disabled={form.expenseType === "OWNER_PERSONAL"}
         />
-        <div className="md:col-span-2">
-          <label className="text-sm font-medium">Material Purchase (Add to Inventory)</label>
-          <div className="mt-1 flex items-center gap-2">
-            <input
-              id="addToInventory"
-              type="checkbox"
-              className="h-4 w-4"
-              checked={form.addToInventory}
-              onChange={(e) =>
-                setForm((prev) => ({
-                  ...prev,
-                  addToInventory: e.target.checked,
-                  inventoryItemId: e.target.checked ? prev.inventoryItemId : "",
-                  inventoryQuantity: e.target.checked ? prev.inventoryQuantity : "",
-                  inventoryUnitCost: e.target.checked ? prev.inventoryUnitCost : "",
-                }))
-              }
-            />
-            <label htmlFor="addToInventory" className="text-xs text-gray-600">
-              Use this when you purchased material and want stock updated.
-            </label>
+        <div className="rounded-md border px-3 py-2 text-xs text-gray-600 md:col-span-2">
+          <div className="font-medium text-gray-900">Stock purchases</div>
+          <div>
+            Phase 1 rule: Expenses are non-stock only. For stock purchases use Procurement -&gt; PO/GRN/Vendor Bill.
           </div>
-          {form.category.includes("Material") ? (
-            <p className="mt-1 text-xs text-amber-700">
-              Tip: Material purchases should add to inventory so project costs stay accurate.
-            </p>
-          ) : null}
         </div>
-        {form.addToInventory ? (
-          <>
-            <select
-              className="rounded-md border px-3 py-2"
-              value={form.inventoryItemId}
-              onChange={(e) => setForm({ ...form, inventoryItemId: e.target.value })}
-            >
-              <option value="">
-                {inventoryLoading ? "Loading inventory..." : "Select inventory item"}
-              </option>
-              {inventoryItems.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <input
-              className="rounded-md border px-3 py-2"
-              placeholder="Inventory Quantity"
-              type="number"
-              step="0.01"
-              value={form.inventoryQuantity}
-              onChange={(e) => setForm({ ...form, inventoryQuantity: e.target.value })}
-            />
-            <input
-              className="rounded-md border px-3 py-2"
-              placeholder="Inventory Unit Cost (optional)"
-              type="number"
-              step="0.01"
-              value={form.inventoryUnitCost}
-              onChange={(e) => setForm({ ...form, inventoryUnitCost: e.target.value })}
-            />
-          </>
-        ) : null}
         <input
           className="rounded-md border px-3 py-2 md:col-span-2"
           placeholder="Description"

@@ -8,6 +8,13 @@ import { getExpenseApprovalLevel, isPendingExpenseStatus } from "@/lib/approvals
 import { Prisma } from "@prisma/client";
 import { resolveProjectId } from "@/lib/projects";
 
+const STOCK_KEYS_BLOCKED_IN_EXPENSES = [
+  "addToInventory",
+  "inventoryItemId",
+  "inventoryQuantity",
+  "inventoryUnitCost",
+] as const;
+
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -18,6 +25,18 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const expense = await prisma.expense.findUnique({ where: { id } });
   if (!expense) {
     return NextResponse.json({ success: false, error: "Expense not found" }, { status: 404 });
+  }
+
+  // Legacy expenses that affected inventory must not be edited in Phase 1.
+  if (expense.inventoryLedgerId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "This is a legacy expense that affected inventory and cannot be edited. Use Procurement -> PO/GRN/Vendor Bill for stock purchases.",
+      },
+      { status: 400 },
+    );
   }
 
   const canEdit = await requirePermission(session.user.id, "expenses.edit");
@@ -31,6 +50,18 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   const body = await req.json();
+  for (const key of STOCK_KEYS_BLOCKED_IN_EXPENSES) {
+    if (key in body && body[key] != null && body[key] !== false && body[key] !== "") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Stock purchases are not allowed in Expenses (Phase 1). Use Procurement -> PO/GRN/Vendor Bill.",
+        },
+        { status: 400 },
+      );
+    }
+  }
   const parsed = expenseUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -177,6 +208,18 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   const expense = await prisma.expense.findUnique({ where: { id } });
   if (!expense) {
     return NextResponse.json({ success: false, error: "Expense not found" }, { status: 404 });
+  }
+
+  // Legacy expenses that affected inventory must not be deleted in Phase 1.
+  if (expense.inventoryLedgerId) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "This is a legacy expense that affected inventory and cannot be deleted. Use Procurement -> PO/GRN/Vendor Bill for stock purchases.",
+      },
+      { status: 400 },
+    );
   }
 
   const canEdit = await requirePermission(session.user.id, "expenses.edit");
