@@ -338,11 +338,11 @@ These defaults are locked to avoid mid-build reinterpretation and cost creep. An
 - Upload storage (S3/local) is Phase 2+
 
 ### A.8 Auth + user provisioning
-- Admin/Owner-only user creation (no public signup in production)
-- Password reset:
-  - Admin generates temporary password
-  - User must change password on first login
-  - All actions are audited
+- Phase 1 auth (LOCKED): **Google OAuth only** (no credentials login)
+- Admin/Owner-only provisioning (no public signup in production)
+- Allowlist rule (LOCKED): user can sign in only if their email exists as an **ACTIVE Employee**
+- Password reset: **N/A in Phase 1** (OAuth-only)
+- All provisioning + role changes must be audited
 
 ---
 
@@ -377,11 +377,12 @@ These defaults are locked for Phase 1 to prevent infra/security scope creep. Any
   1. Pull code for the target branch
   2. `pnpm install --frozen-lockfile`
   3. `pnpm security:check`
-  4. `pnpm build:optimized` (or `pnpm build`)
-  5. DB backup (verified file exists)
-  6. `prisma migrate deploy` (prod/staging only)
-  7. PM2 restart/reload
-  8. Smoke test (health endpoint + login)
+  4. `pnpm prisma:generate` (safe to run always; avoids stale Prisma Client types)
+  5. `pnpm build:optimized` (or `pnpm build`)
+  6. DB backup (verified file exists)
+  7. `prisma migrate deploy` (prod/staging only)
+  8. PM2 restart/reload
+  9. Smoke test (health endpoint + login)
 
 ### B3) Database + migrations (real data rules)
 - Postgres hosted on the same VPS initially
@@ -415,7 +416,7 @@ These defaults are locked for Phase 1 to prevent infra/security scope creep. Any
 - Public registration disabled in production:
   - `/api/register` must be admin-only or disabled
 - Brute-force protection:
-  - Rate-limit credentials login
+  - OAuth-only in Phase 1 (no credentials endpoint to brute-force)
   - Basic lockout/backoff after repeated failed attempts
 - Secrets management:
   - Env only (never committed):
@@ -439,6 +440,19 @@ These defaults are locked for Phase 1 to prevent infra/security scope creep. Any
   - Used by UptimeRobot (or similar)
 - Optional (recommended):
   - Sentry error tracking (client + server)
+
+---
+
+## Implementation Status (Changelog)
+
+### 2026-02-10 — Auth & Ops alignment (Phase 1 locked)
+- Google OAuth only (credentials login removed)
+- Allowlist enforced: must be an ACTIVE Employee to sign in
+- Public signup disabled (`/api/register` returns 410)
+- Password reset disabled (OAuth-only; `/api/users/reset-password` returns 410)
+- Health endpoint added: `/api/health` (DB connectivity)
+- Staging deployment verified on `https://erp-staging.automatrix.pk`
+- Detailed implementation report: `docs/IMPLEMENTATION_REPORT_2026-02-10.md`
 
 ### B7) Data governance (ERP-grade)
 - Audit log retention: minimum 2 years
