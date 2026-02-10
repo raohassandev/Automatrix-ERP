@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -32,6 +33,18 @@ export async function GET(req: Request) {
   const type = (searchParams.get("type") || "").trim();
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+
+  await logAudit({
+    action: "EXPORT_INVENTORY_LEDGER_CSV",
+    entity: "Export",
+    entityId: "inventory-ledger",
+    newValue: JSON.stringify({
+      route: "/api/inventory/ledger/export",
+      query: searchParams.toString(),
+      includesCost: canViewCost,
+    }),
+    userId: session.user.id,
+  });
 
   let itemFilterIds: string[] | undefined = undefined;
   if (query) {

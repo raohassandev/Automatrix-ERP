@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -31,6 +32,14 @@ export async function GET() {
   if (!canExport || (!canViewAll && !canViewTeam && !canViewOwn)) {
     return new Response("Forbidden", { status: 403 });
   }
+
+  await logAudit({
+    action: "EXPORT_REPORTS_SUMMARY_CSV",
+    entity: "Export",
+    entityId: "reports-summary",
+    newValue: JSON.stringify({ route: "/api/reports/export" }),
+    userId,
+  });
 
   const [expenseSum, incomeSum, projectCount, invoiceCount, pendingRecoverySum, inventoryItems] =
     await Promise.all([

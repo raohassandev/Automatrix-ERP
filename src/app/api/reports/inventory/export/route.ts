@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { formatMoney } from "@/lib/format";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -30,6 +31,18 @@ export async function GET() {
   if (!canExport || (!canViewAll && !canViewTeam && !canViewOwn)) {
     return new Response("Forbidden", { status: 403 });
   }
+
+  await logAudit({
+    action: "EXPORT_INVENTORY_REPORT_CSV",
+    entity: "Export",
+    entityId: "inventory-report",
+    newValue: JSON.stringify({
+      route: "/api/reports/inventory/export",
+      scope: canViewAll ? "ALL" : canViewTeam ? "TEAM" : "OWN",
+      includesCost: canViewCost,
+    }),
+    userId: session.user.id,
+  });
 
   const ledgerItemIds =
     !canViewAll && !canViewTeam && canViewOwn

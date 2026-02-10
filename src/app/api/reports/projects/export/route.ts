@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { formatMoney } from "@/lib/format";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -32,6 +33,14 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const search = (searchParams.get("search") || "").trim();
+
+  await logAudit({
+    action: "EXPORT_PROJECTS_REPORT_CSV",
+    entity: "Export",
+    entityId: "projects-report",
+    newValue: JSON.stringify({ route: "/api/reports/projects/export", query: searchParams.toString() }),
+    userId: session.user.id,
+  });
 
   const ownProjectAssignments =
     !canViewAll && !canViewTeam && canViewOwn

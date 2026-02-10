@@ -342,3 +342,43 @@ Files:
   - `/var/backups/automatrix-erp/automatrix_erp_staging_20260210-183227.dump`
 - Migrations:
   - `prisma migrate deploy` found **no pending migrations**
+
+---
+
+## 15) Phase 1 Release Blockers — RB1/RB2/RB4 progress
+
+### 15.1 RB1 — Remove QuickEdit prompt in finance/inventory
+- Removed the unused `QuickEditButton` (prompt-based edits) so it cannot reappear in finance/inventory UI.
+- File:
+  - `src/components/TableActions.tsx`
+
+### 15.2 RB2 — RBAC + data exposure sweep (exports + audit endpoint)
+- Protected audit log API with explicit RBAC permission:
+  - `GET /api/audit` now requires `audit.view`
+  - Files:
+    - `src/app/api/audit/route.ts`
+    - `src/lib/permissions.ts` (added `audit.view` to Finance/Admin roles)
+- Export endpoints are now **audited** (in addition to permission gating):
+  - Added `logAudit(...)` calls to CSV export routes to record who exported what.
+  - Files (non-exhaustive list of exports updated):
+    - `src/app/api/expenses/export/route.ts`
+    - `src/app/api/income/export/route.ts`
+    - `src/app/api/wallets/export/route.ts`
+    - `src/app/api/inventory/ledger/export/route.ts`
+    - `src/app/api/reports/*/export/route.ts`
+    - `src/app/api/reports/procurement/*-export/route.ts`
+    - `src/app/api/me/*/export/route.ts`
+
+### 15.3 RB4 — Restore Playwright e2e (safe-by-default)
+- Updated Playwright to run with an **isolated E2E database** by default:
+  - Requires `E2E_DATABASE_URL` unless `PLAYWRIGHT_ALLOW_REAL_DB=1` override is explicitly set.
+  - File:
+    - `playwright.config.ts`
+- Added an **E2E-only credentials provider** (guarded by `E2E_TEST_MODE=1`) so Playwright can log in without real Google OAuth.
+  - Bootstraps a test Employee + Role + User in the E2E DB when missing (E2E-only).
+  - Files:
+    - `src/lib/auth.ts`
+    - `src/app/login/LoginClient.tsx` (E2E form visible only when `NEXT_PUBLIC_E2E_TEST_MODE=1`)
+- Replaced outdated Playwright specs and added RB4 specs:
+  - `playwright/tests/rb4-procurement-chain.spec.ts`
+  - `playwright/tests/rb4-expenses-nonstock.spec.ts`

@@ -1,10 +1,13 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
 
 export function LoginClient({ error }: { error: string | null }) {
   const [pending, startTransition] = useTransition();
+  const e2eEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
+  const [e2eEmail, setE2eEmail] = useState("");
+  const [e2ePassword, setE2ePassword] = useState("");
   const message = (() => {
     if (!error) return null;
     switch (error) {
@@ -23,6 +26,14 @@ export function LoginClient({ error }: { error: string | null }) {
     await signIn("google", { callbackUrl: "/dashboard" });
   }
 
+  async function handleE2ELogin() {
+    await signIn("credentials", {
+      email: e2eEmail,
+      password: e2ePassword,
+      callbackUrl: "/dashboard",
+    });
+  }
+
   return (
     <div className="mx-auto max-w-md rounded-xl border bg-card p-8 shadow-sm">
       <h1 className="text-2xl font-semibold">Sign in</h1>
@@ -37,6 +48,35 @@ export function LoginClient({ error }: { error: string | null }) {
         >
           {pending ? "Working..." : "Sign in with Google"}
         </button>
+
+        {e2eEnabled ? (
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+            <div className="font-medium text-foreground">E2E login (local only)</div>
+            <div className="mt-2 grid gap-2">
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder="Email"
+                value={e2eEmail}
+                onChange={(e) => setE2eEmail(e.target.value)}
+              />
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder="Password"
+                type="password"
+                value={e2ePassword}
+                onChange={(e) => setE2ePassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md border px-4 py-2"
+                onClick={() => startTransition(handleE2ELogin)}
+                disabled={pending || !e2eEmail || !e2ePassword}
+              >
+                {pending ? "Working..." : "E2E Sign in"}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {message ? <p className="text-sm text-red-600">{message}</p> : null}
       </div>

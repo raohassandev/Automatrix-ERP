@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -33,6 +34,14 @@ export async function GET(req: Request) {
   const search = (searchParams.get("search") || "").trim().toLowerCase();
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+
+  await logAudit({
+    action: "EXPORT_EMPLOYEE_EXPENSES_REPORT_CSV",
+    entity: "Export",
+    entityId: "employee-expenses-report",
+    newValue: JSON.stringify({ route: "/api/reports/employee-expenses/export", query: searchParams.toString() }),
+    userId: session.user.id,
+  });
 
   const where: Record<string, unknown> = {
     status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },

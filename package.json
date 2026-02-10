@@ -15,7 +15,6 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "node prisma/seed.js",
     "test:e2e": "playwright test",
-    "test:refrens:audit": "playwright test playwright/tests/refrens-audit.spec.ts",
     "test": "vitest run",
     "security:check": "node scripts/verify-env.js",
     "analyze": "ANALYZE=true pnpm build",

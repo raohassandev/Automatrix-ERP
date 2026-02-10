@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -34,6 +35,18 @@ export async function GET(req: Request) {
   const type = (searchParams.get("type") || "").trim();
   const from = searchParams.get("from");
   const to = searchParams.get("to");
+
+  await logAudit({
+    action: "EXPORT_WALLET_LEDGER_CSV",
+    entity: "Export",
+    entityId: "wallet-ledger",
+    newValue: JSON.stringify({
+      route: "/api/wallets/export",
+      query: searchParams.toString(),
+      scope: canViewAll || canEdit ? "ALL" : "OWN",
+    }),
+    userId: session.user.id,
+  });
 
   let baseWhere: Record<string, unknown> = {};
   if (!canViewAll && !canEdit && session.user.email) {

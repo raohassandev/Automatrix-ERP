@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -29,6 +30,14 @@ export async function GET() {
   if (!canViewAll && !canViewOwn) {
     return new Response("Forbidden", { status: 403 });
   }
+
+  await logAudit({
+    action: "EXPORT_EXPENSES_CSV",
+    entity: "Export",
+    entityId: "expenses",
+    newValue: JSON.stringify({ route: "/api/expenses/export", scope: canViewAll ? "ALL" : "OWN" }),
+    userId,
+  });
 
   const expenses = await prisma.expense.findMany({
     where: canViewAll ? {} : { submittedById: userId },

@@ -4,6 +4,7 @@ export const PERMISSIONS = {
   Admin: [
     "dashboard.view",
     "dashboard.view_all_metrics",
+    "audit.view",
     "clients.view_all",
     "clients.edit",
     "quotations.view_all",
@@ -61,6 +62,7 @@ export const PERMISSIONS = {
   CFO: [
     "dashboard.view",
     "dashboard.view_all_metrics",
+    "audit.view",
     "clients.view_all",
     "clients.edit",
     "quotations.view_all",
@@ -121,6 +123,7 @@ export const PERMISSIONS = {
   ],
   Accountant: [
     "dashboard.view",
+    "audit.view",
     "clients.view_all",
     "quotations.view_all",
     "expenses.view_all",
@@ -242,6 +245,7 @@ export const PERMISSIONS = {
   "Finance Manager": [
     "dashboard.view",
     "dashboard.view_all_metrics",
+    "audit.view",
     "clients.view_all",
     "clients.edit",
     "quotations.view_all",

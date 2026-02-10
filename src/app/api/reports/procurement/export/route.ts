@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { formatMoney } from "@/lib/format";
 import { resolveProjectId } from "@/lib/projects";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -36,6 +37,14 @@ export async function GET(req: Request) {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const projectFilter = searchParams.get("project");
+
+  await logAudit({
+    action: "EXPORT_PROCUREMENT_REPORT_CSV",
+    entity: "Export",
+    entityId: "procurement-report",
+    newValue: JSON.stringify({ route: "/api/reports/procurement/export", query: searchParams.toString() }),
+    userId: session.user.id,
+  });
 
   const range: { gte?: Date; lte?: Date } = {};
   if (from) range.gte = new Date(from);

@@ -1,27 +1,116 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
+import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { Adapter, AdapterUser } from "next-auth/adapters";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const e2eMode = process.env.E2E_TEST_MODE === "1";
 
-if (!googleClientId || !googleClientSecret) {
-  // Phase 1: Google OAuth is the only supported auth method.
-  throw new Error("Missing Google OAuth env vars: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required.");
+if ((!googleClientId || !googleClientSecret) && !e2eMode) {
+  // Phase 1: Google OAuth is the only supported auth method in real environments.
+  throw new Error(
+    "Missing Google OAuth env vars: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required."
+  );
 }
 
-const authProviders = [
-  Google({
-    clientId: googleClientId,
-    clientSecret: googleClientSecret,
-    // We allow linking by email because:
-    // - Google emails are verified
-    // - we still enforce an allowlist (Employee table) server-side
-    allowDangerousEmailAccountLinking: true,
-  }),
-];
+const authProviders = [];
+if (googleClientId && googleClientSecret) {
+  authProviders.push(
+    Google({
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+      // We allow linking by email because:
+      // - Google emails are verified
+      // - we still enforce an allowlist (Employee table) server-side
+      allowDangerousEmailAccountLinking: true,
+    })
+  );
+}
+
+// E2E-only credentials provider so Playwright can authenticate without real Google OAuth.
+// This must never be enabled in production.
+if (e2eMode) {
+  authProviders.push(
+    Credentials({
+      name: "E2E Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      authorize: async (credentials) => {
+        const email =
+          typeof credentials?.email === "string" ? credentials.email.trim().toLowerCase() : "";
+        const password = typeof credentials?.password === "string" ? credentials.password : "";
+        const expected = process.env.E2E_TEST_PASSWORD || "";
+        const bootstrap = process.env.E2E_BOOTSTRAP !== "0";
+        const desiredRoleName = process.env.E2E_TEST_ROLE || "Admin";
+
+        if (!expected || password !== expected || !email) return null;
+
+        let employee = await prisma.employee.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+          select: { id: true, name: true, status: true },
+        });
+
+        if (!employee && bootstrap) {
+          employee = await prisma.employee.create({
+            data: {
+              email,
+              name: email.split("@")[0] || "E2E User",
+              role: desiredRoleName,
+              status: "ACTIVE",
+            },
+            select: { id: true, name: true, status: true },
+          });
+        }
+
+        if (!employee || employee.status !== "ACTIVE") return null;
+
+        let desiredRole = await prisma.role.findUnique({
+          where: { name: desiredRoleName },
+          select: { id: true },
+        });
+        if (!desiredRole && bootstrap) {
+          desiredRole = await prisma.role.create({
+            data: { name: desiredRoleName },
+            select: { id: true },
+          });
+        }
+        if (!desiredRole) return null;
+
+        let user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+        });
+
+        if (!user) {
+          user = await prisma.user.create({
+            data: {
+              email,
+              name: employee.name || null,
+              roleId: desiredRole.id,
+              passwordHash: null,
+            },
+          });
+        } else if (user.roleId !== desiredRole.id) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { roleId: desiredRole.id },
+          });
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          roleId: user.roleId,
+        };
+      },
+    })
+  );
+}
 
 // Adapter wrapper to enforce allowlisted (admin-provisioned) sign-in.
 // Phase 1 policy: a user can sign in only if there is an ACTIVE Employee record with the same email.
@@ -87,8 +176,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     signIn: async ({ user, account }) => {
-      // Phase 1: Google OAuth only.
-      if (account?.provider !== "google") return false;
+      // Phase 1: Google OAuth only (except E2E-only credentials provider).
+      if (account?.provider !== "google") {
+        return e2eMode && account?.provider === "credentials";
+      }
 
       const email = typeof user?.email === "string" ? user.email.trim() : "";
       if (!email) return false;

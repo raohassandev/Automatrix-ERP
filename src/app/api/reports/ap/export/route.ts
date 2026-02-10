@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { formatMoney } from "@/lib/format";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -41,6 +42,14 @@ export async function GET(req: Request) {
   const to = searchParams.get("to");
   const vendor = (searchParams.get("vendor") || "").trim();
   const overdueOnly = (searchParams.get("overdue") || "").trim().toLowerCase() === "true";
+
+  await logAudit({
+    action: "EXPORT_AP_AGING_CSV",
+    entity: "Export",
+    entityId: "ap-aging",
+    newValue: JSON.stringify({ route: "/api/reports/ap/export", query: searchParams.toString() }),
+    userId: session.user.id,
+  });
 
   const where: import("@prisma/client").Prisma.VendorBillWhereInput = {
     status: "POSTED",
@@ -110,4 +119,3 @@ export async function GET(req: Request) {
     },
   });
 }
-

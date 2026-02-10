@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
+import { logAudit } from "@/lib/audit";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -28,6 +29,14 @@ export async function GET() {
   if (!employee) {
     return new Response("Employee not found", { status: 404 });
   }
+
+  await logAudit({
+    action: "EXPORT_MY_WALLET_CSV",
+    entity: "Export",
+    entityId: `my-wallet:${employee.id}`,
+    newValue: JSON.stringify({ route: "/api/me/wallet/export" }),
+    userId: session.user.id,
+  });
 
   const rows = await prisma.walletLedger.findMany({
     where: { employeeId: employee.id },
