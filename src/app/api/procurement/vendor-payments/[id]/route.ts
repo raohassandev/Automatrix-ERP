@@ -205,7 +205,19 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
         }
       }
 
-      const updated = await prisma.vendorPayment.update({ where: { id }, data: { status: "POSTED" } });
+      const updated = await prisma.$transaction(async (tx) => {
+        const payment = await tx.vendorPayment.update({ where: { id }, data: { status: "POSTED" } });
+        await tx.vendorPaymentAllocation.updateMany({
+          where: { vendorPaymentId: id },
+          data: {
+            sourceType: "VENDOR_PAYMENT",
+            sourceId: id,
+            postedById: session.user.id,
+            postedAt: payment.paymentDate,
+          },
+        });
+        return payment;
+      });
       await logAudit({
         action: "POST_VENDOR_PAYMENT",
         entity: "VendorPayment",
@@ -270,6 +282,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
               vendorPaymentId: id,
               vendorBillId: a.vendorBillId,
               amount: new Prisma.Decimal(a.amount),
+              sourceType: "VENDOR_PAYMENT",
+              sourceId: id,
             })),
           });
         }
@@ -348,4 +362,3 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
 
   return NextResponse.json({ success: true });
 }
-

@@ -139,6 +139,16 @@ export async function POST(request: NextRequest) {
       include: { vendor: true, companyAccount: true, allocations: true },
     });
 
+    if (created.allocations.length > 0) {
+      await prisma.vendorPaymentAllocation.updateMany({
+        where: { vendorPaymentId: created.id },
+        data: {
+          sourceType: "VENDOR_PAYMENT",
+          sourceId: created.id,
+        },
+      });
+    }
+
     await logAudit({
       action: "CREATE_VENDOR_PAYMENT",
       entity: "VendorPayment",
@@ -160,4 +170,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
-

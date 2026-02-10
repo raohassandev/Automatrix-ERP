@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { MermaidDiagram } from "@/components/MermaidDiagram";
+import { requirePermission } from "@/lib/rbac";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -20,8 +21,8 @@ export default async function CeoBlueprintPage() {
     return redirect("/login");
   }
 
-  const role = (session.user as { role?: string })?.role || "Guest";
-  if (role !== "CEO" && role !== "Owner") {
+  const canView = await requirePermission(session.user.id, "dashboard.view_all_metrics");
+  if (!canView) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">ERP Blueprint</h1>

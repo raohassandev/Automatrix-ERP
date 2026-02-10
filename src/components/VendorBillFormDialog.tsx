@@ -12,7 +12,12 @@ import { VendorFormDialog } from "@/components/VendorFormDialog";
 
 type BillLine = {
   description: string;
-  total: number | string;
+  itemId?: string;
+  grnItemId?: string;
+  quantity?: number | string;
+  unit?: string;
+  unitCost?: number | string;
+  total?: number | string;
   project?: string;
 };
 
@@ -25,10 +30,45 @@ type BillData = {
   currency: string;
   notes: string | null;
   status: string;
-  lines: Array<{ description: string; total: number; project: string | null }>;
+  lines: Array<{
+    description: string;
+    itemId: string | null;
+    grnItemId: string | null;
+    quantity: number | null;
+    unit: string | null;
+    unitCost: number | null;
+    total: number;
+    project: string | null;
+  }>;
 };
 
-const createLine = (): BillLine => ({ description: "", total: 0, project: "" });
+type InventoryItemOption = { id: string; name: string; unit: string };
+
+type GrnListRow = {
+  id: string;
+  grnNumber: string;
+  status: string;
+  receivedDate: string;
+  purchaseOrder: { id: string; poNumber: string; vendorId: string | null; vendorName: string } | null;
+  items: Array<{
+    id: string;
+    itemName: string;
+    unit: string | null;
+    quantity: string | number;
+    unitCost: string | number;
+  }>;
+};
+
+const createLine = (): BillLine => ({
+  description: "",
+  quantity: "",
+  unit: "",
+  unitCost: "",
+  total: "",
+  project: "",
+});
+
+const normalizeKey = (value?: string | null) => (value || "").trim().toLowerCase();
 
 export function VendorBillFormDialog({
   open,
@@ -43,6 +83,9 @@ export function VendorBillFormDialog({
   const [pending, startTransition] = useTransition();
   const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
   const [vendorRefreshKey, setVendorRefreshKey] = useState(0);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItemOption[]>([]);
+  const [grns, setGrns] = useState<GrnListRow[]>([]);
+  const [selectedGrnId, setSelectedGrnId] = useState("");
 
   const [form, setForm] = useState({
     billNumber: "",
@@ -53,6 +96,50 @@ export function VendorBillFormDialog({
     notes: "",
   });
   const [lines, setLines] = useState<BillLine[]>([createLine()]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen && !billId) {
+      setSelectedGrnId("");
+      setForm({
+        billNumber: "",
+        vendorId: "",
+        billDate: new Date().toISOString().slice(0, 10),
+        dueDate: "",
+        currency: "PKR",
+        notes: "",
+      });
+      setLines([createLine()]);
+    }
+    onOpenChange(nextOpen);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+
+    fetch("/api/inventory")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.data)) {
+          setInventoryItems(
+            (data.data as Array<{ id: string; name: string; unit: string }>).map((i) => ({
+              id: i.id,
+              name: i.name,
+              unit: i.unit,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/procurement/grn")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.data)) {
+          setGrns(data.data as GrnListRow[]);
+        }
+      })
+      .catch(() => {});
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -77,6 +164,11 @@ export function VendorBillFormDialog({
           bill.lines?.length
             ? bill.lines.map((l) => ({
                 description: l.description,
+                itemId: l.itemId || undefined,
+                grnItemId: l.grnItemId || undefined,
+                quantity: l.quantity ?? "",
+                unit: l.unit || "",
+                unitCost: l.unitCost ?? "",
                 total: l.total,
                 project: l.project || "",
               }))
@@ -86,17 +178,74 @@ export function VendorBillFormDialog({
       .catch(() => toast.error("Failed to load bill"))
   }, [open, billId]);
 
-  const total = useMemo(() => {
-    return lines.reduce((sum, l) => sum + (Number(l.total) || 0), 0);
+  const computedLineTotals = useMemo(() => {
+    return lines.map((l) => {
+      const qty = Number(l.quantity);
+      const cost = Number(l.unitCost);
+      if (Number.isFinite(qty) && qty > 0 && Number.isFinite(cost) && cost >= 0) {
+        return qty * cost;
+      }
+      return Number(l.total) || 0;
+    });
   }, [lines]);
+
+  const total = useMemo(() => computedLineTotals.reduce((sum, t) => sum + t, 0), [computedLineTotals]);
 
   const updateLine = (index: number, key: keyof BillLine, value: string) => {
     setLines((prev) => prev.map((l, i) => (i === index ? { ...l, [key]: value } : l)));
   };
 
+  const updateLineItem = (index: number, itemId: string) => {
+    setLines((prev) =>
+      prev.map((l, i) => {
+        if (i !== index) return l;
+        const selected = inventoryItems.find((it) => it.id === itemId);
+        return {
+          ...l,
+          itemId: itemId || undefined,
+          unit: selected?.unit || l.unit || "",
+          description: l.description || selected?.name || "",
+        };
+      })
+    );
+  };
+
   const addLine = () => setLines((prev) => [...prev, createLine()]);
   const removeLine = (index: number) =>
     setLines((prev) => (prev.length === 1 ? prev : prev.filter((_, i) => i !== index)));
+
+  const importFromGrn = async () => {
+    if (!selectedGrnId) return;
+    const grn = grns.find((g) => g.id === selectedGrnId);
+    if (!grn) return;
+
+    if (grn.purchaseOrder?.vendorId && !form.vendorId) {
+      setForm((prev) => ({ ...prev, vendorId: grn.purchaseOrder?.vendorId || "" }));
+    }
+
+    const itemByName = new Map(inventoryItems.map((i) => [normalizeKey(i.name), i]));
+    const imported = (grn.items || []).map((it) => {
+      const match = itemByName.get(normalizeKey(it.itemName));
+      return {
+        description: it.itemName,
+        itemId: match?.id,
+        grnItemId: it.id,
+        quantity: Number(it.quantity) || "",
+        unit: it.unit || match?.unit || "",
+        unitCost: Number(it.unitCost) || "",
+        total: "",
+        project: "",
+      } satisfies BillLine;
+    });
+
+    if (imported.length === 0) {
+      toast.error("Selected GRN has no items to import.");
+      return;
+    }
+
+    setLines(imported);
+    toast.success(`Imported ${imported.length} line(s) from GRN ${grn.grnNumber}.`);
+  };
 
   async function submit() {
     if (!form.billNumber || !form.vendorId || !form.billDate) {
@@ -104,12 +253,26 @@ export function VendorBillFormDialog({
       return;
     }
     const cleanedLines = lines
-      .map((l) => ({
-        description: l.description.trim(),
-        total: Number(l.total),
-        project: (l.project || "").trim() || undefined,
-      }))
-      .filter((l) => l.description && Number.isFinite(l.total));
+      .map((l, idx) => {
+        const qty = Number(l.quantity);
+        const unitCost = Number(l.unitCost);
+        const computedTotal =
+          Number.isFinite(qty) && qty > 0 && Number.isFinite(unitCost) && unitCost >= 0
+            ? qty * unitCost
+            : computedLineTotals[idx] || 0;
+
+        return {
+          description: l.description.trim(),
+          itemId: l.itemId || undefined,
+          grnItemId: l.grnItemId || undefined,
+          quantity: Number.isFinite(qty) && qty > 0 ? qty : undefined,
+          unit: (l.unit || "").trim() || undefined,
+          unitCost: Number.isFinite(unitCost) && unitCost >= 0 ? unitCost : undefined,
+          total: computedTotal,
+          project: (l.project || "").trim() || undefined,
+        };
+      })
+      .filter((l) => l.description && Number.isFinite(l.total) && l.total >= 0);
 
     if (cleanedLines.length === 0) {
       toast.error("Add at least one bill line");
@@ -148,7 +311,7 @@ export function VendorBillFormDialog({
   return (
     <FormDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       title={billId ? "Edit Vendor Bill" : "Create Vendor Bill"}
       description="Record vendor bills (multi-line). Posting/allocations handled separately."
     >
@@ -160,6 +323,40 @@ export function VendorBillFormDialog({
         className="space-y-4"
       >
         <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="importGrn">Import from GRN (optional)</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                id="importGrn"
+                className="w-full md:w-auto min-w-[280px] rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                value={selectedGrnId}
+                onChange={(e) => setSelectedGrnId(e.target.value)}
+              >
+                <option value="">Select GRN...</option>
+                {grns
+                  .filter((g) => g.status !== "VOID")
+                  .map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.grnNumber} ({String(g.status || "").toUpperCase()}) —{" "}
+                      {new Date(g.receivedDate).toLocaleDateString()}
+                    </option>
+                  ))}
+              </select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={importFromGrn}
+                disabled={!selectedGrnId}
+              >
+                Import Lines
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              For stock purchases: use PO → GRN → Vendor Bill (this screen). Expenses are non-stock only in Phase 1.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="billNumber">Bill Number</Label>
             <Input
@@ -237,7 +434,9 @@ export function VendorBillFormDialog({
           <div className="flex items-center justify-between gap-2">
             <div>
               <div className="font-semibold">Bill Lines</div>
-              <div className="text-xs text-muted-foreground">Describe items/services and totals (PKR).</div>
+              <div className="text-xs text-muted-foreground">
+                Use qty + unit cost for item lines. For service lines, fill description + total.
+              </div>
             </div>
             <Button type="button" variant="outline" size="sm" onClick={addLine}>
               Add Line
@@ -247,7 +446,7 @@ export function VendorBillFormDialog({
           <div className="space-y-2">
             {lines.map((line, idx) => (
               <div key={idx} className="grid gap-2 md:grid-cols-12 items-end">
-                <div className="md:col-span-7 space-y-1">
+                <div className="md:col-span-4 space-y-1">
                   <Label className="text-xs">Description</Label>
                   <Input
                     value={line.description}
@@ -257,18 +456,70 @@ export function VendorBillFormDialog({
                   />
                 </div>
                 <div className="md:col-span-2 space-y-1">
+                  <Label className="text-xs">Item (opt)</Label>
+                  <select
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                    value={line.itemId || ""}
+                    onChange={(e) => updateLineItem(idx, e.target.value)}
+                  >
+                    <option value="">(service / no item)</option>
+                    {inventoryItems.map((it) => (
+                      <option key={it.id} value={it.id}>
+                        {it.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="md:col-span-1 space-y-1">
+                  <Label className="text-xs">Qty</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={String(line.quantity ?? "")}
+                    onChange={(e) => updateLine(idx, "quantity", e.target.value)}
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="md:col-span-1 space-y-1">
+                  <Label className="text-xs">Unit</Label>
+                  <Input
+                    value={line.unit || ""}
+                    onChange={(e) => updateLine(idx, "unit", e.target.value)}
+                    placeholder="pcs"
+                  />
+                </div>
+                <div className="md:col-span-1 space-y-1">
+                  <Label className="text-xs">Unit Cost</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={String(line.unitCost ?? "")}
+                    onChange={(e) => updateLine(idx, "unitCost", e.target.value)}
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="md:col-span-1 space-y-1">
                   <Label className="text-xs">Total</Label>
                   <Input
                     type="number"
                     inputMode="decimal"
-                    value={String(line.total)}
+                    value={String(computedLineTotals[idx] || 0)}
                     onChange={(e) => updateLine(idx, "total", e.target.value)}
                     min="0"
                     step="0.01"
+                    disabled={
+                      Number(line.quantity) > 0 &&
+                      Number.isFinite(Number(line.quantity)) &&
+                      Number.isFinite(Number(line.unitCost))
+                    }
                     required
                   />
                 </div>
-                <div className="md:col-span-2 space-y-1">
+                <div className="md:col-span-1 space-y-1">
                   <Label className="text-xs">Project (opt)</Label>
                   <Input
                     value={line.project || ""}

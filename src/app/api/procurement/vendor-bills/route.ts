@@ -6,11 +6,25 @@ import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 
-const billLineSchema = z.object({
-  description: z.string().trim().min(1),
-  total: z.number().finite().nonnegative(),
-  project: z.string().trim().optional(),
-});
+const billLineSchema = z
+  .object({
+    description: z.string().trim().min(1),
+    itemId: z.string().trim().min(1).optional(),
+    quantity: z.number().finite().positive().optional(),
+    unit: z.string().trim().optional(),
+    unitCost: z.number().finite().nonnegative().optional(),
+    total: z.number().finite().nonnegative().optional(),
+    project: z.string().trim().optional(),
+    grnItemId: z.string().trim().min(1).optional(),
+  })
+  .refine(
+    (line) => {
+      const hasQtyCost = typeof line.quantity === "number" && typeof line.unitCost === "number";
+      const hasTotal = typeof line.total === "number";
+      return hasQtyCost || hasTotal;
+    },
+    { message: "Each line must include either total or (quantity + unitCost)." }
+  );
 
 const vendorBillCreateSchema = z.object({
   billNumber: z.string().trim().min(1),
@@ -110,7 +124,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const totalAmount = parsed.data.lines.reduce((sum, line) => sum + Number(line.total), 0);
+  const normalizedLines = parsed.data.lines.map((line) => {
+    const total =
+      typeof line.quantity === "number" && typeof line.unitCost === "number"
+        ? line.quantity * line.unitCost
+        : Number(line.total || 0);
+    return { ...line, total };
+  });
+
+  const totalAmount = normalizedLines.reduce((sum, line) => sum + Number(line.total), 0);
 
     const created = await prisma.vendorBill.create({
       data: {
@@ -123,10 +145,15 @@ export async function POST(request: NextRequest) {
         totalAmount: new Prisma.Decimal(totalAmount),
         status: "DRAFT",
         lines: {
-          create: parsed.data.lines.map((line) => ({
+          create: normalizedLines.map((line) => ({
             description: line.description,
+            itemId: line.itemId || undefined,
+            quantity: typeof line.quantity === "number" ? new Prisma.Decimal(line.quantity) : undefined,
+            unit: line.unit || undefined,
+            unitCost: typeof line.unitCost === "number" ? new Prisma.Decimal(line.unitCost) : undefined,
             total: new Prisma.Decimal(line.total),
             project: line.project || undefined,
+            grnItemId: line.grnItemId || undefined,
           })),
         },
       },
@@ -151,4 +178,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
-

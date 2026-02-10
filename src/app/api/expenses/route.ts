@@ -169,6 +169,14 @@ export async function POST(req: Request) {
     // Stock purchases must go through PO -> GRN -> Vendor Bill -> Vendor Payment.
     for (const key of STOCK_KEYS_BLOCKED_IN_EXPENSES) {
       if (key in body && body[key] != null && body[key] !== false && body[key] !== "") {
+        await logAudit({
+          action: "BLOCK_EXPENSE_STOCK_PAYLOAD",
+          entity: "Expense",
+          entityId: "NEW",
+          reason: `Blocked stock payload key: ${key}`,
+          newValue: JSON.stringify({ key, value: body[key] }),
+          userId: session.user.id,
+        });
         return NextResponse.json(
           {
             success: false,

@@ -429,3 +429,63 @@ Files:
 - Updated the flow to show explicit GRN posting to Inventory Ledger (no implicit stock-in on create).
 - File:
 - `docs/ERP_DIAGRAMS.md`
+
+---
+
+## 17) RB3 Procurement UX polish (Vendor Bills + Payments)
+
+Improved procurement UX to be closer to “ERP standard” while keeping Phase 1 scope lean.
+
+### 17.1 Vendor Bill multi-line editor improvements
+- Vendor Bill lines now support item-style entry (optional):
+  - `itemId`, `quantity`, `unit`, `unitCost` (server computes line total when qty+unitCost present).
+- Service-style lines remain supported:
+  - description + manual total (no item).
+- Added “Import from GRN” helper:
+  - select a GRN and import its items as bill lines (with `grnItemId` linkage).
+
+Files:
+- `src/components/VendorBillFormDialog.tsx`
+- `src/app/api/procurement/vendor-bills/route.ts`
+- `src/app/api/procurement/vendor-bills/[id]/route.ts`
+
+### 17.2 Vendor Payment allocation UX improvements
+- Added “Auto allocate” (fills allocations sequentially up to payment amount).
+- Added per-bill “Max” button (allocates up to outstanding, respecting payment amount).
+
+File:
+- `src/components/VendorPaymentFormDialog.tsx`
+
+---
+
+## 18) Posting traceability for AP allocations (SOP non-negotiable)
+
+Extended `VendorPaymentAllocation` to carry posting trace fields so allocations can be audited as “ledger-like” rows:
+- `sourceType`, `sourceId`, `postedById`, `postedAt`
+
+API behavior:
+- Allocation rows always stamp `sourceType/sourceId` on create/edit.
+- When a payment is POSTED, allocations get `postedById/postedAt`.
+
+Files:
+- `prisma/schema.prisma`
+- `src/app/api/procurement/vendor-payments/route.ts`
+- `src/app/api/procurement/vendor-payments/[id]/route.ts`
+
+---
+
+## 19) CEO Dashboard (Phase 1 truthful KPIs)
+
+Added an executive-only dashboard aligned to `SUPER_MASTER_PLAN.md` reporting list:
+- AP outstanding + overdue count (from posted bills + posted allocations)
+- Payments this month by CompanyAccount
+- Purchases billed this month
+- Inventory low stock list
+- GRN stock-in activity (from InventoryLedger sourceType=GRN)
+- Approval queue counts (from “pending/submitted” docs)
+- Exceptions list (blocked actions recorded in AuditLog)
+
+Files:
+- `src/app/ceo/dashboard/page.tsx`
+- `src/lib/navigation.ts` (adds nav item)
+- `docs/ERP_DIAGRAMS.md` (updated blueprint to Phase 1 spine)

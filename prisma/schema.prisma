@@ -36,6 +36,7 @@ model User {
   salaryAdvanceApprovals SalaryAdvance[]
   inventoryLedgerPosts InventoryLedger[] @relation("InventoryLedgerPostedBy")
   walletLedgerPosts    WalletLedger[]    @relation("WalletLedgerPostedBy")
+  vendorPaymentAllocationPosts VendorPaymentAllocation[] @relation("VendorPaymentAllocationPostedBy")
   projectAssignments ProjectAssignment[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -617,6 +618,13 @@ model VendorPaymentAllocation {
 
   vendorPayment  VendorPayment @relation(fields: [vendorPaymentId], references: [id])
   vendorBill     VendorBill    @relation(fields: [vendorBillId], references: [id])
+
+  // Posting traceability (SOP non-negotiable). Nullable until all allocation flows are fully migrated.
+  sourceType     String?
+  sourceId       String?
+  postedById     String?
+  postedAt       DateTime?
+  postedBy       User? @relation("VendorPaymentAllocationPostedBy", fields: [postedById], references: [id])
 
   @@unique([vendorPaymentId, vendorBillId])
 }

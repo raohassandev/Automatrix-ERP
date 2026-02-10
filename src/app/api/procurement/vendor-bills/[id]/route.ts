@@ -7,11 +7,25 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { canUserApprove } from "@/lib/approval-engine";
 
-const billLineSchema = z.object({
-  description: z.string().trim().min(1),
-  total: z.number().finite().nonnegative(),
-  project: z.string().trim().optional(),
-});
+const billLineSchema = z
+  .object({
+    description: z.string().trim().min(1),
+    itemId: z.string().trim().min(1).optional(),
+    quantity: z.number().finite().positive().optional(),
+    unit: z.string().trim().optional(),
+    unitCost: z.number().finite().nonnegative().optional(),
+    total: z.number().finite().nonnegative().optional(),
+    project: z.string().trim().optional(),
+    grnItemId: z.string().trim().min(1).optional(),
+  })
+  .refine(
+    (line) => {
+      const hasQtyCost = typeof line.quantity === "number" && typeof line.unitCost === "number";
+      const hasTotal = typeof line.total === "number";
+      return hasQtyCost || hasTotal;
+    },
+    { message: "Each line must include either total or (quantity + unitCost)." }
+  );
 
 const vendorBillUpdateSchema = z.object({
   billNumber: z.string().trim().min(1).optional(),
@@ -71,8 +85,13 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       lines: bill.lines.map((l) => ({
         id: l.id,
         description: l.description,
+        itemId: l.itemId,
+        quantity: l.quantity ? Number(l.quantity) : null,
+        unit: l.unit,
+        unitCost: l.unitCost ? Number(l.unitCost) : null,
         total: Number(l.total),
         project: l.project,
+        grnItemId: l.grnItemId,
       })),
       createdAt: bill.createdAt.toISOString(),
       updatedAt: bill.updatedAt.toISOString(),
@@ -209,19 +228,34 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   }
 
   const nextLines = parsed.data.lines;
+  const normalizedLines = nextLines
+    ? nextLines.map((line) => {
+        const total =
+          typeof line.quantity === "number" && typeof line.unitCost === "number"
+            ? line.quantity * line.unitCost
+            : Number(line.total || 0);
+        return { ...line, total };
+      })
+    : null;
+
   const totalAmount =
-    nextLines?.reduce((sum, line) => sum + Number(line.total), 0) ?? Number(existing.totalAmount);
+    normalizedLines?.reduce((sum, line) => sum + Number(line.total), 0) ?? Number(existing.totalAmount);
 
   try {
     const updated = await prisma.$transaction(async (tx) => {
       if (nextLines) {
         await tx.vendorBillLine.deleteMany({ where: { vendorBillId: id } });
         await tx.vendorBillLine.createMany({
-          data: nextLines.map((line) => ({
+          data: (normalizedLines || []).map((line) => ({
             vendorBillId: id,
             description: line.description,
+            itemId: line.itemId || null,
+            quantity: typeof line.quantity === "number" ? new Prisma.Decimal(line.quantity) : null,
+            unit: line.unit || null,
+            unitCost: typeof line.unitCost === "number" ? new Prisma.Decimal(line.unitCost) : null,
             total: new Prisma.Decimal(line.total),
             project: line.project || null,
+            grnItemId: line.grnItemId || null,
           })),
         });
       }
@@ -302,4 +336,3 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
 
   return NextResponse.json({ success: true });
 }
-

@@ -1,148 +1,113 @@
-# ERP Diagrams (Draft)
+# ERP Diagrams (Phase 1 Blueprint)
 
-These diagrams show the current module map and cross-module flows.
-Names can be refined later without changing the structure.
+These diagrams are a **living blueprint** of the current ERP spine.
+Update this file whenever a workflow changes (schema/API/UI), so the CEO blueprint stays truthful.
 
-## 1) Module Mindmap
+## 1) Phase 1 Module Mindmap (Single-Spine)
 ```mermaid
 mindmap
-  root((Automatrix ERP))
-    Overview
-      Dashboard
-      My Dashboard
-      Notifications
-    HR & Admin
-      Employees
-        Personal Info
-        Education
-        Experience
-        Department
-        Designation
-        Reporting Officer
-        Salary Package
-      Departments (Master Data)
-      Designations (Master Data)
-      Salary Advances
-      Roles & Permissions (future)
-    Finance
-      Expenses
-        Non-stock only (Phase 1)
-        Salary Expense (Phase 3)
-        Incentive Expense (Phase 3)
-        Commission Expense (Phase 3)
-        Project Direct (non-stock) Expense
-      Payroll
-        Monthly (Previous Month)
-      Incentives
-        Project Completion Only
-      Wallet Ledger
-      Income/Receipts
-      Approvals
-    Projects/Engineering
-      Projects
-        Assignments (Team)
-        Status: Not Started/Upcoming
-        Status: Active
-        Status: On Hold
-        Status: Completed
-        Status: Closed
-      Project Financials
-      Project Expenses View
-    Procurement/Store
-      Purchase Orders
-      Goods Receipts (GRN)
-      Vendor Bills (AP)
-      Vendor Payments (AP)
-      Company Accounts (Cash/Bank)
-      Vendor Records
-    Inventory
-      Items
-      Warehouse (Default: Main)
-      Ledger (Stock In/Out)
-      Last Purchase Price
-      Avg Cost
-    CRM/Sales
-      Clients
-      Quotations
-      Invoices
-      Commissions
-    Reports
-      Expenses
-      AP Aging
-      Inventory
-      Wallets
-      Projects
-      Procurement
-      Employee Expenses
+  root((AutoMatrix ERP))
+    Phase 1 Spine (LOCKED)
+      Procurement (P2P-lite)
+        Vendors
+        Purchase Orders (PO)
+          DRAFT
+          SUBMITTED
+          ORDERED
+          RECEIVED/PARTIALLY_RECEIVED
+          CANCELLED
+        Goods Receipt (GRN)
+          DRAFT
+          SUBMITTED
+          APPROVED
+          POSTED (creates InventoryLedger)
+          VOID
+        Vendor Bills (AP)
+          DRAFT
+          SUBMITTED
+          APPROVED
+          POSTED (AP truth via allocations)
+          VOID
+        Vendor Payments (AP)
+          DRAFT
+          SUBMITTED
+          APPROVED
+          POSTED (allocations)
+          VOID
+        Company Accounts (Cash/Banks)
+      Inventory (Truth Source)
+        Warehouse (Default)
+        Item Master
+        Inventory Ledger (only postings)
+          sourceType/sourceId/postedBy/postedAt
+        Valuation (Average Cost)
+        Low Stock thresholds
+      Controls (ERP-grade)
+        RBAC (server enforced)
+        Audit Log (every critical action)
+        Lifecycle gates (no edits after POSTED)
+      Reports (Truthful basics)
+        AP Aging (from bills + posted allocations)
+        Inventory On-hand (from item master + ledger)
+        GRN Activity (from InventoryLedger sourceType=GRN)
+        Approval/Queue counts (from SUBMITTED docs)
+        Exceptions (blocked actions, missing items)
+    Phase 1 Non-Spine / Legacy (read-only or limited)
+      Expenses (Non-stock only)
+        Must NOT create InventoryLedger
+      Income (Legacy in Phase 1)
+    Phase 2+ (OUT of Phase 1)
+      Sales (O2C-lite)
+      GL/COA/Journals
+      Payroll maturity
+      Projects/Tasks workflows
+      Tax/FX/Bank Recon
 ```
 
-## 2) Cross-Module Flow Diagram
+## 2) Phase 1 Document Spine Flow (Truth Sources)
 ```mermaid
 flowchart LR
-  subgraph HR
-    EMP[Employee Master Profile]
-    ADV[Salary Advance]
-  end
-
-  subgraph Finance
-    PAY[Payroll Run]
-    INC[Incentive Approval]
-    EXP[Expense Ledger]
-    WAL[Wallet Ledger]
-    APR[Approvals]
-  end
-
-  subgraph Projects
-    PROJ[Project Status]
-  end
-
   subgraph Procurement
+    VND[Vendor]
     PO[Purchase Order]
     GRN[Goods Receipt (GRN)]
     BILL[Vendor Bill]
-    VPAY[Vendor Payment]
-    CACCT[Company Account (Cash/Bank)]
+    PAY[Vendor Payment]
+    CACCT[Company Account]
   end
 
   subgraph Inventory
-    INV[Inventory Ledger (warehouse + source trace)]
+    ITEM[Inventory Item Master]
+    LEDGER[InventoryLedger (stock truth)]
   end
 
-  subgraph CRM
-    QUO[Quotation]
-    INVCE[Invoice]
-    COMM[Commission]
+  subgraph AP
+    APLEDGER[AP Truth (Bills - Posted Allocations)]
   end
 
-  EMP --> PAY
-  ADV --> WAL
-
-  PAY -->|Approve| EXP
-  PAY -->|Approve| WAL
-
-  PROJ -->|Completed/Closed| INC
-  INC -->|Approve| EXP
-  INC -->|Approve| WAL
-
-  COMM --> EXP
-
-  PO --> GRN
-  GRN -->|POST (explicit)| INV
-  GRN --> BILL --> VPAY --> CACCT
-
-  %% Phase 1 guardrail: stock purchases do NOT go through Expenses.
-
-  QUO --> INVCE --> EXP
-
-  APR --> PAY
-  APR --> INC
-  APR --> COMM
-  APR --> BILL
-  APR --> VPAY
-
-  subgraph Reports
-    AP[AP Aging Report]
+  subgraph Controls
+    RBAC[RBAC Server Checks]
+    AUD[AuditLog]
   end
-  BILL --> AP
-  VPAY --> AP
+
+  VND --> PO --> GRN
+  GRN -->|POST (explicit)| LEDGER
+  ITEM <-->|qty/avg cost updates| LEDGER
+
+  GRN --> BILL --> PAY --> CACCT
+  BILL --> APLEDGER
+  PAY -->|allocations| APLEDGER
+
+  RBAC --- PO
+  RBAC --- GRN
+  RBAC --- BILL
+  RBAC --- PAY
+
+  AUD --- PO
+  AUD --- GRN
+  AUD --- BILL
+  AUD --- PAY
+
+  %% Guardrail (Phase 1): Expenses cannot do stock purchases.
+  EXP[Expenses (Non-stock)] -. cannot post stock .-> LEDGER
 ```

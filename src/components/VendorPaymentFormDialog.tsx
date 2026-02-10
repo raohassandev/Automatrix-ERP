@@ -83,6 +83,40 @@ export function VendorPaymentFormDialog({
     [allocations]
   );
 
+  const autoAllocate = () => {
+    const paymentAmount = Number(form.amount) || 0;
+    if (paymentAmount <= 0) return;
+    setAllocations((prev) => {
+      const next = [...prev];
+      let remaining = paymentAmount;
+      // Allocate in the order shown (usually newest bills first depending on API sorting).
+      for (const bill of vendorBills) {
+        const idx = next.findIndex((a) => a.vendorBillId === bill.id);
+        if (idx === -1) continue;
+        const alloc = Math.min(bill.outstandingAmount, remaining);
+        next[idx] = { ...next[idx], amount: alloc };
+        remaining -= alloc;
+        if (remaining <= 0) break;
+      }
+      return next;
+    });
+  };
+
+  const allocateMax = (vendorBillId: string) => {
+    const paymentAmount = Number(form.amount) || 0;
+    const bill = vendorBills.find((b) => b.id === vendorBillId);
+    if (!bill || paymentAmount <= 0) return;
+    setAllocations((prev) => {
+      const othersSum = prev.reduce(
+        (sum, a) => sum + (a.vendorBillId === vendorBillId ? 0 : Number(a.amount) || 0),
+        0
+      );
+      const remaining = Math.max(0, paymentAmount - othersSum);
+      const nextAmount = Math.min(bill.outstandingAmount, remaining);
+      return prev.map((a) => (a.vendorBillId === vendorBillId ? { ...a, amount: nextAmount } : a));
+    });
+  };
+
   useEffect(() => {
     if (!open) return;
     fetch("/api/company-accounts")
@@ -324,6 +358,11 @@ export function VendorPaymentFormDialog({
                 Only posted bills with outstanding amount appear here.
               </div>
             </div>
+            {vendorBills.length > 0 ? (
+              <Button type="button" variant="outline" size="sm" onClick={autoAllocate}>
+                Auto allocate
+              </Button>
+            ) : null}
           </div>
 
           {form.vendorId ? (
@@ -352,8 +391,13 @@ export function VendorPaymentFormDialog({
                           onChange={(e) => updateAllocation(bill.id, e.target.value)}
                         />
                       </div>
-                      <div className="md:col-span-3 text-xs text-muted-foreground">
-                        Total: PKR {bill.totalAmount.toLocaleString()} | Paid: PKR {bill.paidAmount.toLocaleString()}
+                      <div className="md:col-span-3 flex items-center justify-between gap-2">
+                        <div className="text-xs text-muted-foreground">
+                          Total: PKR {bill.totalAmount.toLocaleString()} | Paid: PKR {bill.paidAmount.toLocaleString()}
+                        </div>
+                        <Button type="button" variant="outline" size="sm" onClick={() => allocateMax(bill.id)}>
+                          Max
+                        </Button>
                       </div>
                     </div>
                   );

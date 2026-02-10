@@ -37,7 +37,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permissions: ["dashboard.view"] },
       { name: "My Dashboard", href: "/me", icon: LayoutDashboard, permissions: ["employees.view_own", "employees.view_all"] },
-      { name: "ERP Blueprint", href: "/ceo/blueprint", icon: FileBarChart, permissions: ["executive.view"] },
+      { name: "ERP Blueprint", href: "/ceo/blueprint", icon: FileBarChart, permissions: ["dashboard.view_all_metrics"] },
+      { name: "CEO Dashboard", href: "/ceo/dashboard", icon: LayoutDashboard, permissions: ["dashboard.view_all_metrics"] },
       { name: "Notifications", href: "/notifications", icon: Bell, permissions: ["dashboard.view", "reports.view_all"] },
     ],
   },
