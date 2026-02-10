@@ -26,22 +26,23 @@ interface InvoiceFormDialogProps {
   };
 }
 
+const EMPTY_FORM = {
+  invoiceNo: "",
+  projectId: "",
+  date: "",
+  dueDate: "",
+  amount: "",
+  status: "DRAFT",
+  notes: "",
+  paymentDate: "",
+};
+
 export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [projectRefreshKey, setProjectRefreshKey] = useState(0);
-  const emptyForm = {
-    invoiceNo: "",
-    projectId: "",
-    date: "",
-    dueDate: "",
-    amount: "",
-    status: "DRAFT",
-    notes: "",
-    paymentDate: "",
-  };
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(EMPTY_FORM);
   const isEdit = Boolean(initialData?.id);
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFo
           : "",
       });
     } else {
-      setForm(emptyForm);
+      setForm(EMPTY_FORM);
     }
   }, [open, initialData]);
 
@@ -99,7 +100,7 @@ export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFo
       toast.success(isEdit ? "Invoice updated successfully!" : "Invoice created successfully!");
       
       // Reset form
-      setForm(emptyForm);
+      setForm(EMPTY_FORM);
       
       // Close dialog
       onOpenChange(false);

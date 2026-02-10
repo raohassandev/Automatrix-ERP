@@ -28,15 +28,16 @@ interface ClientFormProps {
   };
 }
 
+const EMPTY_FORM = {
+  name: "",
+  description: "",
+  address: "",
+};
+
 export function ClientForm({ onCreated, onSaved, showHeader = true, initialData }: ClientFormProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const emptyForm = {
-    name: "",
-    description: "",
-    address: "",
-  };
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [contacts, setContacts] = useState<Contact[]>([{ name: "", phone: "", designation: "", email: "" }]);
   const isEdit = Boolean(initialData?.id);
 
@@ -58,7 +59,7 @@ export function ClientForm({ onCreated, onSaved, showHeader = true, initialData 
           : [{ name: "", phone: "", designation: "", email: "" }]
       );
     } else {
-      setForm(emptyForm);
+      setForm(EMPTY_FORM);
       setContacts([{ name: "", phone: "", designation: "", email: "" }]);
     }
   }, [initialData]);
@@ -102,7 +103,7 @@ export function ClientForm({ onCreated, onSaved, showHeader = true, initialData 
       }
 
       toast.success(isEdit ? "Client updated" : "Client created");
-      setForm(emptyForm);
+      setForm(EMPTY_FORM);
       setContacts([{ name: "", phone: "", designation: "", email: "" }]);
       router.refresh();
       onCreated?.();

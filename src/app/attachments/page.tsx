@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
+import Image from "next/image";
 
 export default async function AttachmentsPage({
   searchParams,
@@ -119,10 +120,13 @@ export default async function AttachmentsPage({
                   <td className="py-2">{item.fileName}</td>
                   <td className="py-2">
                     {/\.(png|jpe?g|gif|webp)$/i.test(item.fileUrl) ? (
-                      <img
+                      <Image
                         src={item.fileUrl}
                         alt={item.fileName}
+                        width={40}
+                        height={40}
                         className="h-10 w-10 rounded border object-cover"
+                        unoptimized
                       />
                     ) : (
                       <span className="text-muted-foreground">—</span>

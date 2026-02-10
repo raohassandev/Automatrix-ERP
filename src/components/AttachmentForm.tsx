@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Image from "next/image";
 
 const IMAGE_EXT = [".png", ".jpg", ".jpeg", ".gif", ".webp"];
 
@@ -106,10 +107,13 @@ export default function AttachmentForm() {
           <div className="font-medium">Preview</div>
           <div className="mt-2">
             {isImage ? (
-              <img
+              <Image
                 src={form.fileUrl}
                 alt={form.fileName || "Attachment preview"}
-                className="max-h-48 rounded border bg-background"
+                width={320}
+                height={320}
+                className="max-h-48 w-auto rounded border bg-background"
+                unoptimized
               />
             ) : (
               <a className="text-primary hover:underline" href={form.fileUrl} target="_blank" rel="noreferrer">

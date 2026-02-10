@@ -4,11 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { expenseSchema } from '@/lib/validation';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/rbac';
-import {
-  DUPLICATE_CHECK_DAYS,
-  PROCUREMENT_SPIKE_THRESHOLD,
-  RECEIPT_REQUIRED_THRESHOLD,
-} from '@/lib/constants';
+import { DUPLICATE_CHECK_DAYS, PROCUREMENT_SPIKE_THRESHOLD } from '@/lib/constants';
 import { getExpenseApprovalLevel } from '@/lib/approvals';
 import { createNotification } from '@/lib/notifications';
 import { Prisma } from '@prisma/client';

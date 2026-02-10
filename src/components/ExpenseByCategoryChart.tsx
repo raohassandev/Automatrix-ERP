@@ -59,30 +59,19 @@ export default function ExpenseByCategoryChart({
             fill="#8884d8"
             dataKey="value"
             nameKey="name"
-            label={({
-              cx,
-              cy,
-              midAngle,
-              innerRadius,
-              outerRadius,
-              percent,
-              index,
-              name,
-              value,
-              textAnchor,
-              dominantBaseline,
-              ...rest
-            }) => (
+            label={({ name, value, textAnchor, x, y }) => (
               <text
-                x={rest.x}
-                y={rest.y}
+                x={x}
+                y={y}
                 fill={textColor}
                 textAnchor={textAnchor}
                 dominantBaseline="central"
                 fontSize="0.75rem"
               >
-                <tspan x={rest.x} dy="-0.6em">{name}</tspan>
-                <tspan x={rest.x} dy="1.2em">{`(${formatMoney(value, '')})`}</tspan>
+                <tspan x={x} dy="-0.6em">
+                  {name}
+                </tspan>
+                <tspan x={x} dy="1.2em">{`(${formatMoney(value, '')})`}</tspan>
               </text>
             )}
           >

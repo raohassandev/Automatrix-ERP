@@ -600,6 +600,22 @@ Do not claim “production ready” or give scores unless you define a rubric an
 | Reports: own/team/all | ❌ (Guest has only `dashboard.view`) `src/lib/permissions.ts:224` |
 | Audit log access | ❌ (requires `reports.view_all`; Guest only has `dashboard.view`) `src/lib/permissions.ts:224` and `src/app/audit/page.tsx:20-22` |
 
+---
+
+## Audit V2 Addendum — Post‑deploy Delta (2026‑02‑10)
+
+### 1) Project Financials deploy fix: moved to server component (Hostinger-safe)
+- The financial dashboard page is implemented as a **server component** (no `useSearchParams` / client hooks), which avoids the deploy/build error that triggered the earlier stub.  
+  Evidence: `src/app/projects/financial/page.tsx:1-13` (server imports) and `src/app/projects/financial/page.tsx:30-46` (auth + permission gate).
+- It computes and renders project financial KPIs + per-project cards from Prisma directly (no placeholder UI).  
+  Evidence: `src/app/projects/financial/page.tsx:84-147` (Prisma fetch + transform) and `src/app/projects/financial/page.tsx:149-218` (summary KPIs) and `src/app/projects/financial/page.tsx:220-341` (per-project cards + links).
+
+**Impact:** Project financial reporting is functional again and compatible with Hostinger deployment constraints (no client-only hooks in the page component).
+
+---
+
+## Audit V2 — Continued (from original checklist)
+
 ### 5) Data integrity invariants
 | Invariant | API enforcement | UI enforcement |
 | --- | --- | --- |

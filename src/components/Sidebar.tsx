@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { hasPermission, type RoleName } from "@/lib/permissions";
 import { navGroups } from "@/lib/navigation";
@@ -18,18 +18,20 @@ export function Sidebar() {
   const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
   const canAccess = (permissions?: string[]) =>
     !permissions || permissions.some((permission) => hasPermission(roleName, permission));
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem("nav_collapsed");
-    if (stored) {
-      try {
-        setCollapsed(JSON.parse(stored));
-      } catch {
-        // ignore parsing errors
-      }
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") {
+      return {};
     }
-  }, []);
+    const stored = window.localStorage.getItem("nav_collapsed");
+    if (!stored) {
+      return {};
+    }
+    try {
+      return JSON.parse(stored) as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  });
 
   const toggleGroup = (title: string) => {
     setCollapsed((prev) => {

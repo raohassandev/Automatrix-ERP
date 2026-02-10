@@ -31,29 +31,30 @@ interface EmployeeFormDialogProps {
   };
 }
 
+const EMPTY_FORM = {
+  name: "",
+  email: "",
+  phone: "",
+  cnic: "",
+  address: "",
+  education: "",
+  experience: "",
+  department: "",
+  designation: "",
+  reportingOfficerId: "",
+  joinDate: "",
+  role: "Staff",
+  initialWalletBalance: "",
+  status: "ACTIVE",
+};
+
 export function EmployeeFormDialog({ open, onOpenChange, initialData }: EmployeeFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [reportingOptions, setReportingOptions] = useState<Array<{ id: string; name: string }>>([]);
   const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
   const [designations, setDesignations] = useState<Array<{ id: string; name: string }>>([]);
-  const emptyForm = {
-    name: "",
-    email: "",
-    phone: "",
-    cnic: "",
-    address: "",
-    education: "",
-    experience: "",
-    department: "",
-    designation: "",
-    reportingOfficerId: "",
-    joinDate: "",
-    role: "Staff",
-    initialWalletBalance: "",
-    status: "ACTIVE",
-  };
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(EMPTY_FORM);
   const isEdit = Boolean(initialData?.id);
 
   useEffect(() => {
@@ -109,6 +110,7 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
     if (!open) return;
     if (initialData) {
       setForm({
+        ...EMPTY_FORM,
         name: initialData.name || "",
         email: initialData.email || "",
         phone: initialData.phone || "",
@@ -125,7 +127,7 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
         status: initialData.status || "ACTIVE",
       });
     } else {
-      setForm(emptyForm);
+      setForm(EMPTY_FORM);
     }
   }, [open, initialData]);
 
@@ -179,7 +181,7 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
       toast.success(isEdit ? "Employee updated successfully!" : "Employee added successfully!");
       
       // Reset form
-      setForm(emptyForm);
+      setForm(EMPTY_FORM);
       
       // Close dialog
       onOpenChange(false);

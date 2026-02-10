@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { expenseUpdateSchema } from "@/lib/validation";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
-import { RECEIPT_REQUIRED_THRESHOLD } from "@/lib/constants";
 import { getExpenseApprovalLevel, isPendingExpenseStatus } from "@/lib/approvals";
 import { Prisma } from "@prisma/client";
 import { resolveProjectId } from "@/lib/projects";

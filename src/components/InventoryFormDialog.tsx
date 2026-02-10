@@ -27,6 +27,18 @@ interface InventoryFormDialogProps {
   };
 }
 
+const EMPTY_FORM = {
+  name: "",
+  sku: "",
+  category: "",
+  unit: "",
+  unitCost: "",
+  sellingPrice: "",
+  initialQuantity: "",
+  minStock: "",
+  reorderQty: "",
+};
+
 export function InventoryFormDialog({ open, onOpenChange, initialData }: InventoryFormDialogProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -34,47 +46,38 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
   const canViewCost = hasPermission(roleName, "inventory.view_cost");
   const canViewSelling = hasPermission(roleName, "inventory.view_selling");
   const [pending, startTransition] = useTransition();
-  const emptyForm = {
-    name: "",
-    sku: "",
-    category: "",
-    unit: "",
-    unitCost: "",
-    sellingPrice: "",
-    initialQuantity: "",
-    minStock: "",
-    reorderQty: "",
-  };
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(EMPTY_FORM);
   const isEdit = Boolean(initialData?.id);
 
-  function applyInitialData() {
+  useEffect(() => {
+    if (!open) return;
     if (initialData) {
       setForm({
+        ...EMPTY_FORM,
         name: initialData.name || "",
         sku: initialData.sku || "",
         category: initialData.category || "",
         unit: initialData.unit || "",
-        unitCost: initialData.unitCost !== null && initialData.unitCost !== undefined ? String(initialData.unitCost) : "",
+        unitCost:
+          initialData.unitCost !== null && initialData.unitCost !== undefined
+            ? String(initialData.unitCost)
+            : "",
         sellingPrice:
           initialData.sellingPrice !== null && initialData.sellingPrice !== undefined
             ? String(initialData.sellingPrice)
             : "",
         initialQuantity: "",
-        minStock: initialData.minStock !== null && initialData.minStock !== undefined ? String(initialData.minStock) : "",
+        minStock:
+          initialData.minStock !== null && initialData.minStock !== undefined
+            ? String(initialData.minStock)
+            : "",
         reorderQty:
           initialData.reorderQty !== null && initialData.reorderQty !== undefined
             ? String(initialData.reorderQty)
             : "",
       });
     } else {
-      setForm(emptyForm);
-    }
-  }
-
-  useEffect(() => {
-    if (open) {
-      applyInitialData();
+      setForm(EMPTY_FORM);
     }
   }, [open, initialData]);
 
@@ -117,7 +120,7 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
       toast.success(isEdit ? "Inventory item updated successfully!" : "Inventory item added successfully!");
       
       // Reset form
-      setForm(emptyForm);
+      setForm(EMPTY_FORM);
       
       // Close dialog
       onOpenChange(false);
