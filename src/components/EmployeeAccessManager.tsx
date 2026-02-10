@@ -16,11 +16,6 @@ type Employee = {
   userRole: string | null;
 };
 
-type PasswordState = {
-  employeeId: string;
-  password: string;
-};
-
 export default function EmployeeAccessManager() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -28,7 +23,6 @@ export default function EmployeeAccessManager() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [passwordState, setPasswordState] = useState<PasswordState | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -76,41 +70,11 @@ export default function EmployeeAccessManager() {
         setStatus(data.error || "Failed to provision access.");
         return;
       }
-      if (data.password) {
-        setPasswordState({ employeeId: employee.id, password: data.password });
-      }
       setStatus(`Access updated for ${employee.email}`);
       await loadData();
     } catch (error) {
       console.error(error);
       setStatus("Failed to provision access.");
-    } finally {
-      setPendingId(null);
-    }
-  };
-
-  const resetPassword = async (employee: Employee) => {
-    if (!employee.userId) return;
-    setPendingId(employee.id);
-    setStatus(null);
-    try {
-      const res = await fetch("/api/users/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: employee.userId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setStatus(data.error || "Failed to reset password.");
-        return;
-      }
-      if (data.password) {
-        setPasswordState({ employeeId: employee.id, password: data.password });
-      }
-      setStatus(`Password reset for ${employee.email}`);
-    } catch (error) {
-      console.error(error);
-      setStatus("Failed to reset password.");
     } finally {
       setPendingId(null);
     }
@@ -132,7 +96,8 @@ export default function EmployeeAccessManager() {
       <CardHeader>
         <CardTitle>Employee Access</CardTitle>
         <CardDescription>
-          Create login access so employees can submit expenses. Assign the RBAC role that controls permissions.
+          Provision portal access for employees. Phase 1 uses Google OAuth only (no passwords).
+          This tool creates/updates the user record and RBAC role for the employee email.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -189,23 +154,7 @@ export default function EmployeeAccessManager() {
                       >
                         {employee.userId ? "Update Role" : "Create Login"}
                       </Button>
-                      {employee.userId ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => resetPassword(employee)}
-                          disabled={pendingId === employee.id}
-                        >
-                          Reset Password
-                        </Button>
-                      ) : null}
                     </div>
-                    {passwordState?.employeeId === employee.id ? (
-                      <div className="mt-2 rounded-md border bg-muted/40 px-2 py-1 text-xs">
-                        Temp password:{" "}
-                        <code className="rounded bg-muted px-1 py-0.5">{passwordState.password}</code>
-                      </div>
-                    ) : null}
                   </td>
                 </tr>
               ))}

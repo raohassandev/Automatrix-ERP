@@ -2,12 +2,6 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
-import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
-
-function generatePassword() {
-  return randomBytes(9).toString("base64url");
-}
 
 export async function GET() {
   const session = await auth();
@@ -67,7 +61,6 @@ export async function POST(request: Request) {
   const body = await request.json();
   const employeeId = typeof body?.employeeId === "string" ? body.employeeId : null;
   const roleName = typeof body?.roleName === "string" ? body.roleName : null;
-  const resetPassword = Boolean(body?.resetPassword);
 
   if (!employeeId || !roleName) {
     return NextResponse.json({ error: "employeeId and roleName are required" }, { status: 400 });
@@ -87,36 +80,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Role not found" }, { status: 404 });
   }
 
-  const existingUser = await prisma.user.findUnique({
-    where: { email: employee.email },
-  });
-
-  let password: string | null = null;
-  let passwordHash: string | null = null;
-
-  if (!existingUser || resetPassword) {
-    password = generatePassword();
-    passwordHash = await bcrypt.hash(password, 10);
-  }
-
   const user = await prisma.user.upsert({
     where: { email: employee.email },
     update: {
       name: employee.name || employee.email,
       roleId: role.id,
-      ...(passwordHash ? { passwordHash } : {}),
+      // Phase 1: Google OAuth only (no credentials login). Keep credentials disabled even if legacy users exist.
+      passwordHash: null,
     },
     create: {
       email: employee.email,
       name: employee.name || employee.email,
       roleId: role.id,
-      ...(passwordHash ? { passwordHash } : {}),
+      passwordHash: null,
     },
   });
 
   return NextResponse.json({
     success: true,
     userId: user.id,
-    password,
   });
 }

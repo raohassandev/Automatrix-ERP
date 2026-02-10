@@ -1,99 +1,71 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
-import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import type { Adapter, AdapterUser } from "next-auth/adapters";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
-const credentialsProvider = Credentials({
-  name: "Credentials",
-  credentials: {
-    email: { label: "Email", type: "email" },
-    password: { label: "Password", type: "password" },
-  },
-  authorize: async (credentials) => {
-    const email = typeof credentials?.email === "string" ? credentials.email : "";
-    const password = typeof credentials?.password === "string" ? credentials.password : "";
-    if (!email || !password) return null;
+if (!googleClientId || !googleClientSecret) {
+  // Phase 1: Google OAuth is the only supported auth method.
+  throw new Error("Missing Google OAuth env vars: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required.");
+}
 
-    // Development bypass: hardcoded credentials
-    // NOTE: If this user does not exist in the DB, pages that filter by `submittedById/addedById`
-    // will show empty lists and dashboards will appear as 0. We auto-provision a real DB user
-    // in development so created records correctly belong to this user.
-    if (process.env.NODE_ENV === "development" && email === "admin@automatrix.local" && password === "admin123") {
-      const devUserId = "dev-admin-id";
+const authProviders = [
+  Google({
+    clientId: googleClientId,
+    clientSecret: googleClientSecret,
+    // We allow linking by email because:
+    // - Google emails are verified
+    // - we still enforce an allowlist (Employee table) server-side
+    allowDangerousEmailAccountLinking: true,
+  }),
+];
 
-      // Ensure CEO role exists
-      const ceoRole = await prisma.role.upsert({
-        where: { name: "CEO" },
-        update: {},
-        create: { name: "CEO" },
-      });
+// Adapter wrapper to enforce allowlisted (admin-provisioned) sign-in.
+// Phase 1 policy: a user can sign in only if there is an ACTIVE Employee record with the same email.
+const baseAdapter = PrismaAdapter(prisma);
+const adapter = {
+  ...baseAdapter,
+  createUser: async (data: AdapterUser) => {
+    const rawEmail = typeof data?.email === "string" ? data.email.trim() : "";
+    if (!rawEmail) {
+      throw new Error("User email is required.");
+    }
+    const email = rawEmail.toLowerCase();
 
-      // Ensure dev user exists
-      await prisma.user.upsert({
-        where: { id: devUserId },
-        update: {
-          email: "admin@automatrix.local",
-          name: "Admin User",
-          roleId: ceoRole.id,
-        },
-        create: {
-          id: devUserId,
-          email: "admin@automatrix.local",
-          name: "Admin User",
-          roleId: ceoRole.id,
-          // passwordHash intentionally omitted for dev-bypass
-        },
-      });
+    const employee = await prisma.employee.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+      select: { status: true },
+    });
 
-      // Ensure employee exists for wallet/dashboard charts
-      await prisma.employee.upsert({
-        where: { email: "admin@automatrix.local" },
-        update: { name: "Admin User", role: "CEO" },
-        create: {
-          email: "admin@automatrix.local",
-          name: "Admin User",
-          role: "CEO",
-          walletBalance: 0,
-        },
-      });
-
-      return {
-        id: devUserId,
-        email: "admin@automatrix.local",
-        name: "Admin User",
-        roleId: ceoRole.id,
-        role: { name: "CEO" },
-      };
+    if (!employee || employee.status !== "ACTIVE") {
+      throw new Error("Access denied. This email is not allowlisted.");
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const staffRole = await prisma.role.findUnique({
+      where: { name: "Staff" },
+      select: { id: true },
     });
-    if (!user?.passwordHash) return null;
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return null;
-    return user;
-  },
-});
 
-const authProviders = [];
-if (googleClientId && googleClientSecret) {
-  authProviders.push(
-    Google({
-      clientId: googleClientId,
-      clientSecret: googleClientSecret,
-    })
-  );
-}
-authProviders.push(credentialsProvider);
+    if (!baseAdapter.createUser) {
+      throw new Error("Auth adapter misconfigured: createUser is not implemented.");
+    }
+
+    const toCreate = {
+      ...data,
+      email,
+      // Custom field on our User model (not part of Auth.js types).
+      roleId: staffRole?.id ?? undefined,
+    } as AdapterUser;
+
+    return await baseAdapter.createUser(toCreate);
+  },
+} satisfies Adapter;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma),
+  adapter,
   providers: authProviders,
   secret:
     process.env.AUTH_SECRET ??
@@ -107,6 +79,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     enableWebAuthn: false,
   },
   callbacks: {
+    signIn: async ({ user, account }) => {
+      // Phase 1: Google OAuth only.
+      if (account?.provider !== "google") return false;
+
+      const email = typeof user?.email === "string" ? user.email.trim() : "";
+      if (!email) return false;
+
+      const employee = await prisma.employee.findFirst({
+        where: { email: { equals: email, mode: "insensitive" } },
+        select: { status: true },
+      });
+
+      return Boolean(employee && employee.status === "ACTIVE");
+    },
     jwt: async ({ token, user }) => {
       if (user) {
         token.id = user.id;
@@ -139,35 +125,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     authorized: ({ auth, request }) => {
       const { pathname } = request.nextUrl;
       if (pathname.startsWith("/api/auth")) return true;
+      if (pathname === "/api/health") return true;
       if (pathname.startsWith("/login")) return true;
       return !!auth?.user;
-    },
-  },
-  events: {
-    createUser: async ({ user }) => {
-      const staffRole = await prisma.role.findUnique({
-        where: { name: "Staff" },
-      });
-      if (staffRole && user.id) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { roleId: staffRole.id },
-        });
-      }
-
-      const userEmail = user.email || "";
-      const existingEmployee = await prisma.employee.findUnique({
-        where: { email: userEmail },
-      });
-      if (!existingEmployee && userEmail) {
-        await prisma.employee.create({
-          data: {
-            email: userEmail,
-            name: user.name || userEmail.split("@")[0],
-            role: "Staff",
-          },
-        });
-      }
     },
   },
 });

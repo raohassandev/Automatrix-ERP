@@ -5,7 +5,7 @@ module.exports = {
     args: 'start',
     cwd: '/var/www/automatrix-erp-staging',
     env: {
-      NODE_ENV: 'development',
+      NODE_ENV: 'production',
       PORT: 3031
     },
     instances: 1,

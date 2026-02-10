@@ -1,4 +1,5 @@
 import "next-auth";
+import "next-auth/adapters";
 
 declare module "next-auth" {
   interface User {
@@ -13,5 +14,17 @@ declare module "next-auth" {
       roleId?: string | null;
       role?: { name: string } | null;
     };
+  }
+}
+
+declare module "next-auth/adapters" {
+  interface AdapterUser {
+    roleId?: string | null;
+  }
+}
+
+declare module "@auth/core/adapters" {
+  interface AdapterUser {
+    roleId?: string | null;
   }
 }
