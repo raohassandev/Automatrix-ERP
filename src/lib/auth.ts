@@ -28,6 +28,13 @@ const authProviders = [
 const baseAdapter = PrismaAdapter(prisma);
 const adapter = {
   ...baseAdapter,
+  getUserByEmail: async (email) => {
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    if (!normalizedEmail) return null;
+    return prisma.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: "insensitive" } },
+    });
+  },
   createUser: async (data: AdapterUser) => {
     const rawEmail = typeof data?.email === "string" ? data.email.trim() : "";
     if (!rawEmail) {
