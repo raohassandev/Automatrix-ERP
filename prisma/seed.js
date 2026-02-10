@@ -350,6 +350,27 @@ async function main() {
       },
     });
   }
+
+  // Phase 1 ops defaults (safe, non-destructive):
+  // - Ensure at least one warehouse exists (future-proof inventory ledger).
+  // - Ensure minimal company accounts exist for payment/receipt attribution.
+  const warehouseCount = await prisma.warehouse.count();
+  if (warehouseCount === 0) {
+    await prisma.warehouse.create({
+      data: { name: "Main Warehouse", code: "MAIN", isDefault: true, isActive: true },
+    });
+  }
+
+  const accountCount = await prisma.companyAccount.count();
+  if (accountCount === 0) {
+    await prisma.companyAccount.createMany({
+      data: [
+        { name: "Cash", type: "CASH", currency: "PKR", openingBalance: 0, isActive: true },
+        { name: "Bank", type: "BANK", currency: "PKR", openingBalance: 0, isActive: true },
+      ],
+      skipDuplicates: true,
+    });
+  }
 }
 
 main()

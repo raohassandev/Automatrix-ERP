@@ -34,6 +34,8 @@ model User {
   commissionApprovals CommissionEntry[] @relation("CommissionApprovedBy")
   payrollApprovals  PayrollEntry[] @relation("PayrollApprovedBy")
   salaryAdvanceApprovals SalaryAdvance[]
+  inventoryLedgerPosts InventoryLedger[] @relation("InventoryLedgerPostedBy")
+  walletLedgerPosts    WalletLedger[]    @relation("WalletLedgerPostedBy")
   projectAssignments ProjectAssignment[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -258,6 +260,7 @@ model InventoryItem {
   avgUsage30Days Decimal   @default(0)
   lastUpdated    DateTime
   ledger         InventoryLedger[]
+  vendorBillLines VendorBillLine[] @relation("VendorBillLineItem")
   createdAt      DateTime @default(now())
 }
 
@@ -265,6 +268,7 @@ model InventoryLedger {
   id            String     @id @default(cuid())
   date          DateTime
   itemId        String
+  warehouseId   String?
   type          String
   quantity      Decimal    
   unitCost      Decimal    
@@ -275,6 +279,16 @@ model InventoryLedger {
   runningBalance Decimal   
 
   item          InventoryItem @relation(fields: [itemId], references: [id])
+  warehouse     Warehouse?    @relation(fields: [warehouseId], references: [id])
+
+  // Posting traceability (SOP non-negotiable). Nullable until all posting flows are migrated.
+  sourceType    String?
+  sourceId      String?
+  postedById    String?
+  postedAt      DateTime?
+  postedBy      User?      @relation("InventoryLedgerPostedBy", fields: [postedById], references: [id])
+
+  createdAt     DateTime @default(now())
 }
 
 model Employee {
@@ -314,6 +328,15 @@ model WalletLedger {
   balance    Decimal    
 
   employee   Employee   @relation(fields: [employeeId], references: [id])
+
+  // Posting traceability (SOP non-negotiable). Nullable until all posting flows are migrated.
+  sourceType String?
+  sourceId   String?
+  postedById String?
+  postedAt   DateTime?
+  postedBy   User?      @relation("WalletLedgerPostedBy", fields: [postedById], references: [id])
+
+  createdAt  DateTime @default(now())
 }
 
 model CompensationPolicy {
@@ -482,6 +505,7 @@ model GoodsReceiptItem {
 
   goodsReceipt  GoodsReceipt @relation(fields: [goodsReceiptId], references: [id])
   purchaseOrderItem PurchaseOrderItem? @relation(fields: [purchaseOrderItemId], references: [id])
+  vendorBillLines VendorBillLine[] @relation("VendorBillLineGRNItem")
 }
 
 model Vendor {
@@ -497,6 +521,104 @@ model Vendor {
   updatedAt   DateTime @updatedAt
 
   purchaseOrders PurchaseOrder[]
+  bills          VendorBill[]
+  payments       VendorPayment[]
+}
+
+// Phase 1: single warehouse, but keep the model now to avoid refactors later.
+// We keep InventoryLedger.warehouseId nullable for now to protect existing real data.
+model Warehouse {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String?  @unique
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventoryLedger InventoryLedger[]
+}
+
+// Minimal company accounts (cash + banks) for truthful payment/receipt reporting (Phase 1 locked).
+model CompanyAccount {
+  id             String   @id @default(cuid())
+  name           String   @unique
+  type           String   // CASH | BANK
+  currency       String   @default("PKR")
+  openingBalance Decimal  @default(0)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  vendorPayments VendorPayment[]
+}
+
+// AP (finance-lite) — Vendor Bill + Payment + allocation (no GL yet).
+model VendorBill {
+  id          String   @id @default(cuid())
+  billNumber  String   @unique
+  vendorId    String
+  billDate    DateTime
+  dueDate     DateTime?
+  status      String   @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | POSTED | VOID
+  currency    String   @default("PKR")
+  totalAmount Decimal  @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  vendor     Vendor    @relation(fields: [vendorId], references: [id])
+  lines      VendorBillLine[]
+  allocations VendorPaymentAllocation[]
+}
+
+model VendorBillLine {
+  id           String   @id @default(cuid())
+  vendorBillId String
+  description  String
+  itemId       String?
+  quantity     Decimal?
+  unit         String?
+  unitCost     Decimal?
+  total        Decimal
+  project      String?
+  grnItemId    String?
+  createdAt    DateTime @default(now())
+
+  vendorBill   VendorBill @relation(fields: [vendorBillId], references: [id])
+  item         InventoryItem? @relation("VendorBillLineItem", fields: [itemId], references: [id])
+  grnItem      GoodsReceiptItem? @relation("VendorBillLineGRNItem", fields: [grnItemId], references: [id])
+}
+
+model VendorPayment {
+  id             String   @id @default(cuid())
+  paymentNumber  String   @unique
+  vendorId       String
+  paymentDate    DateTime
+  companyAccountId String
+  method         String?  // Cash/Bank/Online/Cheque (labels only in Phase 1)
+  amount         Decimal
+  status         String   @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | POSTED | VOID
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  vendor         Vendor        @relation(fields: [vendorId], references: [id])
+  companyAccount CompanyAccount @relation(fields: [companyAccountId], references: [id])
+  allocations    VendorPaymentAllocation[]
+}
+
+model VendorPaymentAllocation {
+  id             String   @id @default(cuid())
+  vendorPaymentId String
+  vendorBillId    String
+  amount         Decimal
+  createdAt      DateTime @default(now())
+
+  vendorPayment  VendorPayment @relation(fields: [vendorPaymentId], references: [id])
+  vendorBill     VendorBill    @relation(fields: [vendorBillId], references: [id])
+
+  @@unique([vendorPaymentId, vendorBillId])
 }
 
 model CommissionEntry {

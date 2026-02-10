@@ -161,3 +161,31 @@ If the email is not allowlisted (no ACTIVE employee), sign-in is denied.
 - `pnpm lint` OK
 - `pnpm test` OK
 - `pnpm build` OK
+
+---
+
+## 8) Phase 1 (M1) foundation — AP + Company Accounts + Posting Trace (Schema Only)
+
+This change is **schema + migration only** (no UI/API yet), to align the codebase with `MASTER_PLAN_NEW.md` Phase 1 “Purchasing + Inventory spine”.
+
+### 8.1 Added models (AP subledger, finance-lite)
+- `VendorBill` + `VendorBillLine` (multi-line vendor bills)
+- `VendorPayment` + `VendorPaymentAllocation` (payments with bill allocations)
+- `CompanyAccount` (Cash/Banks list for attribution)
+
+### 8.2 Added model for future-proof inventory
+- `Warehouse` (single warehouse in Phase 1; InventoryLedger now has nullable `warehouseId` to avoid breaking existing real data)
+
+### 8.3 Posting traceability fields (SOP non-negotiable)
+Added nullable fields to posting/ledger tables so we can migrate flows safely:
+- `InventoryLedger`: `sourceType`, `sourceId`, `postedById`, `postedAt`, `createdAt`, `warehouseId`
+- `WalletLedger`: `sourceType`, `sourceId`, `postedById`, `postedAt`, `createdAt`
+
+### 8.4 Migration applied locally (safe + additive)
+- Migration: `20260210101457_ap_vendor_bill_payment_and_posting_trace`
+- Only adds columns / new tables; **no drops**, **no data loss**
+
+### 8.5 Seed defaults (safe)
+Updated seed to ensure (only if missing):
+- Warehouse: `Main Warehouse (MAIN)` as default
+- Company accounts: `Cash`, `Bank`
