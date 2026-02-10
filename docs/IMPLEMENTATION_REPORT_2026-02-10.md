@@ -382,3 +382,10 @@ Files:
 - Replaced outdated Playwright specs and added RB4 specs:
   - `playwright/tests/rb4-procurement-chain.spec.ts`
   - `playwright/tests/rb4-expenses-nonstock.spec.ts`
+
+### 15.4 Staging deploy (Hostinger VPS)
+- Deployed `dev` commit: `1c0d3e8`
+- Backup created before deploy actions:
+  - `/var/backups/automatrix-erp/automatrix_erp_staging_20260210-191126.dump`
+- Migrations:
+  - `prisma migrate deploy` found **no pending migrations**
