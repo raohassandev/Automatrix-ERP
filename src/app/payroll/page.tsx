@@ -10,7 +10,7 @@ import { PayrollRunActions } from "@/components/PayrollRunActions";
 export default async function PayrollPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: { page?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -29,7 +29,7 @@ export default async function PayrollPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 20;
   const skip = (page - 1) * take;

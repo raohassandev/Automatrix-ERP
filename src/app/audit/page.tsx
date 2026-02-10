@@ -8,7 +8,7 @@ import PaginationControls from "@/components/PaginationControls";
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: { search?: string; page?: string };
 }) {
   const session = await auth();
 
@@ -27,7 +27,7 @@ export default async function AuditPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;

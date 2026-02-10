@@ -10,7 +10,7 @@ import PaginationControls from "@/components/PaginationControls";
 export default async function QuotationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string; status?: string }>;
+  searchParams: { page?: string; q?: string; status?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -27,7 +27,7 @@ export default async function QuotationsPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const query = (params.q || "").trim();
   const status = (params.status || "").trim();

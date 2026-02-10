@@ -11,7 +11,7 @@ import QuerySelect from "@/components/QuerySelect";
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; status?: string }>;
+  searchParams: { search?: string; page?: string; status?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -34,7 +34,7 @@ export default async function NotificationsPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const status = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);

@@ -15,7 +15,7 @@ import { IncomeActions } from "@/components/IncomeActions";
 export default async function IncomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; status?: string }>;
+  searchParams: { search?: string; page?: string; status?: string };
 }) {
   const session = await auth();
   const userId = session?.user?.id;
@@ -32,7 +32,7 @@ export default async function IncomePage({
   const canEditAny = await requirePermission(userId, "income.edit");
   const canExport = canViewAll || canViewOwn;
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const status = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);

@@ -9,7 +9,7 @@ import { DesignationActions } from "@/components/DesignationActions";
 export default async function DesignationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: { page?: string; q?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -28,7 +28,7 @@ export default async function DesignationsPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const query = (params.q || "").trim();
   const take = 25;

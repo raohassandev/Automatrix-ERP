@@ -11,7 +11,7 @@ import PaginationControls from "@/components/PaginationControls";
 export default async function ExpenseReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; from?: string; to?: string; expenseType?: string }>;
+  searchParams: { search?: string; page?: string; from?: string; to?: string; expenseType?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -30,7 +30,7 @@ export default async function ExpenseReportPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const expenseType = (params.expenseType || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);

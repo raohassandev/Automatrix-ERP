@@ -10,7 +10,7 @@ import { requirePermission } from "@/lib/rbac";
 export default async function ProjectExpensesReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: { search?: string; page?: string };
 }) {
   const session = await auth();
   if (!session) {
@@ -31,7 +31,7 @@ export default async function ProjectExpensesReportPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;

@@ -8,7 +8,7 @@ import { requirePermission } from "@/lib/rbac";
 export default async function ExpensesByProjectPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string }>;
+  searchParams: { project?: string };
 }) {
   const session = await auth();
   if (!session) {
@@ -26,7 +26,7 @@ export default async function ExpensesByProjectPage({
     );
   }
 
-  const resolvedSearchParams = await searchParams;
+  const resolvedSearchParams = searchParams;
   const projectId = resolvedSearchParams.project;
 
   // Get all expenses grouped by project

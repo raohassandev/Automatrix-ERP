@@ -9,7 +9,7 @@ import PaginationControls from "@/components/PaginationControls";
 export default async function InventoryReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: { search?: string; page?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -31,7 +31,7 @@ export default async function InventoryReportPage({
   const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
   const canExport = await requirePermission(session.user.id, "reports.export");
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;

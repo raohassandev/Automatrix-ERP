@@ -12,7 +12,7 @@ import Link from "next/link";
 export default async function WalletLedgerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; type?: string; from?: string; to?: string }>;
+  searchParams: { search?: string; page?: string; type?: string; from?: string; to?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -32,7 +32,7 @@ export default async function WalletLedgerPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const type = (params.type || "").trim();
   const from = params.from;

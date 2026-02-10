@@ -21,7 +21,7 @@ type ExpenseRow = {
 export default async function EmployeeExpenseReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; from?: string; to?: string }>;
+  searchParams: { search?: string; page?: string; from?: string; to?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -41,7 +41,7 @@ export default async function EmployeeExpenseReportPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim().toLowerCase();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;

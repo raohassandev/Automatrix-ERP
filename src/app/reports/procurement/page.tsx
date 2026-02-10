@@ -12,14 +12,14 @@ import { resolveProjectId } from "@/lib/projects";
 export default async function ProcurementReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{
+  searchParams: {
     search?: string;
     page?: string;
     from?: string;
     to?: string;
     project?: string;
     vendor?: string;
-  }>;
+  };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -38,7 +38,7 @@ export default async function ProcurementReportPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;

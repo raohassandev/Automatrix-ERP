@@ -31,7 +31,7 @@ type FinancialProjectRow = {
 export default async function ProjectFinancialPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; status?: string; page?: string }>;
+  searchParams: { search?: string; status?: string; page?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -49,7 +49,7 @@ export default async function ProjectFinancialPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const statusFilter = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);

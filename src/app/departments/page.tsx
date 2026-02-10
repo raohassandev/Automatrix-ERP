@@ -9,7 +9,7 @@ import { DepartmentActions } from "@/components/DepartmentActions";
 export default async function DepartmentsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: { page?: string; q?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -28,7 +28,7 @@ export default async function DepartmentsPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const query = (params.q || "").trim();
   const take = 25;

@@ -10,7 +10,7 @@ import { PageCreateButton } from "@/components/PageCreateButton";
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: { search?: string; page?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -32,7 +32,7 @@ export default async function ProjectsPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;

@@ -14,7 +14,7 @@ import { PageCreateButton } from "@/components/PageCreateButton";
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string; status?: string }>;
+  searchParams: { search?: string; page?: string; status?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -35,7 +35,7 @@ export default async function InvoicesPage({
     );
   }
 
-  const params = await searchParams;
+  const params = searchParams;
   const search = (params.search || "").trim();
   const status = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);

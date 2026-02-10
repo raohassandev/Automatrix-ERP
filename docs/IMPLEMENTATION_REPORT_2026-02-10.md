@@ -24,6 +24,10 @@
 ### 1.4 Health endpoint for uptime monitoring
 - Added `/api/health` (public) that checks DB connectivity.
 
+### 1.5 RBAC hardening + server component correctness
+- Removed the leftover **development bypass** in RBAC role resolution (`dev-admin-id`).
+- Normalized all `page.tsx` files to treat `searchParams` as a plain object (Next.js behavior), removing incorrect `Promise<>` typing and `await searchParams` patterns.
+
 ---
 
 ## 2) Repo changes (files)
@@ -53,6 +57,10 @@
 - `scripts/verify-env.js`
   - Loads `.env` for local/devops checks.
   - Requires: `DATABASE_URL`, `NEXTAUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, plus `AUTH_SECRET` or `NEXTAUTH_SECRET`.
+
+### RBAC + page correctness
+- `src/lib/rbac.ts` (removed dev-bypass role mapping)
+- Multiple `src/app/**/page.tsx` pages (correct `searchParams` typing/usage)
 
 ### Prisma schema + migrations
 - `prisma/schema.prisma`: added `User.emailVerified` (nullable) required by Auth.js OAuth flow.
@@ -137,3 +145,19 @@ If the email is not allowlisted (no ACTIVE employee), sign-in is denied.
   - No password reset in Phase 1
 - Production ops now has a working `/api/health` endpoint for uptime monitoring.
 
+---
+
+## 7) Follow-up hardening (Next.js 16 compatibility + auth discipline)
+
+### 7.1 Fix `searchParams` typing across app pages
+- Updated page component props to treat `searchParams` as a plain object (not `Promise<...>`), matching Next.js app router behavior.
+- Removed `await searchParams` usage accordingly to prevent runtime/type confusion.
+
+### 7.2 Remove RBAC dev-bypass identity
+- Removed the `dev-admin-id` bypass in RBAC (`getUserRoleName`). With OAuth-only + allowlist, dev/prod auth behavior must stay consistent.
+
+### 7.3 Local quality gates executed
+- `pnpm typecheck` OK
+- `pnpm lint` OK
+- `pnpm test` OK
+- `pnpm build` OK
