@@ -53,7 +53,6 @@ const buildInitialForm = (purchaseOrder: PurchaseOrder | null | undefined) => ({
   vendorContact: purchaseOrder?.vendorContact || "",
   orderDate: purchaseOrder?.orderDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
   expectedDate: purchaseOrder?.expectedDate?.slice(0, 10) || "",
-  status: purchaseOrder?.status || "DRAFT",
   currency: purchaseOrder?.currency || "PKR",
   notes: purchaseOrder?.notes || "",
 });
@@ -152,6 +151,11 @@ function PurchaseOrderFormDialogInner({
       title={purchaseOrder ? "Edit Purchase Order" : "Create Purchase Order"}
       description="Track vendor orders and expected deliveries."
     >
+      <div className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+        Phase 1 lifecycle: POs are created as <span className="font-medium text-foreground">DRAFT</span>. Send for
+        approval using <span className="font-medium text-foreground">Submit → Approve</span>. DRAFT is the only editable
+        state.
+      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -227,20 +231,6 @@ function PurchaseOrderFormDialogInner({
               value={form.expectedDate}
               onChange={(e) => setForm({ ...form, expectedDate: e.target.value })}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <select
-              id="status"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-            >
-              <option value="DRAFT">Draft</option>
-              <option value="SENT">Sent</option>
-              <option value="APPROVED">Approved</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="currency">Currency</Label>

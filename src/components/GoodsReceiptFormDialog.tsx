@@ -20,7 +20,6 @@ type GoodsReceipt = {
   grnNumber: string;
   purchaseOrderId?: string | null;
   receivedDate: string;
-  status?: string | null;
   notes?: string | null;
   items: GoodsReceiptItem[];
 };
@@ -42,7 +41,6 @@ const buildInitialForm = (receipt: GoodsReceipt | null | undefined) => ({
   grnNumber: receipt?.grnNumber || "",
   purchaseOrderId: receipt?.purchaseOrderId || "",
   receivedDate: receipt?.receivedDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-  status: receipt?.status || "RECEIVED",
   notes: receipt?.notes || "",
 });
 
@@ -134,6 +132,10 @@ function GoodsReceiptFormDialogInner({
       title={receipt ? "Edit Goods Receipt" : "Create Goods Receipt"}
       description="Record inventory received against a purchase order."
     >
+      <div className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+        Phase 1 lifecycle: GRNs are created as <span className="font-medium text-foreground">DRAFT</span>. Stock is
+        posted to Inventory Ledger only after <span className="font-medium text-foreground">Submit → Approve → Post</span>.
+      </div>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -168,19 +170,6 @@ function GoodsReceiptFormDialogInner({
               onChange={(e) => setForm({ ...form, receivedDate: e.target.value })}
               required
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <select
-              id="status"
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-            >
-              <option value="RECEIVED">Received</option>
-              <option value="PARTIAL">Partial</option>
-              <option value="PENDING">Pending</option>
-            </select>
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="notes">Notes</Label>

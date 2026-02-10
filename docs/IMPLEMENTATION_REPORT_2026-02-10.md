@@ -389,3 +389,43 @@ Files:
   - `/var/backups/automatrix-erp/automatrix_erp_staging_20260210-191126.dump`
 - Migrations:
   - `prisma migrate deploy` found **no pending migrations**
+
+---
+
+## 16) Procurement doc lifecycle hardening (PO + GRN) — Phase 1 single-spine
+
+Aligned Purchase Orders and GRNs with the Phase 1 lifecycle model (no implicit postings, no edits after posting).
+
+### 16.1 GRN (Goods Receipt) lifecycle + explicit inventory posting
+- GRN create now defaults to `DRAFT` (no InventoryLedger postings on create).
+- New lifecycle actions:
+  - `SUBMIT` (DRAFT -> SUBMITTED)
+  - `APPROVE` (SUBMITTED -> APPROVED)
+  - `POST` (APPROVED -> POSTED) **creates InventoryLedger postings + updates avg cost**
+  - `VOID` (non-posted only)
+- Editing/deleting GRNs is allowed only while `DRAFT`.
+
+Files:
+- `src/app/api/procurement/grn/route.ts`
+- `src/app/api/procurement/grn/[id]/route.ts`
+- `src/components/GoodsReceiptFormDialog.tsx`
+- `src/components/GoodsReceiptActions.tsx`
+
+### 16.2 Purchase Order lifecycle
+- PO create now defaults to `DRAFT`.
+- New lifecycle actions:
+  - `SUBMIT` (DRAFT -> SUBMITTED)
+  - `APPROVE` (SUBMITTED -> ORDERED)
+  - `CANCEL` (blocked if posted receipts exist)
+- Editing/deleting POs is allowed only while `DRAFT`.
+
+Files:
+- `src/app/api/procurement/purchase-orders/route.ts`
+- `src/app/api/procurement/purchase-orders/[id]/route.ts`
+- `src/components/PurchaseOrderFormDialog.tsx`
+- `src/components/PurchaseOrderActions.tsx`
+
+### 16.3 Blueprint update
+- Updated the flow to show explicit GRN posting to Inventory Ledger (no implicit stock-in on create).
+- File:
+- `docs/ERP_DIAGRAMS.md`

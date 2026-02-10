@@ -22,6 +22,20 @@ const normalizeKey = (value?: string | null) => value?.trim().toLowerCase() || "
 const buildItemKey = (name: string, unit?: string | null) =>
   `${normalizeKey(name)}::${normalizeKey(unit)}`;
 
+function isEditableStatus(status: string | null | undefined) {
+  return (status || "").toUpperCase() === "DRAFT";
+}
+
+function isPostedStatus(status: string | null | undefined) {
+  const s = (status || "").toUpperCase();
+  return s === "POSTED" || s === "RECEIVED" || s === "PARTIAL";
+}
+
+function isLifecycleStatus(status: string | null | undefined) {
+  const s = (status || "").toUpperCase();
+  return s === "DRAFT" || s === "SUBMITTED" || s === "APPROVED" || s === "VOID";
+}
+
 async function recalcPurchaseOrderReceipts(
   tx: Prisma.TransactionClient,
   purchaseOrderId: string
@@ -34,7 +48,10 @@ async function recalcPurchaseOrderReceipts(
 
   const receiptItems = await tx.goodsReceiptItem.findMany({
     where: {
-      goodsReceipt: { purchaseOrderId },
+      goodsReceipt: {
+        purchaseOrderId,
+        OR: [{ status: "POSTED" }, { status: "RECEIVED" }, { status: "PARTIAL" }],
+      },
       purchaseOrderItemId: { not: null },
     },
     select: { purchaseOrderItemId: true, quantity: true },
@@ -76,37 +93,6 @@ async function recalcPurchaseOrderReceipts(
       where: { id: po.id },
       data: { status: "ORDERED" },
     });
-  }
-}
-
-async function revertInventoryStockIn(tx: Prisma.TransactionClient, receiptId: string) {
-  const entries = await tx.inventoryLedger.findMany({
-    where: { reference: `GRN:${receiptId}` },
-  });
-
-  for (const entry of entries) {
-    const item = await tx.inventoryItem.findUnique({ where: { id: entry.itemId } });
-    if (!item) continue;
-
-    const newQty = Number(item.quantity) - Number(entry.quantity);
-    if (newQty < 0) {
-      throw new Error(`Cannot revert stock-in for ${item.name}`);
-    }
-
-    const cost = Number(entry.unitCost);
-    await tx.inventoryItem.update({
-      where: { id: item.id },
-      data: {
-        quantity: new Prisma.Decimal(newQty),
-        totalValue: new Prisma.Decimal(newQty * cost),
-        availableQty: new Prisma.Decimal(newQty - Number(item.reservedQty)),
-        lastUpdated: new Date(),
-      },
-    });
-  }
-
-  if (entries.length > 0) {
-    await tx.inventoryLedger.deleteMany({ where: { reference: `GRN:${receiptId}` } });
   }
 }
 
@@ -168,8 +154,12 @@ async function applyInventoryStockIn(
 
     const qtyChange = Math.abs(item.quantity);
     const newQty = Number(inventoryItem.quantity) + qtyChange;
-    const cost = Number(item.unitCost);
-    const total = qtyChange * cost;
+    const effectiveCost = Number(item.unitCost);
+    const prevQty = Number(inventoryItem.quantity);
+    const prevAvgCost = Number(inventoryItem.unitCost);
+    const totalCost = prevQty * prevAvgCost + qtyChange * effectiveCost;
+    const nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
+    const total = qtyChange * effectiveCost;
 
     const projectRef = item.purchaseOrderItemId
       ? projectByPoItemId.get(item.purchaseOrderItemId) || null
@@ -183,7 +173,7 @@ async function applyInventoryStockIn(
         warehouseId: defaultWarehouseId,
         type: "PURCHASE",
         quantity: new Prisma.Decimal(qtyChange),
-        unitCost: new Prisma.Decimal(cost),
+        unitCost: new Prisma.Decimal(effectiveCost),
         total: new Prisma.Decimal(total),
         reference: `GRN:${receiptId}`,
         project: resolvedProject || undefined,
@@ -200,7 +190,9 @@ async function applyInventoryStockIn(
       where: { id: inventoryItem.id },
       data: {
         quantity: new Prisma.Decimal(newQty),
-        totalValue: new Prisma.Decimal(newQty * cost),
+        unitCost: new Prisma.Decimal(nextAvgCost),
+        lastPurchasePrice: new Prisma.Decimal(effectiveCost),
+        totalValue: new Prisma.Decimal(newQty * nextAvgCost),
         availableQty: new Prisma.Decimal(newQty - Number(inventoryItem.reservedQty)),
         lastUpdated: new Date(),
         lastPurchaseDate: new Date(receivedDate),
@@ -252,6 +244,141 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   const body = await req.json();
+  const action = typeof body?.action === "string" ? body.action.trim().toUpperCase() : null;
+
+  // Lifecycle actions (Phase 1 locked).
+  if (action) {
+    if (!["SUBMIT", "APPROVE", "POST", "VOID"].includes(action)) {
+      return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });
+    }
+
+    const currentStatus = (existing.status || "").toUpperCase();
+
+    if (action === "SUBMIT") {
+      if (currentStatus !== "DRAFT") {
+        return NextResponse.json({ success: false, error: "Only DRAFT GRNs can be submitted." }, { status: 400 });
+      }
+      const updated = await prisma.goodsReceipt.update({ where: { id }, data: { status: "SUBMITTED" } });
+      await logAudit({
+        action: "SUBMIT_GOODS_RECEIPT",
+        entity: "GoodsReceipt",
+        entityId: id,
+        oldValue: existing.status,
+        newValue: updated.status,
+        reason: typeof body?.reason === "string" ? body.reason : null,
+        userId: session.user.id,
+      });
+      return NextResponse.json({ success: true, data: updated });
+    }
+
+    if (action === "APPROVE") {
+      if (currentStatus !== "SUBMITTED") {
+        return NextResponse.json({ success: false, error: "Only SUBMITTED GRNs can be approved." }, { status: 400 });
+      }
+      const updated = await prisma.goodsReceipt.update({ where: { id }, data: { status: "APPROVED" } });
+      await logAudit({
+        action: "APPROVE_GOODS_RECEIPT",
+        entity: "GoodsReceipt",
+        entityId: id,
+        oldValue: existing.status,
+        newValue: updated.status,
+        reason: typeof body?.reason === "string" ? body.reason : null,
+        userId: session.user.id,
+      });
+      return NextResponse.json({ success: true, data: updated });
+    }
+
+    if (action === "POST") {
+      if (currentStatus !== "APPROVED") {
+        return NextResponse.json({ success: false, error: "Only APPROVED GRNs can be posted." }, { status: 400 });
+      }
+
+      const posted = await prisma.$transaction(async (tx) => {
+        // Prevent double posting.
+        const already = await tx.inventoryLedger.count({ where: { reference: `GRN:${id}` } });
+        if (already > 0) {
+          throw new Error("This GRN already has inventory postings.");
+        }
+
+        const receipt = await tx.goodsReceipt.findUnique({
+          where: { id },
+          include: {
+            items: true,
+            purchaseOrder: { include: { items: true } },
+          },
+        });
+        if (!receipt) throw new Error("Goods receipt not found");
+
+        const receiptItems = receipt.items.map((item) => ({
+          purchaseOrderItemId: item.purchaseOrderItemId,
+          itemName: item.itemName,
+          unit: item.unit,
+          quantity: Number(item.quantity),
+          unitCost: Number(item.unitCost),
+        }));
+
+        const projectByPoItemId = new Map(
+          (receipt.purchaseOrder?.items || []).map((item) => [item.id, item.project || null])
+        );
+
+        await applyInventoryStockIn(tx, {
+          items: receiptItems,
+          receiptId: receipt.id,
+          receivedDate: receipt.receivedDate,
+          userId: session.user.id,
+          projectByPoItemId,
+        });
+
+        if (receipt.purchaseOrderId) {
+          await recalcPurchaseOrderReceipts(tx, receipt.purchaseOrderId);
+        }
+
+        return tx.goodsReceipt.update({ where: { id }, data: { status: "POSTED" } });
+      });
+
+      await logAudit({
+        action: "POST_GOODS_RECEIPT",
+        entity: "GoodsReceipt",
+        entityId: id,
+        oldValue: existing.status,
+        newValue: "POSTED",
+        reason: typeof body?.reason === "string" ? body.reason : null,
+        userId: session.user.id,
+      });
+
+      return NextResponse.json({ success: true, data: posted });
+    }
+
+    // VOID
+    if (isPostedStatus(existing.status)) {
+      return NextResponse.json(
+        { success: false, error: "Posted GRNs cannot be voided (use reversal later)." },
+        { status: 400 }
+      );
+    }
+    const updated = await prisma.goodsReceipt.update({ where: { id }, data: { status: "VOID" } });
+    await logAudit({
+      action: "VOID_GOODS_RECEIPT",
+      entity: "GoodsReceipt",
+      entityId: id,
+      oldValue: existing.status,
+      newValue: updated.status,
+      reason: typeof body?.reason === "string" ? body.reason : null,
+      userId: session.user.id,
+    });
+    return NextResponse.json({ success: true, data: updated });
+  }
+
+  // Field updates are allowed only while DRAFT. Legacy receipts are treated as posted.
+  if (!isEditableStatus(existing.status)) {
+    const status = (existing.status || "").toUpperCase();
+    const hint = isLifecycleStatus(existing.status) ? status : "LEGACY_POSTED";
+    return NextResponse.json(
+      { success: false, error: `Only DRAFT GRNs can be edited. Current status: ${hint}.` },
+      { status: 400 }
+    );
+  }
+
   const parsed = goodsReceiptUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -266,7 +393,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     data.purchaseOrderId = parsed.data.purchaseOrderId || null;
   }
   if (parsed.data.receivedDate) data.receivedDate = new Date(parsed.data.receivedDate);
-  if (parsed.data.status) data.status = sanitizeString(parsed.data.status);
   if (parsed.data.notes !== undefined) {
     data.notes = parsed.data.notes ? sanitizeString(parsed.data.notes) : null;
   }
@@ -357,7 +483,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (purchaseOrder) {
     const otherReceiptItems = await prisma.goodsReceiptItem.findMany({
       where: {
-        goodsReceipt: { purchaseOrderId: targetPurchaseOrderId, id: { not: id } },
+        goodsReceipt: {
+          purchaseOrderId: targetPurchaseOrderId,
+          id: { not: id },
+          OR: [{ status: "POSTED" }, { status: "RECEIVED" }, { status: "PARTIAL" }],
+        },
         purchaseOrderItemId: { not: null },
       },
       select: { purchaseOrderItemId: true, quantity: true },
@@ -388,24 +518,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     }
   }
 
-  const shouldReplaceItems =
-    parsed.data.items !== undefined ||
-    (parsed.data.purchaseOrderId !== undefined &&
-      parsed.data.purchaseOrderId !== existing.purchaseOrderId);
-  const shouldRefreshInventory =
-    parsed.data.items !== undefined ||
-    parsed.data.receivedDate !== undefined ||
-    (parsed.data.purchaseOrderId !== undefined &&
-      parsed.data.purchaseOrderId !== existing.purchaseOrderId);
-
-  const previousPurchaseOrderId = existing.purchaseOrderId;
-
   const updated = await prisma.$transaction(async (tx) => {
-    if (shouldRefreshInventory) {
-      await revertInventoryStockIn(tx, id);
-    }
-
-    if (shouldReplaceItems) {
+    if (parsed.data.items !== undefined) {
       await tx.goodsReceiptItem.deleteMany({ where: { goodsReceiptId: id } });
       await tx.goodsReceiptItem.createMany({
         data: receiptItems.map((item) => ({
@@ -425,26 +539,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       data,
       include: { items: true, purchaseOrder: true },
     });
-
-    if (shouldRefreshInventory) {
-      const projectByPoItemId = new Map(
-        (purchaseOrder?.items || []).map((item) => [item.id, item.project || null])
-      );
-      await applyInventoryStockIn(tx, {
-        items: receiptItems,
-        receiptId: receipt.id,
-        receivedDate: receipt.receivedDate,
-        userId: session.user.id,
-        projectByPoItemId,
-      });
-    }
-
-    if (previousPurchaseOrderId) {
-      await recalcPurchaseOrderReceipts(tx, previousPurchaseOrderId);
-    }
-    if (receipt.purchaseOrderId && receipt.purchaseOrderId !== previousPurchaseOrderId) {
-      await recalcPurchaseOrderReceipts(tx, receipt.purchaseOrderId);
-    }
 
     return receipt;
   });
@@ -477,13 +571,16 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ success: false, error: "Goods receipt not found" }, { status: 404 });
   }
 
+  if (!isEditableStatus(existing.status)) {
+    return NextResponse.json(
+      { success: false, error: "Only DRAFT GRNs can be deleted." },
+      { status: 400 }
+    );
+  }
+
   await prisma.$transaction(async (tx) => {
-    await revertInventoryStockIn(tx, id);
     await tx.goodsReceiptItem.deleteMany({ where: { goodsReceiptId: id } });
     await tx.goodsReceipt.delete({ where: { id } });
-    if (existing.purchaseOrderId) {
-      await recalcPurchaseOrderReceipts(tx, existing.purchaseOrderId);
-    }
   });
 
   await logAudit({

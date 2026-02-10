@@ -51,7 +51,8 @@ export async function POST(req: Request) {
     vendorId: parsed.data.vendorId ? sanitizeString(parsed.data.vendorId) : undefined,
     vendorName: sanitizeString(parsed.data.vendorName),
     vendorContact: parsed.data.vendorContact ? sanitizeString(parsed.data.vendorContact) : undefined,
-    status: parsed.data.status ? sanitizeString(parsed.data.status) : "DRAFT",
+    // Phase 1 lifecycle: create PO as DRAFT; submit/approve are explicit actions.
+    status: "DRAFT",
     currency: parsed.data.currency ? sanitizeString(parsed.data.currency) : "PKR",
     notes: parsed.data.notes ? sanitizeString(parsed.data.notes) : undefined,
     items: parsed.data.items.map((item) => ({

@@ -6,8 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
-import { resolveProjectId } from "@/lib/projects";
-import { ensureDefaultWarehouseId } from "@/lib/warehouses";
+// NOTE: GRN posting to InventoryLedger is handled in `/api/procurement/grn/[id]` via explicit POST action.
 
 type PurchaseOrderItem = {
   id: string;
@@ -21,190 +20,6 @@ type PurchaseOrderItem = {
 const normalizeKey = (value?: string | null) => value?.trim().toLowerCase() || "";
 const buildItemKey = (name: string, unit?: string | null) =>
   `${normalizeKey(name)}::${normalizeKey(unit)}`;
-
-async function recalcPurchaseOrderReceipts(
-  tx: Prisma.TransactionClient,
-  purchaseOrderId: string
-) {
-  const po = await tx.purchaseOrder.findUnique({
-    where: { id: purchaseOrderId },
-    include: { items: true },
-  });
-  if (!po) return;
-
-  const receiptItems = await tx.goodsReceiptItem.findMany({
-    where: {
-      goodsReceipt: { purchaseOrderId },
-      purchaseOrderItemId: { not: null },
-    },
-    select: { purchaseOrderItemId: true, quantity: true },
-  });
-
-  const totals = new Map<string, number>();
-  receiptItems.forEach((item) => {
-    if (!item.purchaseOrderItemId) return;
-    totals.set(
-      item.purchaseOrderItemId,
-      (totals.get(item.purchaseOrderItemId) || 0) + Number(item.quantity)
-    );
-  });
-
-  await Promise.all(
-    po.items.map((item) => {
-      const receivedQty = totals.get(item.id) || 0;
-      return tx.purchaseOrderItem.update({
-        where: { id: item.id },
-        data: { receivedQty: new Prisma.Decimal(receivedQty) },
-      });
-    })
-  );
-
-  if (po.status === "CANCELLED") return;
-
-  const anyReceived = po.items.some((item) => (totals.get(item.id) || 0) > 0);
-  const allReceived = po.items.every(
-    (item) => (totals.get(item.id) || 0) >= Number(item.quantity)
-  );
-
-  if (anyReceived) {
-    await tx.purchaseOrder.update({
-      where: { id: po.id },
-      data: { status: allReceived ? "RECEIVED" : "PARTIALLY_RECEIVED" },
-    });
-  } else {
-    await tx.purchaseOrder.update({
-      where: { id: po.id },
-      data: { status: "ORDERED" },
-    });
-  }
-}
-
-async function applyInventoryStockIn(
-  tx: Prisma.TransactionClient,
-  {
-    items,
-    receiptId,
-    receivedDate,
-    userId,
-    projectByPoItemId,
-  }: {
-    items: Array<{
-      itemName: string;
-      unit?: string | null;
-      quantity: number;
-      unitCost: number;
-      purchaseOrderItemId?: string | null;
-    }>;
-    receiptId: string;
-    receivedDate: string | Date;
-    userId: string;
-    projectByPoItemId: Map<string, string | null>;
-  }
-) {
-  const uniqueNames = Array.from(
-    new Set(items.map((item) => item.itemName.trim()).filter(Boolean))
-  );
-  if (uniqueNames.length === 0) return;
-
-  const inventoryItems = await tx.inventoryItem.findMany({
-    where: {
-      OR: uniqueNames.map((name) => ({ name: { equals: name, mode: "insensitive" as const } })),
-    },
-  });
-  const inventoryByName = new Map(
-    inventoryItems.map((item) => [normalizeKey(item.name), item])
-  );
-
-  const projectCache = new Map<string, string | null>();
-  const resolveProject = async (ref?: string | null) => {
-    if (!ref) return null;
-    if (projectCache.has(ref)) return projectCache.get(ref) || null;
-    const resolved = await resolveProjectId(ref);
-    projectCache.set(ref, resolved || ref);
-    return resolved || ref;
-  };
-
-  const missingItems: string[] = [];
-  const defaultWarehouseId = await ensureDefaultWarehouseId(tx);
-
-  for (const item of items) {
-    const key = normalizeKey(item.itemName);
-    const inventoryItem = inventoryByName.get(key);
-    if (!inventoryItem) {
-      missingItems.push(item.itemName);
-      continue;
-    }
-
-    const qtyChange = Math.abs(item.quantity);
-    const newQty = Number(inventoryItem.quantity) + qtyChange;
-    const effectiveCost = Number(item.unitCost);
-    const prevQty = Number(inventoryItem.quantity);
-    const prevAvgCost = Number(inventoryItem.unitCost);
-    const totalCost = prevQty * prevAvgCost + qtyChange * effectiveCost;
-    const nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
-    const total = qtyChange * effectiveCost;
-
-    const projectRef = item.purchaseOrderItemId
-      ? projectByPoItemId.get(item.purchaseOrderItemId) || null
-      : null;
-    const resolvedProject = await resolveProject(projectRef);
-
-    await tx.inventoryLedger.create({
-      data: {
-        date: new Date(receivedDate),
-        itemId: inventoryItem.id,
-        warehouseId: defaultWarehouseId,
-        type: "PURCHASE",
-        quantity: new Prisma.Decimal(qtyChange),
-        unitCost: new Prisma.Decimal(effectiveCost),
-        total: new Prisma.Decimal(total),
-        reference: `GRN:${receiptId}`,
-        project: resolvedProject || undefined,
-        userId,
-        runningBalance: new Prisma.Decimal(newQty),
-        sourceType: "GRN",
-        sourceId: receiptId,
-        postedById: userId,
-        postedAt: new Date(receivedDate),
-      },
-    });
-
-    const updatedItem = await tx.inventoryItem.update({
-      where: { id: inventoryItem.id },
-      data: {
-        quantity: new Prisma.Decimal(newQty),
-        unitCost: new Prisma.Decimal(nextAvgCost),
-        lastPurchasePrice: new Prisma.Decimal(effectiveCost),
-        totalValue: new Prisma.Decimal(newQty * nextAvgCost),
-        availableQty: new Prisma.Decimal(newQty - Number(inventoryItem.reservedQty)),
-        lastUpdated: new Date(),
-        lastPurchaseDate: new Date(receivedDate),
-      },
-    });
-
-    inventoryByName.set(key, updatedItem);
-  }
-
-  if (missingItems.length > 0) {
-    const rolesToNotify = ["Owner", "CEO", "Admin", "Procurement", "Store Keeper"];
-    const users = await tx.user.findMany({
-      where: { role: { name: { in: rolesToNotify } } },
-      select: { id: true },
-    });
-    if (users.length > 0) {
-      await tx.notification.createMany({
-        data: missingItems.flatMap((name) =>
-          users.map((user) => ({
-            userId: user.id,
-            type: "PROCUREMENT_MISSING_ITEM",
-            message: `GRN item "${name}" has no matching inventory item.`,
-            status: "NEW",
-          }))
-        ),
-      });
-    }
-  }
-}
 
 export async function GET() {
   const session = await auth();
@@ -247,7 +62,8 @@ export async function POST(req: Request) {
   const sanitized = {
     ...parsed.data,
     grnNumber: sanitizeString(parsed.data.grnNumber),
-    status: parsed.data.status ? sanitizeString(parsed.data.status) : "RECEIVED",
+    // Phase 1 lifecycle: create GRN as DRAFT; posting to InventoryLedger happens only on explicit POST action.
+    status: "DRAFT",
     notes: parsed.data.notes ? sanitizeString(parsed.data.notes) : undefined,
     items: parsed.data.items.map((item) => ({
       purchaseOrderItemId: item.purchaseOrderItemId ? sanitizeString(item.purchaseOrderItemId) : undefined,
@@ -362,21 +178,6 @@ export async function POST(req: Request) {
         },
       },
       include: { items: true, purchaseOrder: true },
-    });
-
-    if (purchaseOrder) {
-      await recalcPurchaseOrderReceipts(tx, purchaseOrder.id);
-    }
-
-    const projectByPoItemId = new Map(
-      (purchaseOrder?.items || []).map((item) => [item.id, item.project || null])
-    );
-    await applyInventoryStockIn(tx, {
-      items: receiptItems,
-      receiptId: receipt.id,
-      receivedDate: receipt.receivedDate,
-      userId: session.user.id,
-      projectByPoItemId,
     });
 
     if (purchaseOrder && unmatchedItems.length > 0) {

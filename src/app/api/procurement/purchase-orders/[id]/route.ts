@@ -25,6 +25,96 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   const body = await req.json();
+  const action = typeof body?.action === "string" ? body.action.trim().toUpperCase() : null;
+  const currentStatus = (existing.status || "").toUpperCase();
+
+  if (action) {
+    if (!["SUBMIT", "APPROVE", "CANCEL"].includes(action)) {
+      return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });
+    }
+
+    if (action === "SUBMIT") {
+      if (currentStatus !== "DRAFT") {
+        return NextResponse.json(
+          { success: false, error: "Only DRAFT purchase orders can be submitted." },
+          { status: 400 }
+        );
+      }
+      const updated = await prisma.purchaseOrder.update({ where: { id }, data: { status: "SUBMITTED" } });
+      await logAudit({
+        action: "SUBMIT_PURCHASE_ORDER",
+        entity: "PurchaseOrder",
+        entityId: id,
+        oldValue: existing.status,
+        newValue: updated.status,
+        reason: typeof body?.reason === "string" ? body.reason : null,
+        userId: session.user.id,
+      });
+      return NextResponse.json({ success: true, data: updated });
+    }
+
+    if (action === "APPROVE") {
+      if (currentStatus !== "SUBMITTED") {
+        return NextResponse.json(
+          { success: false, error: "Only SUBMITTED purchase orders can be approved." },
+          { status: 400 }
+        );
+      }
+      // We reuse the existing operational status name "ORDERED" to avoid disrupting legacy reporting.
+      const updated = await prisma.purchaseOrder.update({ where: { id }, data: { status: "ORDERED" } });
+      await logAudit({
+        action: "APPROVE_PURCHASE_ORDER",
+        entity: "PurchaseOrder",
+        entityId: id,
+        oldValue: existing.status,
+        newValue: updated.status,
+        reason: typeof body?.reason === "string" ? body.reason : null,
+        userId: session.user.id,
+      });
+      return NextResponse.json({ success: true, data: updated });
+    }
+
+    // CANCEL
+    if (["RECEIVED", "PARTIALLY_RECEIVED"].includes(currentStatus)) {
+      return NextResponse.json(
+        { success: false, error: "Received purchase orders cannot be cancelled." },
+        { status: 400 }
+      );
+    }
+
+    const hasPostedReceipts = await prisma.goodsReceipt.count({
+      where: {
+        purchaseOrderId: id,
+        OR: [{ status: "POSTED" }, { status: "RECEIVED" }, { status: "PARTIAL" }],
+      },
+    });
+    if (hasPostedReceipts > 0) {
+      return NextResponse.json(
+        { success: false, error: "Cannot cancel a PO that has posted goods receipts." },
+        { status: 400 }
+      );
+    }
+
+    const updated = await prisma.purchaseOrder.update({ where: { id }, data: { status: "CANCELLED" } });
+    await logAudit({
+      action: "CANCEL_PURCHASE_ORDER",
+      entity: "PurchaseOrder",
+      entityId: id,
+      oldValue: existing.status,
+      newValue: updated.status,
+      reason: typeof body?.reason === "string" ? body.reason : null,
+      userId: session.user.id,
+    });
+    return NextResponse.json({ success: true, data: updated });
+  }
+
+  if (currentStatus !== "DRAFT") {
+    return NextResponse.json(
+      { success: false, error: `Only DRAFT purchase orders can be edited. Current status: ${existing.status}.` },
+      { status: 400 }
+    );
+  }
+
   const parsed = purchaseOrderUpdateSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -46,7 +136,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.expectedDate !== undefined) {
     data.expectedDate = parsed.data.expectedDate ? new Date(parsed.data.expectedDate) : null;
   }
-  if (parsed.data.status) data.status = sanitizeString(parsed.data.status);
   if (parsed.data.currency) data.currency = sanitizeString(parsed.data.currency);
   if (parsed.data.notes !== undefined) {
     data.notes = parsed.data.notes ? sanitizeString(parsed.data.notes) : null;
@@ -121,6 +210,13 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   const existing = await prisma.purchaseOrder.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ success: false, error: "Purchase order not found" }, { status: 404 });
+  }
+
+  if ((existing.status || "").toUpperCase() !== "DRAFT") {
+    return NextResponse.json(
+      { success: false, error: "Only DRAFT purchase orders can be deleted." },
+      { status: 400 }
+    );
   }
 
   await prisma.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });

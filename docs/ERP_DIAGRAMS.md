@@ -98,7 +98,7 @@ flowchart LR
 
   subgraph Procurement
     PO[Purchase Order]
-    GRN[Goods Receipt]
+    GRN[Goods Receipt (GRN)]
     BILL[Vendor Bill]
     VPAY[Vendor Payment]
     CACCT[Company Account (Cash/Bank)]
@@ -126,7 +126,8 @@ flowchart LR
 
   COMM --> EXP
 
-  PO --> GRN --> INV
+  PO --> GRN
+  GRN -->|POST (explicit)| INV
   GRN --> BILL --> VPAY --> CACCT
 
   %% Phase 1 guardrail: stock purchases do NOT go through Expenses.

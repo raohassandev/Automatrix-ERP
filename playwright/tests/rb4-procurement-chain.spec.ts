@@ -82,7 +82,6 @@ test.describe("RB4 - Procurement chain", () => {
         grnNumber: `GRN-E2E-${ts}`,
         purchaseOrderId: poId,
         receivedDate: today,
-        status: "RECEIVED",
         items: [
           {
             purchaseOrderItemId: poItemId,
@@ -96,7 +95,13 @@ test.describe("RB4 - Procurement chain", () => {
     });
     expect(grnRes.ok()).toBeTruthy();
     const grnJson = await grnRes.json();
-    void grnJson;
+    const grnId: string = grnJson.data.id;
+
+    // GRN is DRAFT; post it through lifecycle to create inventory postings.
+    for (const action of ["SUBMIT", "APPROVE", "POST"] as const) {
+      const r = await api.patch(`/api/procurement/grn/${grnId}`, { data: { action } });
+      expect(r.ok()).toBeTruthy();
+    }
 
     // Inventory item quantity should be updated by GRN stock-in.
     const inventoryListRes = await api.get("/api/inventory");
