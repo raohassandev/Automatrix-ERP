@@ -290,3 +290,16 @@ Added a basic but truthful AP Aging report driven by:
 
 ### 12.2 Export API
 - `GET /api/reports/ap/export` (CSV)
+
+---
+
+## 13) CEO Blueprint update (diagrams)
+
+Updated the executive blueprint diagrams to reflect the Phase 1 procurement/AP work that now exists in code:
+- Vendor Bills + Vendor Payments
+- Company Accounts (Cash/Bank attribution)
+- Warehouse (default) + inventory posting traceability
+- AP Aging report fed by posted bills + posted payments allocations
+
+### 13.1 Diagram source
+- `docs/ERP_DIAGRAMS.md` (rendered at `/ceo/blueprint`)

@@ -51,9 +51,13 @@ mindmap
     Procurement/Store
       Purchase Orders
       Goods Receipts (GRN)
+      Vendor Bills (AP)
+      Vendor Payments (AP)
+      Company Accounts (Cash/Bank)
       Vendor Records
     Inventory
       Items
+      Warehouse (Default: Main)
       Ledger (Stock In/Out)
       Last Purchase Price
       Avg Cost
@@ -64,6 +68,7 @@ mindmap
       Commissions
     Reports
       Expenses
+      AP Aging
       Inventory
       Wallets
       Projects
@@ -94,10 +99,13 @@ flowchart LR
   subgraph Procurement
     PO[Purchase Order]
     GRN[Goods Receipt]
+    BILL[Vendor Bill]
+    VPAY[Vendor Payment]
+    CACCT[Company Account (Cash/Bank)]
   end
 
   subgraph Inventory
-    INV[Inventory Ledger]
+    INV[Inventory Ledger (warehouse + source trace)]
   end
 
   subgraph CRM
@@ -119,10 +127,19 @@ flowchart LR
   COMM --> EXP
 
   PO --> GRN --> INV
+  GRN --> BILL --> VPAY --> CACCT
 
   QUO --> INVCE --> EXP
 
   APR --> PAY
   APR --> INC
   APR --> COMM
+  APR --> BILL
+  APR --> VPAY
+
+  subgraph Reports
+    AP[AP Aging Report]
+  end
+  BILL --> AP
+  VPAY --> AP
 ```
