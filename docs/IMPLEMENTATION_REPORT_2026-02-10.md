@@ -335,3 +335,10 @@ Files:
 - `src/components/ExpenseForm.tsx`
 - `src/app/expenses/page.tsx`
 - `src/components/ExpenseActions.tsx`
+
+### 14.3 Staging deploy (Hostinger VPS)
+- Deployed `dev` commit: `b2941c0`
+- Backup created before deploy actions:
+  - `/var/backups/automatrix-erp/automatrix_erp_staging_20260210-183227.dump`
+- Migrations:
+  - `prisma migrate deploy` found **no pending migrations**
