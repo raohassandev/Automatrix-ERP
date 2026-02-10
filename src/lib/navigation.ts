@@ -15,6 +15,7 @@ import {
   Settings,
   Tags,
   Shield,
+  Receipt,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -73,6 +74,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { name: "Purchase Orders", href: "/procurement/purchase-orders", icon: FileText, permissions: ["procurement.view_all", "procurement.edit"] },
       { name: "Goods Receipts", href: "/procurement/grn", icon: FileCheck, permissions: ["procurement.view_all", "procurement.edit"] },
+      { name: "Vendor Bills", href: "/procurement/vendor-bills", icon: Receipt, permissions: ["procurement.view_all", "procurement.edit"] },
+      { name: "Vendor Payments", href: "/procurement/vendor-payments", icon: CreditCard, permissions: ["procurement.view_all", "procurement.edit"] },
       { name: "Vendors", href: "/vendors", icon: Building2, permissions: ["vendors.view_all"] },
     ],
   },

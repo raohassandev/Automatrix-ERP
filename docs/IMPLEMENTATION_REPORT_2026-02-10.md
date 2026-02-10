@@ -215,3 +215,40 @@ All create/update/delete actions write audit log entries:
 - `CREATE_COMPANY_ACCOUNT`
 - `UPDATE_COMPANY_ACCOUNT`
 - `DELETE_COMPANY_ACCOUNT`
+
+---
+
+## 10) Phase 1 (M1) — Vendor Bills + Vendor Payments (AP subledger-lite)
+
+Implemented minimal but ERP-aligned AP flows:
+- Vendor Bills (multi-line)
+- Vendor Payments (with allocations to bills)
+- Lifecycle actions: `DRAFT -> SUBMITTED -> APPROVED -> POSTED` (and `VOID`)
+
+### 10.1 API routes
+- Vendor Bills:
+  - `GET /api/procurement/vendor-bills`
+  - `POST /api/procurement/vendor-bills`
+  - `GET /api/procurement/vendor-bills/[id]`
+  - `PATCH /api/procurement/vendor-bills/[id]` (edit DRAFT + lifecycle actions)
+  - `DELETE /api/procurement/vendor-bills/[id]` (DRAFT only)
+- Vendor Payments:
+  - `GET /api/procurement/vendor-payments`
+  - `POST /api/procurement/vendor-payments`
+  - `GET /api/procurement/vendor-payments/[id]`
+  - `PATCH /api/procurement/vendor-payments/[id]` (edit DRAFT + lifecycle actions + posting validation)
+  - `DELETE /api/procurement/vendor-payments/[id]` (DRAFT only)
+
+### 10.2 Posting validation (payments)
+- On POST action, server enforces:
+  - payment must be `APPROVED`
+  - allocations can reference only `POSTED` bills
+  - allocations cannot overpay a bill (considers already `POSTED` payments)
+
+### 10.3 Approvals policy (interim)
+For Phase 1, Vendor Bills/Payments reuse the existing **expense** approval matrix via `canUserApprove(module=\"expense\")`.
+This keeps approvals role-assignable without schema changes to the approvals engine yet.
+
+### 10.4 UI pages added (Procurement)
+- `/procurement/vendor-bills` (list + create/edit + lifecycle actions)
+- `/procurement/vendor-payments` (list + create/edit + allocations + lifecycle actions)
