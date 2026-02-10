@@ -252,3 +252,25 @@ This keeps approvals role-assignable without schema changes to the approvals eng
 ### 10.4 UI pages added (Procurement)
 - `/procurement/vendor-bills` (list + create/edit + lifecycle actions)
 - `/procurement/vendor-payments` (list + create/edit + allocations + lifecycle actions)
+
+---
+
+## 11) Phase 1 (M1) — Posting traceability + default warehouse (InventoryLedger)
+
+Aligned inventory posting creation with SOP non-negotiables by populating posting trace fields and warehouse attribution where we create inventory ledger entries.
+
+### 11.1 Default warehouse selection
+All new InventoryLedger postings now assign `warehouseId` using the default warehouse (`Warehouse.isDefault = true`).
+
+### 11.2 Posting trace fields populated
+For new InventoryLedger entries created via:
+- GRN (Goods Receipts): `sourceType="GRN"`, `sourceId=<receiptId>`, `postedById=<user>`, `postedAt=<receivedDate>`
+- Expense -> Inventory stock-in: `sourceType="EXPENSE_INVENTORY"`, `sourceId=<expenseId>`, `postedById=<user>`, `postedAt=now`
+- Manual ledger adjustments API: `sourceType="INVENTORY_LEDGER_MANUAL"`, `sourceId=<ledger.id>`, `postedById=<user>`, `postedAt=now`
+
+### 11.3 Code points updated
+- `src/app/api/procurement/grn/route.ts` (stock-in postings)
+- `src/app/api/procurement/grn/[id]/route.ts` (stock-in postings)
+- `src/app/api/expenses/route.ts` (expense-driven stock-in postings)
+- `src/app/api/inventory/ledger/route.ts` (manual ledger postings)
+- Added helper: `src/lib/warehouses.ts` (`ensureDefaultWarehouseId`)

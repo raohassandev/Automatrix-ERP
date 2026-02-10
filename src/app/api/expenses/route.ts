@@ -10,6 +10,7 @@ import { createNotification } from '@/lib/notifications';
 import { Prisma } from '@prisma/client';
 import { sanitizeString } from '@/lib/sanitize';
 import { resolveProjectId } from '@/lib/projects';
+import { ensureDefaultWarehouseId } from "@/lib/warehouses";
 
 async function checkDuplicateExpense(input: { amount: number; description: string; date: string }) {
   const date = new Date(input.date);
@@ -400,10 +401,12 @@ export async function POST(req: Request) {
         const nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
         const total = qtyChange * effectiveCost;
 
+        const defaultWarehouseId = await ensureDefaultWarehouseId(tx);
         const ledger = await tx.inventoryLedger.create({
           data: {
             date: new Date(),
             itemId: item.id,
+            warehouseId: defaultWarehouseId,
             type: 'PURCHASE',
             quantity: new Prisma.Decimal(qtyChange),
             unitCost: new Prisma.Decimal(effectiveCost),
@@ -412,6 +415,10 @@ export async function POST(req: Request) {
             project: resolvedProjectId || undefined,
             userId: session.user.id,
             runningBalance: new Prisma.Decimal(newQty),
+            sourceType: "EXPENSE_INVENTORY",
+            sourceId: created.id,
+            postedById: session.user.id,
+            postedAt: new Date(),
           },
         });
 

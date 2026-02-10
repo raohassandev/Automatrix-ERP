@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { resolveProjectId } from "@/lib/projects";
+import { ensureDefaultWarehouseId } from "@/lib/warehouses";
 
 type PurchaseOrderItem = {
   id: string;
@@ -124,6 +125,7 @@ async function applyInventoryStockIn(
   };
 
   const missingItems: string[] = [];
+  const defaultWarehouseId = await ensureDefaultWarehouseId(tx);
 
   for (const item of items) {
     const key = normalizeKey(item.itemName);
@@ -151,6 +153,7 @@ async function applyInventoryStockIn(
       data: {
         date: new Date(receivedDate),
         itemId: inventoryItem.id,
+        warehouseId: defaultWarehouseId,
         type: "PURCHASE",
         quantity: new Prisma.Decimal(qtyChange),
         unitCost: new Prisma.Decimal(effectiveCost),
@@ -159,6 +162,10 @@ async function applyInventoryStockIn(
         project: resolvedProject || undefined,
         userId,
         runningBalance: new Prisma.Decimal(newQty),
+        sourceType: "GRN",
+        sourceId: receiptId,
+        postedById: userId,
+        postedAt: new Date(receivedDate),
       },
     });
 

@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { resolveProjectId } from "@/lib/projects";
+import { ensureDefaultWarehouseId } from "@/lib/warehouses";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -67,10 +68,12 @@ export async function POST(req: Request) {
   const total = Math.abs(qtyChange) * effectiveCost;
 
   const result = await prisma.$transaction(async (tx) => {
+    const defaultWarehouseId = await ensureDefaultWarehouseId(tx);
     const ledger = await tx.inventoryLedger.create({
       data: {
         date: new Date(),
         itemId,
+        warehouseId: defaultWarehouseId,
         type,
         quantity: new Prisma.Decimal(qtyChange),
         unitCost: new Prisma.Decimal(effectiveCost),
@@ -79,7 +82,16 @@ export async function POST(req: Request) {
         project: resolvedProjectId || undefined,
         userId: session.user.id,
         runningBalance: new Prisma.Decimal(newQty),
+        sourceType: "INVENTORY_LEDGER_MANUAL",
+        // We'll set sourceId to the entry id in a follow-up update (see below).
+        postedById: session.user.id,
+        postedAt: new Date(),
       },
+    });
+
+    await tx.inventoryLedger.update({
+      where: { id: ledger.id },
+      data: { sourceId: ledger.id },
     });
 
     const updatedItem = await tx.inventoryItem.update({
