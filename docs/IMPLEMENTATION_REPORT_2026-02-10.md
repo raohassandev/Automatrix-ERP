@@ -520,3 +520,22 @@ Files:
 - `src/app/api/me/wallet/export/route.ts`
 - `src/app/api/me/payroll/export/route.ts`
 - `src/app/api/me/incentives/export/route.ts`
+
+---
+
+## 21) Procurement approvals policy module (Phase 1 alignment)
+
+Fixed a policy mismatch: Vendor Bills/Payments were using the **expense** approval policy module.
+Phase 1 requires procurement approvals to be independently assignable (role-based) and auditable.
+
+Change:
+- Added approval module: `procurement` (code-only; DB model already supports arbitrary `module` strings).
+- Default thresholds reuse expense thresholds; default allowed roles:
+  - L1: Procurement + finance/executives
+  - L2/L3: finance/executives
+- Vendor Bill and Vendor Payment approval checks now use `module: "procurement"`.
+
+Files:
+- `src/lib/approval-policies.ts`
+- `src/app/api/procurement/vendor-bills/[id]/route.ts`
+- `src/app/api/procurement/vendor-payments/[id]/route.ts`

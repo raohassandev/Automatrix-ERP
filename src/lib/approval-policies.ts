@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { EXPENSE_APPROVAL_LEVELS, INCOME_APPROVAL_LEVELS } from "@/lib/constants";
 import type { ApprovalLevel as ExpenseApprovalLevel } from "@/lib/approvals";
 
-export type ApprovalModule = "expense" | "income";
+// Phase 1: approvals apply to expense/income and money-moving procurement docs.
+export type ApprovalModule = "expense" | "income" | "procurement";
 export type ApprovalLevel = ExpenseApprovalLevel;
 
 type DefaultPolicy = {
@@ -23,6 +24,13 @@ const DEFAULT_ROLES: Record<ApprovalModule, Record<ApprovalLevel, string[]>> = {
   income: {
     L1: ["Finance Manager", "CFO", "CEO", "Owner", "Admin"],
     L2: ["CEO", "Owner", "Admin"],
+    L3: ["CEO", "Owner", "Admin"],
+  },
+  procurement: {
+    // Defaults: L1 = procurement/department lead; L2/L3 = finance/executive.
+    // Admin can reassign via Approval Policies UI.
+    L1: ["Procurement", "Finance Manager", "CFO", "CEO", "Owner", "Admin"],
+    L2: ["Finance Manager", "CFO", "CEO", "Owner", "Admin"],
     L3: ["CEO", "Owner", "Admin"],
   },
 };
@@ -50,7 +58,19 @@ function buildDefaultPolicies(): DefaultPolicy[] {
     };
   });
 
-  return [...expensePolicies, ...incomePolicies];
+  // Procurement uses the same thresholds as expenses (money moving).
+  const procurementPolicies: DefaultPolicy[] = EXPENSE_APPROVAL_LEVELS.map((level, idx) => {
+    const minAmount = idx === 0 ? 0 : EXPENSE_APPROVAL_LEVELS[idx - 1]?.max ?? 0;
+    return {
+      module: "procurement",
+      level: level.level,
+      minAmount,
+      maxAmount: Number.isFinite(level.max) ? level.max : null,
+      roleNames: DEFAULT_ROLES.procurement[level.level],
+    };
+  });
+
+  return [...expensePolicies, ...incomePolicies, ...procurementPolicies];
 }
 
 export async function ensureApprovalPolicies() {

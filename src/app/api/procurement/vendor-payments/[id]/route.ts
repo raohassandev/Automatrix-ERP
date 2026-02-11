@@ -139,7 +139,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
         return NextResponse.json({ success: false, error: "Only SUBMITTED payments can be approved." }, { status: 400 });
       }
       const amount = Number(existing.amount);
-      const { canApprove, reason } = await canUserApprove(session.user.id, { module: "expense", amount });
+      const { canApprove, reason } = await canUserApprove(session.user.id, { module: "procurement", amount });
       if (!canApprove) {
         return NextResponse.json({ success: false, error: reason || "Not allowed to approve this amount." }, { status: 403 });
       }
