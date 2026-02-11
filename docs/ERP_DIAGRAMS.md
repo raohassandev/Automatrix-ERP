@@ -53,6 +53,7 @@ mindmap
         AP Aging (from bills + posted allocations)
         Inventory On-hand (from item master + ledger)
         GRN Activity (from InventoryLedger sourceType=GRN)
+        Procurement Stock-in Report (from InventoryLedger only; expenses excluded)
         Approval/Queue counts (from SUBMITTED docs)
         Exceptions (blocked actions, missing items)
     Phase 1 Non-Spine / Legacy (read-only or limited)

@@ -113,3 +113,39 @@ Release-blockers (still pending):
 2. Phase 1 reports pack (AP aging, inventory on-hand/value, GRN activity, approvals queue, exceptions)
 3. Posting immutability: ensure all POSTED docs reject value-bearing edits server-side + audit
 
+---
+
+## 8) Update — Phase 1 completion pass (Dashboards + Reports + Immutability)
+
+### 8.1 POSTED immutability enforcement (blocked edits are audited)
+Added audit entries when users attempt field edits in non-DRAFT status:
+- `src/app/api/procurement/purchase-orders/[id]/route.ts`
+- `src/app/api/procurement/grn/[id]/route.ts`
+- `src/app/api/procurement/vendor-bills/[id]/route.ts`
+- `src/app/api/procurement/vendor-payments/[id]/route.ts`
+
+Audit action used: `BLOCK_EDIT_NON_DRAFT`
+
+### 8.2 Procurement report aligned to single-spine (no Expenses proxy)
+Procurement report now shows **only stock-in truth** from `InventoryLedger` (GRN postings):
+- `src/app/reports/procurement/page.tsx`
+- `src/app/api/reports/procurement/export/route.ts` now supports only `type=ledger` / `type=stockin` and rejects expense exports.
+
+### 8.3 CEO dashboard approval queue aligned to Phase 1 scope
+Removed Income/Expense approval queue counts from CEO dashboard (Phase 1 focuses on procurement spine):
+- `src/app/ceo/dashboard/page.tsx`
+
+### 8.4 /dashboard made Phase-1 safe (no prototype “profit” metrics)
+Dashboard is now navigation-first and links to truthful KPI surfaces:
+- `src/app/dashboard/page.tsx`
+
+### 8.5 Reports landing page aligned to Phase 1 truth sources
+Reports overview now highlights Phase 1 spine reports and clearly labels non-spine reports as Legacy:
+- `src/app/reports/page.tsx`
+
+### 8.6 Verification run
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+```
