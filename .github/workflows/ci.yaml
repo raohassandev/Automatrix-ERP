@@ -11,6 +11,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: automatrix_erp_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d automatrix_erp_e2e"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout repository
@@ -33,7 +46,7 @@ jobs:
       - name: Prisma generate (types)
         run: pnpm prisma:generate
         env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/automatrix_erp_ci?schema=public
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public
 
       - name: Lint
         run: pnpm lint
@@ -41,7 +54,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
         env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/automatrix_erp_ci?schema=public
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public
 
       - name: Unit tests
         run: pnpm test
@@ -49,10 +62,22 @@ jobs:
       - name: Import case check (Linux parity)
         run: pnpm check:import-case
 
+      - name: Install Playwright browsers (Chromium)
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Build
         run: pnpm build
         env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/automatrix_erp_ci?schema=public
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public
+          NEXTAUTH_URL: http://localhost:3000
+          AUTH_SECRET: ci-secret
+          GOOGLE_CLIENT_ID: dummy
+          GOOGLE_CLIENT_SECRET: dummy
+
+      - name: E2E (RB4 procurement chain, production-like)
+        run: pnpm test:e2e:prod
+        env:
+          E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public
           NEXTAUTH_URL: http://localhost:3000
           AUTH_SECRET: ci-secret
           GOOGLE_CLIENT_ID: dummy
