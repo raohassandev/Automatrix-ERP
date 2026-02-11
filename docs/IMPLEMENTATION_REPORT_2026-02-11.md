@@ -452,3 +452,65 @@ Run (requires disposable DB):
 export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
 pnpm test:e2e:prod -- project-workhub-actions
 ```
+
+---
+
+## Vendor + Item Work Hub (Phase 1)
+
+### Vendor Detail Work Hub (`/vendors/[id]`)
+Added an `Actions` menu to Vendor Detail to start Phase 1 document flows (no ad-hoc finance logic) and to add safe notes/attachments.
+
+Actions (Phase 1 safe):
+- Create PO for this Vendor (opens PO create dialog with vendor prefilled)
+- Create Vendor Bill for this Vendor (opens Vendor Bill create dialog with vendor prefilled)
+- Record Vendor Payment (Finance/Owner only)
+- Add Vendor Note (audited)
+- Add Vendor Attachment (URL-only, audited)
+
+Server APIs (RBAC enforced server-side):
+- `POST /api/vendors/[id]/notes` -> audit: `VENDOR_NOTE_ADD`
+- `POST /api/vendors/[id]/attachments` -> create `Attachment(type=vendor)` + audit: `VENDOR_ATTACHMENT_ADD`
+
+RBAC matrix (default):
+- Finance/Owner: all actions
+- Procurement: PO/Bill + note/attachment (no Payment unless finance role)
+- Sales/Marketing/Engineer/Store/Technician: note/attachment only
+
+Implementation:
+- UI: `src/app/vendors/[id]/VendorDetailClient.tsx`
+- Policy: `src/lib/vendor-workhub-policy.ts`
+- APIs: `src/app/api/vendors/[id]/notes/route.ts`, `src/app/api/vendors/[id]/attachments/route.ts`
+
+### Item Detail Work Hub (`/inventory/items/[id]`)
+Added an `Actions` menu to Item Detail for Phase 1 safe actions.
+
+Actions (Phase 1 safe):
+- Start Purchase Order with this Item (Procurement/Finance only; prefilled as the first line item)
+- Add Item Note (audited)
+- Add Item Attachment (URL-only, audited)
+
+Server APIs (RBAC enforced server-side):
+- `POST /api/inventory/items/[id]/notes` -> audit: `ITEM_NOTE_ADD`
+- `POST /api/inventory/items/[id]/attachments` -> create `Attachment(type=inventory_item)` + audit: `ITEM_ATTACHMENT_ADD`
+
+RBAC matrix (default):
+- Procurement/Finance: all actions
+- Store/Technician/Engineer/Sales: note/attachment only (no PO action)
+
+Implementation:
+- UI: `src/app/inventory/items/[id]/ItemDetailClient.tsx`
+- Policy: `src/lib/item-workhub-policy.ts`
+- APIs: `src/app/api/inventory/items/[id]/notes/route.ts`, `src/app/api/inventory/items/[id]/attachments/route.ts`
+
+### Playwright E2E (RBAC + API-negative + mobile)
+- Added: `playwright/tests/vendor-item-workhub-actions.spec.ts`
+  - Vendor: finance sees Payment action; engineer/store do not
+  - Item: finance sees Start PO action; store does not
+  - API-negative: sales cannot create vendor payment (403); store cannot create PO (403)
+  - Mobile smoke (iPhone 13): Vendor + Item actions menus open
+
+Run (requires disposable DB):
+```bash
+export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod -- vendor-item-workhub-actions
+```

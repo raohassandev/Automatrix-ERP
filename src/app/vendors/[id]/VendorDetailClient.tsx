@@ -4,6 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import type { VendorDetailData, VendorDetailTab } from "@/lib/vendor-detail-policy";
+import { buildVendorWorkhubPolicy } from "@/lib/vendor-workhub-policy";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { FormDialog } from "@/components/FormDialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
+import { VendorBillFormDialog } from "@/components/VendorBillFormDialog";
+import { VendorPaymentFormDialog } from "@/components/VendorPaymentFormDialog";
 
 function tabLabel(tab: VendorDetailTab) {
   switch (tab) {
@@ -23,6 +33,16 @@ function tabLabel(tab: VendorDetailTab) {
 export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
   const tabs = (Object.keys(detail.policy.tabs) as VendorDetailTab[]).filter((t) => detail.policy.tabs[t]);
   const [active, setActive] = React.useState<VendorDetailTab>(tabs[0] || "activity");
+  const workhub = buildVendorWorkhubPolicy(detail.policy.role);
+
+  const [poOpen, setPoOpen] = React.useState(false);
+  const [billOpen, setBillOpen] = React.useState(false);
+  const [paymentOpen, setPaymentOpen] = React.useState(false);
+  const [noteOpen, setNoteOpen] = React.useState(false);
+  const [attachmentOpen, setAttachmentOpen] = React.useState(false);
+
+  const [note, setNote] = React.useState("");
+  const [attachment, setAttachment] = React.useState({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
 
   React.useEffect(() => {
     if (!detail.policy.tabs[active]) {
@@ -30,6 +50,34 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail.policy.role]);
+
+  async function addNote() {
+    const res = await fetch(`/api/vendors/${detail.header.id}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || "Failed to add note");
+  }
+
+  async function addAttachment() {
+    const payload = {
+      fileName: attachment.fileName,
+      url: attachment.url,
+      mimeType: attachment.mimeType || undefined,
+      sizeBytes: attachment.sizeBytes ? Number(attachment.sizeBytes) : undefined,
+    };
+    const res = await fetch(`/api/vendors/${detail.header.id}/attachments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || "Failed to add attachment");
+  }
+
+  const anyActions = Object.values(workhub.actions).some(Boolean);
 
   return (
     <div className="grid gap-6">
@@ -64,8 +112,157 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
           <div className="text-xs text-muted-foreground">
             Role: <span className="font-medium text-foreground">{detail.policy.role}</span>
           </div>
+          {anyActions ? (
+            <div className="md:ml-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {workhub.actions.create_po ? (
+                    <DropdownMenuItem onSelect={() => setPoOpen(true)}>Create PO for this Vendor</DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.create_vendor_bill ? (
+                    <DropdownMenuItem onSelect={() => setBillOpen(true)}>Create Vendor Bill for this Vendor</DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.record_vendor_payment ? (
+                    <DropdownMenuItem onSelect={() => setPaymentOpen(true)}>Record Vendor Payment</DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.add_note ? (
+                    <DropdownMenuItem onSelect={() => setNoteOpen(true)}>Add Vendor Note</DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.add_attachment ? (
+                    <DropdownMenuItem onSelect={() => setAttachmentOpen(true)}>Add Vendor Attachment (URL)</DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : null}
         </div>
       </div>
+
+      {/* Work Hub dialogs (Phase 1 safe; no ad-hoc posting logic) */}
+      <PurchaseOrderFormDialog
+        open={poOpen}
+        onOpenChange={setPoOpen}
+        initialVendorId={detail.header.id}
+        initialVendorName={detail.header.name}
+      />
+      <VendorBillFormDialog
+        open={billOpen}
+        onOpenChange={setBillOpen}
+        initialVendorId={detail.header.id}
+      />
+      <VendorPaymentFormDialog
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        initialVendorId={detail.header.id}
+      />
+
+      <FormDialog open={noteOpen} onOpenChange={setNoteOpen} title="Add Vendor Note" description="Notes are stored as audited events (Phase 1).">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            (async () => {
+              try {
+                await addNote();
+                toast.success("Note added");
+                setNote("");
+                setNoteOpen(false);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to add note");
+              }
+            })();
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-2">
+            <Label htmlFor="vendorNote">Note</Label>
+            <textarea
+              id="vendorNote"
+              className="min-h-[120px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Write a short vendor note..."
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setNoteOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add</Button>
+          </div>
+        </form>
+      </FormDialog>
+
+      <FormDialog open={attachmentOpen} onOpenChange={setAttachmentOpen} title="Add Vendor Attachment (URL)" description="URL-only attachments (Phase 1).">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            (async () => {
+              try {
+                await addAttachment();
+                toast.success("Attachment added");
+                setAttachment({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
+                setAttachmentOpen(false);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to add attachment");
+              }
+            })();
+          }}
+          className="space-y-4"
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="venAttUrl">URL</Label>
+              <Input
+                id="venAttUrl"
+                value={attachment.url}
+                onChange={(e) => setAttachment((p) => ({ ...p, url: e.target.value }))}
+                placeholder="https://..."
+                required
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="venAttName">File name</Label>
+              <Input
+                id="venAttName"
+                value={attachment.fileName}
+                onChange={(e) => setAttachment((p) => ({ ...p, fileName: e.target.value }))}
+                placeholder="invoice.pdf"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="venAttMime">MIME type (optional)</Label>
+              <Input
+                id="venAttMime"
+                value={attachment.mimeType}
+                onChange={(e) => setAttachment((p) => ({ ...p, mimeType: e.target.value }))}
+                placeholder="application/pdf"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="venAttSize">Size bytes (optional)</Label>
+              <Input
+                id="venAttSize"
+                value={attachment.sizeBytes}
+                onChange={(e) => setAttachment((p) => ({ ...p, sizeBytes: e.target.value }))}
+                placeholder="12345"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setAttachmentOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add</Button>
+          </div>
+        </form>
+      </FormDialog>
 
       {/* Tabs: buttons on desktop, select on mobile */}
       <div className="rounded-xl border bg-card p-4 shadow-sm">
@@ -311,4 +508,3 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
     </div>
   );
 }
-

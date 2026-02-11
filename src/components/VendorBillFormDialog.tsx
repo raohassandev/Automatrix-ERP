@@ -76,11 +76,13 @@ export function VendorBillFormDialog({
   onOpenChange,
   billId,
   initialProjectRef,
+  initialVendorId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   billId?: string;
   initialProjectRef?: string;
+  initialVendorId?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -106,7 +108,7 @@ export function VendorBillFormDialog({
       setSelectedGrnId("");
       setForm({
         billNumber: "",
-        vendorId: "",
+        vendorId: initialVendorId || "",
         projectRef: initialProjectRef || "",
         billDate: new Date().toISOString().slice(0, 10),
         dueDate: "",

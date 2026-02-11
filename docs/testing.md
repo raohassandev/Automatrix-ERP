@@ -84,6 +84,19 @@ Expected outcomes:
 - Sales sees availability-only (On-hand tab only).
 - Store cannot open `/employees/[id]` (forbidden).
 
+## Vendor + Item Work Hub E2E (RBAC + API-negative + mobile)
+
+Covers:
+- Vendor Detail Work Hub actions (`/vendors/[id]`)
+- Item Detail Work Hub actions (`/inventory/items/[id]`)
+- API-negative permission checks for finance-only/procurement-only actions
+- Mobile smoke (iPhone 13): actions menus open
+
+Run:
+```bash
+pnpm test:e2e:prod -- vendor-item-workhub-actions
+```
+
 ## Seeding test role users (dev/staging only)
 
 Optional seed path (explicit, never implicit):

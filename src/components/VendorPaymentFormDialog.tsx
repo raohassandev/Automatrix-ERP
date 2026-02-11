@@ -56,10 +56,12 @@ export function VendorPaymentFormDialog({
   open,
   onOpenChange,
   paymentId,
+  initialVendorId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   paymentId?: string;
+  initialVendorId?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -72,7 +74,7 @@ export function VendorPaymentFormDialog({
 
   const [form, setForm] = useState({
     paymentNumber: "",
-    vendorId: "",
+    vendorId: initialVendorId || "",
     projectRef: "",
     paymentDate: new Date().toISOString().slice(0, 10),
     companyAccountId: "",

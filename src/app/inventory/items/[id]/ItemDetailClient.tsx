@@ -4,6 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import type { ItemDetailData, ItemDetailTab } from "@/lib/item-detail-policy";
+import { buildItemWorkhubPolicy } from "@/lib/item-workhub-policy";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { FormDialog } from "@/components/FormDialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
 
 function tabLabel(tab: ItemDetailTab) {
   switch (tab) {
@@ -21,6 +29,13 @@ function tabLabel(tab: ItemDetailTab) {
 export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
   const tabs = (Object.keys(detail.policy.tabs) as ItemDetailTab[]).filter((t) => detail.policy.tabs[t]);
   const [active, setActive] = React.useState<ItemDetailTab>(tabs[0] || "onhand");
+  const workhub = buildItemWorkhubPolicy(detail.policy.role);
+
+  const [poOpen, setPoOpen] = React.useState(false);
+  const [noteOpen, setNoteOpen] = React.useState(false);
+  const [attachmentOpen, setAttachmentOpen] = React.useState(false);
+  const [note, setNote] = React.useState("");
+  const [attachment, setAttachment] = React.useState({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
 
   React.useEffect(() => {
     if (!detail.policy.tabs[active]) {
@@ -28,6 +43,34 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail.policy.role]);
+
+  async function addNote() {
+    const res = await fetch(`/api/inventory/items/${detail.header.id}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || "Failed to add note");
+  }
+
+  async function addAttachment() {
+    const payload = {
+      fileName: attachment.fileName,
+      url: attachment.url,
+      mimeType: attachment.mimeType || undefined,
+      sizeBytes: attachment.sizeBytes ? Number(attachment.sizeBytes) : undefined,
+    };
+    const res = await fetch(`/api/inventory/items/${detail.header.id}/attachments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || "Failed to add attachment");
+  }
+
+  const anyActions = Object.values(workhub.actions).some(Boolean);
 
   const prevLedgerHref =
     detail.ledger.page > 1 ? `/inventory/items/${detail.header.id}?ledgerPage=${detail.ledger.page - 1}` : null;
@@ -53,8 +96,143 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
           <div className="text-xs text-muted-foreground">
             Role: <span className="font-medium text-foreground">{detail.policy.role}</span>
           </div>
+          {anyActions ? (
+            <div className="md:ml-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {workhub.actions.start_po_with_item ? (
+                    <DropdownMenuItem onSelect={() => setPoOpen(true)}>
+                      Start Purchase Order with this Item
+                    </DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.add_note ? (
+                    <DropdownMenuItem onSelect={() => setNoteOpen(true)}>Add Item Note</DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.add_attachment ? (
+                    <DropdownMenuItem onSelect={() => setAttachmentOpen(true)}>
+                      Add Item Attachment (URL)
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : null}
         </div>
       </div>
+
+      <PurchaseOrderFormDialog
+        open={poOpen}
+        onOpenChange={setPoOpen}
+        initialItem={{ itemName: detail.header.name, unit: detail.header.unit, quantity: 1, unitCost: 0 }}
+      />
+
+      <FormDialog open={noteOpen} onOpenChange={setNoteOpen} title="Add Item Note" description="Notes are stored as audited events (Phase 1).">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            (async () => {
+              try {
+                await addNote();
+                toast.success("Note added");
+                setNote("");
+                setNoteOpen(false);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to add note");
+              }
+            })();
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-2">
+            <Label htmlFor="itemNote">Note</Label>
+            <textarea
+              id="itemNote"
+              className="min-h-[120px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Write a short item note..."
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setNoteOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add</Button>
+          </div>
+        </form>
+      </FormDialog>
+
+      <FormDialog open={attachmentOpen} onOpenChange={setAttachmentOpen} title="Add Item Attachment (URL)" description="URL-only attachments (Phase 1).">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            (async () => {
+              try {
+                await addAttachment();
+                toast.success("Attachment added");
+                setAttachment({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
+                setAttachmentOpen(false);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to add attachment");
+              }
+            })();
+          }}
+          className="space-y-4"
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="itmAttUrl">URL</Label>
+              <Input
+                id="itmAttUrl"
+                value={attachment.url}
+                onChange={(e) => setAttachment((p) => ({ ...p, url: e.target.value }))}
+                placeholder="https://..."
+                required
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="itmAttName">File name</Label>
+              <Input
+                id="itmAttName"
+                value={attachment.fileName}
+                onChange={(e) => setAttachment((p) => ({ ...p, fileName: e.target.value }))}
+                placeholder="spec.pdf"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="itmAttMime">MIME type (optional)</Label>
+              <Input
+                id="itmAttMime"
+                value={attachment.mimeType}
+                onChange={(e) => setAttachment((p) => ({ ...p, mimeType: e.target.value }))}
+                placeholder="application/pdf"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="itmAttSize">Size bytes (optional)</Label>
+              <Input
+                id="itmAttSize"
+                value={attachment.sizeBytes}
+                onChange={(e) => setAttachment((p) => ({ ...p, sizeBytes: e.target.value }))}
+                placeholder="12345"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setAttachmentOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add</Button>
+          </div>
+        </form>
+      </FormDialog>
 
       {/* Tabs: buttons on desktop, select on mobile */}
       <div className="rounded-xl border bg-card p-4 shadow-sm">
@@ -272,4 +450,3 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
     </div>
   );
 }
-

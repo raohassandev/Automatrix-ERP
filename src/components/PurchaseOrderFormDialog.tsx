@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,9 @@ type PurchaseOrderFormDialogProps = {
   onOpenChange: (open: boolean) => void;
   purchaseOrder?: PurchaseOrder | null;
   initialProjectRef?: string;
+  initialVendorId?: string;
+  initialVendorName?: string;
+  initialItem?: PurchaseOrderItem;
 };
 
 const buildInitialForm = (
@@ -87,13 +90,31 @@ function PurchaseOrderFormDialogInner({
   onOpenChange,
   purchaseOrder,
   initialProjectRef,
+  initialVendorId,
+  initialVendorName,
+  initialItem,
 }: PurchaseOrderFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
   const [vendorRefreshKey, setVendorRefreshKey] = useState(0);
   const [form, setForm] = useState(() => buildInitialForm(purchaseOrder, initialProjectRef));
-  const [items, setItems] = useState<PurchaseOrderItem[]>(() => buildInitialItems(purchaseOrder));
+  const [items, setItems] = useState<PurchaseOrderItem[]>(() =>
+    purchaseOrder?.items?.length ? buildInitialItems(purchaseOrder) : initialItem ? [initialItem] : buildInitialItems(purchaseOrder)
+  );
+
+  // Prefill vendor when opening a new PO from a Work Hub.
+  useEffect(() => {
+    if (!open || purchaseOrder) return;
+    if (initialVendorId || initialVendorName) {
+      setForm((prev) => ({
+        ...prev,
+        vendorId: initialVendorId || prev.vendorId,
+        vendorName: initialVendorName || prev.vendorName,
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const updateItem = (index: number, key: keyof PurchaseOrderItem, value: string) => {
     setItems((prev) =>
