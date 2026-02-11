@@ -36,3 +36,27 @@ export E2E_TEST_PASSWORD='e2e'
 - RB4: PO -> GRN -> Vendor Bill -> Vendor Payment (posted) + inventory ledger stock-in
 - Negative: expense stock-in payload must be rejected (Expenses are non-stock only in Phase 1)
 
+## E2E — Project Detail (RBAC + mobile)
+
+This repo also includes role-based E2E coverage for `/projects/[id]`:
+- Tab visibility assertions per role
+- Sensitive field masking (unit costs / totals)
+- Mobile (iPhone 13) navigation + tabs dropdown
+
+Run:
+```bash
+export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod -- project-detail-rbac
+```
+
+## Seeding test role users (dev/staging only)
+
+Optional seed path (explicit, never implicit):
+```bash
+export SEED_TEST_USERS=1
+pnpm prisma:seed
+```
+
+Notes:
+- The seed is guarded and only runs when `SEED_TEST_USERS=1` and the environment is dev/staging.
+- In E2E mode, Playwright login can also bootstrap these users automatically via the E2E Credentials provider.

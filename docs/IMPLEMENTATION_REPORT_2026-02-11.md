@@ -153,3 +153,70 @@ pnpm lint
 pnpm typecheck
 pnpm test
 ```
+
+---
+
+## 9) Detail Pages Pattern (Phase 1) — Project Detail (RBAC + mobile)
+
+### 9.1 Route + navigation
+- New route: `/projects/[id]`
+  - `src/app/projects/[id]/page.tsx`
+- Project list rows are now clickable and navigate to the detail page:
+  - `src/components/ProjectsTable.tsx`
+  - Mobile cards now render the title as a link:
+    - `src/components/MobileCard.tsx`
+
+### 9.2 Data truth sources (Phase 1 spine)
+Project detail is read-first and truth-sourced from:
+- Procurement docs: PO/GRN/VendorBill/VendorPayment (filtered by `projectRef`)
+- Inventory movements: `InventoryLedger` (filtered by `project`)
+- Expenses: shown only as **non-stock costs** (never as inventory movements)
+
+Implementation:
+- `src/lib/project-detail-policy.ts`
+- `src/app/api/projects/[id]/detail/route.ts`
+
+### 9.3 RBAC + masking (enforced twice: server + UI)
+Enforcement points:
+- Server/API: `/api/projects/[id]/detail` returns role-filtered data.
+- UI: tabs and fields render only what policy allows (no client-only hiding).
+
+Policy matrix (Phase 1 default):
+- Finance/Owner (Finance Manager/Admin/CFO/CEO/Owner):
+  - Tabs: Activity, Costs, Inventory, People, Documents
+  - Fields: unitCost + totals visible
+- Engineer/PM (Engineering):
+  - Tabs: Activity, Inventory, People, Documents
+  - Fields: unitCost + totals masked
+- Sales/Marketing (Sales/Marketing):
+  - Tabs: Activity, Documents (docs-only view)
+  - Fields: no costs, no inventory, no people
+- Technician (Staff):
+  - Tabs: Activity, Inventory, Documents
+  - Fields: unitCost + totals masked (qty only)
+- Store (Store Keeper):
+  - Tabs: Activity, Inventory, Documents
+  - Fields: unitCost + totals masked (qty/movements only)
+
+### 9.4 Test users strategy (dev/staging only)
+- Seed option (explicit):
+  - `prisma/seed.js` supports `SEED_TEST_USERS=1` (guarded to dev/staging)
+- E2E login role mapping:
+  - `src/lib/auth.ts` maps specific emails to role names in `E2E_TEST_MODE`
+- Store Keeper permission adjusted to allow assigned project access:
+  - `src/lib/permissions.ts`
+
+### 9.5 Playwright E2E (RBAC + mobile)
+- Added: `playwright/tests/project-detail-rbac.spec.ts`
+  - Logs in as 5 roles, asserts:
+    - allowed tabs visible; disallowed tabs hidden
+    - sensitive fields masked/absent where required
+  - Mobile test (iPhone 13):
+    - `/projects` click -> `/projects/[id]`
+    - tabs dropdown works
+
+Run (requires disposable DB):
+```bash
+export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod -- project-detail-rbac
+```
