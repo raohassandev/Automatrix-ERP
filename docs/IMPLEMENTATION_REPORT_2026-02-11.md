@@ -108,10 +108,14 @@ ssh hostinger-vps 'cd /var/www/automatrix-erp-staging && git log -1 --oneline &&
 
 ## 7) What remains to “complete” Phase 1 (single-spine) per SUPER_MASTER_PLAN.md
 
-Release-blockers (still pending):
-1. CEO dashboard KPIs (truth-source + drilldown only; no “fake aggregates”)
+Previous Phase 1 release-blockers (now completed in section 8):
+1. CEO dashboard KPIs + drilldowns (truth sources only)
 2. Phase 1 reports pack (AP aging, inventory on-hand/value, GRN activity, approvals queue, exceptions)
-3. Posting immutability: ensure all POSTED docs reject value-bearing edits server-side + audit
+3. Posting immutability (server-side) + audit for blocked edits
+
+Remaining work (polish / follow-ups):
+- Expand Playwright E2E coverage beyond RB4 (future), and add more negative cases as new invariants are introduced.
+- Continue reducing/remove Legacy pages that expose prototype metrics without a clear Legacy label.
 
 ---
 
