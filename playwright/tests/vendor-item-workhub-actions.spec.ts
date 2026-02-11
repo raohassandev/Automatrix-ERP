@@ -35,6 +35,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   let itemDbId = "";
   let projectDbId = "";
   let otherUserId = "";
+  let companyAccountId = "";
   const states = {
     engineer: "playwright/.auth/engineer.json",
     procurement: "playwright/.auth/procurement.json",
@@ -100,6 +101,12 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     });
     expect(assignRes.ok()).toBeTruthy();
 
+    const accRes = await api.post("/api/company-accounts", {
+      data: { name: `E2E WH Account ${ts}`, type: "CASH", currency: "PKR", openingBalance: 0, isActive: true },
+    });
+    expect(accRes.ok()).toBeTruthy();
+    companyAccountId = (await accRes.json()).data.id;
+
     await api.dispose();
   });
 
@@ -119,6 +126,47 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const page = await ctx.newPage();
       await page.goto("/dashboard");
       await expect(page.getByRole("link", { name: "Vendor Payments" })).toHaveCount(0);
+      await ctx.close();
+    }
+  });
+
+  test("Company Account Detail: finance-only access + API-negative + mobile smoke", async ({ browser, baseURL }) => {
+    // Finance: can open detail and sees Actions.
+    {
+      const ctx = await browser.newContext({ baseURL, storageState: states.finance });
+      const page = await ctx.newPage();
+      await page.goto(`/company-accounts/${companyAccountId}`);
+      await expect(page.getByRole("button", { name: "Actions" })).toBeVisible();
+      await page.getByRole("button", { name: "Actions" }).click();
+      await expect(page.getByText("Record Vendor Payment")).toBeVisible();
+      await ctx.close();
+    }
+
+    // Restricted roles: forbidden UI.
+    for (const role of ["engineer", "store", "sales", "procurement"] as const) {
+      const ctx = await browser.newContext({ baseURL, storageState: states[role] });
+      const page = await ctx.newPage();
+      await page.goto(`/company-accounts/${companyAccountId}`);
+      await expect(page.getByText("You do not have access to this page.")).toBeVisible();
+      await ctx.close();
+    }
+
+    // API-negative: restricted role gets 403 on detail endpoint.
+    {
+      const api = await request.newContext({ baseURL, storageState: states.engineer });
+      const res = await api.get(`/api/company-accounts/${companyAccountId}/detail`);
+      expect(res.status()).toBe(403);
+      await api.dispose();
+    }
+
+    // Mobile smoke: actions menu opens and tabs dropdown exists.
+    {
+      const ctx = await browser.newContext({ ...devices["iPhone 13"], baseURL, storageState: states.finance });
+      const page = await ctx.newPage();
+      await page.goto(`/company-accounts/${companyAccountId}`);
+      await page.getByRole("button", { name: "Actions" }).click();
+      await expect(page.getByText("Add Account Note")).toBeVisible();
+      await expect(page.getByText("Section")).toBeVisible();
       await ctx.close();
     }
   });

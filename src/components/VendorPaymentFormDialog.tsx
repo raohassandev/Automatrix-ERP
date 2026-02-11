@@ -57,11 +57,13 @@ export function VendorPaymentFormDialog({
   onOpenChange,
   paymentId,
   initialVendorId,
+  initialCompanyAccountId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   paymentId?: string;
   initialVendorId?: string;
+  initialCompanyAccountId?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -77,12 +79,18 @@ export function VendorPaymentFormDialog({
     vendorId: initialVendorId || "",
     projectRef: "",
     paymentDate: new Date().toISOString().slice(0, 10),
-    companyAccountId: "",
+    companyAccountId: initialCompanyAccountId || "",
     method: "",
     amount: 0,
     notes: "",
   });
   const [allocations, setAllocations] = useState<AllocationDraft[]>([]);
+
+  useEffect(() => {
+    if (!paymentId && initialCompanyAccountId) {
+      setForm((prev) => ({ ...prev, companyAccountId: initialCompanyAccountId }));
+    }
+  }, [initialCompanyAccountId, paymentId]);
 
   const allocationSum = useMemo(
     () => allocations.reduce((sum, a) => sum + (Number(a.amount) || 0), 0),

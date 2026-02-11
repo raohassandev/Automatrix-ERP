@@ -571,3 +571,51 @@ Run (requires disposable DB):
 export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
 pnpm test:e2e:prod -- vendor-item-workhub-actions
 ```
+
+## Company Account Detail Work Hub (finance-lite, Phase 1)
+
+### Routes + navigation
+- List: `/company-accounts` (finance-only)
+- Detail: `/company-accounts/[id]` (finance-only)
+
+### API (RBAC enforced server-side)
+- Detail: `GET /api/company-accounts/[id]/detail` (requires `company_accounts.manage`)
+- Work Hub actions:
+  - `POST /api/company-accounts/[id]/notes` -> audit: `COMPANY_ACCOUNT_NOTE_ADD`
+  - `POST /api/company-accounts/[id]/attachments` -> creates `Attachment(type=company_account)` + audit: `COMPANY_ACCOUNT_ATTACHMENT_ADD`
+
+### Truth sources (Phase 1, no GL)
+- Account header from `CompanyAccount`
+- Current balance is **outflow-only**:
+  - `openingBalance - sum(POSTED VendorPayment.amount)` (no inflow/GL in Phase 1)
+- Payments tab from `VendorPayment` filtered by `companyAccountId`
+- Documents tab from current page payments + their allocated `VendorBill` references
+- Notes/attachments history from `AuditLog` (entity=`CompanyAccount`, entityId, actions above)
+
+### Work Hub actions (finance-only)
+- Record Vendor Payment (opens existing Vendor Payment dialog prefilled with `companyAccountId`)
+- Add Account Note (audit-only note event)
+- Add Account Attachment URL (URL-only attachment)
+
+Implementation:
+- Detail policy + payload shaping: `src/lib/company-account-detail-policy.ts`
+- UI:
+  - `src/app/company-accounts/page.tsx`
+  - `src/app/company-accounts/[id]/page.tsx`
+  - `src/app/company-accounts/[id]/CompanyAccountDetailClient.tsx`
+- Vendor Payment dialog prefill:
+  - `src/components/VendorPaymentFormDialog.tsx` (`initialCompanyAccountId`)
+
+### Playwright E2E (added to consolidated spec)
+Updated:
+- `playwright/tests/vendor-item-workhub-actions.spec.ts`
+  - Finance can open Company Account detail and see Actions
+  - Restricted roles get forbidden UI
+  - API-negative: restricted role GET detail returns 403
+  - Mobile smoke (iPhone 13): Actions menu opens + tabs dropdown exists
+
+Run:
+```bash
+export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod -- vendor-item-workhub-actions
+```

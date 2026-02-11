@@ -90,6 +90,7 @@ Covers:
 - Project Detail Work Hub actions (`/projects/[id]`)
 - Vendor Detail Work Hub actions (`/vendors/[id]`)
 - Item Detail Work Hub actions (`/inventory/items/[id]`)
+- Company Account Detail Work Hub (`/company-accounts/[id]`) (finance-only)
 - Employee access checks:
   - `/me` loads for all roles
   - `/employees/[id]` blocked for non-HR/non-Finance roles
@@ -104,6 +105,7 @@ pnpm test:e2e:prod -- vendor-item-workhub-actions
 Expected outcomes:
 - Finance sees procurement + assignment actions on Project and payment action on Vendor.
 - Engineer/Store do not see finance-only actions (payments/assignments/PO create where not allowed).
+- Company Account Detail is finance-only; restricted roles see a forbidden UI and the detail API returns 403.
 
 ## Seeding test role users (dev/staging only)
 
