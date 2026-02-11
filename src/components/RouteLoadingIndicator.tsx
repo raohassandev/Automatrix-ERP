@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 function isInternalAnchor(el: Element | null) {
   if (!el) return null;
@@ -27,7 +27,6 @@ function isInternalAnchor(el: Element | null) {
 
 export function RouteLoadingIndicator() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [active, setActive] = React.useState(false);
 
   // Stop the indicator when the route actually changed.
@@ -36,7 +35,7 @@ export function RouteLoadingIndicator() {
     const t = window.setTimeout(() => setActive(false), 250);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   // Start the indicator on internal link clicks (covers sidebar + row links without changing every Link).
   React.useEffect(() => {
@@ -66,4 +65,3 @@ export function RouteLoadingIndicator() {
     </div>
   );
 }
-
