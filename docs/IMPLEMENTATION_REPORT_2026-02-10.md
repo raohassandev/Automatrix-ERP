@@ -630,3 +630,10 @@ Phase 1 (locked) behavior now:
 ## 4) Notes / known limitations (intentional for Phase 1)
 - `projectRef` columns are nullable to protect legacy/real data already in the DB; API enforces “required for new docs” by rejecting submit/post when missing.
 - Vendor Bill “POST” does not create any ledger entries (Phase 1 accounting is AP allocations only; no GL).
+
+## 5) CI reinforcement (RB4)
+- Updated GitHub Actions CI to run Playwright E2E in production-like mode against a disposable Postgres service DB.
+- This ensures the procurement spine cannot regress silently (PO → GRN → Bill → Payment chain).
+
+File:
+- `.github/workflows/ci.yaml`
