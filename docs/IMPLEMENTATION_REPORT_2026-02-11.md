@@ -517,6 +517,12 @@ pnpm test:e2e:prod -- vendor-item-workhub-actions
 
 ## Work Hub Consistency + Notes History (Phase 1)
 
+### Nav parity fix (sidebar matches server RBAC)
+Updated sidebar permissions so users don't see "Vendor Payments" unless they have finance/AP permission (`company_accounts.manage`). This prevents "click then 403" for non-finance roles.
+
+Implementation:
+- Nav config: `src/lib/navigation.ts` (Vendor Payments now requires `company_accounts.manage`)
+
 ### Vendor Payments RBAC tightening (finance/AP only)
 Aligned the Vendor Work Hub "Record Vendor Payment" action and vendor payment mutation APIs to require finance/AP permission (`company_accounts.manage`) instead of `procurement.edit`.
 

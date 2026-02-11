@@ -2,6 +2,7 @@ import { test, expect, request, devices } from "@playwright/test";
 
 const ROLE_EMAILS = {
   engineer: "engineer1@automatrix.pk",
+  procurement: "procurement1@automatrix.pk",
   sales: "sales1@automatrix.pk",
   store: "store1@automatrix.pk",
   finance: "finance1@automatrix.pk",
@@ -36,6 +37,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   let otherUserId = "";
   const states = {
     engineer: "playwright/.auth/engineer.json",
+    procurement: "playwright/.auth/procurement.json",
     sales: "playwright/.auth/sales.json",
     store: "playwright/.auth/store.json",
     finance: "playwright/.auth/finance.json",
@@ -44,6 +46,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   test.beforeAll(async ({ browser, baseURL }) => {
     await ensureStorageState(browser, baseURL, ROLE_EMAILS.finance, states.finance);
     await ensureStorageState(browser, baseURL, ROLE_EMAILS.engineer, states.engineer);
+    await ensureStorageState(browser, baseURL, ROLE_EMAILS.procurement, states.procurement);
     await ensureStorageState(browser, baseURL, ROLE_EMAILS.sales, states.sales);
     await ensureStorageState(browser, baseURL, ROLE_EMAILS.store, states.store);
 
@@ -98,6 +101,26 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     expect(assignRes.ok()).toBeTruthy();
 
     await api.dispose();
+  });
+
+  test("Sidebar nav parity: Vendor Payments visible to finance only", async ({ browser, baseURL }) => {
+    // Finance: should see Vendor Payments in sidebar.
+    {
+      const ctx = await browser.newContext({ baseURL, storageState: states.finance });
+      const page = await ctx.newPage();
+      await page.goto("/dashboard");
+      await expect(page.getByRole("link", { name: "Vendor Payments" })).toBeVisible();
+      await ctx.close();
+    }
+
+    // Procurement/Engineer/Store: should not see Vendor Payments in sidebar.
+    for (const role of ["procurement", "engineer", "store"] as const) {
+      const ctx = await browser.newContext({ baseURL, storageState: states[role] });
+      const page = await ctx.newPage();
+      await page.goto("/dashboard");
+      await expect(page.getByRole("link", { name: "Vendor Payments" })).toHaveCount(0);
+      await ctx.close();
+    }
   });
 
   test("Project actions: finance sees procurement + assign + note; engineer/store note only; API-negative store cannot assign", async ({

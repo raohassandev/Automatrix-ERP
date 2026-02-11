@@ -49,7 +49,8 @@ export const navGroups: NavGroup[] = [
     title: "Finance",
     items: [
       { name: "Vendor Bills", href: "/procurement/vendor-bills", icon: Receipt, permissions: ["procurement.view_all", "procurement.edit"] },
-      { name: "Vendor Payments", href: "/procurement/vendor-payments", icon: CreditCard, permissions: ["procurement.view_all", "procurement.edit"] },
+      // Phase 1: Vendor Payments are finance/AP only (server-enforced).
+      { name: "Vendor Payments", href: "/procurement/vendor-payments", icon: CreditCard, permissions: ["company_accounts.manage"] },
       { name: "AP Aging", href: "/reports/ap", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
     ],
   },

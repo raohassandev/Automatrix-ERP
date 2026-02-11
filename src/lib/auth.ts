@@ -39,6 +39,7 @@ if (googleClientId && googleClientSecret) {
 if (e2eMode) {
   const roleByEmail: Record<string, string> = {
     "engineer1@automatrix.pk": "Engineering",
+    "procurement1@automatrix.pk": "Procurement",
     "sales1@automatrix.pk": "Sales",
     "technician1@automatrix.pk": "Staff",
     "store1@automatrix.pk": "Store Keeper",
