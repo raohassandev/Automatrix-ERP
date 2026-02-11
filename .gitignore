@@ -36,5 +36,4 @@ data/Refrens/
 
 # Local secrets / ops artifacts
 Credentials*.md
-Codebase_Analysis_Report.md
 *.dump
