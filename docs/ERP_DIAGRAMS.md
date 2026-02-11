@@ -9,6 +9,9 @@ mindmap
   root((AutoMatrix ERP))
     Phase 1 Spine (LOCKED)
       Procurement (P2P-lite)
+        ProjectRef (LOCKED)
+          One-project-per-document
+          Mandatory on PO/GRN/Bill/Payment (new docs)
         Vendors
         Purchase Orders (PO)
           DRAFT
@@ -69,6 +72,7 @@ mindmap
 flowchart LR
   subgraph Procurement
     VND[Vendor]
+    PROJ[Project (Project.projectId)]
     PO[Purchase Order]
     GRN[Goods Receipt (GRN)]
     BILL[Vendor Bill]
@@ -91,6 +95,10 @@ flowchart LR
   end
 
   VND --> PO --> GRN
+  PROJ --> PO
+  PROJ --> GRN
+  PROJ --> BILL
+  PROJ --> PAY
   GRN -->|POST (explicit)| LEDGER
   ITEM <-->|qty/avg cost updates| LEDGER
 

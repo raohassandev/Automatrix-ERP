@@ -104,6 +104,7 @@ async function applyInventoryStockIn(
     receivedDate,
     userId,
     projectByPoItemId,
+    projectRef,
   }: {
     items: Array<{
       itemName: string;
@@ -116,6 +117,7 @@ async function applyInventoryStockIn(
     receivedDate: string | Date;
     userId: string;
     projectByPoItemId: Map<string, string | null>;
+    projectRef?: string | null;
   }
 ) {
   const uniqueNames = Array.from(
@@ -161,10 +163,10 @@ async function applyInventoryStockIn(
     const nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
     const total = qtyChange * effectiveCost;
 
-    const projectRef = item.purchaseOrderItemId
+    const lineProjectRef = item.purchaseOrderItemId
       ? projectByPoItemId.get(item.purchaseOrderItemId) || null
       : null;
-    const resolvedProject = await resolveProject(projectRef);
+    const resolvedProject = await resolveProject(lineProjectRef || projectRef || null);
 
     await tx.inventoryLedger.create({
       data: {
@@ -258,6 +260,28 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       if (currentStatus !== "DRAFT") {
         return NextResponse.json({ success: false, error: "Only DRAFT GRNs can be submitted." }, { status: 400 });
       }
+      if (!existing.projectRef) {
+        if (existing.purchaseOrderId) {
+          const po = await prisma.purchaseOrder.findUnique({
+            where: { id: existing.purchaseOrderId },
+            include: { items: true },
+          });
+          const inferred = po?.projectRef || po?.items.find((i) => i.project)?.project || null;
+          const resolved = inferred ? await resolveProjectId(inferred) : null;
+          if (!resolved) {
+            return NextResponse.json(
+              { success: false, error: "Project is required on GRNs (Phase 1). Set project on PO or GRN before submitting." },
+              { status: 400 }
+            );
+          }
+          await prisma.goodsReceipt.update({ where: { id }, data: { projectRef: resolved } });
+        } else {
+          return NextResponse.json(
+            { success: false, error: "Project is required on GRNs (Phase 1). Select a project before submitting." },
+            { status: 400 }
+          );
+        }
+      }
       const updated = await prisma.goodsReceipt.update({ where: { id }, data: { status: "SUBMITTED" } });
       await logAudit({
         action: "SUBMIT_GOODS_RECEIPT",
@@ -293,12 +317,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         return NextResponse.json({ success: false, error: "Only APPROVED GRNs can be posted." }, { status: 400 });
       }
 
-      const posted = await prisma.$transaction(async (tx) => {
-        // Prevent double posting.
-        const already = await tx.inventoryLedger.count({ where: { reference: `GRN:${id}` } });
-        if (already > 0) {
-          throw new Error("This GRN already has inventory postings.");
-        }
+      let posted;
+      try {
+        posted = await prisma.$transaction(async (tx) => {
+          // Prevent double posting.
+          const already = await tx.inventoryLedger.count({ where: { reference: `GRN:${id}` } });
+          if (already > 0) {
+            throw new Error("This GRN already has inventory postings.");
+          }
 
         const receipt = await tx.goodsReceipt.findUnique({
           where: { id },
@@ -308,6 +334,18 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           },
         });
         if (!receipt) throw new Error("Goods receipt not found");
+        const effectiveProjectRef =
+          receipt.projectRef ||
+          receipt.purchaseOrder?.projectRef ||
+          receipt.purchaseOrder?.items.find((i) => i.project)?.project ||
+          null;
+        const resolvedProjectRef = effectiveProjectRef ? await resolveProjectId(effectiveProjectRef) : null;
+        if (!resolvedProjectRef) {
+          throw new Error("Project is required on GRNs (Phase 1).");
+        }
+        if (!receipt.projectRef) {
+          await tx.goodsReceipt.update({ where: { id }, data: { projectRef: resolvedProjectRef } });
+        }
 
         const receiptItems = receipt.items.map((item) => ({
           purchaseOrderItemId: item.purchaseOrderItemId,
@@ -327,14 +365,25 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           receivedDate: receipt.receivedDate,
           userId: session.user.id,
           projectByPoItemId,
+          projectRef: resolvedProjectRef,
         });
 
         if (receipt.purchaseOrderId) {
           await recalcPurchaseOrderReceipts(tx, receipt.purchaseOrderId);
         }
 
-        return tx.goodsReceipt.update({ where: { id }, data: { status: "POSTED" } });
-      });
+          return tx.goodsReceipt.update({ where: { id }, data: { status: "POSTED" } });
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "Failed to post GRN";
+        if (
+          message.includes("Project is required on GRNs") ||
+          message.includes("already has inventory postings")
+        ) {
+          return NextResponse.json({ success: false, error: message }, { status: 400 });
+        }
+        throw err;
+      }
 
       await logAudit({
         action: "POST_GOODS_RECEIPT",
@@ -392,6 +441,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.purchaseOrderId !== undefined) {
     data.purchaseOrderId = parsed.data.purchaseOrderId || null;
   }
+  if (parsed.data.projectRef !== undefined) {
+    data.projectRef = parsed.data.projectRef ? sanitizeString(parsed.data.projectRef) : null;
+  }
   if (parsed.data.receivedDate) data.receivedDate = new Date(parsed.data.receivedDate);
   if (parsed.data.notes !== undefined) {
     data.notes = parsed.data.notes ? sanitizeString(parsed.data.notes) : null;
@@ -410,6 +462,30 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     : null;
   if (targetPurchaseOrderId && !purchaseOrder) {
     return NextResponse.json({ success: false, error: "Purchase order not found" }, { status: 400 });
+  }
+
+  // Phase 1 rule: one-project-per-document.
+  // - If linked to a PO: projectRef must match PO.projectRef (inferred if needed), and is not user-editable.
+  // - If direct GRN: projectRef is required and must resolve to a known project.
+  if (purchaseOrder) {
+    const inferred = purchaseOrder.projectRef || purchaseOrder.items.find((i) => i.project)?.project || null;
+    const resolved = inferred ? await resolveProjectId(inferred) : null;
+    if (!resolved) {
+      return NextResponse.json(
+        { success: false, error: "Linked PO has no project. Please set project on PO before editing this GRN." },
+        { status: 400 }
+      );
+    }
+    data.projectRef = resolved;
+  } else if (data.projectRef !== undefined) {
+    const raw = data.projectRef ? String(data.projectRef) : "";
+    const resolved = raw ? await resolveProjectId(raw) : null;
+    if (!resolved) {
+      return NextResponse.json({ success: false, error: "Project is required on GRNs (Phase 1)." }, { status: 400 });
+    }
+    data.projectRef = resolved;
+  } else if (!existing.projectRef) {
+    return NextResponse.json({ success: false, error: "Project is required on GRNs (Phase 1)." }, { status: 400 });
   }
 
   const sanitizedItems = parsed.data.items

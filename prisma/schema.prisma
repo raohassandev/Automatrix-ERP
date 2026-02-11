@@ -449,6 +449,8 @@ model PurchaseOrder {
   vendorId     String?
   vendorName   String
   vendorContact String?
+  // Phase 1 (locked): one-project-per-document. Nullable to protect legacy rows.
+  projectRef   String?
   orderDate    DateTime
   expectedDate DateTime?
   status       String   @default("DRAFT")
@@ -483,6 +485,8 @@ model GoodsReceipt {
   id             String   @id @default(cuid())
   grnNumber      String   @unique
   purchaseOrderId String?
+  // Phase 1 (locked): one-project-per-document. Nullable to protect legacy rows.
+  projectRef     String?
   receivedDate   DateTime
   status         String   @default("RECEIVED")
   notes          String?
@@ -559,6 +563,8 @@ model VendorBill {
   id          String   @id @default(cuid())
   billNumber  String   @unique
   vendorId    String
+  // Phase 1 (locked): one-project-per-document. Nullable to protect legacy rows.
+  projectRef  String?
   billDate    DateTime
   dueDate     DateTime?
   status      String   @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | POSTED | VOID
@@ -595,6 +601,8 @@ model VendorPayment {
   id             String   @id @default(cuid())
   paymentNumber  String   @unique
   vendorId       String
+  // Phase 1 (locked): one-project-per-document. Nullable to protect legacy rows.
+  projectRef     String?
   paymentDate    DateTime
   companyAccountId String
   method         String?  // Cash/Bank/Online/Cheque (labels only in Phase 1)

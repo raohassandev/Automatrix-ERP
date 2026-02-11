@@ -56,10 +56,12 @@ export default async function VendorBillsPage({
     const paid = bill.allocations
       .filter((a) => a.vendorPayment.status === "POSTED")
       .reduce((sum, a) => sum + Number(a.amount), 0);
+    const inferredProject = bill.projectRef || bill.lines.find((l) => l.project)?.project || null;
     return {
       id: bill.id,
       billNumber: bill.billNumber,
       vendorName: bill.vendor.name,
+      projectRef: inferredProject,
       billDate: bill.billDate.toISOString(),
       dueDate: bill.dueDate ? bill.dueDate.toISOString() : null,
       status: bill.status,
@@ -95,6 +97,7 @@ export default async function VendorBillsPage({
               <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">Bill #</th>
                 <th className="py-2">Vendor</th>
+                <th className="py-2">Project</th>
                 <th className="py-2">Bill Date</th>
                 <th className="py-2">Due</th>
                 <th className="py-2">Lines</th>
@@ -109,6 +112,7 @@ export default async function VendorBillsPage({
                 <tr key={bill.id} className="border-b">
                   <td className="py-2 font-medium">{bill.billNumber}</td>
                   <td className="py-2">{bill.vendorName}</td>
+                  <td className="py-2">{bill.projectRef || "-"}</td>
                   <td className="py-2">{new Date(bill.billDate).toLocaleDateString()}</td>
                   <td className="py-2">{bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : "-"}</td>
                   <td className="py-2">{bill.lineCount}</td>
@@ -135,4 +139,3 @@ export default async function VendorBillsPage({
     </div>
   );
 }
-

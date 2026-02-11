@@ -24,6 +24,27 @@ test.describe("RB4 - Procurement chain", () => {
     const ts = Date.now();
     const today = new Date().toISOString().slice(0, 10);
 
+    // 0) Client + Project (Phase 1 rule: projectRef required on procurement docs)
+    const clientRes = await api.post("/api/clients", {
+      data: { name: `E2E Client ${ts}` },
+    });
+    expect(clientRes.ok()).toBeTruthy();
+    const clientJson = await clientRes.json();
+    const clientId: string = clientJson.data.id;
+
+    const projectRef = `PRJ-E2E-${ts}`;
+    const projectRes = await api.post("/api/projects", {
+      data: {
+        projectId: projectRef,
+        name: `E2E Project ${ts}`,
+        clientId,
+        startDate: today,
+        status: "ACTIVE",
+        contractValue: 0,
+      },
+    });
+    expect(projectRes.ok()).toBeTruthy();
+
     // 1) Vendor
     const vendorRes = await api.post("/api/vendors", {
       data: {
@@ -58,6 +79,7 @@ test.describe("RB4 - Procurement chain", () => {
         poNumber: `PO-E2E-${ts}`,
         vendorId,
         vendorName: `E2E Vendor ${ts}`,
+        projectRef,
         orderDate: today,
         status: "DRAFT",
         currency: "PKR",
@@ -117,6 +139,7 @@ test.describe("RB4 - Procurement chain", () => {
       data: {
         billNumber: `BILL-E2E-${ts}`,
         vendorId,
+        projectRef,
         billDate: today,
         currency: "PKR",
         lines: [{ description: `Bill for ${itemName}`, total: 200 }],
@@ -144,6 +167,7 @@ test.describe("RB4 - Procurement chain", () => {
       data: {
         paymentNumber: `PAY-E2E-${ts}`,
         vendorId,
+        projectRef,
         paymentDate: today,
         companyAccountId,
         method: "Bank Transfer",

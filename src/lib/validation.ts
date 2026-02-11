@@ -180,6 +180,8 @@ export const purchaseOrderSchema = z.object({
   vendorId: z.string().optional(),
   vendorName: z.string().min(1),
   vendorContact: z.string().optional(),
+  // Phase 1 (locked): one-project-per-document. Stored as Project.projectId reference.
+  projectRef: z.string().min(1),
   orderDate: z.string().min(1),
   expectedDate: z.string().optional(),
   status: z.string().optional(),
@@ -191,6 +193,7 @@ export const purchaseOrderSchema = z.object({
       unit: z.string().optional(),
       quantity: z.number().positive(),
       unitCost: z.number().nonnegative(),
+      // Kept for backward compatibility with older payloads/rows; API enforces header-only.
       project: z.string().optional(),
     })
   ).min(1),
@@ -226,6 +229,8 @@ export const commissionUpdateSchema = commissionSchema.partial();
 export const goodsReceiptSchema = z.object({
   grnNumber: z.string().min(1),
   purchaseOrderId: z.string().optional(),
+  // Phase 1 (locked): required when GRN is not linked to a PO. When linked, API inherits from PO.
+  projectRef: z.string().min(1).optional(),
   receivedDate: z.string().min(1),
   status: z.string().optional(),
   notes: z.string().optional(),

@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { resolveProjectId } from "@/lib/projects";
 // NOTE: GRN posting to InventoryLedger is handled in `/api/procurement/grn/[id]` via explicit POST action.
 
 type PurchaseOrderItem = {
@@ -20,6 +21,18 @@ type PurchaseOrderItem = {
 const normalizeKey = (value?: string | null) => value?.trim().toLowerCase() || "";
 const buildItemKey = (name: string, unit?: string | null) =>
   `${normalizeKey(name)}::${normalizeKey(unit)}`;
+
+function inferProjectRefFromPo(po: { projectRef?: string | null; items: Array<{ project: string | null }> }) {
+  if (po.projectRef && po.projectRef.trim()) return po.projectRef.trim();
+  const set = new Set(
+    po.items
+      .map((i) => (i.project || "").trim())
+      .filter(Boolean)
+      .map((v) => v.toLowerCase())
+  );
+  if (set.size !== 1) return null;
+  return po.items.find((i) => i.project)?.project || null;
+}
 
 export async function GET() {
   const session = await auth();
@@ -64,6 +77,7 @@ export async function POST(req: Request) {
     grnNumber: sanitizeString(parsed.data.grnNumber),
     // Phase 1 lifecycle: create GRN as DRAFT; posting to InventoryLedger happens only on explicit POST action.
     status: "DRAFT",
+    projectRef: parsed.data.projectRef ? sanitizeString(parsed.data.projectRef) : undefined,
     notes: parsed.data.notes ? sanitizeString(parsed.data.notes) : undefined,
     items: parsed.data.items.map((item) => ({
       purchaseOrderItemId: item.purchaseOrderItemId ? sanitizeString(item.purchaseOrderItemId) : undefined,
@@ -85,6 +99,24 @@ export async function POST(req: Request) {
     if (!purchaseOrder) {
       return NextResponse.json({ success: false, error: "Purchase order not found" }, { status: 400 });
     }
+  }
+
+  const effectiveProjectRefRaw = purchaseOrder
+    ? inferProjectRefFromPo(purchaseOrder)
+    : sanitized.projectRef;
+  if (!effectiveProjectRefRaw) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Project is required on Goods Receipts (Phase 1). Link a PO with a project, or select a project for direct GRNs.",
+      },
+      { status: 400 }
+    );
+  }
+  const effectiveProjectRef = await resolveProjectId(effectiveProjectRefRaw);
+  if (!effectiveProjectRef) {
+    return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
   }
 
   const poItemsByKey = new Map<string, Array<PurchaseOrderItem>>();
@@ -163,6 +195,7 @@ export async function POST(req: Request) {
       data: {
         grnNumber: sanitized.grnNumber,
         purchaseOrderId: sanitized.purchaseOrderId || null,
+        projectRef: effectiveProjectRef,
         receivedDate: new Date(sanitized.receivedDate),
         status: sanitized.status,
         notes: sanitized.notes,

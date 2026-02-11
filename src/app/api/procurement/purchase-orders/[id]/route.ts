@@ -6,6 +6,18 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { resolveProjectId } from "@/lib/projects";
+
+function inferProjectRefFromItems(items: Array<{ project: string | null }>) {
+  const set = new Set(
+    items
+      .map((i) => (i.project || "").trim())
+      .filter(Boolean)
+      .map((v) => v.toLowerCase())
+  );
+  if (set.size !== 1) return null;
+  return items.find((i) => i.project)?.project || null;
+}
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -37,6 +49,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       if (currentStatus !== "DRAFT") {
         return NextResponse.json(
           { success: false, error: "Only DRAFT purchase orders can be submitted." },
+          { status: 400 }
+        );
+      }
+      const projectRef = existing.projectRef || inferProjectRefFromItems(existing.items);
+      if (!projectRef) {
+        return NextResponse.json(
+          { success: false, error: "Project is required on Purchase Orders (Phase 1). Please set the project before submitting." },
           { status: 400 }
         );
       }
@@ -132,6 +151,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.vendorContact !== undefined) {
     data.vendorContact = parsed.data.vendorContact ? sanitizeString(parsed.data.vendorContact) : null;
   }
+  if (parsed.data.projectRef !== undefined) {
+    const next = parsed.data.projectRef ? sanitizeString(parsed.data.projectRef) : "";
+    const resolved = next ? await resolveProjectId(next) : null;
+    if (!resolved) {
+      return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
+    }
+    data.projectRef = resolved;
+  }
   if (parsed.data.orderDate) data.orderDate = new Date(parsed.data.orderDate);
   if (parsed.data.expectedDate !== undefined) {
     data.expectedDate = parsed.data.expectedDate ? new Date(parsed.data.expectedDate) : null;
@@ -156,33 +183,49 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   let updated = existing;
-  await prisma.$transaction(async (tx) => {
-    if (parsed.data.items && parsed.data.items.length > 0) {
-      await tx.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
-      const totalAmount = parsed.data.items.reduce(
-        (sum, item) => sum + item.quantity * item.unitCost,
-        0
-      );
-      data.totalAmount = new Prisma.Decimal(totalAmount);
-      await tx.purchaseOrderItem.createMany({
-        data: parsed.data.items.map((item) => ({
-          purchaseOrderId: id,
-          itemName: sanitizeString(item.itemName),
-          unit: item.unit ? sanitizeString(item.unit) : null,
-          quantity: new Prisma.Decimal(item.quantity),
-          unitCost: new Prisma.Decimal(item.unitCost),
-          total: new Prisma.Decimal(item.quantity * item.unitCost),
-          project: item.project ? sanitizeString(item.project) : null,
-        })),
-      });
-    }
+  try {
+    await prisma.$transaction(async (tx) => {
+      const effectiveProjectRef =
+        (data.projectRef as string | undefined) ||
+        existing.projectRef ||
+        inferProjectRefFromItems(existing.items);
 
-    updated = await tx.purchaseOrder.update({
-      where: { id },
-      data,
-      include: { items: true },
+      if (parsed.data.items && parsed.data.items.length > 0) {
+        if (!effectiveProjectRef) {
+          throw new Error("Project is required on Purchase Orders (Phase 1).");
+        }
+        await tx.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
+        const totalAmount = parsed.data.items.reduce(
+          (sum, item) => sum + item.quantity * item.unitCost,
+          0
+        );
+        data.totalAmount = new Prisma.Decimal(totalAmount);
+        await tx.purchaseOrderItem.createMany({
+          data: parsed.data.items.map((item) => ({
+            purchaseOrderId: id,
+            itemName: sanitizeString(item.itemName),
+            unit: item.unit ? sanitizeString(item.unit) : null,
+            quantity: new Prisma.Decimal(item.quantity),
+            unitCost: new Prisma.Decimal(item.unitCost),
+            total: new Prisma.Decimal(item.quantity * item.unitCost),
+            project: effectiveProjectRef,
+          })),
+        });
+      }
+
+      updated = await tx.purchaseOrder.update({
+        where: { id },
+        data,
+        include: { items: true },
+      });
     });
-  });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to update purchase order";
+    if (message.includes("Project is required on Purchase Orders")) {
+      return NextResponse.json({ success: false, error: message }, { status: 400 });
+    }
+    throw err;
+  }
 
   await logAudit({
     action: "UPDATE_PURCHASE_ORDER",

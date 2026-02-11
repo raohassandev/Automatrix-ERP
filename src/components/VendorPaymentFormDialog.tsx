@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import VendorAutoComplete from "@/components/VendorAutoComplete";
 import { VendorFormDialog } from "@/components/VendorFormDialog";
+import ProjectAutoComplete from "@/components/ProjectAutoComplete";
 
 type CompanyAccount = { id: string; name: string; type: string };
 
@@ -24,6 +25,7 @@ type VendorBillRow = {
 type VendorBillListApiRow = {
   id: string;
   billNumber: string;
+  projectRef?: string | null;
   totalAmount: number;
   paidAmount: number;
   outstandingAmount: number;
@@ -40,6 +42,7 @@ type PaymentData = {
   id: string;
   paymentNumber: string;
   vendorId: string;
+  projectRef: string | null;
   paymentDate: string;
   companyAccountId: string;
   method: string | null;
@@ -70,6 +73,7 @@ export function VendorPaymentFormDialog({
   const [form, setForm] = useState({
     paymentNumber: "",
     vendorId: "",
+    projectRef: "",
     paymentDate: new Date().toISOString().slice(0, 10),
     companyAccountId: "",
     method: "",
@@ -135,7 +139,7 @@ export function VendorPaymentFormDialog({
 
   useEffect(() => {
     if (!open) return;
-    if (!form.vendorId) {
+    if (!form.vendorId || !form.projectRef) {
       setVendorBills([]);
       setAllocations([]);
       return;
@@ -148,6 +152,7 @@ export function VendorPaymentFormDialog({
         if (!data?.success || !Array.isArray(data.data)) return;
         const list = (data.data as VendorBillListApiRow[])
           .filter((row) => row?.vendor?.id === form.vendorId)
+          .filter((row) => String(row.projectRef || "").trim() === String(form.projectRef || "").trim())
           .map((row) => ({
             id: row.id,
             billNumber: row.billNumber,
@@ -170,7 +175,7 @@ export function VendorPaymentFormDialog({
         });
       })
       .catch(() => {});
-  }, [open, form.vendorId]);
+  }, [open, form.vendorId, form.projectRef]);
 
   useEffect(() => {
     if (!open) return;
@@ -187,6 +192,7 @@ export function VendorPaymentFormDialog({
         setForm({
           paymentNumber: payment.paymentNumber,
           vendorId: payment.vendorId,
+          projectRef: payment.projectRef || "",
           paymentDate: payment.paymentDate.slice(0, 10),
           companyAccountId: payment.companyAccountId,
           method: payment.method || "",
@@ -208,8 +214,8 @@ export function VendorPaymentFormDialog({
   };
 
   async function submit() {
-    if (!form.paymentNumber || !form.vendorId || !form.paymentDate || !form.companyAccountId) {
-      toast.error("Payment number, vendor, date, and account are required");
+    if (!form.paymentNumber || !form.vendorId || !form.projectRef || !form.paymentDate || !form.companyAccountId) {
+      toast.error("Payment number, vendor, project, date, and account are required");
       return;
     }
     if (Number(form.amount) < 0) {
@@ -224,6 +230,7 @@ export function VendorPaymentFormDialog({
     const payload = {
       paymentNumber: form.paymentNumber,
       vendorId: form.vendorId,
+      projectRef: form.projectRef,
       paymentDate: form.paymentDate,
       companyAccountId: form.companyAccountId,
       method: form.method || undefined,
@@ -292,6 +299,15 @@ export function VendorPaymentFormDialog({
             <Button type="button" variant="outline" size="sm" onClick={() => setVendorDialogOpen(true)}>
               Create Vendor
             </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Project (required)</Label>
+            <ProjectAutoComplete
+              value={form.projectRef}
+              onChange={(value) => setForm((prev) => ({ ...prev, projectRef: value }))}
+              placeholder="Select project..."
+            />
           </div>
 
           <div className="space-y-2">

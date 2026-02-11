@@ -61,6 +61,7 @@ export default async function GoodsReceiptPage({
     purchaseOrder: receipt.purchaseOrder
       ? { id: receipt.purchaseOrder.id, poNumber: receipt.purchaseOrder.poNumber }
       : null,
+    projectRef: receipt.projectRef || receipt.purchaseOrder?.projectRef || null,
     items: receipt.items.map((item) => ({
       itemName: item.itemName,
       unit: item.unit,
@@ -96,6 +97,7 @@ export default async function GoodsReceiptPage({
               <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">GRN #</th>
                 <th className="py-2">PO</th>
+                <th className="py-2">Project</th>
                 <th className="py-2">Received</th>
                 <th className="py-2">Status</th>
                 <th className="py-2">Total</th>
@@ -109,6 +111,7 @@ export default async function GoodsReceiptPage({
                   <tr key={receipt.id} className="border-b">
                     <td className="py-2 font-medium">{receipt.grnNumber}</td>
                     <td className="py-2">{receipt.purchaseOrder?.poNumber || "-"}</td>
+                    <td className="py-2">{receipt.projectRef || "-"}</td>
                     <td className="py-2">
                       {new Date(receipt.receivedDate).toLocaleDateString()}
                     </td>

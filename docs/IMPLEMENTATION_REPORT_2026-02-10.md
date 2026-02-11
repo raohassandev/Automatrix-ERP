@@ -539,3 +539,94 @@ Files:
 - `src/lib/approval-policies.ts`
 - `src/app/api/procurement/vendor-bills/[id]/route.ts`
 - `src/app/api/procurement/vendor-payments/[id]/route.ts`
+
+---
+
+# Implementation Report — 2026-02-11 (ProjectRef Lock + One-Project-Per-Document)
+
+**Author / Identity:** Codex (OpenAI), engineering agent for this repo  
+**Branch:** `dev`  
+**Primary goal:** Close the remaining “hybrid gap” in Phase 1 procurement by enforcing **ProjectRef** and **one-project-per-document** across the P2P-lite spine.
+
+## 1) What was implemented (high signal)
+
+### 1.1 ProjectRef added to procurement documents (schema + migration)
+Added `projectRef` to:
+- `PurchaseOrder`
+- `GoodsReceipt` (GRN)
+- `VendorBill`
+- `VendorPayment`
+
+Migration (additive, safe for real data):
+- `prisma/migrations/20260211062602_add_project_ref_to_procurement_docs/migration.sql`
+
+### 1.2 Phase 1 rule enforced: one-project-per-document (API hard rules)
+Phase 1 (locked) behavior now:
+- PO: `projectRef` is required for new POs; all PO items inherit header project (prevents mixed projects).
+- GRN:
+  - If linked to a PO: GRN inherits PO `projectRef` (user cannot change it).
+  - If direct (no PO): `projectRef` is required.
+  - Posting (GRN POST) stamps `InventoryLedger.project` using GRN/PO projectRef (single-project truth).
+- Vendor Bill: `projectRef` required; all lines store the same projectRef.
+  - If bill lines reference `grnItemId`: server validates GRN is not VOID and project/vendor match.
+- Vendor Payment: `projectRef` required; allocations are allowed only against POSTED bills **of the same vendor + projectRef**.
+
+### 1.3 UI updated to match Phase 1 rules (no hidden requirements)
+- Added `ProjectAutoComplete` (required) to:
+  - Purchase Order create/edit dialog
+  - Vendor Bill create/edit dialog
+  - Vendor Payment create/edit dialog
+- Added Project selection to GRN dialog (required only if GRN is not linked to a PO).
+- Procurement lists now display Project column:
+  - Purchase Orders
+  - Goods Receipts
+  - Vendor Bills
+  - Vendor Payments
+
+### 1.4 E2E procurement chain updated to include ProjectRef
+- Updated `playwright/tests/rb4-procurement-chain.spec.ts`:
+  - creates Client + Project up-front
+  - passes `projectRef` through PO → Bill → Payment
+
+## 2) Repo changes (files)
+
+### Schema / migrations
+- `prisma/schema.prisma`
+- `prisma/migrations/20260211062602_add_project_ref_to_procurement_docs/migration.sql`
+
+### Validation
+- `src/lib/validation.ts` (PO now requires `projectRef`; GRN accepts `projectRef` for direct GRNs)
+
+### Procurement APIs
+- `src/app/api/procurement/purchase-orders/route.ts`
+- `src/app/api/procurement/purchase-orders/[id]/route.ts`
+- `src/app/api/procurement/grn/route.ts`
+- `src/app/api/procurement/grn/[id]/route.ts`
+- `src/app/api/procurement/vendor-bills/route.ts`
+- `src/app/api/procurement/vendor-bills/[id]/route.ts`
+- `src/app/api/procurement/vendor-payments/route.ts`
+- `src/app/api/procurement/vendor-payments/[id]/route.ts`
+
+### UI (forms + lists)
+- `src/components/PurchaseOrderFormDialog.tsx`
+- `src/components/GoodsReceiptFormDialog.tsx`
+- `src/components/VendorBillFormDialog.tsx`
+- `src/components/VendorPaymentFormDialog.tsx`
+- `src/app/procurement/purchase-orders/page.tsx`
+- `src/app/procurement/grn/page.tsx`
+- `src/app/procurement/vendor-bills/page.tsx`
+- `src/app/procurement/vendor-payments/page.tsx`
+
+### Blueprint + tests
+- `docs/ERP_DIAGRAMS.md` (explicit ProjectRef/one-project-per-document in blueprint)
+- `playwright/tests/rb4-procurement-chain.spec.ts`
+
+## 3) Local quality gates executed
+- `pnpm lint` OK
+- `pnpm typecheck` OK
+- `pnpm test` OK
+- `pnpm build` OK
+
+## 4) Notes / known limitations (intentional for Phase 1)
+- `projectRef` columns are nullable to protect legacy/real data already in the DB; API enforces “required for new docs” by rejecting submit/post when missing.
+- Vendor Bill “POST” does not create any ledger entries (Phase 1 accounting is AP allocations only; no GL).

@@ -65,6 +65,9 @@ export default async function PurchaseOrdersPage({
       project: item.project,
     }));
 
+    const inferredProject =
+      order.projectRef || items.find((i) => i.project)?.project || null;
+
     const receivedTotal = items.reduce((sum: number, item) => sum + Number(item.receivedQty || 0), 0);
     const quantityTotal = items.reduce((sum: number, item) => sum + Number(item.quantity || 0), 0);
 
@@ -77,6 +80,7 @@ export default async function PurchaseOrdersPage({
       items,
       receivedTotal,
       quantityTotal,
+      projectRef: inferredProject,
     };
   });
 
@@ -106,6 +110,7 @@ export default async function PurchaseOrdersPage({
               <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">PO #</th>
                 <th className="py-2">Vendor</th>
+                <th className="py-2">Project</th>
                 <th className="py-2">Order Date</th>
                 <th className="py-2">Received</th>
                 <th className="py-2">Status</th>
@@ -118,6 +123,7 @@ export default async function PurchaseOrdersPage({
                 <tr key={order.id} className="border-b">
                   <td className="py-2 font-medium">{order.poNumber}</td>
                   <td className="py-2">{order.vendorName}</td>
+                  <td className="py-2">{order.projectRef || "-"}</td>
                   <td className="py-2">{new Date(order.orderDate).toLocaleDateString()}</td>
                   <td className="py-2">
                     {order.receivedTotal} / {order.quantityTotal}

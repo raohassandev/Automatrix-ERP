@@ -9,13 +9,14 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import VendorAutoComplete from "@/components/VendorAutoComplete";
 import { VendorFormDialog } from "@/components/VendorFormDialog";
+import ProjectAutoComplete from "@/components/ProjectAutoComplete";
 
 type PurchaseOrderItem = {
   itemName: string;
   unit?: string | null;
   quantity: number | string;
   unitCost: number | string;
-  project?: string | null;
+  project?: string | null; // legacy (Phase 1 now uses header-only projectRef)
 };
 
 type PurchaseOrder = {
@@ -24,6 +25,7 @@ type PurchaseOrder = {
   vendorId?: string | null;
   vendorName: string;
   vendorContact?: string | null;
+  projectRef?: string | null;
   orderDate: string;
   expectedDate?: string | null;
   status?: string | null;
@@ -37,7 +39,6 @@ const createItem = (): PurchaseOrderItem => ({
   unit: "",
   quantity: 1,
   unitCost: 0,
-  project: "",
 });
 
 type PurchaseOrderFormDialogProps = {
@@ -51,6 +52,10 @@ const buildInitialForm = (purchaseOrder: PurchaseOrder | null | undefined) => ({
   vendorId: purchaseOrder?.vendorId || "",
   vendorName: purchaseOrder?.vendorName || "",
   vendorContact: purchaseOrder?.vendorContact || "",
+  projectRef:
+    purchaseOrder?.projectRef ||
+    purchaseOrder?.items?.find((i) => i.project)?.project ||
+    "",
   orderDate: purchaseOrder?.orderDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
   expectedDate: purchaseOrder?.expectedDate?.slice(0, 10) || "",
   currency: purchaseOrder?.currency || "PKR",
@@ -64,7 +69,6 @@ const buildInitialItems = (purchaseOrder: PurchaseOrder | null | undefined) =>
         unit: item.unit || "",
         quantity: Number(item.quantity || 0),
         unitCost: Number(item.unitCost || 0),
-        project: item.project || "",
       }))
     : [createItem()];
 
@@ -96,8 +100,8 @@ function PurchaseOrderFormDialogInner({
     setItems((prev) => prev.filter((_, idx) => idx !== index));
 
   async function submit() {
-    if (!form.poNumber || !form.vendorName || !form.orderDate) {
-      toast.error("PO number, vendor name, and order date are required");
+    if (!form.poNumber || !form.vendorName || !form.orderDate || !form.projectRef) {
+      toast.error("PO number, vendor name, project, and order date are required");
       return;
     }
 
@@ -206,6 +210,14 @@ function PurchaseOrderFormDialogInner({
             />
           </div>
           <div className="space-y-2">
+            <Label>Project (required)</Label>
+            <ProjectAutoComplete
+              value={form.projectRef}
+              onChange={(value) => setForm({ ...form, projectRef: value })}
+              placeholder="Select project..."
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="vendorContact">Vendor Contact</Label>
             <Input
               id="vendorContact"
@@ -293,14 +305,6 @@ function PurchaseOrderFormDialogInner({
                     value={item.unit || ""}
                     onChange={(e) => updateItem(index, "unit", e.target.value)}
                     placeholder="Unit"
-                  />
-                </div>
-                <div className="space-y-1 md:col-span-5">
-                  <Label>Project (optional)</Label>
-                  <Input
-                    value={item.project || ""}
-                    onChange={(e) => updateItem(index, "project", e.target.value)}
-                    placeholder="Project reference"
                   />
                 </div>
                 {items.length > 1 ? (

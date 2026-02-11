@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { resolveProjectId } from "@/lib/projects";
 
 export async function GET() {
   const session = await auth();
@@ -51,6 +52,7 @@ export async function POST(req: Request) {
     vendorId: parsed.data.vendorId ? sanitizeString(parsed.data.vendorId) : undefined,
     vendorName: sanitizeString(parsed.data.vendorName),
     vendorContact: parsed.data.vendorContact ? sanitizeString(parsed.data.vendorContact) : undefined,
+    projectRef: sanitizeString(parsed.data.projectRef),
     // Phase 1 lifecycle: create PO as DRAFT; submit/approve are explicit actions.
     status: "DRAFT",
     currency: parsed.data.currency ? sanitizeString(parsed.data.currency) : "PKR",
@@ -60,9 +62,18 @@ export async function POST(req: Request) {
       unit: item.unit ? sanitizeString(item.unit) : undefined,
       quantity: item.quantity,
       unitCost: item.unitCost,
-      project: item.project ? sanitizeString(item.project) : undefined,
+      // Phase 1 (locked): header-only project. We accept item.project for backward compatibility,
+      // but we overwrite it to prevent mixed projects within one PO.
+      project: undefined as string | undefined,
     })),
   };
+
+  const resolvedProjectRef = await resolveProjectId(sanitized.projectRef);
+  if (!resolvedProjectRef) {
+    return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
+  }
+  sanitized.projectRef = resolvedProjectRef;
+  sanitized.items = sanitized.items.map((item) => ({ ...item, project: sanitized.projectRef }));
 
   if (sanitized.vendorId) {
     const vendor = await prisma.vendor.findUnique({
@@ -89,6 +100,7 @@ export async function POST(req: Request) {
       vendorId: sanitized.vendorId,
       vendorName: sanitized.vendorName,
       vendorContact: sanitized.vendorContact,
+      projectRef: sanitized.projectRef,
       orderDate: new Date(sanitized.orderDate),
       expectedDate: sanitized.expectedDate ? new Date(sanitized.expectedDate) : null,
       status: sanitized.status,

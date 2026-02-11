@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { canUserApprove } from "@/lib/approval-engine";
+import { resolveProjectId } from "@/lib/projects";
 
 const billLineSchema = z
   .object({
@@ -30,6 +31,7 @@ const billLineSchema = z
 const vendorBillUpdateSchema = z.object({
   billNumber: z.string().trim().min(1).optional(),
   vendorId: z.string().trim().min(1).optional(),
+  projectRef: z.string().trim().min(1).optional(),
   billDate: z.string().trim().min(1).optional(),
   dueDate: z.string().trim().optional(),
   currency: z.string().trim().min(1).optional(),
@@ -73,6 +75,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       id: bill.id,
       billNumber: bill.billNumber,
       vendorId: bill.vendorId,
+      projectRef: bill.projectRef,
       billDate: bill.billDate.toISOString(),
       dueDate: bill.dueDate ? bill.dueDate.toISOString() : null,
       status: bill.status,
@@ -143,6 +146,12 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       if (!canEdit) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
       if (existing.status !== "DRAFT") {
         return NextResponse.json({ success: false, error: "Only DRAFT bills can be submitted." }, { status: 400 });
+      }
+      if (!existing.projectRef) {
+        return NextResponse.json(
+          { success: false, error: "Project is required on Vendor Bills (Phase 1). Please set a project before submitting." },
+          { status: 400 }
+        );
       }
       const updated = await prisma.vendorBill.update({ where: { id }, data: { status: "SUBMITTED" } });
       await logAudit({
@@ -227,6 +236,12 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     return NextResponse.json({ success: false, error: "Only DRAFT bills can be edited." }, { status: 400 });
   }
 
+  const effectiveProjectRefRaw = parsed.data.projectRef ?? existing.projectRef;
+  const effectiveProjectRef = effectiveProjectRefRaw ? await resolveProjectId(effectiveProjectRefRaw) : null;
+  if (!effectiveProjectRef) {
+    return NextResponse.json({ success: false, error: "Project is required on Vendor Bills (Phase 1)." }, { status: 400 });
+  }
+
   const nextLines = parsed.data.lines;
   const normalizedLines = nextLines
     ? nextLines.map((line) => {
@@ -242,6 +257,36 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     normalizedLines?.reduce((sum, line) => sum + Number(line.total), 0) ?? Number(existing.totalAmount);
 
   try {
+    if (nextLines) {
+      const grnItemIds = nextLines.map((l) => l.grnItemId).filter(Boolean) as string[];
+      if (grnItemIds.length > 0) {
+        const grnItems = await prisma.goodsReceiptItem.findMany({
+          where: { id: { in: grnItemIds } },
+          include: { goodsReceipt: { include: { purchaseOrder: true } } },
+        });
+        const byId = new Map(grnItems.map((i) => [i.id, i]));
+        const effectiveVendorId = parsed.data.vendorId ?? existing.vendorId;
+        for (const ref of grnItemIds) {
+          const item = byId.get(ref);
+          if (!item) {
+            return NextResponse.json({ success: false, error: "Invalid GRN item reference on bill line." }, { status: 400 });
+          }
+          if ((item.goodsReceipt.status || "").toUpperCase() === "VOID") {
+            return NextResponse.json({ success: false, error: "Cannot bill against a VOID GRN." }, { status: 400 });
+          }
+          const grnProjectRaw = item.goodsReceipt.projectRef || item.goodsReceipt.purchaseOrder?.projectRef || null;
+          const grnProject = grnProjectRaw ? await resolveProjectId(grnProjectRaw) : null;
+          if (!grnProject || grnProject !== effectiveProjectRef) {
+            return NextResponse.json({ success: false, error: "GRN project does not match Vendor Bill project (Phase 1)." }, { status: 400 });
+          }
+          const poVendorId = item.goodsReceipt.purchaseOrder?.vendorId;
+          if (poVendorId && poVendorId !== effectiveVendorId) {
+            return NextResponse.json({ success: false, error: "GRN vendor does not match Vendor Bill vendor." }, { status: 400 });
+          }
+        }
+      }
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       if (nextLines) {
         await tx.vendorBillLine.deleteMany({ where: { vendorBillId: id } });
@@ -254,7 +299,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
             unit: line.unit || null,
             unitCost: typeof line.unitCost === "number" ? new Prisma.Decimal(line.unitCost) : null,
             total: new Prisma.Decimal(line.total),
-            project: line.project || null,
+            project: effectiveProjectRef,
             grnItemId: line.grnItemId || null,
           })),
         });
@@ -265,6 +310,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
         data: {
           billNumber: parsed.data.billNumber,
           vendorId: parsed.data.vendorId,
+          projectRef: effectiveProjectRef,
           billDate: parsed.data.billDate ? new Date(parsed.data.billDate) : undefined,
           dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : parsed.data.dueDate === "" ? null : undefined,
           currency: parsed.data.currency,

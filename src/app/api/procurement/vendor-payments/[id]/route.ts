@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { canUserApprove } from "@/lib/approval-engine";
+import { resolveProjectId } from "@/lib/projects";
 
 const allocationSchema = z.object({
   vendorBillId: z.string().trim().min(1),
@@ -15,6 +16,7 @@ const allocationSchema = z.object({
 const vendorPaymentUpdateSchema = z.object({
   paymentNumber: z.string().trim().min(1).optional(),
   vendorId: z.string().trim().min(1).optional(),
+  projectRef: z.string().trim().min(1).optional(),
   paymentDate: z.string().trim().min(1).optional(),
   companyAccountId: z.string().trim().min(1).optional(),
   method: z.string().trim().optional(),
@@ -58,6 +60,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       id: payment.id,
       paymentNumber: payment.paymentNumber,
       vendorId: payment.vendorId,
+      projectRef: payment.projectRef,
       paymentDate: payment.paymentDate.toISOString(),
       companyAccountId: payment.companyAccountId,
       method: payment.method,
@@ -120,6 +123,12 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       if (existing.status !== "DRAFT") {
         return NextResponse.json({ success: false, error: "Only DRAFT payments can be submitted." }, { status: 400 });
       }
+      if (!existing.projectRef) {
+        return NextResponse.json(
+          { success: false, error: "Project is required on Vendor Payments (Phase 1). Please set a project before submitting." },
+          { status: 400 }
+        );
+      }
       const updated = await prisma.vendorPayment.update({ where: { id }, data: { status: "SUBMITTED" } });
       await logAudit({
         action: "SUBMIT_VENDOR_PAYMENT",
@@ -169,9 +178,17 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
       const billIds = Array.from(new Set(allocations.map((a) => a.vendorBillId)));
       if (billIds.length > 0) {
+        const paymentProject = existing.projectRef ? await resolveProjectId(existing.projectRef) : null;
+        if (!paymentProject) {
+          return NextResponse.json(
+            { success: false, error: "Project is required on Vendor Payments (Phase 1)." },
+            { status: 400 }
+          );
+        }
+
         const bills = await prisma.vendorBill.findMany({
           where: { id: { in: billIds } },
-          select: { id: true, status: true, totalAmount: true },
+          select: { id: true, status: true, totalAmount: true, vendorId: true, projectRef: true },
         });
         const billMap = new Map(bills.map((b) => [b.id, b]));
 
@@ -183,6 +200,19 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
           if (bill.status !== "POSTED") {
             return NextResponse.json(
               { success: false, error: "Payments can only be posted against POSTED bills." },
+              { status: 400 }
+            );
+          }
+          if (bill.vendorId !== existing.vendorId) {
+            return NextResponse.json(
+              { success: false, error: "Payment allocations must match the payment vendor." },
+              { status: 400 }
+            );
+          }
+          const billProject = bill.projectRef ? await resolveProjectId(bill.projectRef) : null;
+          if (!billProject || billProject !== paymentProject) {
+            return NextResponse.json(
+              { success: false, error: "Payment allocations must match the payment project (Phase 1)." },
               { status: 400 }
             );
           }
@@ -258,6 +288,16 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     return NextResponse.json({ success: false, error: "Only DRAFT payments can be edited." }, { status: 400 });
   }
 
+  const effectiveVendorId = parsed.data.vendorId ?? existing.vendorId;
+  const effectiveProjectRefRaw = parsed.data.projectRef ?? existing.projectRef;
+  const effectiveProjectRef = effectiveProjectRefRaw ? await resolveProjectId(effectiveProjectRefRaw) : null;
+  if (!effectiveProjectRef) {
+    return NextResponse.json(
+      { success: false, error: "Project is required on Vendor Payments (Phase 1)." },
+      { status: 400 }
+    );
+  }
+
   const nextAllocations = parsed.data.allocations;
 
   const nextAmount = typeof parsed.data.amount === "number" ? parsed.data.amount : Number(existing.amount);
@@ -272,6 +312,36 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   }
 
   try {
+    const allocationsToCheck = (nextAllocations
+      ? nextAllocations
+      : existing.allocations.map((a) => ({ vendorBillId: a.vendorBillId, amount: Number(a.amount) }))
+    ).filter((a) => a.amount > 0);
+
+    if (allocationsToCheck.length > 0) {
+      const billIds = Array.from(new Set(allocationsToCheck.map((a) => a.vendorBillId)));
+      const bills = await prisma.vendorBill.findMany({
+        where: { id: { in: billIds } },
+        select: { id: true, vendorId: true, status: true, projectRef: true },
+      });
+      const byId = new Map(bills.map((b) => [b.id, b]));
+      for (const alloc of allocationsToCheck) {
+        const bill = byId.get(alloc.vendorBillId);
+        if (!bill) {
+          return NextResponse.json({ success: false, error: "Invalid vendor bill allocation." }, { status: 400 });
+        }
+        if (bill.vendorId !== effectiveVendorId) {
+          return NextResponse.json({ success: false, error: "Allocations must match the selected vendor." }, { status: 400 });
+        }
+        if (bill.status !== "POSTED") {
+          return NextResponse.json({ success: false, error: "Allocations are allowed only against POSTED bills." }, { status: 400 });
+        }
+        const billProject = bill.projectRef ? await resolveProjectId(bill.projectRef) : null;
+        if (!billProject || billProject !== effectiveProjectRef) {
+          return NextResponse.json({ success: false, error: "Allocations must match the payment project (Phase 1)." }, { status: 400 });
+        }
+      }
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       if (nextAllocations) {
         await tx.vendorPaymentAllocation.deleteMany({ where: { vendorPaymentId: id } });
@@ -294,6 +364,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
         data: {
           paymentNumber: parsed.data.paymentNumber,
           vendorId: parsed.data.vendorId,
+          projectRef: effectiveProjectRef,
           paymentDate: parsed.data.paymentDate ? new Date(parsed.data.paymentDate) : undefined,
           companyAccountId: parsed.data.companyAccountId,
           method: parsed.data.method,

@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { resolveProjectId } from "@/lib/projects";
 
 const billLineSchema = z
   .object({
@@ -29,6 +30,7 @@ const billLineSchema = z
 const vendorBillCreateSchema = z.object({
   billNumber: z.string().trim().min(1),
   vendorId: z.string().trim().min(1),
+  projectRef: z.string().trim().min(1),
   billDate: z.string().trim().min(1),
   dueDate: z.string().trim().optional(),
   currency: z.string().trim().min(1).default("PKR"),
@@ -85,6 +87,7 @@ export async function GET(request: NextRequest) {
     return {
       id: bill.id,
       billNumber: bill.billNumber,
+      projectRef: bill.projectRef,
       billDate: bill.billDate.toISOString(),
       dueDate: bill.dueDate ? bill.dueDate.toISOString() : null,
       status: bill.status,
@@ -124,6 +127,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+  const resolvedProjectRef = await resolveProjectId(parsed.data.projectRef);
+  if (!resolvedProjectRef) {
+    return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
+  }
+
+  const grnItemIds = parsed.data.lines.map((l) => l.grnItemId).filter(Boolean) as string[];
+  if (grnItemIds.length > 0) {
+    const grnItems = await prisma.goodsReceiptItem.findMany({
+      where: { id: { in: grnItemIds } },
+      include: { goodsReceipt: { include: { purchaseOrder: true } } },
+    });
+    const byId = new Map(grnItems.map((i) => [i.id, i]));
+    for (const ref of grnItemIds) {
+      const item = byId.get(ref);
+      if (!item) {
+        return NextResponse.json({ success: false, error: "Invalid GRN item reference on bill line." }, { status: 400 });
+      }
+      if ((item.goodsReceipt.status || "").toUpperCase() === "VOID") {
+        return NextResponse.json({ success: false, error: "Cannot bill against a VOID GRN." }, { status: 400 });
+      }
+      const grnProjectRaw = item.goodsReceipt.projectRef || item.goodsReceipt.purchaseOrder?.projectRef || null;
+      const grnProject = grnProjectRaw ? await resolveProjectId(grnProjectRaw) : null;
+      if (!grnProject || grnProject !== resolvedProjectRef) {
+        return NextResponse.json({ success: false, error: "GRN project does not match Vendor Bill project (Phase 1)." }, { status: 400 });
+      }
+      const poVendorId = item.goodsReceipt.purchaseOrder?.vendorId;
+      if (poVendorId && poVendorId !== parsed.data.vendorId) {
+        return NextResponse.json({ success: false, error: "GRN vendor does not match Vendor Bill vendor." }, { status: 400 });
+      }
+    }
+  }
+
   const normalizedLines = parsed.data.lines.map((line) => {
     const total =
       typeof line.quantity === "number" && typeof line.unitCost === "number"
@@ -138,6 +173,7 @@ export async function POST(request: NextRequest) {
       data: {
         billNumber: parsed.data.billNumber,
         vendorId: parsed.data.vendorId,
+        projectRef: resolvedProjectRef,
         billDate: new Date(parsed.data.billDate),
         dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
         currency: parsed.data.currency,
@@ -152,7 +188,8 @@ export async function POST(request: NextRequest) {
             unit: line.unit || undefined,
             unitCost: typeof line.unitCost === "number" ? new Prisma.Decimal(line.unitCost) : undefined,
             total: new Prisma.Decimal(line.total),
-            project: line.project || undefined,
+            // Phase 1 (locked): header-only project. Keep the line.project populated for legacy/backward compatibility.
+            project: resolvedProjectRef,
             grnItemId: line.grnItemId || undefined,
           })),
         },

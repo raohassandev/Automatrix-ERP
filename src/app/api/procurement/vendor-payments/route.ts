@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { resolveProjectId } from "@/lib/projects";
 
 const allocationSchema = z.object({
   vendorBillId: z.string().trim().min(1),
@@ -14,6 +15,7 @@ const allocationSchema = z.object({
 const vendorPaymentCreateSchema = z.object({
   paymentNumber: z.string().trim().min(1),
   vendorId: z.string().trim().min(1),
+  projectRef: z.string().trim().min(1),
   paymentDate: z.string().trim().min(1),
   companyAccountId: z.string().trim().min(1),
   method: z.string().trim().optional(),
@@ -70,6 +72,7 @@ export async function GET(request: NextRequest) {
     return {
       id: payment.id,
       paymentNumber: payment.paymentNumber,
+      projectRef: payment.projectRef,
       paymentDate: payment.paymentDate.toISOString(),
       status: payment.status,
       method: payment.method,
@@ -117,10 +120,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const resolvedProjectRef = await resolveProjectId(parsed.data.projectRef);
+    if (!resolvedProjectRef) {
+      return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
+    }
+
+    if (allocations.length > 0) {
+      const billIds = allocations.map((a) => a.vendorBillId);
+      const bills = await prisma.vendorBill.findMany({
+        where: { id: { in: billIds } },
+        select: { id: true, vendorId: true, status: true, projectRef: true },
+      });
+      const byId = new Map(bills.map((b) => [b.id, b]));
+      for (const alloc of allocations) {
+        const bill = byId.get(alloc.vendorBillId);
+        if (!bill) {
+          return NextResponse.json({ success: false, error: "Invalid vendor bill allocation." }, { status: 400 });
+        }
+        if (bill.vendorId !== parsed.data.vendorId) {
+          return NextResponse.json({ success: false, error: "Allocations must match the selected vendor." }, { status: 400 });
+        }
+        if (bill.status !== "POSTED") {
+          return NextResponse.json({ success: false, error: "Allocations are allowed only against POSTED bills." }, { status: 400 });
+        }
+        const billProject = bill.projectRef ? await resolveProjectId(bill.projectRef) : null;
+        if (!billProject || billProject !== resolvedProjectRef) {
+          return NextResponse.json({ success: false, error: "Allocations must match the payment project (Phase 1)." }, { status: 400 });
+        }
+      }
+    }
+
     const created = await prisma.vendorPayment.create({
       data: {
         paymentNumber: parsed.data.paymentNumber,
         vendorId: parsed.data.vendorId,
+        projectRef: resolvedProjectRef,
         paymentDate: new Date(parsed.data.paymentDate),
         companyAccountId: parsed.data.companyAccountId,
         method: parsed.data.method,

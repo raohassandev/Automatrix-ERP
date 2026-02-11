@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import ProjectAutoComplete from "@/components/ProjectAutoComplete";
 
 type GoodsReceiptItem = {
   itemName: string;
@@ -19,6 +20,7 @@ type GoodsReceipt = {
   id: string;
   grnNumber: string;
   purchaseOrderId?: string | null;
+  projectRef?: string | null;
   receivedDate: string;
   notes?: string | null;
   items: GoodsReceiptItem[];
@@ -40,6 +42,7 @@ type GoodsReceiptFormDialogProps = {
 const buildInitialForm = (receipt: GoodsReceipt | null | undefined) => ({
   grnNumber: receipt?.grnNumber || "",
   purchaseOrderId: receipt?.purchaseOrderId || "",
+  projectRef: receipt?.projectRef || "",
   receivedDate: receipt?.receivedDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
   notes: receipt?.notes || "",
 });
@@ -84,6 +87,10 @@ function GoodsReceiptFormDialogInner({
       toast.error("GRN number and received date are required");
       return;
     }
+    if (!form.purchaseOrderId && !form.projectRef) {
+      toast.error("Project is required when GRN is not linked to a Purchase Order");
+      return;
+    }
 
     const cleanedItems = items
       .map((item) => ({
@@ -102,6 +109,7 @@ function GoodsReceiptFormDialogInner({
     const payload = {
       ...form,
       purchaseOrderId: form.purchaseOrderId || undefined,
+      projectRef: form.projectRef || undefined,
       notes: form.notes || undefined,
       items: cleanedItems,
     };
@@ -159,6 +167,18 @@ function GoodsReceiptFormDialogInner({
               id="purchaseOrderId"
               value={form.purchaseOrderId}
               onChange={(e) => setForm({ ...form, purchaseOrderId: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">
+              If you link a GRN to a PO, the Project is inherited from the PO (Phase 1 rule).
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Project (required if no PO)</Label>
+            <ProjectAutoComplete
+              value={form.projectRef}
+              onChange={(value) => setForm({ ...form, projectRef: value })}
+              placeholder="Select project..."
+              disabled={Boolean(form.purchaseOrderId)}
             />
           </div>
           <div className="space-y-2">

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import VendorAutoComplete from "@/components/VendorAutoComplete";
 import { VendorFormDialog } from "@/components/VendorFormDialog";
+import ProjectAutoComplete from "@/components/ProjectAutoComplete";
 
 type BillLine = {
   description: string;
@@ -18,13 +19,13 @@ type BillLine = {
   unit?: string;
   unitCost?: number | string;
   total?: number | string;
-  project?: string;
 };
 
 type BillData = {
   id: string;
   billNumber: string;
   vendorId: string;
+  projectRef: string | null;
   billDate: string;
   dueDate: string | null;
   currency: string;
@@ -49,6 +50,7 @@ type GrnListRow = {
   grnNumber: string;
   status: string;
   receivedDate: string;
+  projectRef?: string | null;
   purchaseOrder: { id: string; poNumber: string; vendorId: string | null; vendorName: string } | null;
   items: Array<{
     id: string;
@@ -65,7 +67,6 @@ const createLine = (): BillLine => ({
   unit: "",
   unitCost: "",
   total: "",
-  project: "",
 });
 
 const normalizeKey = (value?: string | null) => (value || "").trim().toLowerCase();
@@ -90,6 +91,7 @@ export function VendorBillFormDialog({
   const [form, setForm] = useState({
     billNumber: "",
     vendorId: "",
+    projectRef: "",
     billDate: new Date().toISOString().slice(0, 10),
     dueDate: "",
     currency: "PKR",
@@ -103,6 +105,7 @@ export function VendorBillFormDialog({
       setForm({
         billNumber: "",
         vendorId: "",
+        projectRef: "",
         billDate: new Date().toISOString().slice(0, 10),
         dueDate: "",
         currency: "PKR",
@@ -155,6 +158,7 @@ export function VendorBillFormDialog({
         setForm({
           billNumber: bill.billNumber,
           vendorId: bill.vendorId,
+          projectRef: bill.projectRef || "",
           billDate: bill.billDate.slice(0, 10),
           dueDate: bill.dueDate ? bill.dueDate.slice(0, 10) : "",
           currency: bill.currency || "PKR",
@@ -170,7 +174,6 @@ export function VendorBillFormDialog({
                 unit: l.unit || "",
                 unitCost: l.unitCost ?? "",
                 total: l.total,
-                project: l.project || "",
               }))
             : [createLine()]
         );
@@ -222,6 +225,9 @@ export function VendorBillFormDialog({
     if (grn.purchaseOrder?.vendorId && !form.vendorId) {
       setForm((prev) => ({ ...prev, vendorId: grn.purchaseOrder?.vendorId || "" }));
     }
+    if (grn.projectRef) {
+      setForm((prev) => ({ ...prev, projectRef: grn.projectRef || "" }));
+    }
 
     const itemByName = new Map(inventoryItems.map((i) => [normalizeKey(i.name), i]));
     const imported = (grn.items || []).map((it) => {
@@ -234,7 +240,6 @@ export function VendorBillFormDialog({
         unit: it.unit || match?.unit || "",
         unitCost: Number(it.unitCost) || "",
         total: "",
-        project: "",
       } satisfies BillLine;
     });
 
@@ -248,8 +253,8 @@ export function VendorBillFormDialog({
   };
 
   async function submit() {
-    if (!form.billNumber || !form.vendorId || !form.billDate) {
-      toast.error("Bill number, vendor, and bill date are required");
+    if (!form.billNumber || !form.vendorId || !form.projectRef || !form.billDate) {
+      toast.error("Bill number, vendor, project, and bill date are required");
       return;
     }
     const cleanedLines = lines
@@ -269,7 +274,6 @@ export function VendorBillFormDialog({
           unit: (l.unit || "").trim() || undefined,
           unitCost: Number.isFinite(unitCost) && unitCost >= 0 ? unitCost : undefined,
           total: computedTotal,
-          project: (l.project || "").trim() || undefined,
         };
       })
       .filter((l) => l.description && Number.isFinite(l.total) && l.total >= 0);
@@ -282,6 +286,7 @@ export function VendorBillFormDialog({
     const payload = {
       billNumber: form.billNumber,
       vendorId: form.vendorId,
+      projectRef: form.projectRef,
       billDate: form.billDate,
       dueDate: form.dueDate || undefined,
       currency: form.currency || "PKR",
@@ -388,6 +393,15 @@ export function VendorBillFormDialog({
             >
               Create Vendor
             </Button>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Project (required)</Label>
+            <ProjectAutoComplete
+              value={form.projectRef}
+              onChange={(value) => setForm((prev) => ({ ...prev, projectRef: value }))}
+              placeholder="Select project..."
+            />
           </div>
 
           <div className="space-y-2">
@@ -517,14 +531,6 @@ export function VendorBillFormDialog({
                       Number.isFinite(Number(line.unitCost))
                     }
                     required
-                  />
-                </div>
-                <div className="md:col-span-1 space-y-1">
-                  <Label className="text-xs">Project (opt)</Label>
-                  <Input
-                    value={line.project || ""}
-                    onChange={(e) => updateLine(idx, "project", e.target.value)}
-                    placeholder="AE-..."
                   />
                 </div>
                 <div className="md:col-span-1">

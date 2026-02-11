@@ -59,6 +59,7 @@ export default async function VendorPaymentsPage({
       id: payment.id,
       paymentNumber: payment.paymentNumber,
       vendorName: payment.vendor.name,
+      projectRef: payment.projectRef,
       paymentDate: payment.paymentDate.toISOString(),
       status: payment.status,
       method: payment.method,
@@ -94,6 +95,7 @@ export default async function VendorPaymentsPage({
               <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">Payment #</th>
                 <th className="py-2">Vendor</th>
+                <th className="py-2">Project</th>
                 <th className="py-2">Date</th>
                 <th className="py-2">Account</th>
                 <th className="py-2">Method</th>
@@ -108,6 +110,7 @@ export default async function VendorPaymentsPage({
                 <tr key={payment.id} className="border-b">
                   <td className="py-2 font-medium">{payment.paymentNumber}</td>
                   <td className="py-2">{payment.vendorName}</td>
+                  <td className="py-2">{payment.projectRef || "-"}</td>
                   <td className="py-2">{new Date(payment.paymentDate).toLocaleDateString()}</td>
                   <td className="py-2">{payment.accountName}</td>
                   <td className="py-2">{payment.method || "-"}</td>
@@ -134,4 +137,3 @@ export default async function VendorPaymentsPage({
     </div>
   );
 }
-
