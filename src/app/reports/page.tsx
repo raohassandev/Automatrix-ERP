@@ -3,20 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
 import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/rbac";
-import ReportExporter from "@/components/ReportExporter";
 
 export default async function ReportsPage() {
   const session = await auth();
   if (!session?.user?.id) {
-    return (
-       redirect("/login")
-       );
+    redirect("/login");
   }
 
   const canViewAll = await requirePermission(session.user.id, "reports.view_all");
   const canViewTeam = await requirePermission(session.user.id, "reports.view_team");
   const canViewOwn = await requirePermission(session.user.id, "reports.view_own");
-  const canExport = await requirePermission(session.user.id, "reports.export");
   if (!canViewAll && !canViewTeam && !canViewOwn) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -26,119 +22,123 @@ export default async function ReportsPage() {
     );
   }
 
-  const [expenseSum, incomeSum, projectCount, invoiceCount, pendingRecoverySum, inventoryItems] =
+  // Phase 1 single-spine (truth sources):
+  // - AP: posted vendor bills - posted payment allocations (no full GL)
+  // - Inventory: item master (avg cost) / stock ledger
+  const [postedBillsSum, postedAllocationsSum, inventoryValueSum, inventoryItems, pendingCounts] =
     await Promise.all([
-      prisma.expense.aggregate({ _sum: { amount: true } }),
-      prisma.income.aggregate({ _sum: { amount: true } }),
-      prisma.project.count(),
-      prisma.invoice.count(),
-      prisma.project.aggregate({ _sum: { pendingRecovery: true } }),
+      prisma.vendorBill.aggregate({ where: { status: "POSTED" }, _sum: { totalAmount: true } }),
+      prisma.vendorPaymentAllocation.aggregate({
+        where: {
+          vendorPayment: { status: "POSTED" },
+          vendorBill: { status: "POSTED" },
+        },
+        _sum: { amount: true },
+      }),
+      prisma.inventoryItem.aggregate({ _sum: { totalValue: true } }),
       prisma.inventoryItem.findMany({
         where: { minStock: { gt: 0 } },
         select: { quantity: true, minStock: true },
       }),
+      Promise.all([
+        prisma.purchaseOrder.count({ where: { status: "SUBMITTED" } }),
+        prisma.goodsReceipt.count({ where: { status: "SUBMITTED" } }),
+        prisma.vendorBill.count({ where: { status: "SUBMITTED" } }),
+        prisma.vendorPayment.count({ where: { status: "SUBMITTED" } }),
+      ]),
     ]);
 
-  const totalExpenses = Number(expenseSum._sum.amount || 0);
-  const totalIncome = Number(incomeSum._sum.amount || 0);
-  const lowStockCount = inventoryItems.filter(
-    (item) => Number(item.quantity) <= Number(item.minStock)
+  const billsTotal = Number(postedBillsSum._sum.totalAmount || 0);
+  const paidTotal = Number(postedAllocationsSum._sum.amount || 0);
+  const apOutstanding = Math.max(0, billsTotal - paidTotal);
+
+  const inventoryValue = Number(inventoryValueSum._sum.totalValue || 0);
+  const inventoryLowStockItems = inventoryItems.filter(
+    (i) => Number(i.quantity) <= Number(i.minStock),
   ).length;
+
+  const [pendingPos, pendingGrns, pendingBills, pendingPayments] = pendingCounts;
 
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">Reports</h1>
-            <p className="mt-2 text-muted-foreground">High-level summary report.</p>
-          </div>
-          <div className="flex gap-2">
-            {canExport ? (
-              <a
-                href="/api/reports/export"
-                className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
-              >
-                Export CSV
-              </a>
-            ) : null}
-            {canExport ? <ReportExporter /> : null}
-          </div>
-        </div>
+        <h1 className="text-2xl font-semibold">Reports</h1>
+        <p className="mt-2 text-muted-foreground">
+          Phase 1 truthful reports sourced from the single spine (Procurement + Inventory + AP allocations).
+        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Total Income</div>
-          <div className="mt-2 text-xl font-semibold">{formatMoney(totalIncome)}</div>
+          <div className="text-sm text-muted-foreground">AP outstanding</div>
+          <div className="mt-2 text-xl font-semibold">{formatMoney(apOutstanding)}</div>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Total Expenses</div>
-          <div className="mt-2 text-xl font-semibold">{formatMoney(totalExpenses)}</div>
+          <div className="text-sm text-muted-foreground">Inventory on-hand value</div>
+          <div className="mt-2 text-xl font-semibold">{formatMoney(inventoryValue)}</div>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Projects</div>
-          <div className="mt-2 text-xl font-semibold">{projectCount}</div>
+          <div className="text-sm text-muted-foreground">Low stock alerts</div>
+          <div className="mt-2 text-xl font-semibold">{inventoryLowStockItems}</div>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Invoices</div>
-          <div className="mt-2 text-xl font-semibold">{invoiceCount}</div>
-        </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Pending Recovery</div>
-          <div className="mt-2 text-xl font-semibold">
-            {formatMoney(Number(pendingRecoverySum._sum.pendingRecovery || 0))}
+          <div className="text-sm text-muted-foreground">Approvals queue (submitted)</div>
+          <div className="mt-2 space-y-1 text-sm">
+            <div className="flex items-center justify-between">
+              <span>PO</span>
+              <span className="font-medium">{pendingPos}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>GRN</span>
+              <span className="font-medium">{pendingGrns}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Bills</span>
+              <span className="font-medium">{pendingBills}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Payments</span>
+              <span className="font-medium">{pendingPayments}</span>
+            </div>
           </div>
-        </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Low Stock Alerts</div>
-          <div className="mt-2 text-xl font-semibold">{lowStockCount}</div>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <a
-          href="/reports/projects"
-          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
-        >
-          <div className="text-sm text-muted-foreground">Project Expense Report</div>
-          <div className="mt-2 text-lg font-semibold">View project-wise expenses</div>
+        <a href="/reports/ap" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+          <div className="text-sm text-muted-foreground">AP Aging</div>
+          <div className="mt-2 text-lg font-semibold">Outstanding vendor bills (allocations-only)</div>
         </a>
-        <a
-          href="/reports/expenses"
-          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
-        >
-          <div className="text-sm text-muted-foreground">Expense Report</div>
-          <div className="mt-2 text-lg font-semibold">Approved expenses by category</div>
-        </a>
-        <a
-          href="/reports/inventory"
-          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
-        >
+        <a href="/reports/inventory" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
           <div className="text-sm text-muted-foreground">Inventory Report</div>
-          <div className="mt-2 text-lg font-semibold">Stock valuation and low stock</div>
+          <div className="mt-2 text-lg font-semibold">On-hand, valuation, low stock</div>
         </a>
-        <a
-          href="/reports/wallets"
-          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
-        >
-          <div className="text-sm text-muted-foreground">Wallet Summary</div>
-          <div className="mt-2 text-lg font-semibold">Employee balances and holds</div>
+        <a href="/reports/procurement" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+          <div className="text-sm text-muted-foreground">Procurement (Stock-in)</div>
+          <div className="mt-2 text-lg font-semibold">GRN postings into stock ledger</div>
         </a>
-        <a
-          href="/reports/employee-expenses"
-          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
-        >
-          <div className="text-sm text-muted-foreground">Employee Expense Summary</div>
-          <div className="mt-2 text-lg font-semibold">Approved expenses by employee</div>
+        <a href="/audit" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+          <div className="text-sm text-muted-foreground">Audit Log</div>
+          <div className="mt-2 text-lg font-semibold">Traceability + exceptions</div>
         </a>
-        <a
-          href="/reports/procurement"
-          className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent"
-        >
-          <div className="text-sm text-muted-foreground">Procurement Summary</div>
-          <div className="mt-2 text-lg font-semibold">Material spend and stock-in</div>
-        </a>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="text-sm font-medium text-muted-foreground">Legacy / Non-spine (not Phase 1 truth sources)</div>
+        <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+          <a className="underline" href="/reports/expenses">
+            Expense Report (non-stock)
+          </a>
+          <a className="underline" href="/reports/employee-expenses">
+            Employee Expense Summary
+          </a>
+          <a className="underline" href="/reports/wallets">
+            Wallet Summary
+          </a>
+          <a className="underline" href="/reports/projects">
+            Project Expense Report (legacy)
+          </a>
+        </div>
       </div>
     </div>
   );
