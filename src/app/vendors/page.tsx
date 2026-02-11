@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import PaginationControls from "@/components/PaginationControls";
 import { PageCreateButton } from "@/components/PageCreateButton";
@@ -96,7 +97,11 @@ export default async function VendorsPage({
             <tbody>
               {vendors.map((vendor) => (
                 <tr key={vendor.id} className="border-b">
-                  <td className="py-2 font-medium">{vendor.name}</td>
+                  <td className="py-2 font-medium">
+                    <Link className="underline underline-offset-2" href={`/vendors/${vendor.id}`}>
+                      {vendor.name}
+                    </Link>
+                  </td>
                   <td className="py-2">{vendor.contactName || "-"}</td>
                   <td className="py-2">{vendor.phone || "-"}</td>
                   <td className="py-2">{vendor.status}</td>
@@ -112,7 +117,11 @@ export default async function VendorsPage({
         <div className="md:hidden space-y-4">
           {vendors.map((vendor) => (
             <div key={vendor.id} className="border rounded-lg p-4">
-              <div className="font-semibold">{vendor.name}</div>
+              <div className="font-semibold">
+                <Link className="underline underline-offset-2" href={`/vendors/${vendor.id}`}>
+                  {vendor.name}
+                </Link>
+              </div>
               <div className="mt-2 text-sm space-y-1">
                 <div>Contact: {vendor.contactName || "-"}</div>
                 <div>Phone: {vendor.phone || "-"}</div>
