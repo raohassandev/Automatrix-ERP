@@ -4,6 +4,16 @@ import * as React from "react";
 import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import type { ProjectDetailData, ProjectDetailTab } from "@/lib/project-detail-policy";
+import { buildProjectWorkhubPolicy } from "@/lib/project-workhub-policy";
+import { Button } from "@/components/ui/button";
+import { FormDialog } from "@/components/FormDialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
+import { GoodsReceiptFormDialog } from "@/components/GoodsReceiptFormDialog";
+import { VendorBillFormDialog } from "@/components/VendorBillFormDialog";
 
 function tabLabel(tab: ProjectDetailTab) {
   switch (tab) {
@@ -25,6 +35,19 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
     (t) => detail.policy.tabs[t],
   );
   const [active, setActive] = React.useState<ProjectDetailTab>(tabs[0] || "activity");
+  const workhub = buildProjectWorkhubPolicy(detail.policy.role);
+
+  const [poOpen, setPoOpen] = React.useState(false);
+  const [grnOpen, setGrnOpen] = React.useState(false);
+  const [billOpen, setBillOpen] = React.useState(false);
+  const [assignOpen, setAssignOpen] = React.useState(false);
+  const [noteOpen, setNoteOpen] = React.useState(false);
+  const [attachmentOpen, setAttachmentOpen] = React.useState(false);
+
+  const [users, setUsers] = React.useState<Array<{ id: string; email: string; name: string | null; role: string | null }>>([]);
+  const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
+  const [note, setNote] = React.useState("");
+  const [attachment, setAttachment] = React.useState({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
 
   React.useEffect(() => {
     if (!detail.policy.tabs[active]) {
@@ -32,6 +55,76 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail.policy.role]);
+
+  React.useEffect(() => {
+    if (!assignOpen) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [usersRes, assignRes] = await Promise.all([
+          fetch("/api/users/list"),
+          fetch(`/api/projects/${detail.header.id}/assignments`),
+        ]);
+        const usersJson = await usersRes.json();
+        const assignJson = await assignRes.json();
+        if (!usersRes.ok) throw new Error(usersJson.error || "Failed to load users");
+        if (!assignRes.ok) throw new Error(assignJson.error || "Failed to load assignments");
+        if (cancelled) return;
+        setUsers(Array.isArray(usersJson.data) ? usersJson.data : []);
+        const ids = Array.isArray(assignJson.data)
+          ? assignJson.data.map((a: { userId: string }) => a.userId)
+          : [];
+        setSelectedUserIds(ids);
+      } catch (e) {
+        console.error(e);
+        toast.error(e instanceof Error ? e.message : "Failed to load assignment data");
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [assignOpen, detail.header.id]);
+
+  async function saveAssignments() {
+    const res = await fetch(`/api/projects/${detail.header.id}/assignments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assignments: selectedUserIds.map((userId) => ({ userId })) }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error || "Failed to save assignments");
+    }
+  }
+
+  async function addNote() {
+    const res = await fetch(`/api/projects/${detail.header.id}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || "Failed to add note");
+  }
+
+  async function addAttachment() {
+    const payload = {
+      fileName: attachment.fileName,
+      url: attachment.url,
+      mimeType: attachment.mimeType || undefined,
+      sizeBytes: attachment.sizeBytes ? Number(attachment.sizeBytes) : undefined,
+    };
+    const res = await fetch(`/api/projects/${detail.header.id}/attachments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || "Failed to add attachment");
+  }
+
+  const anyActions = Object.values(workhub.actions).some(Boolean);
 
   return (
     <div className="grid gap-6">
@@ -63,8 +156,200 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           <div className="text-xs text-muted-foreground">
             Role: <span className="font-medium text-foreground">{detail.policy.role}</span>
           </div>
+          {anyActions ? (
+            <div className="md:ml-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {workhub.actions.create_po ? (
+                    <DropdownMenuItem onSelect={() => setPoOpen(true)}>
+                      Create Purchase Order for this Project
+                    </DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.receive_grn ? (
+                    <DropdownMenuItem onSelect={() => setGrnOpen(true)}>
+                      Receive Goods (GRN) for this Project
+                    </DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.create_vendor_bill ? (
+                    <DropdownMenuItem onSelect={() => setBillOpen(true)}>
+                      Create Vendor Bill for this Project
+                    </DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.assign_people ? (
+                    <DropdownMenuItem onSelect={() => setAssignOpen(true)}>
+                      Assign People to Project
+                    </DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.add_note ? (
+                    <DropdownMenuItem onSelect={() => setNoteOpen(true)}>
+                      Add Project Note
+                    </DropdownMenuItem>
+                  ) : null}
+                  {workhub.actions.add_attachment ? (
+                    <DropdownMenuItem onSelect={() => setAttachmentOpen(true)}>
+                      Add Attachment (URL)
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : null}
         </div>
       </div>
+
+      {/* Work Hub dialogs (Phase 1 safe; no ad-hoc posting logic) */}
+      <PurchaseOrderFormDialog
+        open={poOpen}
+        onOpenChange={setPoOpen}
+        initialProjectRef={detail.header.projectId}
+      />
+      <GoodsReceiptFormDialog
+        open={grnOpen}
+        onOpenChange={setGrnOpen}
+        initialProjectRef={detail.header.projectId}
+      />
+      <VendorBillFormDialog open={billOpen} onOpenChange={setBillOpen} initialProjectRef={detail.header.projectId} />
+
+      <FormDialog open={assignOpen} onOpenChange={setAssignOpen} title="Assign People" description="Manage project members (audited).">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            (async () => {
+              try {
+                await saveAssignments();
+                toast.success("Assignments saved");
+                setAssignOpen(false);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to save assignments");
+              }
+            })();
+          }}
+          className="space-y-4"
+        >
+          <div className="max-h-[320px] overflow-auto rounded-md border p-3">
+            {users.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No users found.</div>
+            ) : (
+              <div className="space-y-2">
+                {users.map((u) => {
+                  const checked = selectedUserIds.includes(u.id);
+                  return (
+                    <label key={u.id} className="flex items-center gap-3 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          setSelectedUserIds((prev) =>
+                            next ? Array.from(new Set([...prev, u.id])) : prev.filter((id) => id !== u.id),
+                          );
+                        }}
+                      />
+                      <span className="min-w-0">
+                        <span className="font-medium">{u.name || u.email}</span>{" "}
+                        <span className="text-muted-foreground">({u.email})</span>
+                        {u.role ? <span className="ml-2 text-xs text-muted-foreground">{u.role}</span> : null}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setAssignOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Save</Button>
+          </div>
+        </form>
+      </FormDialog>
+
+      <FormDialog open={noteOpen} onOpenChange={setNoteOpen} title="Add Project Note" description="Notes are stored as audited events (Phase 1).">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            (async () => {
+              try {
+                await addNote();
+                toast.success("Note added");
+                setNote("");
+                setNoteOpen(false);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to add note");
+              }
+            })();
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-2">
+            <Label htmlFor="projectNote">Note</Label>
+            <textarea
+              id="projectNote"
+              className="min-h-[120px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Write a short project note..."
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setNoteOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add</Button>
+          </div>
+        </form>
+      </FormDialog>
+
+      <FormDialog open={attachmentOpen} onOpenChange={setAttachmentOpen} title="Add Attachment (URL)" description="URL-only attachments (Phase 1).">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            (async () => {
+              try {
+                await addAttachment();
+                toast.success("Attachment added");
+                setAttachment({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
+                setAttachmentOpen(false);
+              } catch (err) {
+                toast.error(err instanceof Error ? err.message : "Failed to add attachment");
+              }
+            })();
+          }}
+          className="space-y-4"
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="attUrl">URL</Label>
+              <Input id="attUrl" value={attachment.url} onChange={(e) => setAttachment((p) => ({ ...p, url: e.target.value }))} placeholder="https://..." required />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="attName">File name</Label>
+              <Input id="attName" value={attachment.fileName} onChange={(e) => setAttachment((p) => ({ ...p, fileName: e.target.value }))} placeholder="invoice.pdf" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attMime">MIME type (optional)</Label>
+              <Input id="attMime" value={attachment.mimeType} onChange={(e) => setAttachment((p) => ({ ...p, mimeType: e.target.value }))} placeholder="application/pdf" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attSize">Size bytes (optional)</Label>
+              <Input id="attSize" value={attachment.sizeBytes} onChange={(e) => setAttachment((p) => ({ ...p, sizeBytes: e.target.value }))} placeholder="12345" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setAttachmentOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add</Button>
+          </div>
+        </form>
+      </FormDialog>
 
       {/* Tabs: buttons on desktop, select on mobile */}
       <div className="rounded-xl border bg-card p-4 shadow-sm">
@@ -314,4 +599,3 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
     </div>
   );
 }
-

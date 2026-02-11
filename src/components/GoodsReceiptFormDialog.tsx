@@ -37,12 +37,13 @@ type GoodsReceiptFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   receipt?: GoodsReceipt | null;
+  initialProjectRef?: string;
 };
 
-const buildInitialForm = (receipt: GoodsReceipt | null | undefined) => ({
+const buildInitialForm = (receipt: GoodsReceipt | null | undefined, initialProjectRef?: string) => ({
   grnNumber: receipt?.grnNumber || "",
   purchaseOrderId: receipt?.purchaseOrderId || "",
-  projectRef: receipt?.projectRef || "",
+  projectRef: receipt?.projectRef || initialProjectRef || "",
   receivedDate: receipt?.receivedDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
   notes: receipt?.notes || "",
 });
@@ -66,10 +67,11 @@ function GoodsReceiptFormDialogInner({
   open,
   onOpenChange,
   receipt,
+  initialProjectRef,
 }: GoodsReceiptFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState(() => buildInitialForm(receipt));
+  const [form, setForm] = useState(() => buildInitialForm(receipt, initialProjectRef));
   const [items, setItems] = useState<GoodsReceiptItem[]>(() => buildInitialItems(receipt));
 
   const updateItem = (index: number, key: keyof GoodsReceiptItem, value: string) => {

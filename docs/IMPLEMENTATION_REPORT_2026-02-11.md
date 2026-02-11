@@ -396,3 +396,59 @@ pnpm lint
 pnpm typecheck
 pnpm test
 ```
+
+---
+
+## Project Detail Work Hub + Sidebar Organization (Phase 1)
+
+### Project Work Hub actions (safe Phase 1 routing)
+Project Detail (`/projects/[id]`) remains read-first, but now includes an `Actions` menu (permission-gated + audited).
+
+Actions implemented (Phase 1 safe):
+- Create Purchase Order for this Project (opens PO create dialog with `projectRef` prefilled)
+- Receive Goods (GRN) for this Project (opens GRN create dialog with `projectRef` prefilled)
+- Create Vendor Bill for this Project (opens Vendor Bill create dialog with `projectRef` prefilled)
+- Assign People to Project (writes audited add/remove events)
+- Add Project Note (audited event; no new Note table in Phase 1)
+- Add Attachment (URL-only; creates `Attachment` + audit log)
+
+Explicitly not added:
+- No “add inventory item” from Project page (inventory truth remains GRN/ledger only)
+- No edits to posted financial docs
+- No prompt-based edits
+
+Implementation files:
+- UI:
+  - `src/app/projects/[id]/ProjectDetailClient.tsx`
+- Policy (UI + API agreement):
+  - `src/lib/project-workhub-policy.ts`
+- APIs (server-enforced + audited):
+  - `src/app/api/projects/[id]/assignments/route.ts` (adds `PROJECT_MEMBER_ADD` / `PROJECT_MEMBER_REMOVE`)
+  - `src/app/api/projects/[id]/notes/route.ts` (`PROJECT_NOTE_ADD`)
+  - `src/app/api/projects/[id]/attachments/route.ts` (`PROJECT_ATTACHMENT_ADD`)
+
+Default role matrix (Phase 1):
+- Finance/Owner: all actions
+- Procurement: procurement actions + notes/attachments + assign people if `projects.assign`
+- Engineer/PM: notes/attachments only (assign people only if `projects.assign`)
+- Store/Technician: notes/attachments only
+- Sales/Marketing: notes/attachments only
+
+### Sidebar / navigation organization (Phase 1)
+Sidebar is now grouped for Phase 1 clarity and hides legacy/out-of-scope modules by default (pages remain accessible by URL).
+- Groups: Operations, Finance, People, Controls, Reports, Directory
+
+Implementation:
+- `src/lib/navigation.ts`
+
+### Playwright E2E (RBAC + mobile)
+- Added: `playwright/tests/project-workhub-actions.spec.ts`
+  - Asserts action visibility by role (Finance vs Engineer vs Store)
+  - API-negative: Store cannot call project assignments (403)
+  - Mobile smoke (iPhone 13): Actions menu opens
+
+Run (requires disposable DB):
+```bash
+export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod -- project-workhub-actions
+```

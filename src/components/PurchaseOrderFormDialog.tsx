@@ -45,9 +45,13 @@ type PurchaseOrderFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   purchaseOrder?: PurchaseOrder | null;
+  initialProjectRef?: string;
 };
 
-const buildInitialForm = (purchaseOrder: PurchaseOrder | null | undefined) => ({
+const buildInitialForm = (
+  purchaseOrder: PurchaseOrder | null | undefined,
+  initialProjectRef?: string,
+) => ({
   poNumber: purchaseOrder?.poNumber || "",
   vendorId: purchaseOrder?.vendorId || "",
   vendorName: purchaseOrder?.vendorName || "",
@@ -55,6 +59,7 @@ const buildInitialForm = (purchaseOrder: PurchaseOrder | null | undefined) => ({
   projectRef:
     purchaseOrder?.projectRef ||
     purchaseOrder?.items?.find((i) => i.project)?.project ||
+    initialProjectRef ||
     "",
   orderDate: purchaseOrder?.orderDate?.slice(0, 10) || new Date().toISOString().slice(0, 10),
   expectedDate: purchaseOrder?.expectedDate?.slice(0, 10) || "",
@@ -81,12 +86,13 @@ function PurchaseOrderFormDialogInner({
   open,
   onOpenChange,
   purchaseOrder,
+  initialProjectRef,
 }: PurchaseOrderFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
   const [vendorRefreshKey, setVendorRefreshKey] = useState(0);
-  const [form, setForm] = useState(() => buildInitialForm(purchaseOrder));
+  const [form, setForm] = useState(() => buildInitialForm(purchaseOrder, initialProjectRef));
   const [items, setItems] = useState<PurchaseOrderItem[]>(() => buildInitialItems(purchaseOrder));
 
   const updateItem = (index: number, key: keyof PurchaseOrderItem, value: string) => {

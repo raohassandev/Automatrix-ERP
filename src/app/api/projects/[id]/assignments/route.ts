@@ -74,6 +74,12 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
   }
 
+  const before = await prisma.projectAssignment.findMany({
+    where: { projectId: id },
+    select: { userId: true, role: true },
+  });
+  const beforeSet = new Map(before.map((a) => [a.userId, a.role || "MEMBER"]));
+
   const body = await req.json();
   const assignments = Array.isArray(body?.assignments) ? body.assignments : [];
   const sanitizedAssignments: AssignmentInput[] = assignments
@@ -85,6 +91,16 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
   if (sanitizedAssignments.length === 0) {
     await prisma.projectAssignment.deleteMany({ where: { projectId: id } });
+    // Audit removals
+    for (const [userId, role] of beforeSet.entries()) {
+      await logAudit({
+        action: "PROJECT_MEMBER_REMOVE",
+        entity: "Project",
+        entityId: id,
+        oldValue: JSON.stringify({ userId, role }),
+        userId: session.user.id,
+      });
+    }
     return NextResponse.json({ success: true, data: [] });
   }
 
@@ -109,6 +125,29 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       orderBy: { createdAt: "asc" },
     });
   });
+
+  const afterSet = new Map(result.map((a) => [a.userId, a.role || "MEMBER"]));
+  const added = Array.from(afterSet.keys()).filter((uid) => !beforeSet.has(uid));
+  const removed = Array.from(beforeSet.keys()).filter((uid) => !afterSet.has(uid));
+
+  for (const userId of added) {
+    await logAudit({
+      action: "PROJECT_MEMBER_ADD",
+      entity: "Project",
+      entityId: id,
+      newValue: JSON.stringify({ userId, role: afterSet.get(userId) }),
+      userId: session.user.id,
+    });
+  }
+  for (const userId of removed) {
+    await logAudit({
+      action: "PROJECT_MEMBER_REMOVE",
+      entity: "Project",
+      entityId: id,
+      oldValue: JSON.stringify({ userId, role: beforeSet.get(userId) }),
+      userId: session.user.id,
+    });
+  }
 
   await logAudit({
     action: "UPDATE_PROJECT_ASSIGNMENTS",

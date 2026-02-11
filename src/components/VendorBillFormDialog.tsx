@@ -75,10 +75,12 @@ export function VendorBillFormDialog({
   open,
   onOpenChange,
   billId,
+  initialProjectRef,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   billId?: string;
+  initialProjectRef?: string;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -105,7 +107,7 @@ export function VendorBillFormDialog({
       setForm({
         billNumber: "",
         vendorId: "",
-        projectRef: "",
+        projectRef: initialProjectRef || "",
         billDate: new Date().toISOString().slice(0, 10),
         dueDate: "",
         currency: "PKR",
