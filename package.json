@@ -18,6 +18,7 @@
     "test:e2e:prod": "playwright test --config=playwright.config.prod.ts",
     "test": "vitest run",
     "security:check": "node scripts/verify-env.js",
+    "check:import-case": "node scripts/check-import-case.mjs",
     "analyze": "ANALYZE=true pnpm build",
     "perf:audit": "lighthouse http://localhost:3000 --output=json --output-path=./performance-report.json",
     "build:optimized": "pnpm typecheck && pnpm lint && pnpm build",

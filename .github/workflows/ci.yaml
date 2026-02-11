@@ -19,7 +19,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -28,13 +28,32 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Prisma generate (types)
+        run: pnpm prisma:generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/automatrix_erp_ci?schema=public
 
       - name: Lint
-        run: pnpm --dir apps/web lint
+        run: pnpm lint
 
       - name: Typecheck
-        run: pnpm --dir apps/web typecheck
+        run: pnpm typecheck
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/automatrix_erp_ci?schema=public
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Import case check (Linux parity)
+        run: pnpm check:import-case
 
       - name: Build
-        run: pnpm --dir apps/web build
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/automatrix_erp_ci?schema=public
+          NEXTAUTH_URL: http://localhost:3000
+          AUTH_SECRET: ci-secret
+          GOOGLE_CLIENT_ID: dummy
+          GOOGLE_CLIENT_SECRET: dummy

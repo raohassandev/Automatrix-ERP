@@ -26,9 +26,16 @@ jobs:
     
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
+
+    - name: Prisma generate (types)
+      run: pnpm prisma:generate
+      env:
+        DATABASE_URL: postgresql://ci:ci@localhost:5432/automatrix_erp_ci?schema=public
     
     - name: Run TypeScript check
       run: pnpm typecheck
+      env:
+        DATABASE_URL: postgresql://ci:ci@localhost:5432/automatrix_erp_ci?schema=public
     
     - name: Run tests
       run: pnpm test
@@ -39,6 +46,12 @@ jobs:
     
     - name: Build application
       run: pnpm build
+      env:
+        DATABASE_URL: postgresql://ci:ci@localhost:5432/automatrix_erp_ci?schema=public
+        NEXTAUTH_URL: http://localhost:3000
+        AUTH_SECRET: ci-secret
+        GOOGLE_CLIENT_ID: dummy
+        GOOGLE_CLIENT_SECRET: dummy
     
     - name: Deploy to production server
       uses: appleboy/ssh-action@v1.0.3
