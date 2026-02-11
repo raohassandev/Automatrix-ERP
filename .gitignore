@@ -15,11 +15,13 @@ prisma/**/*.db
 # Playwright
 playwright/.auth/
 playwright/test-results/
+playwright-report/
 # Logs
 logs/
 *.log
 # OS
 .DS_Store
+__MACOSX/
 # IDE
 .vscode/
 .idea/
