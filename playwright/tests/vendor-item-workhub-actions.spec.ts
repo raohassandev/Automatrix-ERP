@@ -32,6 +32,7 @@ async function ensureStorageState(
 
 test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   let vendorDbId = "";
+  let vendorName = "";
   let itemDbId = "";
   let projectDbId = "";
   let otherUserId = "";
@@ -55,7 +56,8 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     const ts = Date.now();
     const today = new Date().toISOString().slice(0, 10);
 
-    const vendorRes = await api.post("/api/vendors", { data: { name: `E2E WH Vendor ${ts}`, status: "ACTIVE" } });
+    vendorName = `E2E WH Vendor ${ts}`;
+    const vendorRes = await api.post("/api/vendors", { data: { name: vendorName, status: "ACTIVE" } });
     expect(vendorRes.ok()).toBeTruthy();
     vendorDbId = (await vendorRes.json()).data.id;
 
@@ -340,7 +342,11 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     await page.getByRole("button", { name: "Actions" }).click();
     await expect(page.getByText("Add Project Note")).toBeVisible();
 
-    await page.goto(`/vendors/${vendorDbId}`);
+    // Mobile list -> detail should show a loader indicator (cheap assertion).
+    await page.goto("/vendors");
+    await page.getByRole("link", { name: vendorName }).click();
+    await expect(page.getByTestId("route-loading-indicator").or(page.getByTestId("app-loading-skeleton"))).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/vendors/${vendorDbId}`), { timeout: 15_000 });
     await page.getByRole("button", { name: "Actions" }).click();
     await expect(page.getByText("Add Vendor Note")).toBeVisible();
 

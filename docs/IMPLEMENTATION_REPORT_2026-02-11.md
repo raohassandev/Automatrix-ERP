@@ -619,3 +619,48 @@ Run:
 export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
 pnpm test:e2e:prod -- vendor-item-workhub-actions
 ```
+
+## Loading UX (Phase 1 hubs + navigation)
+
+### Global navigation indicator
+Added a slim top loading strip that appears immediately on internal link navigation (sidebar links + row links) so users can tell the app is working during route transitions.
+
+Implementation:
+- `src/components/RouteLoadingIndicator.tsx` (document-level internal link click detection; hides on route change)
+- `src/app/layout.tsx` (mounted globally)
+
+### Page-level loading skeleton (App Router)
+Added a global `loading.tsx` fallback to avoid blank screens during server navigation.
+
+Implementation:
+- `src/app/loading.tsx` (simple, mobile-safe skeleton)
+
+### Action-level loaders + refresh
+Standardized action feedback for Work Hub note/attachment/assignment actions:
+- Disable submit button + show “Saving…”
+- Toast feedback via a shared helper
+- Refresh the page (`router.refresh()`) after success so Notes/History updates without manual reload
+
+Implementation:
+- Helper: `src/lib/withLoadingToast.ts`
+- Updated hubs:
+  - `src/app/projects/[id]/ProjectDetailClient.tsx` (assignments + note + attachment)
+  - `src/app/vendors/[id]/VendorDetailClient.tsx` (note + attachment)
+  - `src/app/inventory/items/[id]/ItemDetailClient.tsx` (note + attachment)
+  - `src/app/company-accounts/[id]/CompanyAccountDetailClient.tsx` (note + attachment)
+
+### Playwright UX assertion (cheap + stable)
+Extended the consolidated mobile smoke test to assert a loader indicator appears on `list -> detail` navigation on iPhone viewport.
+
+Implementation:
+- `playwright/tests/vendor-item-workhub-actions.spec.ts` (expects `route-loading-indicator` or `app-loading-skeleton`)
+
+Verification:
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+# E2E (disposable DB)
+export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod -- vendor-item-workhub-actions
+```

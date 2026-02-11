@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import type { ItemDetailData, ItemDetailTab } from "@/lib/item-detail-policy";
 import { buildItemWorkhubPolicy } from "@/lib/item-workhub-policy";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
+import { withLoadingToast } from "@/lib/withLoadingToast";
 
 function tabLabel(tab: ItemDetailTab) {
   switch (tab) {
@@ -27,6 +29,7 @@ function tabLabel(tab: ItemDetailTab) {
 }
 
 export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
+  const router = useRouter();
   const tabs = (Object.keys(detail.policy.tabs) as ItemDetailTab[]).filter((t) => detail.policy.tabs[t]);
   const [active, setActive] = React.useState<ItemDetailTab>(tabs[0] || "onhand");
   const workhub = buildItemWorkhubPolicy(detail.policy.role);
@@ -36,6 +39,8 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
   const [attachmentOpen, setAttachmentOpen] = React.useState(false);
   const [note, setNote] = React.useState("");
   const [attachment, setAttachment] = React.useState({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
+  const [savingNote, setSavingNote] = React.useState(false);
+  const [savingAttachment, setSavingAttachment] = React.useState(false);
 
   React.useEffect(() => {
     if (!detail.policy.tabs[active]) {
@@ -137,12 +142,15 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
             e.preventDefault();
             (async () => {
               try {
-                await addNote();
-                toast.success("Note added");
+                setSavingNote(true);
+                await withLoadingToast(addNote, { loading: "Saving...", success: "Saved" });
                 setNote("");
                 setNoteOpen(false);
+                router.refresh();
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Failed to add note");
+              } finally {
+                setSavingNote(false);
               }
             })();
           }}
@@ -163,7 +171,9 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
             <Button type="button" variant="outline" onClick={() => setNoteOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add</Button>
+            <Button type="submit" disabled={savingNote}>
+              {savingNote ? "Saving..." : "Add"}
+            </Button>
           </div>
         </form>
       </FormDialog>
@@ -174,12 +184,15 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
             e.preventDefault();
             (async () => {
               try {
-                await addAttachment();
-                toast.success("Attachment added");
+                setSavingAttachment(true);
+                await withLoadingToast(addAttachment, { loading: "Saving...", success: "Saved" });
                 setAttachment({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
                 setAttachmentOpen(false);
+                router.refresh();
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Failed to add attachment");
+              } finally {
+                setSavingAttachment(false);
               }
             })();
           }}
@@ -229,7 +242,9 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
             <Button type="button" variant="outline" onClick={() => setAttachmentOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add</Button>
+            <Button type="submit" disabled={savingAttachment}>
+              {savingAttachment ? "Saving..." : "Add"}
+            </Button>
           </div>
         </form>
       </FormDialog>

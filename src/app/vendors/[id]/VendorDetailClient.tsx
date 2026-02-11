@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import type { VendorDetailData, VendorDetailTab } from "@/lib/vendor-detail-policy";
 import { buildVendorWorkhubPolicy } from "@/lib/vendor-workhub-policy";
@@ -14,6 +15,7 @@ import { toast } from "sonner";
 import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
 import { VendorBillFormDialog } from "@/components/VendorBillFormDialog";
 import { VendorPaymentFormDialog } from "@/components/VendorPaymentFormDialog";
+import { withLoadingToast } from "@/lib/withLoadingToast";
 
 function tabLabel(tab: VendorDetailTab) {
   switch (tab) {
@@ -31,6 +33,7 @@ function tabLabel(tab: VendorDetailTab) {
 }
 
 export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
+  const router = useRouter();
   const tabs = (Object.keys(detail.policy.tabs) as VendorDetailTab[]).filter((t) => detail.policy.tabs[t]);
   const [active, setActive] = React.useState<VendorDetailTab>(tabs[0] || "activity");
   const workhub = buildVendorWorkhubPolicy(detail.policy.role);
@@ -43,6 +46,8 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
 
   const [note, setNote] = React.useState("");
   const [attachment, setAttachment] = React.useState({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
+  const [savingNote, setSavingNote] = React.useState(false);
+  const [savingAttachment, setSavingAttachment] = React.useState(false);
 
   React.useEffect(() => {
     if (!detail.policy.tabs[active]) {
@@ -167,12 +172,15 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
             e.preventDefault();
             (async () => {
               try {
-                await addNote();
-                toast.success("Note added");
+                setSavingNote(true);
+                await withLoadingToast(addNote, { loading: "Saving...", success: "Saved" });
                 setNote("");
                 setNoteOpen(false);
+                router.refresh();
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Failed to add note");
+              } finally {
+                setSavingNote(false);
               }
             })();
           }}
@@ -193,7 +201,9 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
             <Button type="button" variant="outline" onClick={() => setNoteOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add</Button>
+            <Button type="submit" disabled={savingNote}>
+              {savingNote ? "Saving..." : "Add"}
+            </Button>
           </div>
         </form>
       </FormDialog>
@@ -204,12 +214,15 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
             e.preventDefault();
             (async () => {
               try {
-                await addAttachment();
-                toast.success("Attachment added");
+                setSavingAttachment(true);
+                await withLoadingToast(addAttachment, { loading: "Saving...", success: "Saved" });
                 setAttachment({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
                 setAttachmentOpen(false);
+                router.refresh();
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Failed to add attachment");
+              } finally {
+                setSavingAttachment(false);
               }
             })();
           }}
@@ -259,7 +272,9 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
             <Button type="button" variant="outline" onClick={() => setAttachmentOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add</Button>
+            <Button type="submit" disabled={savingAttachment}>
+              {savingAttachment ? "Saving..." : "Add"}
+            </Button>
           </div>
         </form>
       </FormDialog>

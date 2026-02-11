@@ -7,6 +7,7 @@ import { SessionProvider } from "next-auth/react";
 import { FloatingActionButton } from "@/components/FloatingActionButton";
 import { CommandPalette } from "@/components/CommandPalette";
 import { Sidebar } from "@/components/Sidebar";
+import { RouteLoadingIndicator } from "@/components/RouteLoadingIndicator";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <div className="min-h-screen bg-background text-foreground">
+            <RouteLoadingIndicator />
             {/* Sidebar - Desktop only */}
             <Sidebar />
 

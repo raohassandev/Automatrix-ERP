@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import type { ProjectDetailData, ProjectDetailTab } from "@/lib/project-detail-policy";
 import { buildProjectWorkhubPolicy } from "@/lib/project-workhub-policy";
@@ -14,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
 import { GoodsReceiptFormDialog } from "@/components/GoodsReceiptFormDialog";
 import { VendorBillFormDialog } from "@/components/VendorBillFormDialog";
+import { withLoadingToast } from "@/lib/withLoadingToast";
 
 function tabLabel(tab: ProjectDetailTab) {
   switch (tab) {
@@ -31,6 +33,7 @@ function tabLabel(tab: ProjectDetailTab) {
 }
 
 export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
+  const router = useRouter();
   const tabs = (Object.keys(detail.policy.tabs) as ProjectDetailTab[]).filter(
     (t) => detail.policy.tabs[t],
   );
@@ -48,6 +51,9 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   const [selectedUserIds, setSelectedUserIds] = React.useState<string[]>([]);
   const [note, setNote] = React.useState("");
   const [attachment, setAttachment] = React.useState({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
+  const [savingAssignments, setSavingAssignments] = React.useState(false);
+  const [savingNote, setSavingNote] = React.useState(false);
+  const [savingAttachment, setSavingAttachment] = React.useState(false);
 
   React.useEffect(() => {
     if (!detail.policy.tabs[active]) {
@@ -221,11 +227,14 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             e.preventDefault();
             (async () => {
               try {
-                await saveAssignments();
-                toast.success("Assignments saved");
+                setSavingAssignments(true);
+                await withLoadingToast(saveAssignments, { loading: "Saving...", success: "Saved" });
                 setAssignOpen(false);
+                router.refresh();
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Failed to save assignments");
+              } finally {
+                setSavingAssignments(false);
               }
             })();
           }}
@@ -265,7 +274,9 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             <Button type="button" variant="outline" onClick={() => setAssignOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Save</Button>
+            <Button type="submit" disabled={savingAssignments}>
+              {savingAssignments ? "Saving..." : "Save"}
+            </Button>
           </div>
         </form>
       </FormDialog>
@@ -276,12 +287,15 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             e.preventDefault();
             (async () => {
               try {
-                await addNote();
-                toast.success("Note added");
+                setSavingNote(true);
+                await withLoadingToast(addNote, { loading: "Saving...", success: "Saved" });
                 setNote("");
                 setNoteOpen(false);
+                router.refresh();
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Failed to add note");
+              } finally {
+                setSavingNote(false);
               }
             })();
           }}
@@ -302,7 +316,9 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             <Button type="button" variant="outline" onClick={() => setNoteOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add</Button>
+            <Button type="submit" disabled={savingNote}>
+              {savingNote ? "Saving..." : "Add"}
+            </Button>
           </div>
         </form>
       </FormDialog>
@@ -313,12 +329,15 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             e.preventDefault();
             (async () => {
               try {
-                await addAttachment();
-                toast.success("Attachment added");
+                setSavingAttachment(true);
+                await withLoadingToast(addAttachment, { loading: "Saving...", success: "Saved" });
                 setAttachment({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
                 setAttachmentOpen(false);
+                router.refresh();
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Failed to add attachment");
+              } finally {
+                setSavingAttachment(false);
               }
             })();
           }}
@@ -346,7 +365,9 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             <Button type="button" variant="outline" onClick={() => setAttachmentOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add</Button>
+            <Button type="submit" disabled={savingAttachment}>
+              {savingAttachment ? "Saving..." : "Add"}
+            </Button>
           </div>
         </form>
       </FormDialog>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatMoney } from "@/lib/format";
 import type { CompanyAccountDetailData, CompanyAccountDetailTab } from "@/lib/company-account-detail-policy";
@@ -11,6 +12,7 @@ import { FormDialog } from "@/components/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { VendorPaymentFormDialog } from "@/components/VendorPaymentFormDialog";
+import { withLoadingToast } from "@/lib/withLoadingToast";
 
 function tabLabel(tab: CompanyAccountDetailTab) {
   switch (tab) {
@@ -26,6 +28,7 @@ function tabLabel(tab: CompanyAccountDetailTab) {
 }
 
 export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountDetailData }) {
+  const router = useRouter();
   const tabs = (Object.keys(detail.policy.tabs) as CompanyAccountDetailTab[]).filter((t) => detail.policy.tabs[t]);
   const [active, setActive] = React.useState<CompanyAccountDetailTab>(tabs[0] || "activity");
   const workhub = detail.policy.workhub;
@@ -36,6 +39,8 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
 
   const [note, setNote] = React.useState("");
   const [attachment, setAttachment] = React.useState({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
+  const [savingNote, setSavingNote] = React.useState(false);
+  const [savingAttachment, setSavingAttachment] = React.useState(false);
 
   async function addNote() {
     const res = await fetch(`/api/company-accounts/${detail.header.id}/notes`, {
@@ -131,12 +136,15 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
             e.preventDefault();
             (async () => {
               try {
-                await addNote();
-                toast.success("Note added");
+                setSavingNote(true);
+                await withLoadingToast(addNote, { loading: "Saving...", success: "Saved" });
                 setNote("");
                 setNoteOpen(false);
+                router.refresh();
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Failed to add note");
+              } finally {
+                setSavingNote(false);
               }
             })();
           }}
@@ -157,7 +165,9 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
             <Button type="button" variant="outline" onClick={() => setNoteOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add</Button>
+            <Button type="submit" disabled={savingNote}>
+              {savingNote ? "Saving..." : "Add"}
+            </Button>
           </div>
         </form>
       </FormDialog>
@@ -168,12 +178,15 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
             e.preventDefault();
             (async () => {
               try {
-                await addAttachment();
-                toast.success("Attachment added");
+                setSavingAttachment(true);
+                await withLoadingToast(addAttachment, { loading: "Saving...", success: "Saved" });
                 setAttachment({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
                 setAttachmentOpen(false);
+                router.refresh();
               } catch (err) {
                 toast.error(err instanceof Error ? err.message : "Failed to add attachment");
+              } finally {
+                setSavingAttachment(false);
               }
             })();
           }}
@@ -223,7 +236,9 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
             <Button type="button" variant="outline" onClick={() => setAttachmentOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Add</Button>
+            <Button type="submit" disabled={savingAttachment}>
+              {savingAttachment ? "Saving..." : "Add"}
+            </Button>
           </div>
         </form>
       </FormDialog>
@@ -459,4 +474,3 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
     </div>
   );
 }
-
