@@ -33,7 +33,9 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
-  const type = searchParams.get("type") || "expenses";
+  // Phase 1 single-spine: Procurement report exports are truth sources only.
+  // Expenses are explicitly non-stock in Phase 1 and must not be used as a stock-purchase proxy.
+  const type = (searchParams.get("type") || "ledger").trim().toLowerCase();
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   const projectFilter = searchParams.get("project");
@@ -58,7 +60,7 @@ export async function GET(req: Request) {
     }
   }
 
-  if (type === "ledger") {
+  if (type === "ledger" || type === "stockin") {
     const where: Record<string, unknown> = { type: "PURCHASE" };
     if (!canViewAll && !canViewTeam) {
       where.userId = session.user.id;
@@ -99,58 +101,8 @@ export async function GET(req: Request) {
     });
   }
 
-  const expenseWhere: Record<string, unknown> = {
-    status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
-    category: { contains: "material", mode: "insensitive" as const },
-  };
-  if (!canViewAll && !canViewTeam) {
-    expenseWhere.submittedById = session.user.id;
-  }
-  if (from || to) {
-    expenseWhere.date = range;
-  }
-  if (projectValues?.length) {
-    expenseWhere.project = { in: projectValues };
-  }
-
-  const expenses = await prisma.expense.findMany({
-    where: expenseWhere,
-    orderBy: { date: "desc" },
-    select: {
-      date: true,
-      category: true,
-      description: true,
-      project: true,
-      amount: true,
-      approvedAmount: true,
-      status: true,
-    },
-  });
-
-  const rows: Array<Array<string | number | null | undefined>> = [
-    ["Date", "Category", "Description", "Project", "Amount", "Status"],
-    ...expenses.map((exp) => {
-      const usedAmount =
-        exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount
-          ? Number(exp.approvedAmount)
-          : Number(exp.amount);
-      return [
-        exp.date.toISOString().slice(0, 10),
-        exp.category,
-        exp.description,
-        exp.project || "",
-        formatMoney(usedAmount),
-        exp.status,
-      ];
-    }),
-  ];
-
-  const csv = toCsv(rows);
-  const filename = `procurement_expenses_${new Date().toISOString().slice(0, 10)}.csv`;
-  return new Response(csv, {
-    headers: {
-      "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename=${filename}`,
-    },
-  });
+  return new Response(
+    "Invalid type. Phase 1 supports only type=ledger (stock-in truth from InventoryLedger).",
+    { status: 400 }
+  );
 }

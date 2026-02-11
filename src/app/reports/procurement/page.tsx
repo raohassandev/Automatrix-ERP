@@ -56,42 +56,13 @@ export default async function ProcurementReportPage({
   if (vendorFilter) exportParams.set("vendor", vendorFilter);
   const exportQuery = exportParams.toString();
 
-  const expenseWhere: Record<string, unknown> = {
-    status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
-    category: { contains: "material", mode: "insensitive" as const },
-  };
+  // Phase 1 single-spine: stock truth is InventoryLedger only (posted GRNs).
+  // Expenses are non-stock only and intentionally excluded here.
+  const ledgerWhere: Record<string, unknown> = { type: "PURCHASE", sourceType: "GRN" };
   if (projectFilter) {
     const resolvedProject = await resolveProjectId(projectFilter);
     const projectValues = [projectFilter];
-    if (resolvedProject && resolvedProject !== projectFilter) {
-      projectValues.push(resolvedProject);
-    }
-    expenseWhere.project = { in: projectValues };
-  }
-  if (!canViewAll && !canViewTeam) {
-    expenseWhere.submittedById = session.user.id;
-  }
-  if (from || to) {
-    const range: { gte?: Date; lte?: Date } = {};
-    if (from) range.gte = new Date(from);
-    if (to) range.lte = new Date(to);
-    expenseWhere.date = range;
-  }
-  if (search) {
-    expenseWhere.OR = [
-      { description: { contains: search, mode: "insensitive" as const } },
-      { category: { contains: search, mode: "insensitive" as const } },
-      { project: { contains: search, mode: "insensitive" as const } },
-    ];
-  }
-
-  const ledgerWhere: Record<string, unknown> = { type: "PURCHASE" };
-  if (projectFilter) {
-    const resolvedProject = await resolveProjectId(projectFilter);
-    const projectValues = [projectFilter];
-    if (resolvedProject && resolvedProject !== projectFilter) {
-      projectValues.push(resolvedProject);
-    }
+    if (resolvedProject && resolvedProject !== projectFilter) projectValues.push(resolvedProject);
     ledgerWhere.project = { in: projectValues };
   }
   if (!canViewAll && !canViewTeam) {
@@ -110,40 +81,20 @@ export default async function ProcurementReportPage({
     ];
   }
 
-  const [expenses, expensesTotal, ledgerEntries, ledgerTotal, totalExpenseCount, totalLedgerCount] =
-    await Promise.all([
-      prisma.expense.findMany({
-        where: expenseWhere,
-        orderBy: { date: "desc" },
-        skip,
-        take,
-        select: {
-          id: true,
-          date: true,
-          description: true,
-          category: true,
-          amount: true,
-          approvedAmount: true,
-          status: true,
-          project: true,
-        },
-      }),
-      prisma.expense.aggregate({ where: expenseWhere, _sum: { amount: true, approvedAmount: true } }),
-      prisma.inventoryLedger.findMany({
-        where: ledgerWhere,
-        orderBy: { date: "desc" },
-        skip,
-        take,
-        include: { item: { select: { name: true, unit: true } } },
-      }),
-      prisma.inventoryLedger.aggregate({ where: ledgerWhere, _sum: { total: true } }),
-      prisma.expense.count({ where: expenseWhere }),
-      prisma.inventoryLedger.count({ where: ledgerWhere }),
-    ]);
+  const [ledgerEntries, ledgerTotal, totalLedgerCount] = await Promise.all([
+    prisma.inventoryLedger.findMany({
+      where: ledgerWhere,
+      orderBy: { date: "desc" },
+      skip,
+      take,
+      include: { item: { select: { name: true, unit: true } } },
+    }),
+    prisma.inventoryLedger.aggregate({ where: ledgerWhere, _sum: { total: true } }),
+    prisma.inventoryLedger.count({ where: ledgerWhere }),
+  ]);
 
-  const expenseSum = Number(expensesTotal._sum.approvedAmount || expensesTotal._sum.amount || 0);
   const ledgerSum = Number(ledgerTotal._sum.total || 0);
-  const totalPages = Math.max(1, Math.ceil(Math.max(totalExpenseCount, totalLedgerCount) / take));
+  const totalPages = Math.max(1, Math.ceil(totalLedgerCount / take));
 
   return (
     <div className="grid gap-6">
@@ -152,13 +103,14 @@ export default async function ProcurementReportPage({
           <div>
             <h1 className="text-2xl font-semibold">Procurement Report</h1>
             <p className="mt-2 text-muted-foreground">
-              Material purchases and stock-in activity.
+              Phase 1 truthful view: stock-in activity sourced from InventoryLedger (GRN postings only).
+              {vendorFilter ? " (Vendor filter applies to PO/GRN exports, not ledger rows.)" : ""}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <DateRangePicker />
             <div className="min-w-[220px]">
-              <SearchInput placeholder="Search procurement..." />
+              <SearchInput placeholder="Search reference/project..." />
             </div>
             <div className="min-w-[200px]">
               <QueryInput param="project" placeholder="Filter project..." />
@@ -168,12 +120,6 @@ export default async function ProcurementReportPage({
             </div>
             {canExport ? (
               <>
-                <a
-                  href={`/api/reports/procurement/export?type=expenses${exportQuery ? `&${exportQuery}` : ""}`}
-                  className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
-                >
-                  Export Expenses
-                </a>
                 <a
                   href={`/api/reports/procurement/export?type=ledger${exportQuery ? `&${exportQuery}` : ""}`}
                   className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
@@ -200,94 +146,57 @@ export default async function ProcurementReportPage({
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Approved Material Spend</div>
-          <div className="mt-2 text-xl font-semibold">{formatMoney(expenseSum)}</div>
-        </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Stock-in Value</div>
           <div className="mt-2 text-xl font-semibold">{formatMoney(ledgerSum)}</div>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Records</div>
-          <div className="mt-2 text-xl font-semibold">
-            {Math.max(totalExpenseCount, totalLedgerCount)}
+          <div className="text-sm text-muted-foreground">Stock-in Records</div>
+          <div className="mt-2 text-xl font-semibold">{totalLedgerCount}</div>
+        </div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Phase 1 rule</div>
+          <div className="mt-2 text-sm text-foreground">
+            Stock purchases must use Procurement (PO → GRN → Vendor Bill → Vendor Payment). Expenses are non-stock only.
           </div>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Material Expenses</h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2">Date</th>
-                  <th className="py-2">Category</th>
-                  <th className="py-2">Project</th>
-                  <th className="py-2">Amount</th>
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Stock-in Ledger (GRN postings)</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2">Date</th>
+                <th className="py-2">Item</th>
+                <th className="py-2">Qty</th>
+                <th className="py-2">Unit</th>
+                <th className="py-2">Total</th>
+                <th className="py-2">Reference</th>
+                <th className="py-2">Project</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ledgerEntries.map((entry) => (
+                <tr key={entry.id} className="border-b">
+                  <td className="py-2">{new Date(entry.date).toLocaleDateString()}</td>
+                  <td className="py-2">{entry.item?.name || "Item"}</td>
+                  <td className="py-2">{Number(entry.quantity)}</td>
+                  <td className="py-2">{entry.item?.unit || ""}</td>
+                  <td className="py-2">{formatMoney(Number(entry.total))}</td>
+                  <td className="py-2">{entry.reference || "-"}</td>
+                  <td className="py-2">{entry.project || "-"}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {expenses.map((exp) => {
-                  const usedAmount =
-                    exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount
-                      ? Number(exp.approvedAmount)
-                      : Number(exp.amount);
-                  return (
-                    <tr key={exp.id} className="border-b">
-                      <td className="py-2">{new Date(exp.date).toLocaleDateString()}</td>
-                      <td className="py-2">{exp.category}</td>
-                      <td className="py-2">{exp.project || "-"}</td>
-                      <td className="py-2">{formatMoney(usedAmount)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          {expenses.length === 0 && (
-            <div className="py-6 text-center text-muted-foreground">No material expenses found.</div>
-          )}
+              ))}
+            </tbody>
+          </table>
         </div>
-
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Inventory Purchases</h2>
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="py-2">Date</th>
-                  <th className="py-2">Item</th>
-                  <th className="py-2">Qty</th>
-                  <th className="py-2">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ledgerEntries.map((entry) => (
-                  <tr key={entry.id} className="border-b">
-                    <td className="py-2">{new Date(entry.date).toLocaleDateString()}</td>
-                    <td className="py-2">{entry.item?.name || "Item"}</td>
-                    <td className="py-2">
-                      {Number(entry.quantity)} {entry.item?.unit || ""}
-                    </td>
-                    <td className="py-2">{formatMoney(Number(entry.total))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {ledgerEntries.length === 0 && (
-            <div className="py-6 text-center text-muted-foreground">No inventory purchases found.</div>
-          )}
-        </div>
+        {ledgerEntries.length === 0 ? (
+          <div className="py-6 text-center text-muted-foreground">No stock-in entries found.</div>
+        ) : null}
       </div>
 
-      {totalPages > 1 && (
-        <div className="mt-2">
-          <PaginationControls totalPages={totalPages} currentPage={page} />
-        </div>
-      )}
+      <PaginationControls currentPage={page} totalPages={totalPages} />
     </div>
   );
 }
