@@ -192,4 +192,37 @@ test.describe("RB4 - Procurement chain", () => {
 
     await api.dispose();
   });
+
+  test("Negative: expense stock-in attempt is rejected (Phase 1 single-spine)", async ({ page, baseURL }) => {
+    await e2eLogin(page);
+
+    const storageState = await page.context().storageState();
+    const api = await request.newContext({
+      baseURL,
+      storageState,
+    });
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Any attempt to use expense payload to touch stock must be blocked server-side.
+    const res = await api.post("/api/expenses", {
+      data: {
+        date: today,
+        description: "E2E blocked expense stock-in",
+        category: "Material (Stock/Inventory)",
+        amount: 1,
+        paymentMode: "Cash",
+        project: "General Office",
+        // Blocked keys (Phase 1): must be rejected before validation.
+        inventoryItemId: "not-a-uuid",
+      },
+    });
+
+    expect(res.status()).toBe(400);
+    const body = await res.json();
+    expect(body.success).toBeFalsy();
+    expect(String(body.error || "")).toContain("Stock purchases are not allowed in Expenses");
+
+    await api.dispose();
+  });
 });
