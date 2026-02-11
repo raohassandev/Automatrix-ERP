@@ -220,3 +220,25 @@ Run (requires disposable DB):
 export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
 pnpm test:e2e:prod -- project-detail-rbac
 ```
+
+---
+
+## Hardening Pass: E2E auth guard + Project RBAC parity + Audit gating
+
+### What changed (minimal, security-only)
+- Locked down E2E auth mode so it cannot be enabled on staging/prod by env accident.
+- Tightened Project Detail API masking by using role-aware select projections (avoid “fetch then strip”).
+- Confirmed `/api/audit` is permission-gated and export endpoints are permission-gated + audited.
+
+### Files changed
+- `src/lib/auth.ts`
+- `src/lib/auth-e2e-guard.ts`
+- `src/lib/__tests__/auth-e2e-guard.test.ts`
+- `src/lib/project-detail-policy.ts`
+
+### Verification
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+```

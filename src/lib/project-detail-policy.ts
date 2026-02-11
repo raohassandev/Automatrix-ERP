@@ -176,7 +176,82 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   // --- Data sources (Phase 1 single spine) ---
   const projectRef = project.projectId;
 
-  const [pos, grns, bills, payments, ledger, expensesApproved] = await Promise.all([
+  const isSalesOrMarketing = policy.role === "Sales" || policy.role === "Marketing";
+  const includeLedgerInResponse = policy.tabs.inventory;
+  const includeExpensesInResponse = policy.tabs.activity && !isSalesOrMarketing;
+
+  const billSelect: Record<string, unknown> = {
+    id: true,
+    billNumber: true,
+    billDate: true,
+    status: true,
+  };
+  if (policy.canViewFinancialTotals || policy.tabs.costs) {
+    billSelect.totalAmount = true;
+  }
+
+  const paymentSelect: Record<string, unknown> = {
+    id: true,
+    paymentNumber: true,
+    paymentDate: true,
+    status: true,
+  };
+  if (policy.canViewFinancialTotals) {
+    paymentSelect.amount = true;
+  }
+
+  const ledgerSelect: Record<string, unknown> = {
+    id: true,
+    date: true,
+    quantity: true,
+    reference: true,
+    sourceType: true,
+    sourceId: true,
+    item: { select: { name: true, unit: true } },
+  };
+  if (policy.canViewUnitCosts) {
+    ledgerSelect.unitCost = true;
+    ledgerSelect.total = true;
+  }
+
+  const expenseSelect: Record<string, unknown> = {
+    id: true,
+    date: true,
+    description: true,
+    category: true,
+    status: true,
+  };
+  if (policy.canViewFinancialTotals || policy.tabs.costs) {
+    expenseSelect.amount = true;
+    expenseSelect.approvedAmount = true;
+  }
+
+  type PoRow = { id: string; poNumber: string; orderDate: Date; status: string };
+  type GrnRow = { id: string; grnNumber: string; receivedDate: Date; status: string };
+  type BillRow = { id: string; billNumber: string; billDate: Date; status: string; totalAmount?: unknown };
+  type PaymentRow = { id: string; paymentNumber: string; paymentDate: Date; status: string; amount?: unknown };
+  type LedgerRow = {
+    id: string;
+    date: Date;
+    quantity: unknown;
+    reference: string | null;
+    sourceType: string | null;
+    sourceId: string | null;
+    unitCost?: unknown;
+    total?: unknown;
+    item: { name: string; unit: string } | null;
+  };
+  type ExpenseRow = {
+    id: string;
+    date: Date;
+    description: string;
+    category: string;
+    status: string;
+    amount?: unknown;
+    approvedAmount?: unknown;
+  };
+
+  const [pos, grns, bills, payments, ledger, expensesApproved] = (await Promise.all([
     prisma.purchaseOrder.findMany({
       where: { projectRef },
       select: { id: true, poNumber: true, orderDate: true, status: true },
@@ -191,42 +266,36 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     }),
     prisma.vendorBill.findMany({
       where: { projectRef },
-      select: { id: true, billNumber: true, billDate: true, status: true, totalAmount: true },
+      select: billSelect as never,
       orderBy: { billDate: "desc" },
       take: 50,
     }),
     prisma.vendorPayment.findMany({
       where: { projectRef },
-      select: { id: true, paymentNumber: true, paymentDate: true, status: true, amount: true },
+      select: paymentSelect as never,
       orderBy: { paymentDate: "desc" },
       take: 50,
     }),
-    prisma.inventoryLedger.findMany({
-      where: { project: projectRef },
-      select: {
-        id: true,
-        date: true,
-        quantity: true,
-        unitCost: true,
-        total: true,
-        reference: true,
-        sourceType: true,
-        sourceId: true,
-        item: { select: { name: true, unit: true } },
-      },
-      orderBy: { date: "desc" },
-      take: 100,
-    }),
-    prisma.expense.findMany({
-      where: {
-        project: projectRef,
-        status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
-      },
-      select: { id: true, date: true, description: true, category: true, amount: true, approvedAmount: true, status: true },
-      orderBy: { date: "desc" },
-      take: 100,
-    }),
-  ]);
+    includeLedgerInResponse
+      ? prisma.inventoryLedger.findMany({
+          where: { project: projectRef },
+          select: ledgerSelect as never,
+          orderBy: { date: "desc" },
+          take: 100,
+        })
+      : Promise.resolve([]),
+    includeExpensesInResponse
+      ? prisma.expense.findMany({
+          where: {
+            project: projectRef,
+            status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+          },
+          select: expenseSelect as never,
+          orderBy: { date: "desc" },
+          take: 100,
+        })
+      : Promise.resolve([]),
+  ])) as unknown as [PoRow[], GrnRow[], BillRow[], PaymentRow[], LedgerRow[], ExpenseRow[]];
 
   const documents: ProjectDocumentsRow[] = [
     ...pos.map((po) => ({
@@ -285,7 +354,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       type: "BILL",
       label: `Bill ${b.billNumber}`,
       status: b.status,
-      amount: policy.canViewFinancialTotals ? Number(b.totalAmount) : null,
+      amount: policy.canViewFinancialTotals ? Number((b as { totalAmount?: unknown }).totalAmount) : null,
       href: `/procurement/vendor-bills?search=${encodeURIComponent(b.billNumber)}`,
     });
   }
@@ -295,7 +364,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       type: "PAYMENT",
       label: `Payment ${p.paymentNumber}`,
       status: p.status,
-      amount: policy.canViewFinancialTotals ? Number(p.amount) : null,
+      amount: policy.canViewFinancialTotals ? Number((p as { amount?: unknown }).amount) : null,
       href: `/procurement/vendor-payments?search=${encodeURIComponent(p.paymentNumber)}`,
     });
   }
@@ -310,16 +379,21 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     });
   }
   for (const e of expensesApproved) {
-    const used =
-      e.status === "PARTIALLY_APPROVED" && e.approvedAmount
-        ? Number(e.approvedAmount)
-        : Number(e.amount);
     activity.push({
       at: formatIso(e.date),
       type: "EXPENSE",
       label: `${e.category}: ${e.description}`,
       status: e.status,
-      amount: policy.canViewFinancialTotals ? used : null,
+      amount: policy.canViewFinancialTotals
+        ? (() => {
+            const v = e as { amount?: unknown; approvedAmount?: unknown };
+            const used =
+              e.status === "PARTIALLY_APPROVED" && v.approvedAmount != null
+                ? Number(v.approvedAmount)
+                : Number(v.amount);
+            return Number.isFinite(used) ? used : 0;
+          })()
+        : null,
       href: `/expenses?search=${encodeURIComponent(e.description.slice(0, 20))}`,
     });
   }
@@ -340,16 +414,20 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
             },
             _sum: { amount: true },
           });
-    const billedTotal = postedBills.reduce((sum, b) => sum + Number(b.totalAmount), 0);
+    const billedTotal = postedBills.reduce(
+      (sum, b) => sum + Number((b as { totalAmount?: unknown }).totalAmount),
+      0,
+    );
     const paidTotal = Number(paidAgg._sum.amount || 0);
     const apOutstanding = Math.max(0, billedTotal - paidTotal);
 
     const nonStockExpensesApproved = expensesApproved.reduce((sum, e) => {
+      const v = e as { amount?: unknown; approvedAmount?: unknown };
       const used =
-        e.status === "PARTIALLY_APPROVED" && e.approvedAmount
-          ? Number(e.approvedAmount)
-          : Number(e.amount);
-      return sum + used;
+        e.status === "PARTIALLY_APPROVED" && v.approvedAmount != null
+          ? Number(v.approvedAmount)
+          : Number(v.amount);
+      return sum + (Number.isFinite(used) ? used : 0);
     }, 0);
 
     costs = {
