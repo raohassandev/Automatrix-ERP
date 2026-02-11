@@ -233,6 +233,15 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   // Field updates
   if (!canEdit) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   if (!isEditableStatus(existing.status)) {
+    await logAudit({
+      action: "BLOCK_EDIT_NON_DRAFT",
+      entity: "VendorBill",
+      entityId: id,
+      oldValue: existing.status,
+      newValue: existing.status,
+      reason: "Attempted field edit when status is not DRAFT (Phase 1 immutability).",
+      userId: session.user.id,
+    });
     return NextResponse.json({ success: false, error: "Only DRAFT bills can be edited." }, { status: 400 });
   }
 

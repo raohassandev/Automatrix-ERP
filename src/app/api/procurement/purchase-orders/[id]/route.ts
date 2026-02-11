@@ -128,6 +128,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   if (currentStatus !== "DRAFT") {
+    await logAudit({
+      action: "BLOCK_EDIT_NON_DRAFT",
+      entity: "PurchaseOrder",
+      entityId: id,
+      oldValue: existing.status,
+      newValue: existing.status,
+      reason: "Attempted field edit when status is not DRAFT (Phase 1 immutability).",
+      userId: session.user.id,
+    });
     return NextResponse.json(
       { success: false, error: `Only DRAFT purchase orders can be edited. Current status: ${existing.status}.` },
       { status: 400 }

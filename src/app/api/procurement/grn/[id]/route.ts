@@ -422,6 +422,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (!isEditableStatus(existing.status)) {
     const status = (existing.status || "").toUpperCase();
     const hint = isLifecycleStatus(existing.status) ? status : "LEGACY_POSTED";
+    await logAudit({
+      action: "BLOCK_EDIT_NON_DRAFT",
+      entity: "GoodsReceipt",
+      entityId: id,
+      oldValue: existing.status,
+      newValue: existing.status,
+      reason: "Attempted field edit when status is not DRAFT (Phase 1 immutability).",
+      userId: session.user.id,
+    });
     return NextResponse.json(
       { success: false, error: `Only DRAFT GRNs can be edited. Current status: ${hint}.` },
       { status: 400 }

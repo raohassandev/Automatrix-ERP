@@ -129,15 +129,11 @@ export default async function CeoDashboardPage() {
   });
 
   const [
-    pendingExpenses,
-    pendingIncome,
     pendingPos,
     pendingGrns,
     pendingBills,
     pendingPayments,
   ] = await Promise.all([
-    prisma.expense.count({ where: { status: { in: ["PENDING", "PENDING_L1", "PENDING_L2", "PENDING_L3"] } } }),
-    prisma.income.count({ where: { status: "PENDING" } }),
     prisma.purchaseOrder.count({ where: { status: "SUBMITTED" } }),
     prisma.goodsReceipt.count({ where: { status: "SUBMITTED" } }),
     prisma.vendorBill.count({ where: { status: "SUBMITTED" } }),
@@ -246,14 +242,6 @@ export default async function CeoDashboardPage() {
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="text-sm font-medium text-muted-foreground">Approval queue (pending)</div>
           <div className="mt-2 space-y-1 text-sm">
-            <div className="flex items-center justify-between">
-              <span>Expenses</span>
-              <span className="font-medium">{pendingExpenses}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Income</span>
-              <span className="font-medium">{pendingIncome}</span>
-            </div>
             <div className="flex items-center justify-between">
               <span>PO (submitted)</span>
               <span className="font-medium">{pendingPos}</span>
