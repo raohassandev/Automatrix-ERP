@@ -6,6 +6,8 @@ import { DeleteButton } from "@/components/TableActions";
 import { MobileCard } from "@/components/MobileCard";
 import { Button } from "@/components/ui/button";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface ProjectRow {
   id: string;
@@ -27,6 +29,7 @@ export function ProjectsTable({
   projects: ProjectRow[];
   canEdit: boolean;
 }) {
+  const router = useRouter();
   const [editDialog, setEditDialog] = useState<{
     open: boolean;
     project?: ProjectRow;
@@ -53,8 +56,20 @@ export function ProjectsTable({
             </thead>
             <tbody>
               {projects.map((project) => (
-                <tr key={project.id} className="border-b">
-                  <td className="py-2">{project.name}</td>
+                <tr
+                  key={project.id}
+                  className="border-b cursor-pointer hover:bg-accent/40"
+                  onClick={() => router.push(`/projects/${project.id}`)}
+                >
+                  <td className="py-2 font-medium">
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="underline underline-offset-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {project.name}
+                    </Link>
+                  </td>
                   <td className="py-2">{project.clientName || "-"}</td>
                   <td className="py-2">{project.status}</td>
                   <td className="py-2">{formatMoney(Number(project.contractValue))}</td>
@@ -65,11 +80,16 @@ export function ProjectsTable({
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => openEditDialog(project)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditDialog(project);
+                          }}
                         >
                           Edit
                         </Button>
-                        <DeleteButton url={`/api/projects/${project.id}`} />
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <DeleteButton url={`/api/projects/${project.id}`} />
+                        </div>
                       </div>
                     </td>
                   ) : null}
@@ -85,6 +105,7 @@ export function ProjectsTable({
               key={project.id}
               title={project.name}
               subtitle={project.clientName || "-"}
+              href={`/projects/${project.id}`}
               fields={[
                 { label: "Status", value: project.status },
                 { label: "Contract", value: formatMoney(Number(project.contractValue)) },

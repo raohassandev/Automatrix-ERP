@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { ReactNode } from "react";
+import Link from "next/link";
 
 interface MobileCardField {
   label: string;
@@ -14,17 +15,26 @@ interface MobileCardProps {
   fields: MobileCardField[];
   actions?: ReactNode;
   className?: string;
+  href?: string;
 }
 
 /**
  * MobileCard - Card-based layout for mobile devices
  * Replaces table rows with cards on small screens
  */
-export function MobileCard({ title, subtitle, fields, actions, className }: MobileCardProps) {
+export function MobileCard({ title, subtitle, fields, actions, className, href }: MobileCardProps) {
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">{title}</CardTitle>
+        <CardTitle className="text-base font-semibold">
+          {href ? (
+            <Link className="underline underline-offset-2" href={href}>
+              {title}
+            </Link>
+          ) : (
+            title
+          )}
+        </CardTitle>
         {subtitle && (
           <p className="text-sm text-muted-foreground">{subtitle}</p>
         )}
