@@ -11,8 +11,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: './vitest.setup.ts',
+    // CI reliability: our current test suite is server-side business logic tests.
+    // Using jsdom can break in Linux/CI when transitive deps shift to ESM-only.
+    environment: 'node',
     exclude: ['**/node_modules/**', '**/dist/**', '**/playwright/**'],
   },
 })
