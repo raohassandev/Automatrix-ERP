@@ -63,6 +63,10 @@ These items are **useless/obsolete** or actively harmful (secrets, binaries, Mac
 - Prisma folder is single and clean
 - CI/build reproducibility improves
 
+**Status (current repo):**
+- `.env*` and `*.dump` are ignored (not tracked). Keep env files locally only.
+- Nested `prisma/prisma/**` and `*.db` files may exist locally from old experiments; they should be deleted locally, but are not tracked.
+
 ---
 
 ## 1) NORTH STAR — Single ERP Spine (LOCKED)
@@ -297,11 +301,15 @@ Minimum per “document chain”:
 - Add audit logs for edits
 - Add tests for edit restrictions
 
+**Status:** No `window.prompt`-based QuickEdit flows remain in finance/inventory UI. Lifecycle edit gates are enforced on procurement docs.
+
 ### RB2 — RBAC & data exposure sweep
 
 - Every API route must have explicit permission checks.
 - Audit log endpoint must be permission protected.
 - Export endpoints must be permission gated + audited.
+
+**Status:** Export endpoints are permission gated + audited; `/api/audit` is permission protected. User role changes are audited (`UPDATE_USER_ROLE`).
 
 ### RB3 — Finish Procurement UX to ERP standard
 
@@ -316,6 +324,8 @@ Minimum per “document chain”:
   - PO → GRN → Vendor Bill → Payment
   - Stock ledger correctness check
 - Run e2e in staging build mode
+
+**Status:** RB4 procurement chain e2e exists and is enforced in CI (production-like mode) against a disposable Postgres service DB.
 
 ---
 

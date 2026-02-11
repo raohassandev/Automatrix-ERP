@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { sanitizeString } from "@/lib/sanitize";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -39,6 +40,15 @@ export async function POST(req: Request) {
   const updated = await prisma.user.update({
     where: { email },
     data: { roleId: role.id },
+  });
+
+  await logAudit({
+    action: "UPDATE_USER_ROLE",
+    entity: "User",
+    entityId: user.id,
+    oldValue: JSON.stringify({ email: user.email, roleId: user.roleId }),
+    newValue: JSON.stringify({ email: user.email, roleId: role.id, roleName: role.name }),
+    userId: session.user.id,
   });
 
   return NextResponse.json({ success: true, data: updated });
