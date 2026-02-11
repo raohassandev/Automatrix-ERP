@@ -489,3 +489,34 @@ Files:
 - `src/app/ceo/dashboard/page.tsx`
 - `src/lib/navigation.ts` (adds nav item)
 - `docs/ERP_DIAGRAMS.md` (updated blueprint to Phase 1 spine)
+
+---
+
+## 20) CI/CD hardening (GitHub Actions)
+
+Fixed GitHub Actions failures so `dev` can deploy to staging reliably and CI reflects Linux production behavior.
+
+### 20.1 GitHub Actions: pnpm + Node 20.9+
+- Deploy workflows updated to use pnpm (`pnpm-lock.yaml`) instead of npm lockfiles.
+- Node version bumped to `20.9.0` for Next.js 16.
+
+### 20.2 Vitest CI fix (ERR_REQUIRE_ESM / jsdom)
+- Switched Vitest to `environment: node` (current tests are server-side business logic only).
+- This avoids jsdom transitive ESM-require failures on GitHub Linux runners.
+
+### 20.3 RB2 tightening (small exposure fixes)
+- `/api/payment-modes` now requires expense view permission and scopes results to the user unless they have `expenses.view_all`.
+- `/api/income-sources` now requires income view permission and scopes results to the user unless they have `income.view_all`.
+- “My exports” routes now require `employees.view_own` (or `employees.view_all`) in addition to auth.
+
+Files:
+- `.github/workflows/ci.yaml`
+- `.github/workflows/deploy-staging.yml`
+- `.github/workflows/deploy-production.yml`
+- `vitest.config.ts`
+- `vitest.setup.ts`
+- `src/app/api/payment-modes/route.ts`
+- `src/app/api/income-sources/route.ts`
+- `src/app/api/me/wallet/export/route.ts`
+- `src/app/api/me/payroll/export/route.ts`
+- `src/app/api/me/incentives/export/route.ts`

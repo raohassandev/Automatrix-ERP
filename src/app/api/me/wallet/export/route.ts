@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
 import { logAudit } from "@/lib/audit";
+import { requirePermission } from "@/lib/rbac";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -20,6 +21,12 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.id || !session.user.email) {
     return new Response("Unauthorized", { status: 401 });
+  }
+
+  const canViewOwn = await requirePermission(session.user.id, "employees.view_own");
+  const canViewAll = await requirePermission(session.user.id, "employees.view_all");
+  if (!canViewOwn && !canViewAll) {
+    return new Response("Forbidden", { status: 403 });
   }
 
   const employee = await prisma.employee.findUnique({
