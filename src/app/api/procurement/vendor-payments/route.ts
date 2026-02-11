@@ -30,7 +30,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canView = await requirePermission(session.user.id, "procurement.view_all");
+  // Vendor payments are finance/AP only (Phase 1).
+  const canView = await requirePermission(session.user.id, "company_accounts.manage");
   if (!canView) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
@@ -96,7 +97,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canEdit = await requirePermission(session.user.id, "procurement.edit");
+  // Vendor payments are finance/AP only (Phase 1).
+  const canEdit = await requirePermission(session.user.id, "company_accounts.manage");
   if (!canEdit) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }

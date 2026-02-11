@@ -37,7 +37,8 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canView = await requirePermission(session.user.id, "procurement.view_all");
+  // Vendor payments are finance/AP only (Phase 1).
+  const canView = await requirePermission(session.user.id, "company_accounts.manage");
   if (!canView) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
@@ -84,17 +85,17 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canEdit = await requirePermission(session.user.id, "procurement.edit");
+  // Vendor payments are finance/AP only (Phase 1).
+  const canEdit = await requirePermission(session.user.id, "company_accounts.manage");
+  if (!canEdit) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
   const canApproveAny =
     (await requirePermission(session.user.id, "approvals.approve_low")) ||
     (await requirePermission(session.user.id, "approvals.approve_high")) ||
     (await requirePermission(session.user.id, "expenses.approve_low")) ||
     (await requirePermission(session.user.id, "expenses.approve_medium")) ||
     (await requirePermission(session.user.id, "expenses.approve_high"));
-
-  if (!canEdit && !canApproveAny) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-  }
 
   const { id } = await context.params;
   const existing = await prisma.vendorPayment.findUnique({
@@ -413,7 +414,8 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canEdit = await requirePermission(session.user.id, "procurement.edit");
+  // Vendor payments are finance/AP only (Phase 1).
+  const canEdit = await requirePermission(session.user.id, "company_accounts.manage");
   if (!canEdit) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }

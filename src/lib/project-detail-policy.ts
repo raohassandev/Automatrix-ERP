@@ -42,10 +42,18 @@ export type ProjectDocumentsRow = {
   href: string;
 };
 
+export type ProjectNotesHistoryRow = {
+  at: string; // ISO
+  action: "PROJECT_NOTE_ADD" | "PROJECT_ATTACHMENT_ADD";
+  note?: string | null;
+  attachment?: { fileName: string; url: string } | null;
+};
+
 export type ProjectDetailData = {
   header: ProjectDetailHeader;
   policy: ProjectDetailPolicy;
   activity: ProjectActivityRow[];
+  notesHistory: ProjectNotesHistoryRow[];
   costs?: {
     apBilledTotal: number;
     apPaidTotal: number;
@@ -477,10 +485,49 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  const auditRows = await prisma.auditLog.findMany({
+    where: {
+      entity: "Project",
+      entityId: project.id,
+      action: { in: ["PROJECT_NOTE_ADD", "PROJECT_ATTACHMENT_ADD"] },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: { action: true, newValue: true, createdAt: true },
+  });
+
+  const notesHistory: ProjectNotesHistoryRow[] = auditRows.map((r) => {
+    const base: ProjectNotesHistoryRow = {
+      at: formatIso(r.createdAt),
+      action: r.action as ProjectNotesHistoryRow["action"],
+      note: null,
+      attachment: null,
+    };
+    if (!r.newValue) return base;
+    try {
+      const parsed = JSON.parse(r.newValue) as unknown;
+      if (base.action === "PROJECT_NOTE_ADD" && parsed && typeof parsed === "object") {
+        const note = (parsed as { note?: unknown }).note;
+        if (typeof note === "string") base.note = note;
+      }
+      if (base.action === "PROJECT_ATTACHMENT_ADD" && parsed && typeof parsed === "object") {
+        const fileName = (parsed as { fileName?: unknown }).fileName;
+        const url = (parsed as { url?: unknown }).url;
+        if (typeof fileName === "string" && typeof url === "string") {
+          base.attachment = { fileName, url };
+        }
+      }
+    } catch {
+      // Ignore invalid JSON (legacy rows); keep base event.
+    }
+    return base;
+  });
+
   const data: ProjectDetailData = {
     header,
     policy,
     activity,
+    notesHistory,
     costs,
     inventory,
     people,

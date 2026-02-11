@@ -41,10 +41,18 @@ export type VendorDocumentsRow = {
   href: string;
 };
 
+export type VendorNotesHistoryRow = {
+  at: string; // ISO
+  action: "VENDOR_NOTE_ADD" | "VENDOR_ATTACHMENT_ADD";
+  note?: string | null;
+  attachment?: { fileName: string; url: string } | null;
+};
+
 export type VendorDetailData = {
   header: VendorDetailHeader;
   policy: VendorDetailPolicy;
   activity: VendorActivityRow[];
+  notesHistory: VendorNotesHistoryRow[];
   bills?: Array<{
     id: string;
     billNumber: string;
@@ -214,6 +222,44 @@ export async function getVendorDetailForUser(args: { userId: string; vendorDbId:
     paymentTermsLabel: "Net 30",
     attachmentsCount,
   };
+
+  const auditRows = await prisma.auditLog.findMany({
+    where: {
+      entity: "Vendor",
+      entityId: vendor.id,
+      action: { in: ["VENDOR_NOTE_ADD", "VENDOR_ATTACHMENT_ADD"] },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    select: { action: true, newValue: true, createdAt: true },
+  });
+
+  const notesHistory: VendorNotesHistoryRow[] = auditRows.map((r) => {
+    const base: VendorNotesHistoryRow = {
+      at: iso(r.createdAt),
+      action: r.action as VendorNotesHistoryRow["action"],
+      note: null,
+      attachment: null,
+    };
+    if (!r.newValue) return base;
+    try {
+      const parsed = JSON.parse(r.newValue) as unknown;
+      if (base.action === "VENDOR_NOTE_ADD" && parsed && typeof parsed === "object") {
+        const note = (parsed as { note?: unknown }).note;
+        if (typeof note === "string") base.note = note;
+      }
+      if (base.action === "VENDOR_ATTACHMENT_ADD" && parsed && typeof parsed === "object") {
+        const fileName = (parsed as { fileName?: unknown }).fileName;
+        const url = (parsed as { url?: unknown }).url;
+        if (typeof fileName === "string" && typeof url === "string") {
+          base.attachment = { fileName, url };
+        }
+      }
+    } catch {
+      // Ignore invalid JSON (legacy rows); keep base event.
+    }
+    return base;
+  });
 
   // Lists are capped/paged to avoid large payloads.
   const take = 25;
@@ -479,6 +525,7 @@ export async function getVendorDetailForUser(args: { userId: string; vendorDbId:
       header,
       policy,
       activity,
+      notesHistory,
       // Sales/Marketing/Store/Engineering: Phase 1 vendor view excludes bills/payments entirely.
       documents: documents
         .filter((d) => (allowFinancialDocsInActivityAndDocuments ? true : d.type === "PO" || d.type === "GRN"))
@@ -515,6 +562,6 @@ export async function getVendorDetailForUser(args: { userId: string; vendorDbId:
 
   return {
     ok: true as const,
-    data: { header, policy, activity, documents: documents.slice(0, 100) },
+    data: { header, policy, activity, notesHistory, documents: documents.slice(0, 100) },
   };
 }

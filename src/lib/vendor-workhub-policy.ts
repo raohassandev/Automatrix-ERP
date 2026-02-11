@@ -30,11 +30,11 @@ export function buildVendorWorkhubPolicy(role: RoleName): VendorWorkhubPolicy {
   const actions: Record<VendorWorkhubAction, boolean> = {
     create_po: canProcure,
     create_vendor_bill: canProcure,
-    record_vendor_payment: isFinanceRole(role) && hasPermission(role, "procurement.edit"),
+    // Vendor payments are finance/AP only in Phase 1.
+    record_vendor_payment: isFinanceRole(role) && hasPermission(role, "company_accounts.manage"),
     add_note: canAddNotes,
     add_attachment: canAddNotes,
   };
 
   return { role, actions };
 }
-

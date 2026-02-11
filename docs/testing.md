@@ -84,11 +84,15 @@ Expected outcomes:
 - Sales sees availability-only (On-hand tab only).
 - Store cannot open `/employees/[id]` (forbidden).
 
-## Vendor + Item Work Hub E2E (RBAC + API-negative + mobile)
+## Project + Vendor + Item Work Hub + Employee Access E2E (RBAC + API-negative + mobile)
 
 Covers:
+- Project Detail Work Hub actions (`/projects/[id]`)
 - Vendor Detail Work Hub actions (`/vendors/[id]`)
 - Item Detail Work Hub actions (`/inventory/items/[id]`)
+- Employee access checks:
+  - `/me` loads for all roles
+  - `/employees/[id]` blocked for non-HR/non-Finance roles
 - API-negative permission checks for finance-only/procurement-only actions
 - Mobile smoke (iPhone 13): actions menus open
 
@@ -96,6 +100,10 @@ Run:
 ```bash
 pnpm test:e2e:prod -- vendor-item-workhub-actions
 ```
+
+Expected outcomes:
+- Finance sees procurement + assignment actions on Project and payment action on Vendor.
+- Engineer/Store do not see finance-only actions (payments/assignments/PO create where not allowed).
 
 ## Seeding test role users (dev/staging only)
 

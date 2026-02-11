@@ -514,3 +514,54 @@ Run (requires disposable DB):
 export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
 pnpm test:e2e:prod -- vendor-item-workhub-actions
 ```
+
+## Work Hub Consistency + Notes History (Phase 1)
+
+### Vendor Payments RBAC tightening (finance/AP only)
+Aligned the Vendor Work Hub "Record Vendor Payment" action and vendor payment mutation APIs to require finance/AP permission (`company_accounts.manage`) instead of `procurement.edit`.
+
+Implementation:
+- Policy: `src/lib/vendor-workhub-policy.ts` (payment action now requires `company_accounts.manage`)
+- APIs:
+  - `src/app/api/procurement/vendor-payments/route.ts` (GET/POST require `company_accounts.manage`)
+  - `src/app/api/procurement/vendor-payments/[id]/route.ts` (GET/PATCH/DELETE require `company_accounts.manage`)
+
+Verification:
+- Playwright: sales cannot create a vendor payment (403)
+- Unit gates: `pnpm lint && pnpm typecheck && pnpm test`
+
+### Notes & Attachments History (audit-sourced, Phase 1)
+Notes are stored as audited events (no separate Notes table in Phase 1). Added a "Notes & Attachments" section on Project/Vendor/Item detail pages that shows the last 20 audited note/attachment events for that entity.
+
+Truth source:
+- `AuditLog` rows filtered by `(entity, entityId, action)`:
+  - Project: `PROJECT_NOTE_ADD`, `PROJECT_ATTACHMENT_ADD`
+  - Vendor: `VENDOR_NOTE_ADD`, `VENDOR_ATTACHMENT_ADD`
+  - InventoryItem: `ITEM_NOTE_ADD`, `ITEM_ATTACHMENT_ADD`
+
+Implementation:
+- Data (server-side):
+  - `src/lib/project-detail-policy.ts` (adds `notesHistory`)
+  - `src/lib/vendor-detail-policy.ts` (adds `notesHistory`)
+  - `src/lib/item-detail-policy.ts` (adds `notesHistory`)
+- UI:
+  - `src/app/projects/[id]/ProjectDetailClient.tsx`
+  - `src/app/vendors/[id]/VendorDetailClient.tsx`
+  - `src/app/inventory/items/[id]/ItemDetailClient.tsx`
+
+### Playwright E2E consolidated coverage
+Extended the existing Work Hub E2E spec to cover Project actions and employee access checks in the same spec (keeps QA cost low and validates RBAC user journeys end-to-end).
+
+Updated spec:
+- `playwright/tests/vendor-item-workhub-actions.spec.ts`
+  - Project actions RBAC + API-negative for assignments
+  - Vendor actions RBAC + API-negative for vendor payments
+  - Item actions RBAC + API-negative for PO create
+  - `/me` loads for roles; `/employees/[id]` blocked for non-HR/non-Finance
+  - iPhone 13 smoke: actions menus open on Project/Vendor/Item
+
+Run (requires disposable DB):
+```bash
+export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod -- vendor-item-workhub-actions
+```

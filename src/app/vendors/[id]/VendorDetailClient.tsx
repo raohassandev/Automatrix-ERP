@@ -301,6 +301,36 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Activity</h2>
           <p className="mt-1 text-sm text-muted-foreground">Chronological, source-linked events.</p>
+
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold">Notes & Attachments</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Last 20 audited note/attachment events.</p>
+            <div className="mt-3 space-y-3">
+              {detail.notesHistory.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No notes or attachments yet.</div>
+              ) : (
+                detail.notesHistory.map((e, idx) => (
+                  <div key={`${e.at}-${idx}`} className="flex items-start justify-between gap-4 border-b pb-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium">
+                        {e.note ? "Note" : e.attachment ? "Attachment" : e.action}
+                      </div>
+                      {e.note ? <div className="mt-1 whitespace-pre-wrap text-sm">{e.note}</div> : null}
+                      {e.attachment ? (
+                        <div className="mt-1 text-sm">
+                          <a className="underline underline-offset-2" href={e.attachment.url} target="_blank" rel="noreferrer">
+                            {e.attachment.fileName}
+                          </a>
+                        </div>
+                      ) : null}
+                      <div className="mt-1 text-xs text-muted-foreground">{new Date(e.at).toLocaleString()}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           <div className="mt-4 space-y-3">
             {detail.activity.length === 0 ? (
               <div className="text-sm text-muted-foreground">No activity yet.</div>
