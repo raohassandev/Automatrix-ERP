@@ -238,6 +238,7 @@ export const PERMISSIONS = {
     "inventory.adjust",
     "inventory.request",
     "procurement.view_all",
+    "projects.view_assigned",
     "reports.view_own",
     "vendors.view_all",
     "company_accounts.view",

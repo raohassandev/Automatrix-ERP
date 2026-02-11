@@ -33,6 +33,14 @@ if (googleClientId && googleClientSecret) {
 // E2E-only credentials provider so Playwright can authenticate without real Google OAuth.
 // This must never be enabled in production.
 if (e2eMode) {
+  const roleByEmail: Record<string, string> = {
+    "engineer1@automatrix.pk": "Engineering",
+    "sales1@automatrix.pk": "Sales",
+    "technician1@automatrix.pk": "Staff",
+    "store1@automatrix.pk": "Store Keeper",
+    "finance1@automatrix.pk": "Finance Manager",
+  };
+
   authProviders.push(
     Credentials({
       name: "E2E Credentials",
@@ -46,7 +54,7 @@ if (e2eMode) {
         const password = typeof credentials?.password === "string" ? credentials.password : "";
         const expected = process.env.E2E_TEST_PASSWORD || "";
         const bootstrap = process.env.E2E_BOOTSTRAP !== "0";
-        const desiredRoleName = process.env.E2E_TEST_ROLE || "Admin";
+        const desiredRoleName = roleByEmail[email] || process.env.E2E_TEST_ROLE || "Admin";
 
         if (!expected || password !== expected || !email) return null;
 

@@ -371,6 +371,48 @@ async function main() {
       skipDuplicates: true,
     });
   }
+
+  // Dev/staging-only: optional role test users for RBAC QA.
+  // This is guarded by an explicit env flag and must not run implicitly in production.
+  const seedTestUsers = process.env.SEED_TEST_USERS === "1";
+  const nextAuthUrl = (process.env.NEXTAUTH_URL || "").toLowerCase();
+  const allowTestUsersHere =
+    nextAuthUrl.includes("erp-staging.") || process.env.APP_ENV === "staging" || process.env.NODE_ENV !== "production";
+
+  if (seedTestUsers && allowTestUsersHere) {
+    const testUsers = [
+      { email: "engineer1@automatrix.pk", roleName: "Engineering" },
+      { email: "sales1@automatrix.pk", roleName: "Sales" },
+      { email: "technician1@automatrix.pk", roleName: "Staff" },
+      { email: "store1@automatrix.pk", roleName: "Store Keeper" },
+      { email: "finance1@automatrix.pk", roleName: "Finance Manager" },
+    ];
+
+    for (const u of testUsers) {
+      const role = await prisma.role.upsert({
+        where: { name: u.roleName },
+        update: {},
+        create: { name: u.roleName },
+      });
+
+      await prisma.employee.upsert({
+        where: { email: u.email },
+        update: { status: "ACTIVE", role: u.roleName },
+        create: {
+          email: u.email,
+          name: u.email.split("@")[0],
+          role: u.roleName,
+          status: "ACTIVE",
+        },
+      });
+
+      await prisma.user.upsert({
+        where: { email: u.email },
+        update: { roleId: role.id, passwordHash: null },
+        create: { email: u.email, name: u.email.split("@")[0], roleId: role.id, passwordHash: null },
+      });
+    }
+  }
 }
 
 main()
