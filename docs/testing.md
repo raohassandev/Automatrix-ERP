@@ -49,6 +49,41 @@ export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatri
 pnpm test:e2e:prod -- project-detail-rbac
 ```
 
+## Vendor Detail RBAC E2E
+
+Run:
+```bash
+pnpm test:e2e:prod -- vendor-detail-rbac
+```
+
+Required env vars / safety guardrails:
+- You MUST use a disposable DB:
+  - `E2E_DATABASE_URL` must point to a throwaway Postgres database (never staging/prod).
+- If `E2E_TEST_MODE` is used:
+  - It is guarded by `src/lib/auth-e2e-guard.ts` and cannot run when `NEXTAUTH_URL` contains:
+    - `erp.automatrix.pk` (prod) or `erp-staging.automatrix.pk` (staging)
+  - E2E mode is only allowed for localhost URLs.
+
+Expected outcomes:
+- Finance sees `Bills`, `Payments`, and `Aging` tabs.
+- Sales / Store / Engineer do not see financial amounts or restricted tabs.
+
+## Item Detail + My Portal E2E (RBAC + mobile)
+
+Covers:
+- Inventory Item Detail: `/inventory/items/[id]` (RBAC + server-side masking + mobile)
+- My Portal: `/me` (self-only view) and access checks for `/employees/[id]`
+
+Run:
+```bash
+pnpm test:e2e:prod -- item-detail-and-me-portal
+```
+
+Expected outcomes:
+- Finance sees item ledger costs (unitCost/total/value); Store does not.
+- Sales sees availability-only (On-hand tab only).
+- Store cannot open `/employees/[id]` (forbidden).
+
 ## Seeding test role users (dev/staging only)
 
 Optional seed path (explicit, never implicit):

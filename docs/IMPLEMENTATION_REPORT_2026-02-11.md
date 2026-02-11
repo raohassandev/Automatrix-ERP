@@ -223,6 +223,160 @@ pnpm test:e2e:prod -- project-detail-rbac
 
 ---
 
+## Vendor Detail (RBAC + mobile)
+
+### Route + navigation
+- New route: `/vendors/[id]`
+  - `src/app/vendors/[id]/page.tsx`
+- Vendor list now links vendor names to the detail page (desktop + mobile):
+  - `src/app/vendors/page.tsx`
+
+### Truth sources (Phase 1 spine)
+Vendor detail is read-first and truth-sourced from Phase 1 procurement/AP spine:
+- Vendor AP:
+  - `VendorBill` (and totals when permitted)
+  - `VendorPayment` + allocations (when permitted)
+- Procurement docs:
+  - `PurchaseOrder`, `GoodsReceipt`
+- Activity feed:
+  - Built from procurement/AP docs (no Expenses proxy)
+
+Implementation:
+- `src/lib/vendor-detail-policy.ts`
+- `src/app/api/vendors/[id]/detail/route.ts`
+
+### RBAC + masking (enforced twice: server + UI)
+Enforcement points:
+- Server/API: `/api/vendors/[id]/detail` returns role-filtered data and omits sensitive fields for restricted roles.
+- UI: tabs and fields render only what policy allows (no client-only hiding).
+
+API behavior (server-side masking):
+- API: `GET /api/vendors/[id]/detail` (role-filtered payload; masking enforced server-side)
+- For restricted roles (Sales/Store/Engineer/Technician), the API omits VendorBill/VendorPayment datasets entirely and never returns financial fields such as:
+  - `totalAmount`, `paidAmount`, `allocatedAmount`, `aging*`, `unitCost`
+
+Important note (current permission mapping):
+- Vendor financial amount visibility is currently controlled by `inventory.view_cost`.
+  - TODO: rename to a finance/AP permission (e.g., `ap.view_amounts`) to avoid semantic confusion.
+
+RBAC matrix (Phase 1 default):
+- Finance/Owner (Finance Manager/Admin/CFO/CEO/Owner):
+  - Tabs: Activity, Bills, Payments, Aging, Documents
+  - Fields: bill totals, payment amounts, allocation totals, aging totals visible
+- Procurement:
+  - Tabs: Activity, Bills, Payments, Aging, Documents
+  - Fields: amounts visible only if permission allows (currently `inventory.view_cost`)
+- Sales/Marketing:
+  - Tabs: Activity, Documents (PO/GRN only)
+  - Fields: no bills/payments/aging; no amount fields
+- Store/Technician:
+  - Tabs: Activity, Documents (PO/GRN only)
+  - Fields: no bills/payments/aging; no amount fields
+- Engineer/PM:
+  - Tabs: Activity, Documents (PO/GRN only, scope via assigned projects)
+  - Fields: no bills/payments/aging; no amount fields
+
+### Playwright E2E tests
+- Added: `playwright/tests/vendor-detail-rbac.spec.ts`
+  - Creates a vendor + minimal AP chain (bill + payment allocation) using finance role.
+  - Asserts per-role tab visibility and masking.
+  - Mobile test (iPhone 13): `/vendors` -> `/vendors/[id]` and tabs dropdown works.
+  - Includes an API-negative assertion to ensure restricted role responses do not include forbidden fields.
+
+Run (requires disposable DB):
+```bash
+export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod -- vendor-detail-rbac
+```
+
+### Verification commands
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+```
+
+---
+
+## Item Detail (RBAC + mobile) — Inventory truth hub
+
+### Route + navigation
+- New route: `/inventory/items/[id]`
+  - `src/app/inventory/items/[id]/page.tsx`
+- Inventory list now links item names to item detail (desktop + mobile):
+  - `src/components/InventoryTable.tsx`
+
+### Truth sources (Phase 1 spine)
+Item detail is truth-sourced from:
+- `InventoryItem` (header + availability)
+- `InventoryLedger` (activity + ledger + on-hand by warehouse)
+- Links to procurement documents are best-effort via ledger `reference` (no prompt-based edits)
+
+Implementation:
+- `src/lib/item-detail-policy.ts`
+- `src/app/api/inventory/items/[id]/detail/route.ts`
+
+### RBAC + masking (enforced twice: server + UI)
+Enforcement points:
+- Server/API: `GET /api/inventory/items/[id]/detail` uses role-aware select projections (omits `unitCost`/`total` for restricted roles).
+- UI: tab visibility and cost columns follow policy (no UI-only hiding).
+
+RBAC matrix (Phase 1 default):
+- Finance/Owner/Procurement (roles with `inventory.view_cost`):
+  - Tabs: Activity, Ledger, On-hand, Documents
+  - Fields: unitCost + totals/value visible
+- Store/Technician/Engineer:
+  - Tabs: Activity, Ledger, On-hand, Documents
+  - Fields: unitCost + totals/value omitted from API response and absent in UI
+- Sales/Marketing:
+  - Tabs: On-hand only (availability view)
+  - Fields: no unitCost/totals/value
+
+Scope note:
+- Engineering ledger/activity is scoped to assigned projects when `InventoryLedger.project` is present (plus non-project entries).
+
+### Playwright E2E tests
+- Added: `playwright/tests/item-detail-and-me-portal.spec.ts`
+  - Asserts finance vs store vs sales tab/field visibility on item detail
+  - Includes API-negative assertion: store response must not contain `unitCost`/`total`
+  - Mobile test (iPhone 13): inventory list -> item detail and tabs dropdown works
+
+Run (requires disposable DB):
+```bash
+export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod -- item-detail-and-me-portal
+```
+
+### Verification commands
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+```
+
+---
+
+## Employee Access (My Portal + Employee Detail)
+
+### My Portal (`/me`)
+- Existing route enhanced to include assigned projects list (clickable to `/projects/[id]`):
+  - `src/app/me/page.tsx`
+- Self-only behavior:
+  - Uses the signed-in user + linked employee record (by email)
+  - Does not show other employees’ data
+
+### Employee Detail (`/employees/[id]`)
+- New route: `/employees/[id]` (HR/Finance/Admin only)
+  - `src/app/employees/[id]/page.tsx`
+- Access rules:
+  - Page requires `employees.view_all` (server-protected)
+  - PII fields (CNIC/address/education/experience) are permission-gated to HR/Finance/Admin-style roles
+
+### Playwright E2E coverage
+- Covered in: `playwright/tests/item-detail-and-me-portal.spec.ts`
+  - Each role can load `/me`
+  - Store role cannot access `/employees/[id]` (forbidden)
+
 ## Hardening Pass: E2E auth guard + Project RBAC parity + Audit gating
 
 ### What changed (minimal, security-only)

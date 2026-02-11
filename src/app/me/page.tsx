@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { formatMoney } from "@/lib/format";
+import Link from "next/link";
 
 export default async function MyDashboardPage() {
   const session = await auth();
@@ -44,7 +45,13 @@ export default async function MyDashboardPage() {
     );
   }
 
-  const [walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances] = await Promise.all([
+  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances] = await Promise.all([
+    prisma.projectAssignment.findMany({
+      where: { userId: session.user.id },
+      select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 25,
+    }),
     prisma.walletLedger.findMany({
       where: { employeeId: employee.id },
       orderBy: { date: "desc" },
@@ -92,6 +99,7 @@ export default async function MyDashboardPage() {
   const walletHold = Number(employee.walletHold || 0);
   const walletAvailable = walletBalance - walletHold;
   const expenseStatusMap = new Map(expenseCounts.map((row) => [row.status, row._count._all]));
+  const assignedProjects = assignments.map((a) => a.project);
 
   return (
     <div className="grid gap-6">
@@ -129,6 +137,29 @@ export default async function MyDashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">My Assigned Projects</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Quick links to projects you are assigned to.</p>
+          <div className="mt-4 space-y-3">
+            {assignedProjects.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No project assignments.</div>
+            ) : (
+              assignedProjects.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-3 border-b pb-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">
+                      <Link className="underline underline-offset-2" href={`/projects/${p.id}`}>
+                        {p.projectId} — {p.name}
+                      </Link>
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">Status: {p.status}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Recent Wallet Activity</h2>
           <div className="mt-4 overflow-x-auto">

@@ -7,6 +7,7 @@ import { MobileCard } from "@/components/MobileCard";
 import { InventoryLedgerDialog } from "@/components/InventoryLedgerDialog";
 import { Button } from "@/components/ui/button";
 import { InventoryFormDialog } from "@/components/InventoryFormDialog";
+import Link from "next/link";
 
 interface InventoryItemRow {
   id: string;
@@ -62,7 +63,11 @@ export function InventoryTable({
           <tbody>
             {items.map((item) => (
               <tr key={item.id} className="border-b">
-                <td className="py-2">{item.name}</td>
+                <td className="py-2">
+                  <Link className="underline underline-offset-2" href={`/inventory/items/${item.id}`}>
+                    {item.name}
+                  </Link>
+                </td>
                 <td className="py-2">{item.sku || "-"}</td>
                 <td className="py-2">{item.category}</td>
                 <td className="py-2">{Number(item.quantity)}</td>
@@ -130,6 +135,7 @@ export function InventoryTable({
             key={item.id}
             title={item.name}
             subtitle={item.category}
+            href={`/inventory/items/${item.id}`}
             fields={[
               { label: "SKU", value: item.sku || "-" },
               { label: "Quantity", value: Number(item.quantity) },
