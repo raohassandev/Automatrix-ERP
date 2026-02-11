@@ -66,6 +66,7 @@ These items are **useless/obsolete** or actively harmful (secrets, binaries, Mac
 **Status (current repo):**
 - `.env*` and `*.dump` are ignored (not tracked). Keep env files locally only.
 - Nested `prisma/prisma/**` and `*.db` files may exist locally from old experiments; they should be deleted locally, but are not tracked.
+- `Codebase_Analysis_Report.md` is archived under `docs/archive/` for long-term reference.
 
 ---
 
