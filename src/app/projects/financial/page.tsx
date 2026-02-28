@@ -31,7 +31,7 @@ type FinancialProjectRow = {
 export default async function ProjectFinancialPage({
   searchParams,
 }: {
-  searchParams: { search?: string; status?: string; page?: string };
+  searchParams: Promise<{ search?: string; status?: string; page?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -40,7 +40,10 @@ export default async function ProjectFinancialPage({
 
   const canViewAll = await requirePermission(session.user.id, "projects.view_all");
   const canViewAssigned = await requirePermission(session.user.id, "projects.view_assigned");
-  if (!canViewAll && !canViewAssigned) {
+  const canViewFinancials =
+    (await requirePermission(session.user.id, "projects.view_financials")) ||
+    (await requirePermission(session.user.id, "dashboard.view_all_metrics"));
+  if ((!canViewAll && !canViewAssigned) || !canViewFinancials) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Project Financials</h1>
@@ -49,7 +52,7 @@ export default async function ProjectFinancialPage({
     );
   }
 
-  const params = searchParams;
+  const params = await searchParams;
   const search = (params.search || "").trim();
   const statusFilter = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
@@ -339,4 +342,3 @@ export default async function ProjectFinancialPage({
     </div>
   );
 }
-

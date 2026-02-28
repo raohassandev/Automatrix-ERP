@@ -25,9 +25,11 @@ interface ProjectRow {
 export function ProjectsTable({
   projects,
   canEdit,
+  canViewFinancials,
 }: {
   projects: ProjectRow[];
   canEdit: boolean;
+  canViewFinancials: boolean;
 }) {
   const router = useRouter();
   const [editDialog, setEditDialog] = useState<{
@@ -49,8 +51,8 @@ export function ProjectsTable({
                 <th className="py-2">Project</th>
                 <th className="py-2">Client</th>
                 <th className="py-2">Status</th>
-                <th className="py-2">Contract</th>
-                <th className="py-2">Pending</th>
+                {canViewFinancials ? <th className="py-2">Contract</th> : null}
+                {canViewFinancials ? <th className="py-2">Pending</th> : null}
                 {canEdit ? <th className="py-2">Actions</th> : null}
               </tr>
             </thead>
@@ -72,8 +74,12 @@ export function ProjectsTable({
                   </td>
                   <td className="py-2">{project.clientName || "-"}</td>
                   <td className="py-2">{project.status}</td>
-                  <td className="py-2">{formatMoney(Number(project.contractValue))}</td>
-                  <td className="py-2">{formatMoney(Number(project.pendingRecovery))}</td>
+                  {canViewFinancials ? (
+                    <td className="py-2">{formatMoney(Number(project.contractValue))}</td>
+                  ) : null}
+                  {canViewFinancials ? (
+                    <td className="py-2">{formatMoney(Number(project.pendingRecovery))}</td>
+                  ) : null}
                   {canEdit ? (
                     <td className="py-2">
                       <div className="flex gap-2">
@@ -108,8 +114,12 @@ export function ProjectsTable({
               href={`/projects/${project.id}`}
               fields={[
                 { label: "Status", value: project.status },
-                { label: "Contract", value: formatMoney(Number(project.contractValue)) },
-                { label: "Pending", value: formatMoney(Number(project.pendingRecovery)) },
+                ...(canViewFinancials
+                  ? [
+                      { label: "Contract", value: formatMoney(Number(project.contractValue)) },
+                      { label: "Pending", value: formatMoney(Number(project.pendingRecovery)) },
+                    ]
+                  : []),
               ]}
               actions={
                 canEdit ? (

@@ -11,8 +11,11 @@ export async function GET() {
 
   const canViewAll = await requirePermission(session.user.id, "projects.view_all");
   const canViewAssigned = await requirePermission(session.user.id, "projects.view_assigned");
+  const canViewFinancials =
+    (await requirePermission(session.user.id, "projects.view_financials")) ||
+    (await requirePermission(session.user.id, "dashboard.view_all_metrics"));
   
-  if (!canViewAll && !canViewAssigned) {
+  if ((!canViewAll && !canViewAssigned) || !canViewFinancials) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 

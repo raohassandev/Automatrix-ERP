@@ -22,6 +22,9 @@ export default async function ProjectsPage({
   const canViewAll = await requirePermission(session.user.id, "projects.view_all");
   const canViewAssigned = await requirePermission(session.user.id, "projects.view_assigned");
   const canEdit = await requirePermission(session.user.id, "projects.edit");
+  const canViewFinancials =
+    (await requirePermission(session.user.id, "projects.view_financials")) ||
+    (await requirePermission(session.user.id, "dashboard.view_all_metrics"));
 
   if (!canViewAll && !canViewAssigned) {
     return (
@@ -91,8 +94,8 @@ export default async function ProjectsPage({
     clientName: project.client?.name || "-",
     clientId: project.clientId,
     status: project.status,
-    contractValue: Number(project.contractValue),
-    pendingRecovery: Number(project.pendingRecovery),
+    contractValue: canViewFinancials ? Number(project.contractValue) : 0,
+    pendingRecovery: canViewFinancials ? Number(project.pendingRecovery) : 0,
     startDate: project.startDate.toISOString().slice(0, 10),
     endDate: project.endDate ? project.endDate.toISOString().slice(0, 10) : null,
   }));
@@ -117,7 +120,11 @@ export default async function ProjectsPage({
         </div>
       </div>
 
-      <ProjectsTable projects={serializedProjects} canEdit={canEdit} />
+      <ProjectsTable
+        projects={serializedProjects}
+        canEdit={canEdit}
+        canViewFinancials={canViewFinancials}
+      />
 
       {serializedProjects.length === 0 && (
         <div className="rounded-xl border bg-card p-6 text-center text-muted-foreground shadow-sm">

@@ -15,6 +15,9 @@ export async function GET() {
 
   const canViewAll = await requirePermission(session.user.id, "projects.view_all");
   const canViewAssigned = await requirePermission(session.user.id, "projects.view_assigned");
+  const canViewFinancials =
+    (await requirePermission(session.user.id, "projects.view_financials")) ||
+    (await requirePermission(session.user.id, "dashboard.view_all_metrics"));
   if (!canViewAll && !canViewAssigned) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
@@ -35,7 +38,25 @@ export async function GET() {
   const data = await prisma.project.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: { client: true },
+    select: {
+      id: true,
+      projectId: true,
+      name: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      clientId: true,
+      client: { select: { id: true, name: true } },
+      contractValue: canViewFinancials,
+      invoicedAmount: canViewFinancials,
+      receivedAmount: canViewFinancials,
+      pendingRecovery: canViewFinancials,
+      costToDate: canViewFinancials,
+      grossMargin: canViewFinancials,
+      marginPercent: canViewFinancials,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
   return NextResponse.json({ success: true, data });
 }
