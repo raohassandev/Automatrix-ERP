@@ -82,6 +82,12 @@ export default async function EmployeeDetailPage({
               <span>Role: {employee.role}</span>
             </div>
           </div>
+          <a
+            href={`/employees/${employee.id}/dashboard-preview`}
+            className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+          >
+            View Dashboard Preview
+          </a>
         </div>
       </div>
 
@@ -172,4 +178,3 @@ export default async function EmployeeDetailPage({
     </div>
   );
 }
-
