@@ -8,7 +8,7 @@ export default async function ItemDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: { ledgerPage?: string };
+  searchParams: Promise<{ ledgerPage?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -16,7 +16,8 @@ export default async function ItemDetailPage({
   }
 
   const { id } = await params;
-  const ledgerPage = Math.max(parseInt(searchParams.ledgerPage || "1", 10), 1);
+  const resolvedSearchParams = await searchParams;
+  const ledgerPage = Math.max(parseInt(resolvedSearchParams.ledgerPage || "1", 10), 1);
   const result = await getItemDetailForUser({ userId: session.user.id, itemDbId: id, ledgerPage });
 
   if (!result.ok) {
@@ -38,4 +39,3 @@ export default async function ItemDetailPage({
 
   return <ItemDetailClient detail={result.data} />;
 }
-

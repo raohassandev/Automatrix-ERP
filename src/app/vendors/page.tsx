@@ -10,7 +10,7 @@ import { VendorActions } from "@/components/VendorActions";
 export default async function VendorsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; q?: string };
+  searchParams: Promise<{ page?: string; q?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -28,7 +28,7 @@ export default async function VendorsPage({
     );
   }
 
-  const params = searchParams;
+  const params = await searchParams;
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const query = (params.q || "").trim();
   const take = 25;

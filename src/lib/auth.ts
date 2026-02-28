@@ -39,6 +39,7 @@ if (googleClientId && googleClientSecret) {
 if (credentialsMode) {
   authProviders.push(
     Credentials({
+      id: "credentials",
       name: "Email Password",
       credentials: {
         email: { label: "Email", type: "text" },
@@ -81,6 +82,7 @@ if (credentialsMode) {
 // This must never be enabled in production.
 if (e2eMode) {
   const roleByEmail: Record<string, string> = {
+    "e2e-admin@automatrix.local": "CEO",
     "engineer1@automatrix.pk": "Engineering",
     "procurement1@automatrix.pk": "Procurement",
     "sales1@automatrix.pk": "Sales",
@@ -91,6 +93,7 @@ if (e2eMode) {
 
   authProviders.push(
     Credentials({
+      id: "e2e",
       name: "E2E Credentials",
       credentials: {
         email: { label: "Email", type: "text" },
@@ -127,16 +130,17 @@ if (e2eMode) {
 
         if (!employee || employee.status !== "ACTIVE") return null;
 
-        let desiredRole = await prisma.role.findUnique({
-          where: { name: desiredRoleName },
-          select: { id: true },
-        });
-        if (!desiredRole && bootstrap) {
-          desiredRole = await prisma.role.create({
-            data: { name: desiredRoleName },
-            select: { id: true },
-          });
-        }
+        const desiredRole = bootstrap
+          ? await prisma.role.upsert({
+              where: { name: desiredRoleName },
+              update: {},
+              create: { name: desiredRoleName },
+              select: { id: true },
+            })
+          : await prisma.role.findUnique({
+              where: { name: desiredRoleName },
+              select: { id: true },
+            });
         if (!desiredRole) return null;
 
         let user = await prisma.user.findFirst({
@@ -241,7 +245,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Credentials login is optional and explicitly env-gated (intended for staging/internal use).
       if (account?.provider !== "google") {
         if (account?.provider === "credentials") {
-          return e2eMode || credentialsMode;
+          return credentialsMode;
+        }
+        if (account?.provider === "e2e") {
+          return e2eMode;
         }
         return false;
       }

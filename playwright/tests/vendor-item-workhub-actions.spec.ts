@@ -286,11 +286,12 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
       await page.goto(`/employees/${otherUserId}`);
-      await expect(
-        page
-          .getByText("You do not have access to employee details.")
-          .or(page.getByRole("heading", { name: "Dashboard" }))
-      ).toBeVisible();
+      const denyText = page.getByText("You do not have access to employee details.").first();
+      if (await denyText.count()) {
+        await expect(denyText).toBeVisible();
+      } else {
+        await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+      }
       await ctx.close();
     }
   });

@@ -47,6 +47,12 @@ export async function canUserApprove(
   }
 
   const requiredLevel = level ?? resolveApprovalLevel(module, amount);
+
+  // Executive override for Phase 1 operations: top roles can always approve.
+  if (["Owner", "CEO", "Admin"].includes(user.role.name)) {
+    return { canApprove: true, requiredLevel };
+  }
+
   const allowedRoles = await getAllowedRolesForPolicy(module, requiredLevel);
 
   if (!allowedRoles.includes(user.role.name)) {

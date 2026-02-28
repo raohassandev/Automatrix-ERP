@@ -5,15 +5,15 @@ import { LoginClient } from "./LoginClient";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { error?: string };
+  searchParams?: Promise<{ error?: string }>;
 }) {
   const session = await auth();
   if (session?.user?.id) {
     return redirect("/dashboard");
   }
 
-  const error = typeof searchParams?.error === "string" ? searchParams.error : null;
+  const params = (await searchParams) ?? {};
+  const error = typeof params.error === "string" ? params.error : null;
 
   return <LoginClient error={error} />;
 }
-

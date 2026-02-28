@@ -30,7 +30,7 @@ export function LoginClient({ error }: { error: string | null }) {
   }
 
   async function handleE2ELogin() {
-    await signIn("credentials", {
+    await signIn("e2e", {
       email: e2eEmail,
       password: e2ePassword,
       callbackUrl: "/dashboard",
