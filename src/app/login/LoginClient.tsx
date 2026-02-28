@@ -6,8 +6,11 @@ import { signIn } from "next-auth/react";
 export function LoginClient({ error }: { error: string | null }) {
   const [pending, startTransition] = useTransition();
   const e2eEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
+  const credentialsEnabled = process.env.NEXT_PUBLIC_ENABLE_CREDENTIALS_LOGIN === "1";
   const [e2eEmail, setE2eEmail] = useState("");
   const [e2ePassword, setE2ePassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const message = (() => {
     if (!error) return null;
     switch (error) {
@@ -34,6 +37,14 @@ export function LoginClient({ error }: { error: string | null }) {
     });
   }
 
+  async function handleCredentialsLogin() {
+    await signIn("credentials", {
+      email,
+      password,
+      callbackUrl: "/dashboard",
+    });
+  }
+
   return (
     <div className="mx-auto max-w-md rounded-xl border bg-card p-8 shadow-sm">
       <h1 className="text-2xl font-semibold">Sign in</h1>
@@ -48,6 +59,35 @@ export function LoginClient({ error }: { error: string | null }) {
         >
           {pending ? "Working..." : "Sign in with Google"}
         </button>
+
+        {credentialsEnabled ? (
+          <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+            <div className="font-medium text-foreground">Email login (staging/internal)</div>
+            <div className="mt-2 grid gap-2">
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <input
+                className="rounded-md border px-3 py-2"
+                placeholder="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md border px-4 py-2"
+                onClick={() => startTransition(handleCredentialsLogin)}
+                disabled={pending || !email || !password}
+              >
+                {pending ? "Working..." : "Sign in with Email"}
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {e2eEnabled ? (
           <div className="rounded-md border border-border bg-muted/30 p-3 text-sm">

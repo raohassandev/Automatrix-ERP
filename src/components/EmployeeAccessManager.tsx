@@ -23,6 +23,9 @@ export default function EmployeeAccessManager() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [credentialsEnabled, setCredentialsEnabled] = useState(
+    process.env.NEXT_PUBLIC_ENABLE_CREDENTIALS_LOGIN === "1",
+  );
 
   const loadData = async () => {
     setLoading(true);
@@ -80,6 +83,31 @@ export default function EmployeeAccessManager() {
     }
   };
 
+  const resetPassword = async (employee: Employee) => {
+    setPendingId(employee.id);
+    setStatus(null);
+    try {
+      const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
+      const res = await fetch("/api/users/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: employee.email, newPassword: tempPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus(data.error || "Failed to reset password.");
+        return;
+      }
+      setStatus(`Temporary password for ${employee.email}: ${tempPassword}`);
+      setCredentialsEnabled(true);
+    } catch (error) {
+      console.error(error);
+      setStatus("Failed to reset password.");
+    } finally {
+      setPendingId(null);
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -96,11 +124,16 @@ export default function EmployeeAccessManager() {
       <CardHeader>
         <CardTitle>Employee Access</CardTitle>
         <CardDescription>
-          Provision portal access for employees. Phase 1 uses Google OAuth only (no passwords).
-          This tool creates/updates the user record and RBAC role for the employee email.
+          Provision portal access for employees and set their RBAC role.
+          This tool creates/updates the user record for the employee email.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {credentialsEnabled ? (
+          <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-sm">
+            Credentials login is enabled in this environment. Use temporary passwords only for staging/internal QA.
+          </div>
+        ) : null}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -154,6 +187,16 @@ export default function EmployeeAccessManager() {
                       >
                         {employee.userId ? "Update Role" : "Create Login"}
                       </Button>
+                      {credentialsEnabled ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => resetPassword(employee)}
+                          disabled={pendingId === employee.id || !employee.userId}
+                        >
+                          Reset Password
+                        </Button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

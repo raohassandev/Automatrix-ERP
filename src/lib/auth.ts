@@ -5,10 +5,12 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { Adapter, AdapterUser } from "next-auth/adapters";
 import { assertE2eTestModeAllowed } from "@/lib/auth-e2e-guard";
+import bcrypt from "bcryptjs";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const e2eMode = process.env.E2E_TEST_MODE === "1";
+const credentialsMode = process.env.AUTH_ENABLE_CREDENTIALS === "1";
 
 // Fail-fast: prevent accidental enablement of E2E mode in staging/prod.
 assertE2eTestModeAllowed(process.env as Record<string, string | undefined>);
@@ -30,6 +32,47 @@ if (googleClientId && googleClientSecret) {
       // - Google emails are verified
       // - we still enforce an allowlist (Employee table) server-side
       allowDangerousEmailAccountLinking: true,
+    })
+  );
+}
+
+if (credentialsMode) {
+  authProviders.push(
+    Credentials({
+      name: "Email Password",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      authorize: async (credentials) => {
+        const email =
+          typeof credentials?.email === "string" ? credentials.email.trim().toLowerCase() : "";
+        const password = typeof credentials?.password === "string" ? credentials.password : "";
+        if (!email || !password) return null;
+
+        const employee = await prisma.employee.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+          select: { status: true },
+        });
+        if (!employee || employee.status !== "ACTIVE") return null;
+
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
+          include: { role: { select: { name: true } } },
+        });
+        if (!user?.passwordHash) return null;
+
+        const ok = await bcrypt.compare(password, user.passwordHash);
+        if (!ok) return null;
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          roleId: user.roleId,
+          role: user.role || undefined,
+        };
+      },
     })
   );
 }
@@ -195,9 +238,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     signIn: async ({ user, account }) => {
-      // Phase 1: Google OAuth only (except E2E-only credentials provider).
+      // Credentials login is optional and explicitly env-gated (intended for staging/internal use).
       if (account?.provider !== "google") {
-        return e2eMode && account?.provider === "credentials";
+        if (account?.provider === "credentials") {
+          return e2eMode || credentialsMode;
+        }
+        return false;
       }
 
       const email = typeof user?.email === "string" ? user.email.trim() : "";

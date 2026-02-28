@@ -85,8 +85,6 @@ export async function POST(request: Request) {
     update: {
       name: employee.name || employee.email,
       roleId: role.id,
-      // Phase 1: Google OAuth only (no credentials login). Keep credentials disabled even if legacy users exist.
-      passwordHash: null,
     },
     create: {
       email: employee.email,
