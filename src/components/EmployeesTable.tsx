@@ -65,36 +65,36 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
     <>
       {/* Desktop: Table */}
       <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-auto">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
-              <th className="py-2">Name</th>
-              <th className="py-2">Email</th>
-              <th className="py-2">Role</th>
-              <th className="py-2">Department</th>
-              <th className="py-2">Designation</th>
-              <th className="py-2">Wallet</th>
-              <th className="py-2">Status</th>
-              <th className="py-2">Actions</th>
+              <th className="py-2 pr-3">Name</th>
+              <th className="py-2 pr-3">Email</th>
+              <th className="py-2 pr-3">Role</th>
+              <th className="py-2 pr-3">Department</th>
+              <th className="py-2 pr-3">Designation</th>
+              <th className="py-2 pr-3">Wallet</th>
+              <th className="py-2 pr-3 w-[90px] whitespace-nowrap">Status</th>
+              <th className="py-2 w-[240px] whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody>
             {employees.map((employee) => (
               <tr key={employee.id} className="border-b">
-                <td className="py-2">{employee.name}</td>
-                <td className="py-2">{employee.email}</td>
-                <td className="py-2">{employee.role}</td>
-                <td className="py-2">{employee.department || "-"}</td>
-                <td className="py-2">{employee.designation || "-"}</td>
-                <td className="py-2">
+                <td className="py-2 pr-3">{employee.name}</td>
+                <td className="py-2 pr-3">{employee.email}</td>
+                <td className="py-2 pr-3">{employee.role}</td>
+                <td className="py-2 pr-3">{employee.department || "-"}</td>
+                <td className="py-2 pr-3">{employee.designation || "-"}</td>
+                <td className="py-2 pr-3">
                   <div className="text-sm">{formatMoney(Number(employee.walletBalance))}</div>
                   <div className="text-xs text-muted-foreground">
                     Available: {formatMoney(Number(employee.walletBalance) - Number(employee.walletHold || 0))}
                   </div>
                 </td>
-                <td className="py-2">{employee.status}</td>
-                <td className="py-2">
-                  <div className="flex gap-2">
+                <td className="py-2 pr-3 w-[90px] whitespace-nowrap">{employee.status}</td>
+                <td className="py-2 w-[240px]">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
                       variant="outline"
