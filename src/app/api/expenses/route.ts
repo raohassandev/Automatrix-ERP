@@ -299,6 +299,36 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
+
+      // Phase 1 RBAC scope: non-global users can submit only against assigned projects.
+      const canViewAllProjects = await requirePermission(session.user.id, 'projects.view_all');
+      if (!canViewAllProjects) {
+        const canViewAssignedProjects = await requirePermission(session.user.id, 'projects.view_assigned');
+        if (!canViewAssignedProjects) {
+          return NextResponse.json(
+            { success: false, error: 'Project access denied for this expense' },
+            { status: 403 },
+          );
+        }
+        const assigned = await prisma.projectAssignment.findFirst({
+          where: { projectId: resolvedProjectId, userId: session.user.id },
+          select: { id: true },
+        });
+        if (!assigned) {
+          await logAudit({
+            action: 'BLOCK_EXPENSE_PROJECT_SCOPE',
+            entity: 'Expense',
+            entityId: 'NEW',
+            reason: 'User attempted to submit expense for unassigned project',
+            newValue: JSON.stringify({ projectId: resolvedProjectId }),
+            userId: session.user.id,
+          });
+          return NextResponse.json(
+            { success: false, error: 'You are not assigned to the selected project' },
+            { status: 403 },
+          );
+        }
+      }
     }
 
     const approvalLevel = getExpenseApprovalLevel(sanitizedData.amount);

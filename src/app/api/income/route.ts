@@ -90,6 +90,36 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+
+      // Phase 1 RBAC scope: non-global users can log income only against assigned projects.
+      const canViewAllProjects = await requirePermission(session.user.id, "projects.view_all");
+      if (!canViewAllProjects) {
+        const canViewAssignedProjects = await requirePermission(session.user.id, "projects.view_assigned");
+        if (!canViewAssignedProjects) {
+          return NextResponse.json(
+            { success: false, error: "Project access denied for this income entry" },
+            { status: 403 }
+          );
+        }
+        const assigned = await prisma.projectAssignment.findFirst({
+          where: { projectId: resolvedProjectId, userId: session.user.id },
+          select: { id: true },
+        });
+        if (!assigned) {
+          await logAudit({
+            action: "BLOCK_INCOME_PROJECT_SCOPE",
+            entity: "Income",
+            entityId: "NEW",
+            reason: "User attempted to submit income for unassigned project",
+            newValue: JSON.stringify({ projectId: resolvedProjectId }),
+            userId: session.user.id,
+          });
+          return NextResponse.json(
+            { success: false, error: "You are not assigned to the selected project" },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     const created = await prisma.income.create({
