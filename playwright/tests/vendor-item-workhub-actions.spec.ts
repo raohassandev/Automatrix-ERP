@@ -187,6 +187,36 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     }
   });
 
+  test("Project financials: finance-only page + API access", async ({ browser, baseURL }) => {
+    // Finance: page + KPI cards visible.
+    {
+      const ctx = await browser.newContext({ baseURL, storageState: states.finance });
+      const page = await ctx.newPage();
+      await page.goto("/projects/financial");
+      await expect(page.getByRole("heading", { name: "Project Financial Dashboard" })).toBeVisible();
+      await expect(page.getByText("Total Contract Value").first()).toBeVisible();
+      await expect(page.getByText("Gross Margin").first()).toBeVisible();
+      await ctx.close();
+    }
+
+    // Restricted roles: forbidden UI on page.
+    for (const role of ["engineer", "sales", "store", "procurement"] as const) {
+      const ctx = await browser.newContext({ baseURL, storageState: states[role] });
+      const page = await ctx.newPage();
+      await page.goto("/projects/financial");
+      await expect(page.getByText("You do not have access to project financials.").first()).toBeVisible();
+      await ctx.close();
+    }
+
+    // API-negative: restricted roles cannot fetch project financial dataset.
+    for (const role of ["engineer", "sales", "store", "procurement"] as const) {
+      const api = await request.newContext({ baseURL, storageState: states[role] });
+      const res = await api.get("/api/projects/financial");
+      expect(res.status()).toBe(403);
+      await api.dispose();
+    }
+  });
+
   test("Project actions: finance sees procurement + assign + note; engineer/store note only; API-negative store cannot assign", async ({
     browser,
     baseURL,
