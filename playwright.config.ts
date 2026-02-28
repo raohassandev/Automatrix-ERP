@@ -21,7 +21,8 @@ const config: PlaywrightTestConfig = {
   expect: { timeout: 5000 },
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    // Keep host consistent with NEXTAUTH_URL to avoid cookie/session host mismatch.
+    baseURL: "http://localhost:3000",
     trace: "on-first-retry",
   },
   webServer: {
@@ -37,11 +38,13 @@ const config: PlaywrightTestConfig = {
       // Avoid auth boot failure if developer hasn't set Google env vars locally.
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "dummy",
       GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "dummy",
-      NEXTAUTH_URL: process.env.NEXTAUTH_URL || "http://127.0.0.1:3000",
+      NEXTAUTH_URL: process.env.NEXTAUTH_URL || "http://localhost:3000",
       AUTH_SECRET: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "e2e-secret",
+      AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST || "true",
+      CI: process.env.CI || "true",
       DATABASE_URL: e2eDbUrl || process.env.DATABASE_URL || "",
     },
-    url: "http://127.0.0.1:3000",
+    url: "http://localhost:3000",
     reuseExistingServer: true,
     timeout: 120 * 1000,
   },

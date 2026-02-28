@@ -166,7 +166,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             <div className="md:ml-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" data-testid="workhub-actions-button">
                     Actions
                   </Button>
                 </DropdownMenuTrigger>

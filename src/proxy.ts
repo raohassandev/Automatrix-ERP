@@ -21,7 +21,7 @@ const ROUTE_RULES: Array<{ pattern: RegExp; any: string[] }> = [
   { pattern: /^\/designations/, any: ["designations.view_all"] },
   { pattern: /^\/procurement/, any: ["procurement.view_all", "procurement.edit"] },
   { pattern: /^\/invoices/, any: ["invoices.view_all"] },
-  { pattern: /^\/vendors/, any: ["vendors.view_all"] },
+  { pattern: /^\/vendors/, any: ["vendors.view_all", "procurement.view_all", "projects.view_all", "projects.view_assigned"] },
   { pattern: /^\/commissions/, any: ["commissions.view_all", "employees.view_own"] },
   { pattern: /^\/reports/, any: ["reports.view_all", "reports.view_team", "reports.view_own"] },
   { pattern: /^\/settings/, any: ["settings.view"] },

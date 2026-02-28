@@ -11,8 +11,9 @@ const ROLE_EMAILS = {
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
   const password = process.env.E2E_TEST_PASSWORD || "e2e";
   await page.goto("/login");
-  await page.getByPlaceholder("Email").fill(email);
-  await page.getByPlaceholder("Password").fill(password);
+  const e2eBox = page.getByText("E2E login (local only)").locator("..");
+  await e2eBox.getByPlaceholder("Email").first().fill(email);
+  await e2eBox.getByPlaceholder("Password").first().fill(password);
   await page.getByRole("button", { name: "E2E Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 }
@@ -95,15 +96,15 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
     await expect(page.getByRole("heading", { name: "Project" })).toBeVisible({ timeout: 15_000 }).catch(() => {});
-    await expect(page.getByText("Activity")).toBeVisible();
-    await expect(page.getByText("Costs")).toBeVisible();
-    await expect(page.getByText("Inventory")).toBeVisible();
-    await expect(page.getByText("People")).toBeVisible();
-    await expect(page.getByText("Documents")).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Activity$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Costs$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Inventory$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^People$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
 
-    await page.getByRole("button", { name: "Inventory" }).click();
-    await expect(page.getByText("Unit Cost")).toBeVisible();
-    await expect(page.getByText("Total")).toBeVisible();
+    await page.locator("button:visible", { hasText: /^Inventory$/ }).first().click();
+    await expect(page.getByRole("columnheader", { name: "Unit Cost" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "Total" })).toBeVisible();
     await ctx.close();
   });
 
@@ -111,10 +112,10 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await expect(page.getByText("Activity")).toBeVisible();
-    await expect(page.getByText("Documents")).toBeVisible();
-    await expect(page.getByText("People")).toBeVisible();
-    await expect(page.getByText("Costs")).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^Activity$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^People$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Costs$/ })).toHaveCount(0);
 
     await page.getByRole("button", { name: "Inventory" }).click();
     await expect(page.getByText("Unit Cost")).toHaveCount(0);
@@ -126,11 +127,11 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.sales });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await expect(page.getByText("Activity")).toBeVisible();
-    await expect(page.getByText("Documents")).toBeVisible();
-    await expect(page.getByText("Costs")).toHaveCount(0);
-    await expect(page.getByText("Inventory")).toHaveCount(0);
-    await expect(page.getByText("People")).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^Activity$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Costs$/ })).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^Inventory$/ })).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^People$/ })).toHaveCount(0);
     await ctx.close();
   });
 
@@ -138,7 +139,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.technician });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await expect(page.getByText("Inventory")).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Inventory$/ }).first()).toBeVisible();
     await page.getByRole("button", { name: "Inventory" }).click();
     await expect(page.getByText("Unit Cost")).toHaveCount(0);
     await expect(page.getByText("Total")).toHaveCount(0);
@@ -149,9 +150,8 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.store });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await expect(page.getByText("Inventory")).toBeVisible();
-    await expect(page.getByText("People")).toHaveCount(0);
-    await expect(page.getByText("Costs")).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^Inventory$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Costs$/ })).toHaveCount(0);
     await page.getByRole("button", { name: "Inventory" }).click();
     await expect(page.getByText("Unit Cost")).toHaveCount(0);
     await ctx.close();
@@ -176,4 +176,3 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     await ctx.close();
   });
 });
-

@@ -9,8 +9,9 @@ const ROLE_EMAILS = {
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
   const password = process.env.E2E_TEST_PASSWORD || "e2e";
   await page.goto("/login");
-  await page.getByPlaceholder("Email").fill(email);
-  await page.getByPlaceholder("Password").fill(password);
+  const e2eBox = page.getByText("E2E login (local only)").locator("..");
+  await e2eBox.getByPlaceholder("Email").first().fill(email);
+  await e2eBox.getByPlaceholder("Password").first().fill(password);
   await page.getByRole("button", { name: "E2E Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 }
@@ -89,13 +90,13 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.finance });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await page.getByRole("button", { name: "Actions" }).click();
-    await expect(page.getByText("Create Purchase Order for this Project")).toBeVisible();
-    await expect(page.getByText("Receive Goods (GRN) for this Project")).toBeVisible();
-    await expect(page.getByText("Create Vendor Bill for this Project")).toBeVisible();
-    await expect(page.getByText("Assign People to Project")).toBeVisible();
-    await expect(page.getByText("Add Project Note")).toBeVisible();
-    await expect(page.getByText("Add Attachment (URL)")).toBeVisible();
+    await page.getByTestId("workhub-actions-button").first().click();
+    await expect(page.getByRole("menuitem", { name: "Create Purchase Order for this Project" }).first()).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Receive Goods (GRN) for this Project" }).first()).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Create Vendor Bill for this Project" }).first()).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Assign People to Project" }).first()).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Add Attachment (URL)" }).first()).toBeVisible();
     await ctx.close();
   });
 
@@ -103,11 +104,11 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await page.getByRole("button", { name: "Actions" }).click();
-    await expect(page.getByText("Add Project Note")).toBeVisible();
-    await expect(page.getByText("Add Attachment (URL)")).toBeVisible();
-    await expect(page.getByText("Create Purchase Order for this Project")).toHaveCount(0);
-    await expect(page.getByText("Assign People to Project")).toHaveCount(0);
+    await page.getByTestId("workhub-actions-button").first().click();
+    await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Add Attachment (URL)" }).first()).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Create Purchase Order for this Project" })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "Assign People to Project" })).toHaveCount(0);
     await ctx.close();
   });
 
@@ -115,10 +116,10 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.store });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await page.getByRole("button", { name: "Actions" }).click();
-    await expect(page.getByText("Add Project Note")).toBeVisible();
-    await expect(page.getByText("Add Attachment (URL)")).toBeVisible();
-    await expect(page.getByText("Assign People to Project")).toHaveCount(0);
+    await page.getByTestId("workhub-actions-button").first().click();
+    await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Add Attachment (URL)" }).first()).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Assign People to Project" })).toHaveCount(0);
     await ctx.close();
 
     const api = await request.newContext({ baseURL, storageState: states.store });
@@ -135,9 +136,8 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
     });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await page.getByRole("button", { name: "Actions" }).click();
-    await expect(page.getByText("Add Project Note")).toBeVisible();
+    await page.getByTestId("workhub-actions-button").first().click();
+    await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
     await ctx.close();
   });
 });
-

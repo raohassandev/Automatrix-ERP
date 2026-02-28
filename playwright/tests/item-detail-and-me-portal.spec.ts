@@ -9,8 +9,9 @@ const ROLE_EMAILS = {
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
   const password = process.env.E2E_TEST_PASSWORD || "e2e";
   await page.goto("/login");
-  await page.getByPlaceholder("Email").fill(email);
-  await page.getByPlaceholder("Password").fill(password);
+  const e2eBox = page.getByText("E2E login (local only)").locator("..");
+  await e2eBox.getByPlaceholder("Email").fill(email);
+  await e2eBox.getByPlaceholder("Password").fill(password);
   await page.getByRole("button", { name: "E2E Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 }
@@ -75,9 +76,8 @@ test.describe.serial("Item Detail + My Portal (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/inventory/items/${itemId}`);
-      await expect(page.getByText("On-hand")).toBeVisible();
-      await expect(page.getByText("Ledger")).toBeVisible();
-      await page.getByRole("button", { name: "Ledger" }).click();
+      await expect(page.locator("button:visible", { hasText: /^Ledger$/ }).first()).toBeVisible();
+      await page.locator("button:visible", { hasText: /^Ledger$/ }).first().click();
       await expect(page.getByText("Unit Cost")).toBeVisible();
       await expect(page.getByText("Total")).toBeVisible();
       await ctx.close();
@@ -88,8 +88,8 @@ test.describe.serial("Item Detail + My Portal (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.store });
       const page = await ctx.newPage();
       await page.goto(`/inventory/items/${itemId}`);
-      await expect(page.getByText("Ledger")).toBeVisible();
-      await page.getByRole("button", { name: "Ledger" }).click();
+      await expect(page.locator("button:visible", { hasText: /^Ledger$/ }).first()).toBeVisible();
+      await page.locator("button:visible", { hasText: /^Ledger$/ }).first().click();
       await expect(page.getByText("Unit Cost")).toHaveCount(0);
       await expect(page.getByText("Total")).toHaveCount(0);
       await ctx.close();
@@ -100,9 +100,8 @@ test.describe.serial("Item Detail + My Portal (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.sales });
       const page = await ctx.newPage();
       await page.goto(`/inventory/items/${itemId}`);
-      await expect(page.getByText("On-hand")).toBeVisible();
-      await expect(page.getByText("Ledger")).toHaveCount(0);
-      await expect(page.getByText("Documents")).toHaveCount(0);
+      await expect(page.locator("button:visible", { hasText: /^Ledger$/ })).toHaveCount(0);
+      await expect(page.locator("button:visible", { hasText: /^Documents$/ })).toHaveCount(0);
       await ctx.close();
     }
   });
@@ -124,7 +123,7 @@ test.describe.serial("Item Detail + My Portal (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto("/me");
-      await expect(page.getByText("My Dashboard")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "My Dashboard" }).first()).toBeVisible();
       await ctx.close();
     }
 
@@ -133,9 +132,9 @@ test.describe.serial("Item Detail + My Portal (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.store });
       const page = await ctx.newPage();
       await page.goto("/me");
-      await expect(page.getByText("My Dashboard")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "My Dashboard" }).first()).toBeVisible();
       await page.goto(`/employees/${employeeId}`);
-      await expect(page.getByText(/do not have access/i)).toBeVisible();
+      await expect(page.getByRole("main").getByText(/do not have access/i).first()).toBeVisible();
       await ctx.close();
     }
   });
@@ -156,8 +155,7 @@ test.describe.serial("Item Detail + My Portal (RBAC + mobile)", () => {
     await expect(page.getByRole("heading", { name: "On-hand" })).toBeVisible();
 
     await page.goto("/me");
-    await expect(page.getByText("My Dashboard")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "My Dashboard" }).first()).toBeVisible();
     await ctx.close();
   });
 });
-

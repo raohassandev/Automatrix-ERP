@@ -10,6 +10,7 @@ export default async function DashboardPage() {
   }
 
   const canViewCeo = await requirePermission(session.user.id, "dashboard.view_all_metrics");
+  const canManageCompanyAccounts = await requirePermission(session.user.id, "company_accounts.manage");
 
   return (
     <div className="grid gap-6">
@@ -40,9 +41,11 @@ export default async function DashboardPage() {
             <Link className="underline" href="/procurement/vendor-bills">
               Vendor Bills
             </Link>
-            <Link className="underline" href="/procurement/vendor-payments">
-              Vendor Payments
-            </Link>
+            {canManageCompanyAccounts ? (
+              <Link className="underline" href="/procurement/vendor-payments">
+                Vendor Payments
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -106,4 +109,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-

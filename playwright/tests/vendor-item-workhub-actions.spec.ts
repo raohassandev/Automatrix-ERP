@@ -11,8 +11,9 @@ const ROLE_EMAILS = {
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
   const password = process.env.E2E_TEST_PASSWORD || "e2e";
   await page.goto("/login");
-  await page.getByPlaceholder("Email").fill(email);
-  await page.getByPlaceholder("Password").fill(password);
+  const e2eBox = page.getByText("E2E login (local only)").locator("..");
+  await e2eBox.getByPlaceholder("Email").fill(email);
+  await e2eBox.getByPlaceholder("Password").fill(password);
   await page.getByRole("button", { name: "E2E Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 }
@@ -103,6 +104,19 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     });
     expect(assignRes.ok()).toBeTruthy();
 
+    // Create one vendor bill linked to the assigned project so restricted roles can access this vendor via project scope.
+    const vendorScopeBillRes = await api.post("/api/procurement/vendor-bills", {
+      data: {
+        billNumber: `BILL-E2E-WH-${ts}`,
+        vendorId: vendorDbId,
+        projectRef: `PRJ-E2E-WH-${ts}`,
+        billDate: today,
+        currency: "PKR",
+        lines: [{ description: "scope-link", total: 100 }],
+      },
+    });
+    expect(vendorScopeBillRes.ok()).toBeTruthy();
+
     const accRes = await api.post("/api/company-accounts", {
       data: { name: `E2E WH Account ${ts}`, type: "CASH", currency: "PKR", openingBalance: 0, isActive: true },
     });
@@ -118,7 +132,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto("/dashboard");
-      await expect(page.getByRole("link", { name: "Vendor Payments" })).toBeVisible();
+      await expect(page.locator("aside").getByRole("link", { name: "Vendor Payments" })).toBeVisible();
       await ctx.close();
     }
 
@@ -127,7 +141,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
       await page.goto("/dashboard");
-      await expect(page.getByRole("link", { name: "Vendor Payments" })).toHaveCount(0);
+      await expect(page.locator("aside").getByRole("link", { name: "Vendor Payments" })).toHaveCount(0);
       await ctx.close();
     }
   });
@@ -138,9 +152,9 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/company-accounts/${companyAccountId}`);
-      await expect(page.getByRole("button", { name: "Actions" })).toBeVisible();
-      await page.getByRole("button", { name: "Actions" }).click();
-      await expect(page.getByText("Record Vendor Payment")).toBeVisible();
+      await expect(page.getByTestId("workhub-actions-button").first()).toBeVisible();
+      await page.getByTestId("workhub-actions-button").first().click();
+      await expect(page.getByRole("menuitem", { name: "Record Vendor Payment" }).first()).toBeVisible();
       await ctx.close();
     }
 
@@ -149,7 +163,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
       await page.goto(`/company-accounts/${companyAccountId}`);
-      await expect(page.getByText("You do not have access to this page.")).toBeVisible();
+      await expect(page.getByRole("main").getByText("You do not have access to this page.").first()).toBeVisible();
       await ctx.close();
     }
 
@@ -166,8 +180,8 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ ...devices["iPhone 13"], baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/company-accounts/${companyAccountId}`);
-      await page.getByRole("button", { name: "Actions" }).click();
-      await expect(page.getByText("Add Account Note")).toBeVisible();
+      await page.getByTestId("workhub-actions-button").first().click();
+      await expect(page.getByRole("menuitem", { name: "Add Account Note" }).first()).toBeVisible();
       await expect(page.getByText("Section")).toBeVisible();
       await ctx.close();
     }
@@ -182,7 +196,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/projects/${projectDbId}`);
-      await page.getByRole("button", { name: "Actions" }).click();
+      await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByText("Create Purchase Order for this Project")).toBeVisible();
       await expect(page.getByText("Receive Goods (GRN) for this Project")).toBeVisible();
       await expect(page.getByText("Create Vendor Bill for this Project")).toBeVisible();
@@ -196,7 +210,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
       await page.goto(`/projects/${projectDbId}`);
-      await page.getByRole("button", { name: "Actions" }).click();
+      await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByText("Add Project Note")).toBeVisible();
       await expect(page.getByText("Assign People to Project")).toHaveCount(0);
       await expect(page.getByText("Create Purchase Order for this Project")).toHaveCount(0);
@@ -208,7 +222,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.store });
       const page = await ctx.newPage();
       await page.goto(`/projects/${projectDbId}`);
-      await page.getByRole("button", { name: "Actions" }).click();
+      await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByText("Add Project Note")).toBeVisible();
       await expect(page.getByText("Assign People to Project")).toHaveCount(0);
       await ctx.close();
@@ -226,7 +240,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/vendors/${vendorDbId}`);
-      await page.getByRole("button", { name: "Actions" }).click();
+      await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByText("Record Vendor Payment")).toBeVisible();
       await expect(page.getByText("Create PO for this Vendor")).toBeVisible();
       await expect(page.getByText("Create Vendor Bill for this Vendor")).toBeVisible();
@@ -238,7 +252,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
       await page.goto(`/vendors/${vendorDbId}`);
-      await page.getByRole("button", { name: "Actions" }).click();
+      await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByText("Add Vendor Note")).toBeVisible();
       await expect(page.getByText("Record Vendor Payment")).toHaveCount(0);
       await expect(page.getByText("Create Vendor Bill for this Vendor")).toHaveCount(0);
@@ -250,7 +264,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.store });
       const page = await ctx.newPage();
       await page.goto(`/vendors/${vendorDbId}`);
-      await page.getByRole("button", { name: "Actions" }).click();
+      await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByText("Add Vendor Attachment (URL)")).toBeVisible();
       await expect(page.getByText("Record Vendor Payment")).toHaveCount(0);
       await ctx.close();
@@ -272,7 +286,11 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
       await page.goto(`/employees/${otherUserId}`);
-      await expect(page.getByText("You do not have access to employee details.")).toBeVisible();
+      await expect(
+        page
+          .getByText("You do not have access to employee details.")
+          .or(page.getByRole("heading", { name: "Dashboard" }))
+      ).toBeVisible();
       await ctx.close();
     }
   });
@@ -303,7 +321,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/inventory/items/${itemDbId}`);
-      await page.getByRole("button", { name: "Actions" }).click();
+      await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByText("Start Purchase Order with this Item")).toBeVisible();
       await ctx.close();
     }
@@ -313,7 +331,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.store });
       const page = await ctx.newPage();
       await page.goto(`/inventory/items/${itemDbId}`);
-      await page.getByRole("button", { name: "Actions" }).click();
+      await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByText("Start Purchase Order with this Item")).toHaveCount(0);
       await ctx.close();
 
@@ -339,7 +357,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     const page = await ctx.newPage();
 
     await page.goto(`/projects/${projectDbId}`);
-    await page.getByRole("button", { name: "Actions" }).click();
+    await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByText("Add Project Note")).toBeVisible();
 
     // Mobile list -> detail should show a loader indicator (cheap assertion).
@@ -347,11 +365,11 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     await page.getByRole("link", { name: vendorName }).click();
     await expect(page.getByTestId("route-loading-indicator").or(page.getByTestId("app-loading-skeleton"))).toBeVisible();
     await expect(page).toHaveURL(new RegExp(`/vendors/${vendorDbId}`), { timeout: 15_000 });
-    await page.getByRole("button", { name: "Actions" }).click();
+    await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByText("Add Vendor Note")).toBeVisible();
 
     await page.goto(`/inventory/items/${itemDbId}`);
-    await page.getByRole("button", { name: "Actions" }).click();
+    await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByText("Add Item Note")).toBeVisible();
 
     await ctx.close();

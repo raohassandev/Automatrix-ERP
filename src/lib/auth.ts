@@ -69,8 +69,10 @@ if (e2eMode) {
         });
 
         if (!employee && bootstrap) {
-          employee = await prisma.employee.create({
-            data: {
+          employee = await prisma.employee.upsert({
+            where: { email },
+            update: { status: "ACTIVE", role: desiredRoleName },
+            create: {
               email,
               name: email.split("@")[0] || "E2E User",
               role: desiredRoleName,
@@ -98,15 +100,19 @@ if (e2eMode) {
           where: { email: { equals: email, mode: "insensitive" } },
         });
 
-        if (!user) {
-          user = await prisma.user.create({
-            data: {
+        if (!user && bootstrap) {
+          user = await prisma.user.upsert({
+            where: { email },
+            update: { roleId: desiredRole.id, passwordHash: null },
+            create: {
               email,
               name: employee.name || null,
               roleId: desiredRole.id,
               passwordHash: null,
             },
           });
+        } else if (!user) {
+          return null;
         } else if (user.roleId !== desiredRole.id) {
           user = await prisma.user.update({
             where: { id: user.id },

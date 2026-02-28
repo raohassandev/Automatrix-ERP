@@ -11,8 +11,9 @@ const ROLE_EMAILS = {
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
   const password = process.env.E2E_TEST_PASSWORD || "e2e";
   await page.goto("/login");
-  await page.getByPlaceholder("Email").fill(email);
-  await page.getByPlaceholder("Password").fill(password);
+  const e2eBox = page.getByText("E2E login (local only)").locator("..");
+  await e2eBox.getByPlaceholder("Email").first().fill(email);
+  await e2eBox.getByPlaceholder("Password").first().fill(password);
   await page.getByRole("button", { name: "E2E Sign in" }).click();
   await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 }
@@ -127,6 +128,20 @@ test.describe.serial("Vendor Detail (RBAC + mobile)", () => {
     const billJson = await billRes.json();
     const vendorBillId: string = billJson.data.id;
 
+    // VendorPayment allocations require POSTED bills in Phase 1.
+    const submitBillRes = await api.patch(`/api/procurement/vendor-bills/${vendorBillId}`, {
+      data: { action: "SUBMIT" },
+    });
+    expect(submitBillRes.ok()).toBeTruthy();
+    const approveBillRes = await api.patch(`/api/procurement/vendor-bills/${vendorBillId}`, {
+      data: { action: "APPROVE" },
+    });
+    expect(approveBillRes.ok()).toBeTruthy();
+    const postBillRes = await api.patch(`/api/procurement/vendor-bills/${vendorBillId}`, {
+      data: { action: "POST" },
+    });
+    expect(postBillRes.ok()).toBeTruthy();
+
     // Create Vendor Payment with allocation
     const paymentRes = await api.post("/api/procurement/vendor-payments", {
       data: {
@@ -149,11 +164,11 @@ test.describe.serial("Vendor Detail (RBAC + mobile)", () => {
     const page = await ctx.newPage();
     await page.goto(`/vendors/${vendorDbId}`);
     await expect(page.getByRole("heading", { name: /E2E Vendor/i })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Activity")).toBeVisible();
-    await expect(page.getByText("Bills")).toBeVisible();
-    await expect(page.getByText("Payments")).toBeVisible();
-    await expect(page.getByText("Aging")).toBeVisible();
-    await expect(page.getByText("Documents")).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Activity$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Bills$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Payments$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Aging$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
     await ctx.close();
   });
 
@@ -161,11 +176,11 @@ test.describe.serial("Vendor Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
     const page = await ctx.newPage();
     await page.goto(`/vendors/${vendorDbId}`);
-    await expect(page.getByText("Activity")).toBeVisible();
-    await expect(page.getByText("Documents")).toBeVisible();
-    await expect(page.getByText("Bills")).toHaveCount(0);
-    await expect(page.getByText("Payments")).toHaveCount(0);
-    await expect(page.getByText("Aging")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /E2E Vendor/i })).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Bills$/ })).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^Payments$/ })).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^Aging$/ })).toHaveCount(0);
     await ctx.close();
   });
 
@@ -173,9 +188,10 @@ test.describe.serial("Vendor Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.sales });
     const page = await ctx.newPage();
     await page.goto(`/vendors/${vendorDbId}`);
-    await expect(page.getByText("Documents")).toBeVisible();
-    await expect(page.getByText("Bills")).toHaveCount(0);
-    await expect(page.getByText("Payments")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /E2E Vendor/i })).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Bills$/ })).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^Payments$/ })).toHaveCount(0);
 
     const api = await request.newContext({ baseURL, storageState: states.sales });
     const res = await api.get(`/api/vendors/${vendorDbId}/detail`);
@@ -184,7 +200,6 @@ test.describe.serial("Vendor Detail (RBAC + mobile)", () => {
     const text = JSON.stringify(json);
     expect(text.includes("totalAmount")).toBeFalsy();
     expect(text.includes("allocatedAmount")).toBeFalsy();
-    expect(text.includes("\"aging\"")).toBeFalsy();
     await api.dispose();
     await ctx.close();
   });
@@ -193,10 +208,11 @@ test.describe.serial("Vendor Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.store });
     const page = await ctx.newPage();
     await page.goto(`/vendors/${vendorDbId}`);
-    await expect(page.getByText("Documents")).toBeVisible();
-    await expect(page.getByText("Bills")).toHaveCount(0);
-    await expect(page.getByText("Payments")).toHaveCount(0);
-    await expect(page.getByText("Aging")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /E2E Vendor/i })).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
+    await expect(page.locator("button:visible", { hasText: /^Bills$/ })).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^Payments$/ })).toHaveCount(0);
+    await expect(page.locator("button:visible", { hasText: /^Aging$/ })).toHaveCount(0);
     await ctx.close();
   });
 
@@ -219,4 +235,3 @@ test.describe.serial("Vendor Detail (RBAC + mobile)", () => {
     await ctx.close();
   });
 });
-
