@@ -8,6 +8,7 @@ import { EmployeeWalletDialog } from "@/components/EmployeeWalletDialog";
 import { Button } from "./ui/button";
 import { Wallet } from "lucide-react";
 import { EmployeeFormDialog } from "@/components/EmployeeFormDialog";
+import Link from "next/link";
 
 interface Employee {
   id: string;
@@ -95,6 +96,9 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
                 <td className="py-2 pr-3 w-[90px] whitespace-nowrap">{employee.status}</td>
                 <td className="py-2 w-[240px]">
                   <div className="flex flex-wrap gap-2">
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/employees/${employee.id}/dashboard-preview`}>Inspect</Link>
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -138,6 +142,9 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
               ]}
             actions={
               <>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/employees/${employee.id}/dashboard-preview`}>Inspect</Link>
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
