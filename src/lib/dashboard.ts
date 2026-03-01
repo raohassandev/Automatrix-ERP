@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { auth } from "./auth";
 import { requirePermission } from "./rbac";
+import { buildProjectAliases } from "./projects";
 
 async function getDashboardAccess() {
   const session = await auth();
@@ -302,6 +303,7 @@ export async function getProjectProfitabilityData() {
 
   const projectData = await Promise.all(
     projects.map(async (project) => {
+      const aliases = buildProjectAliases(project);
       const incomeWhere = access.canViewAllMetrics
         ? {}
         : { addedById: access.userId };
@@ -310,11 +312,11 @@ export async function getProjectProfitabilityData() {
         : { submittedById: access.userId };
       const incomes = await prisma.income.aggregate({
         _sum: { amount: true },
-        where: { project: { in: [project.projectId, project.name] }, status: 'APPROVED', ...incomeWhere },
+        where: { project: { in: aliases }, status: 'APPROVED', ...incomeWhere },
       });
       const expenses = await prisma.expense.aggregate({
         _sum: { amount: true },
-        where: { project: { in: [project.projectId, project.name] }, status: 'APPROVED', ...expenseWhere },
+        where: { project: { in: aliases }, status: 'APPROVED', ...expenseWhere },
       });
 
       const totalIncome = Number(incomes._sum.amount || 0);

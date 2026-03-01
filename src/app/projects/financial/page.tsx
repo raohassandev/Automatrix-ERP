@@ -10,6 +10,7 @@ import Link from "next/link";
 import SearchInput from "@/components/SearchInput";
 import QuerySelect from "@/components/QuerySelect";
 import PaginationControls from "@/components/PaginationControls";
+import { buildProjectAliases } from "@/lib/projects";
 
 type FinancialProjectRow = {
   id: string;
@@ -84,13 +85,14 @@ export default async function ProjectFinancialPage({
 
   const projectsWithExpenseData = await Promise.all(
     projects.map(async (project) => {
+      const aliases = buildProjectAliases(project);
       const expenseData = await prisma.expense.aggregate({
-        where: { project: { in: [project.projectId, project.name] } },
+        where: { project: { in: aliases } },
         _count: true,
       });
 
       const latestExpense = await prisma.expense.findFirst({
-        where: { project: { in: [project.projectId, project.name] } },
+        where: { project: { in: aliases } },
         orderBy: { date: "desc" },
         select: { date: true },
       });

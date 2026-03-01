@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { formatMoney } from "@/lib/format";
 import { logAudit } from "@/lib/audit";
+import { buildProjectAliases } from "@/lib/projects";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -84,7 +85,7 @@ export async function GET(req: Request) {
 
   const projectStats = await Promise.all(
     projects.map(async (project) => {
-      const projectAliases = [project.id, project.projectId, project.name].filter(Boolean);
+      const projectAliases = buildProjectAliases(project);
       const [expenses, incomes, postedBills] = await Promise.all([
         prisma.expense.findMany({
           where: {

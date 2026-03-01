@@ -25,10 +25,32 @@ export async function resolveProjectDbId(projectRef?: string | null) {
   return project?.id || null;
 }
 
+type ProjectAliasInput = {
+  id?: string | null;
+  projectId?: string | null;
+  name?: string | null;
+};
+
+export function buildProjectAliases(project: ProjectAliasInput) {
+  const id = String(project.id || "").trim();
+  const projectId = String(project.projectId || "").trim();
+  const name = String(project.name || "").trim();
+
+  const aliases = [
+    id,
+    projectId,
+    name,
+    projectId && name ? `${projectId} - ${name}` : "",
+    projectId && name ? `${projectId}-${name}` : "",
+  ].filter(Boolean);
+
+  return Array.from(new Set(aliases));
+}
+
 export async function recalculateProjectFinancials(projectRef: string) {
   const project = await findProjectByRef(projectRef);
   if (!project) return null;
-  const projectAliases = Array.from(new Set([project.id, project.projectId, project.name].filter(Boolean)));
+  const projectAliases = buildProjectAliases(project);
 
   const [expenses, incomes, invoices, postedBills] = await Promise.all([
     prisma.expense.findMany({

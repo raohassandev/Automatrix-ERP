@@ -6,6 +6,7 @@ import Link from "next/link";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import { requirePermission } from "@/lib/rbac";
+import { buildProjectAliases } from "@/lib/projects";
 
 export default async function ProjectExpensesReportPage({
   searchParams,
@@ -85,7 +86,7 @@ export default async function ProjectExpensesReportPage({
 
   const projectStats = await Promise.all(
     projects.map(async (project) => {
-      const aliases = [project.id, project.projectId, project.name].filter(Boolean);
+      const aliases = buildProjectAliases(project);
       const [expenses, incomes, postedBills] = await Promise.all([
         prisma.expense.findMany({
           where: {

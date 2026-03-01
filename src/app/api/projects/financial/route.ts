@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import { buildProjectAliases } from "@/lib/projects";
 
 export async function GET() {
   const session = await auth();
@@ -46,13 +47,14 @@ export async function GET() {
     // Get expense counts and latest expense dates for each project
     const projectsWithExpenseData = await Promise.all(
       projects.map(async (project) => {
+        const aliases = buildProjectAliases(project);
         const expenseData = await prisma.expense.aggregate({
-          where: { project: { in: [project.id, project.projectId, project.name] } },
+          where: { project: { in: aliases } },
           _count: true,
         });
 
         const latestExpense = await prisma.expense.findFirst({
-          where: { project: { in: [project.id, project.projectId, project.name] } },
+          where: { project: { in: aliases } },
           orderBy: { date: 'desc' },
           select: { date: true }
         });

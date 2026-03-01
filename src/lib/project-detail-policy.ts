@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getUserRoleName } from "@/lib/rbac";
 import { hasPermission, RoleName } from "@/lib/permissions";
+import { buildProjectAliases } from "@/lib/projects";
 
 export type ProjectDetailTab = "activity" | "costs" | "inventory" | "people" | "documents";
 
@@ -189,7 +190,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   };
 
   // --- Data sources (Phase 1 single spine) ---
-  const projectAliases = Array.from(new Set([project.id, project.projectId, project.name].filter(Boolean)));
+  const projectAliases = buildProjectAliases(project);
 
   const isSalesOrMarketing = policy.role === "Sales" || policy.role === "Marketing";
   const includeLedgerInResponse = policy.tabs.inventory;
