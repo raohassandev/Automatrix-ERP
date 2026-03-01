@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
+import { logAudit } from "@/lib/audit";
 
 export async function GET() {
   const session = await auth();
@@ -70,6 +71,9 @@ export async function POST(request: Request) {
   if (!employee) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
+  if (employee.status !== "ACTIVE") {
+    return NextResponse.json({ error: "Only ACTIVE employees can be provisioned" }, { status: 400 });
+  }
 
   if (!employee.email) {
     return NextResponse.json({ error: "Employee email is required" }, { status: 400 });
@@ -79,6 +83,11 @@ export async function POST(request: Request) {
   if (!role) {
     return NextResponse.json({ error: "Role not found" }, { status: 404 });
   }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: employee.email },
+    select: { id: true, role: { select: { name: true } } },
+  });
 
   const user = await prisma.user.upsert({
     where: { email: employee.email },
@@ -92,6 +101,19 @@ export async function POST(request: Request) {
       roleId: role.id,
       passwordHash: null,
     },
+  });
+
+  await logAudit({
+    action: existingUser ? "UPDATE_EMPLOYEE_ACCESS" : "CREATE_EMPLOYEE_ACCESS",
+    entity: "User",
+    entityId: user.id,
+    newValue: JSON.stringify({
+      employeeId: employee.id,
+      email: employee.email,
+      fromRole: existingUser?.role?.name || null,
+      toRole: role.name,
+    }),
+    userId: session.user.id,
   });
 
   return NextResponse.json({

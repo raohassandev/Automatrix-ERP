@@ -419,6 +419,31 @@ pnpm test
 E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- project-detail-rbac
 ```
 
+## Employee access hardening (continuous pass)
+
+### What changed
+- Hardened employee provisioning endpoint:
+  - `/api/employees/access` now blocks provisioning for non-`ACTIVE` employees.
+  - Provisioning action is now audited:
+    - `CREATE_EMPLOYEE_ACCESS`
+    - `UPDATE_EMPLOYEE_ACCESS`
+  - Audit payload includes employee id/email and role transition (`fromRole -> toRole`).
+- Updated settings UI (`Employee Access Manager`) to prevent access provisioning for inactive employees:
+  - action button disabled
+  - button label shows `Inactive` for non-active employee rows.
+
+### Files changed
+- `src/app/api/employees/access/route.ts`
+- `src/components/EmployeeAccessManager.tsx`
+
+### Verification
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- vendor-item-workhub-actions
+```
+
 ## Wallet Transfer Accounting Consistency (company account linkage)
 
 ### What changed

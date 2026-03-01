@@ -183,9 +183,13 @@ export default function EmployeeAccessManager() {
                         size="sm"
                         variant="outline"
                         onClick={() => provisionAccess(employee)}
-                        disabled={pendingId === employee.id}
+                        disabled={pendingId === employee.id || employee.status !== "ACTIVE"}
                       >
-                        {employee.userId ? "Update Role" : "Create Login"}
+                        {employee.status !== "ACTIVE"
+                          ? "Inactive"
+                          : employee.userId
+                            ? "Update Role"
+                            : "Create Login"}
                       </Button>
                       {credentialsEnabled ? (
                         <Button
