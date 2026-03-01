@@ -296,6 +296,36 @@ pnpm typecheck
 pnpm test
 ```
 
+## Finance + Projects + Employee consistency pass (current flow continuation)
+
+### What changed
+- Project detail financial rollups now include legacy-safe project alias matching by DB id as well (`id`, `projectId`, `name`) so previously logged income/expense rows are consistently visible.
+- Project costs view now shows explicit incentive breakdown:
+  - `Incentives (approved)`
+  - `Other non-stock expenses (approved)`
+  - while preserving total cost/profit formula.
+- Project financial API expense stats now also use the same alias matching (`id`, `projectId`, `name`) for consistent finance dashboard numbers.
+- Employee detail page (`/employees/[id]`) now provides full operational visibility for HR/Finance/Admin users:
+  - wallet ledger
+  - submitted expenses with status/project
+  - salary history
+  - incentive history
+  - salary advances
+
+### Files changed
+- `src/lib/project-detail-policy.ts`
+- `src/app/projects/[id]/ProjectDetailClient.tsx`
+- `src/app/api/projects/financial/route.ts`
+- `src/app/employees/[id]/page.tsx`
+
+### Verification
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- project-detail-rbac vendor-item-workhub-actions
+```
+
 ## Wallet Transfer Accounting Consistency (company account linkage)
 
 ### What changed

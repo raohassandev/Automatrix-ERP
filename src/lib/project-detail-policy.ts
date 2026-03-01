@@ -58,6 +58,8 @@ export type ProjectDetailData = {
     apBilledTotal: number;
     apPaidTotal: number;
     apOutstanding: number;
+    incentivesApproved: number;
+    otherNonStockExpensesApproved: number;
     nonStockExpensesApproved: number;
     approvedIncomeReceived: number;
     pendingIncomeSubmitted: number;
@@ -188,7 +190,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
 
   // --- Data sources (Phase 1 single spine) ---
   const projectRef = project.projectId;
-  const projectAliases = Array.from(new Set([project.projectId, project.name].filter(Boolean)));
+  const projectAliases = Array.from(new Set([project.id, project.projectId, project.name].filter(Boolean)));
 
   const isSalesOrMarketing = policy.role === "Sales" || policy.role === "Marketing";
   const includeLedgerInResponse = policy.tabs.inventory;
@@ -486,6 +488,17 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
           : Number(v.amount);
       return sum + (Number.isFinite(used) ? used : 0);
     }, 0);
+    const incentivesApproved = expensesApproved
+      .filter((e) => (e.category || "").toLowerCase() === "incentive")
+      .reduce((sum, e) => {
+        const v = e as { amount?: unknown; approvedAmount?: unknown };
+        const used =
+          e.status === "PARTIALLY_APPROVED" && v.approvedAmount != null
+            ? Number(v.approvedAmount)
+            : Number(v.amount);
+        return sum + (Number.isFinite(used) ? used : 0);
+      }, 0);
+    const otherNonStockExpensesApproved = Math.max(0, nonStockExpensesApproved - incentivesApproved);
     const approvedIncomeReceived = incomesApproved.reduce(
       (sum, i) => sum + (Number.isFinite(Number(i.amount)) ? Number(i.amount) : 0),
       0,
@@ -506,6 +519,8 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       apBilledTotal: billedTotal,
       apPaidTotal: paidTotal,
       apOutstanding,
+      incentivesApproved,
+      otherNonStockExpensesApproved,
       nonStockExpensesApproved,
       approvedIncomeReceived,
       pendingIncomeSubmitted,

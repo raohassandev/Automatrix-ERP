@@ -50,14 +50,55 @@ export default async function EmployeeDetailPage({
   }
 
   const user = await prisma.user.findUnique({ where: { email: employee.email }, select: { id: true } });
-  const assignments = user?.id
-    ? await prisma.projectAssignment.findMany({
-        where: { userId: user.id },
-        select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-      })
-    : [];
+  const [assignments, walletEntries, expenses, payrollEntries, incentiveEntries, salaryAdvances] = await Promise.all([
+    user?.id
+      ? prisma.projectAssignment.findMany({
+          where: { userId: user.id },
+          select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        })
+      : Promise.resolve([]),
+    prisma.walletLedger.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { date: "desc" },
+      take: 20,
+    }),
+    user?.id
+      ? prisma.expense.findMany({
+          where: { submittedById: user.id },
+          orderBy: { date: "desc" },
+          take: 20,
+          select: {
+            id: true,
+            date: true,
+            description: true,
+            category: true,
+            amount: true,
+            approvedAmount: true,
+            status: true,
+            project: true,
+            paymentSource: true,
+          },
+        })
+      : Promise.resolve([]),
+    prisma.payrollEntry.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { payrollRun: true },
+    }),
+    prisma.incentiveEntry.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+    prisma.salaryAdvance.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+  ]);
 
   const walletBalance = Number(employee.walletBalance || 0);
   const walletHold = Number(employee.walletHold || 0);
@@ -174,6 +215,176 @@ export default async function EmployeeDetailPage({
             ))
           )}
         </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Wallet Ledger</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Incoming, outgoing, and hold-affecting wallet movements.
+          </p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Date</th>
+                  <th className="py-2">Type</th>
+                  <th className="py-2">Amount</th>
+                  <th className="py-2">Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                {walletEntries.map((entry) => (
+                  <tr key={entry.id} className="border-b">
+                    <td className="py-2">{new Date(entry.date).toLocaleDateString()}</td>
+                    <td className="py-2">{entry.type}</td>
+                    <td className="py-2">{formatMoney(Number(entry.amount))}</td>
+                    <td className="py-2">{entry.reference || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {walletEntries.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">No wallet transactions yet.</div>
+          )}
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Submitted Expenses</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Employee-submitted expenses with approval status and project impact.
+          </p>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Date</th>
+                  <th className="py-2">Description</th>
+                  <th className="py-2">Project</th>
+                  <th className="py-2">Amount</th>
+                  <th className="py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((exp) => {
+                  const usedAmount =
+                    exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount
+                      ? Number(exp.approvedAmount)
+                      : Number(exp.amount);
+                  return (
+                    <tr key={exp.id} className="border-b">
+                      <td className="py-2">{new Date(exp.date).toLocaleDateString()}</td>
+                      <td className="py-2">
+                        {exp.description}
+                        <div className="text-xs text-muted-foreground">{exp.category} • {exp.paymentSource}</div>
+                      </td>
+                      <td className="py-2">{exp.project || "-"}</td>
+                      <td className="py-2">{formatMoney(usedAmount)}</td>
+                      <td className="py-2">{exp.status}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {expenses.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">No submitted expenses yet.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Salary History</h2>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Period</th>
+                  <th className="py-2">Net Pay</th>
+                  <th className="py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payrollEntries.map((entry) => (
+                  <tr key={entry.id} className="border-b">
+                    <td className="py-2">
+                      {entry.payrollRun
+                        ? `${new Date(entry.payrollRun.periodStart).toLocaleDateString()} - ${new Date(
+                            entry.payrollRun.periodEnd,
+                          ).toLocaleDateString()}`
+                        : "-"}
+                    </td>
+                    <td className="py-2">{formatMoney(Number(entry.netPay))}</td>
+                    <td className="py-2">{entry.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {payrollEntries.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">No salary records yet.</div>
+          )}
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Incentive History</h2>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Date</th>
+                  <th className="py-2">Project</th>
+                  <th className="py-2">Amount</th>
+                  <th className="py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {incentiveEntries.map((entry) => (
+                  <tr key={entry.id} className="border-b">
+                    <td className="py-2">{new Date(entry.createdAt).toLocaleDateString()}</td>
+                    <td className="py-2">{entry.projectRef || "-"}</td>
+                    <td className="py-2">{formatMoney(Number(entry.amount))}</td>
+                    <td className="py-2">{entry.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {incentiveEntries.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">No incentives recorded yet.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Salary Advances</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2">Date</th>
+                <th className="py-2">Amount</th>
+                <th className="py-2">Reason</th>
+                <th className="py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {salaryAdvances.map((entry) => (
+                <tr key={entry.id} className="border-b">
+                  <td className="py-2">{new Date(entry.createdAt).toLocaleDateString()}</td>
+                  <td className="py-2">{formatMoney(Number(entry.amount))}</td>
+                  <td className="py-2">{entry.reason}</td>
+                  <td className="py-2">{entry.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {salaryAdvances.length === 0 && (
+          <div className="py-6 text-center text-muted-foreground">No salary advances.</div>
+        )}
       </div>
     </div>
   );

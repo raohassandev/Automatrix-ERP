@@ -47,12 +47,12 @@ export async function GET() {
     const projectsWithExpenseData = await Promise.all(
       projects.map(async (project) => {
         const expenseData = await prisma.expense.aggregate({
-          where: { project: { in: [project.projectId, project.name] } },
+          where: { project: { in: [project.id, project.projectId, project.name] } },
           _count: true,
         });
 
         const latestExpense = await prisma.expense.findFirst({
-          where: { project: { in: [project.projectId, project.name] } },
+          where: { project: { in: [project.id, project.projectId, project.name] } },
           orderBy: { date: 'desc' },
           select: { date: true }
         });
