@@ -82,17 +82,43 @@ export async function GET(req: Request) {
     include: { client: true },
   });
 
-  const projectExpenses = await Promise.all(
+  const projectStats = await Promise.all(
     projects.map(async (project) => {
-      const expenses = await prisma.expense.aggregate({
-        where: { project: { in: [project.projectId, project.name] } },
-        _sum: { amount: true },
-        _count: true,
-      });
+      const projectAliases = [project.id, project.projectId, project.name].filter(Boolean);
+      const [expenses, incomes, postedBills] = await Promise.all([
+        prisma.expense.findMany({
+          where: {
+            project: { in: projectAliases },
+            status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+          },
+          select: { amount: true, approvedAmount: true, status: true },
+        }),
+        prisma.income.aggregate({
+          where: { project: { in: projectAliases }, status: "APPROVED" },
+          _sum: { amount: true },
+          _count: true,
+        }),
+        prisma.vendorBill.aggregate({
+          where: { projectRef: { in: projectAliases }, status: "POSTED" },
+          _sum: { totalAmount: true },
+          _count: true,
+        }),
+      ]);
+      const totalExpenses = expenses.reduce((sum, exp) => {
+        const used =
+          exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount != null
+            ? Number(exp.approvedAmount)
+            : Number(exp.amount);
+        return sum + (Number.isFinite(used) ? used : 0);
+      }, 0);
       return {
         project,
-        totalExpenses: Number(expenses._sum.amount || 0),
-        expenseCount: expenses._count || 0,
+        totalExpenses,
+        expenseCount: expenses.length,
+        approvedIncome: Number(incomes._sum.amount || 0),
+        approvedIncomeCount: incomes._count || 0,
+        postedBillsTotal: Number(postedBills._sum.totalAmount || 0),
+        postedBillsCount: postedBills._count || 0,
       };
     })
   );
@@ -104,11 +130,23 @@ export async function GET(req: Request) {
       "Client",
       "Status",
       "Expense Count",
-      "Total Expenses",
+      "Total Expenses (approved)",
+      "Approved Income",
+      "Posted AP Bills",
       "Contract Value",
+      "Cost To Date",
+      "Gross Margin",
+      "Pending Recovery",
       "Cost %",
     ],
-    ...projectExpenses.map(({ project, totalExpenses, expenseCount }) => {
+    ...projectStats.map(
+      ({
+        project,
+        totalExpenses,
+        expenseCount,
+        approvedIncome,
+        postedBillsTotal,
+      }) => {
       const contractValue = Number(project.contractValue);
       const percentUsed = contractValue > 0 ? (Number(project.costToDate) / contractValue) * 100 : 0;
       return [
@@ -118,10 +156,16 @@ export async function GET(req: Request) {
         project.status,
         expenseCount,
         formatMoney(totalExpenses),
+        formatMoney(approvedIncome),
+        formatMoney(postedBillsTotal),
         formatMoney(contractValue),
+        formatMoney(Number(project.costToDate)),
+        formatMoney(Number(project.grossMargin)),
+        formatMoney(Number(project.pendingRecovery)),
         `${percentUsed.toFixed(1)}%`,
       ];
-    }),
+      },
+    ),
   ];
 
   const csv = toCsv(rows);

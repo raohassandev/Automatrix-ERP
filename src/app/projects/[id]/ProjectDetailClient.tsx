@@ -54,6 +54,13 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   const [savingAssignments, setSavingAssignments] = React.useState(false);
   const [savingNote, setSavingNote] = React.useState(false);
   const [savingAttachment, setSavingAttachment] = React.useState(false);
+  const financeTransactions = React.useMemo(
+    () =>
+      detail.activity.filter((row) =>
+        row.type === "INCOME" || row.type === "EXPENSE" || row.type === "BILL" || row.type === "PAYMENT",
+      ),
+    [detail.activity],
+  );
 
   React.useEffect(() => {
     if (!detail.policy.tabs[active]) {
@@ -487,52 +494,101 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           {!detail.costs ? (
             <div className="mt-4 text-sm text-muted-foreground">No access.</div>
           ) : (
-            <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">AP billed (posted)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apBilledTotal)}</div>
+            <>
+              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">AP billed (posted)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apBilledTotal)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">AP paid (posted allocations)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apPaidTotal)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">AP outstanding</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apOutstanding)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Non-stock expenses (approved)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.nonStockExpensesApproved)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Incentives (approved)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.incentivesApproved)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Other non-stock expenses (approved)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.otherNonStockExpensesApproved)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Pending expenses (submitted)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.pendingExpenseSubmitted)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Project income (approved)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Pending income (submitted)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.pendingIncomeSubmitted)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Total project costs (posted AP + approved expenses)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.totalProjectCosts)}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Project profit (approved income - total project costs)</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.projectProfit)}</div>
+                </div>
               </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">AP paid (posted allocations)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apPaidTotal)}</div>
+
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold">Financial transactions</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Income, expense, bill, and payment trail for this project.
+                </p>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-left text-muted-foreground">
+                        <th className="py-2">Date</th>
+                        <th className="py-2">Type</th>
+                        <th className="py-2">Reference</th>
+                        <th className="py-2">Status</th>
+                        <th className="py-2">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {financeTransactions.length === 0 ? (
+                        <tr>
+                          <td className="py-4 text-muted-foreground" colSpan={5}>
+                            No financial transactions found.
+                          </td>
+                        </tr>
+                      ) : (
+                        financeTransactions.map((row, idx) => (
+                          <tr key={`${row.at}-${row.type}-${idx}`} className="border-b">
+                            <td className="py-2">{new Date(row.at).toLocaleString()}</td>
+                            <td className="py-2">{row.type}</td>
+                            <td className="py-2">
+                              {row.href ? (
+                                <Link className="underline underline-offset-2" href={row.href}>
+                                  {row.label}
+                                </Link>
+                              ) : (
+                                row.label
+                              )}
+                            </td>
+                            <td className="py-2">{row.status || "-"}</td>
+                            <td className="py-2">{typeof row.amount === "number" ? formatMoney(row.amount) : "-"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">AP outstanding</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apOutstanding)}</div>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">Non-stock expenses (approved)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.nonStockExpensesApproved)}</div>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">Incentives (approved)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.incentivesApproved)}</div>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">Other non-stock expenses (approved)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.otherNonStockExpensesApproved)}</div>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">Pending expenses (submitted)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.pendingExpenseSubmitted)}</div>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">Project income (approved)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">Pending income (submitted)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.pendingIncomeSubmitted)}</div>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">Total project costs (posted AP + approved expenses)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.totalProjectCosts)}</div>
-              </div>
-              <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">Project profit (approved income - total project costs)</div>
-                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.projectProfit)}</div>
-              </div>
-            </div>
+            </>
           )}
         </div>
       ) : null}

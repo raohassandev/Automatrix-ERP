@@ -326,6 +326,38 @@ pnpm test
 E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- project-detail-rbac vendor-item-workhub-actions
 ```
 
+## Finance-first continuation pass (projects + inventory + employee visibility)
+
+### What changed
+- Project detail now resolves procurement, inventory, expense, and income datasets using all project aliases (`id`, `projectId`, `name`) so records logged with older references are still visible in one place.
+- Project costs tab now includes a dedicated finance transactions table (Income/Expense/Bill/Payment trail) for quick drilldown from the same screen.
+- Cost cards now explicitly show incentive split:
+  - incentives (approved)
+  - other non-stock expenses (approved)
+- Projects report CSV export now includes finance-operational columns:
+  - approved income
+  - posted AP bills
+  - cost to date
+  - gross margin
+  - pending recovery
+  - with approved-expense calculation aligned to partial approval logic.
+- Employee detail remains HR/Finance/Admin-only and now serves as the consolidated staff finance activity view (wallet + submitted expenses + payroll + incentives + advances).
+
+### Files changed
+- `src/lib/project-detail-policy.ts`
+- `src/lib/projects.ts`
+- `src/app/projects/[id]/ProjectDetailClient.tsx`
+- `src/app/api/reports/projects/export/route.ts`
+- `src/app/employees/[id]/page.tsx`
+
+### Verification
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- project-detail-rbac vendor-item-workhub-actions
+```
+
 ## Wallet Transfer Accounting Consistency (company account linkage)
 
 ### What changed

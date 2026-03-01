@@ -28,9 +28,7 @@ export async function resolveProjectDbId(projectRef?: string | null) {
 export async function recalculateProjectFinancials(projectRef: string) {
   const project = await findProjectByRef(projectRef);
   if (!project) return null;
-  const projectAliases = Array.from(
-    new Set([project.id, project.projectId, project.name].filter(Boolean)),
-  );
+  const projectAliases = Array.from(new Set([project.id, project.projectId, project.name].filter(Boolean)));
 
   const [expenses, incomes, invoices, postedBills] = await Promise.all([
     prisma.expense.findMany({
@@ -53,7 +51,7 @@ export async function recalculateProjectFinancials(projectRef: string) {
     }),
     prisma.vendorBill.findMany({
       where: {
-        projectRef: { in: [project.projectId, project.name] },
+        projectRef: { in: projectAliases },
         status: "POSTED",
       },
       select: { totalAmount: true },

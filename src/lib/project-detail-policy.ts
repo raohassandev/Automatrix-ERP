@@ -189,7 +189,6 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   };
 
   // --- Data sources (Phase 1 single spine) ---
-  const projectRef = project.projectId;
   const projectAliases = Array.from(new Set([project.id, project.projectId, project.name].filter(Boolean)));
 
   const isSalesOrMarketing = policy.role === "Sales" || policy.role === "Marketing";
@@ -277,32 +276,34 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
 
   const [pos, grns, bills, payments, ledger, expensesAll, incomesAll] = (await Promise.all([
     prisma.purchaseOrder.findMany({
-      where: { projectRef },
+      where: { projectRef: { in: projectAliases } },
       select: { id: true, poNumber: true, orderDate: true, status: true },
       orderBy: { orderDate: "desc" },
       take: 50,
     }),
     prisma.goodsReceipt.findMany({
-      where: { OR: [{ projectRef }, { purchaseOrder: { projectRef } }] },
+      where: {
+        OR: [{ projectRef: { in: projectAliases } }, { purchaseOrder: { projectRef: { in: projectAliases } } }],
+      },
       select: { id: true, grnNumber: true, receivedDate: true, status: true },
       orderBy: { receivedDate: "desc" },
       take: 50,
     }),
     prisma.vendorBill.findMany({
-      where: { projectRef },
+      where: { projectRef: { in: projectAliases } },
       select: billSelect as never,
       orderBy: { billDate: "desc" },
       take: 50,
     }),
     prisma.vendorPayment.findMany({
-      where: { projectRef },
+      where: { projectRef: { in: projectAliases } },
       select: paymentSelect as never,
       orderBy: { paymentDate: "desc" },
       take: 50,
     }),
     includeLedgerInResponse
       ? prisma.inventoryLedger.findMany({
-          where: { project: projectRef },
+          where: { project: { in: projectAliases } },
           select: ledgerSelect as never,
           orderBy: { date: "desc" },
           take: 100,
