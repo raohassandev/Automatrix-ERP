@@ -140,6 +140,7 @@ model Income {
   category        String
   amount          Decimal
   paymentMode     String
+  companyAccountId String?
   project         String?
   status          String  @default("PENDING")
   approvalLevel   String?
@@ -154,7 +155,10 @@ model Income {
 
   addedBy         User          @relation("IncomeAddedBy", fields: [addedById], references: [id])
   approvedBy      User?         @relation("IncomeApprovedBy", fields: [approvedById], references: [id])
+  companyAccount  CompanyAccount? @relation(fields: [companyAccountId], references: [id])
   approvals       Approval[]
+
+  @@index([companyAccountId])
 }
 
 model Approval {
@@ -556,6 +560,7 @@ model CompanyAccount {
   updatedAt      DateTime @updatedAt
 
   vendorPayments VendorPayment[]
+  incomes        Income[]
 }
 
 // AP (finance-lite) — Vendor Bill + Payment + allocation (no GL yet).

@@ -23,6 +23,7 @@ export const incomeSchema = z.object({
   category: z.string().min(1).optional(),
   amount: z.number().positive(),
   paymentMode: z.string().min(1),
+  companyAccountId: z.string().min(1),
   project: z.string().optional(),
   receiptUrl: z.string().url().optional(),
   receiptFileId: z.string().optional(),

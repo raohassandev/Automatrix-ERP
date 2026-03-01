@@ -38,7 +38,7 @@ export type CompanyAccountNotesHistoryRow = {
 
 export type CompanyAccountActivityRow = {
   at: string; // ISO
-  type: "PAYMENT" | "NOTE" | "ATTACHMENT";
+  type: "PAYMENT" | "INCOME" | "NOTE" | "ATTACHMENT";
   label: string;
   status?: string | null;
   amount?: number | null;
@@ -59,12 +59,14 @@ export type CompanyAccountPaymentRow = {
 
 export type CompanyAccountSummaryRow = {
   month: string; // yyyy-mm
+  approvedInflow: number;
   postedOutflow: number;
+  netChange: number;
   postedCount: number;
 };
 
 export type CompanyAccountDocumentRow = {
-  type: "PAYMENT" | "BILL";
+  type: "PAYMENT" | "BILL" | "INCOME";
   number: string;
   date: string;
   status: string;
@@ -148,10 +150,14 @@ export async function getCompanyAccountDetailForUser(args: {
     return { ok: false as const, status: 404 as const, error: "Not found" };
   }
 
-  const [attachmentsCount, postedOutflowAgg, auditRows] = await Promise.all([
+  const [attachmentsCount, postedOutflowAgg, approvedInflowAgg, auditRows] = await Promise.all([
     prisma.attachment.count({ where: { type: "company_account", recordId: account.id } }),
     prisma.vendorPayment.aggregate({
       where: { companyAccountId: account.id, status: "POSTED" },
+      _sum: { amount: true },
+    }),
+    prisma.income.aggregate({
+      where: { companyAccountId: account.id, status: "APPROVED" },
       _sum: { amount: true },
     }),
     prisma.auditLog.findMany({
@@ -195,7 +201,8 @@ export async function getCompanyAccountDetailForUser(args: {
 
   const openingBalance = Number(account.openingBalance || 0);
   const postedOutflow = Number(postedOutflowAgg._sum.amount || 0);
-  const currentBalance = openingBalance - postedOutflow;
+  const approvedInflow = Number(approvedInflowAgg._sum.amount || 0);
+  const currentBalance = openingBalance + approvedInflow - postedOutflow;
 
   const header: CompanyAccountDetailHeader = {
     id: account.id,
@@ -254,30 +261,54 @@ export async function getCompanyAccountDetailForUser(args: {
 
   const totalPages = Math.max(1, Math.ceil(paymentCount / take));
 
-  // Summary: month-wise posted outflows (last 12 months)
+  // Summary: month-wise approved inflows + posted outflows (last 12 months)
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1, 0, 0, 0));
-  const postedRows = await prisma.vendorPayment.findMany({
-    where: {
-      companyAccountId: account.id,
-      status: "POSTED",
-      paymentDate: { gte: start },
-    },
-    select: { paymentDate: true, amount: true },
-    orderBy: { paymentDate: "asc" },
-  });
+  const [postedRows, approvedIncomeRows] = await Promise.all([
+    prisma.vendorPayment.findMany({
+      where: {
+        companyAccountId: account.id,
+        status: "POSTED",
+        paymentDate: { gte: start },
+      },
+      select: { paymentDate: true, amount: true },
+      orderBy: { paymentDate: "asc" },
+    }),
+    prisma.income.findMany({
+      where: {
+        companyAccountId: account.id,
+        status: "APPROVED",
+        date: { gte: start },
+      },
+      select: { date: true, amount: true },
+      orderBy: { date: "asc" },
+    }),
+  ]);
 
-  const summaryMap = new Map<string, { sum: number; count: number }>();
+  const summaryMap = new Map<string, { inflow: number; outflow: number; count: number }>();
   for (const row of postedRows) {
     const d = row.paymentDate;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-    const cur = summaryMap.get(key) || { sum: 0, count: 0 };
-    cur.sum += Number(row.amount || 0);
+    const cur = summaryMap.get(key) || { inflow: 0, outflow: 0, count: 0 };
+    cur.outflow += Number(row.amount || 0);
     cur.count += 1;
     summaryMap.set(key, cur);
   }
+  for (const row of approvedIncomeRows) {
+    const d = row.date;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const cur = summaryMap.get(key) || { inflow: 0, outflow: 0, count: 0 };
+    cur.inflow += Number(row.amount || 0);
+    summaryMap.set(key, cur);
+  }
   const summary: CompanyAccountSummaryRow[] = Array.from(summaryMap.entries())
-    .map(([month, v]) => ({ month, postedOutflow: v.sum, postedCount: v.count }))
+    .map(([month, v]) => ({
+      month,
+      approvedInflow: v.inflow,
+      postedOutflow: v.outflow,
+      netChange: v.inflow - v.outflow,
+      postedCount: v.count,
+    }))
     .sort((a, b) => b.month.localeCompare(a.month));
 
   // Documents: payments + allocated bills (current page)
@@ -300,20 +331,43 @@ export async function getCompanyAccountDetailForUser(args: {
       });
     }
   }
-
-  // Activity: payments (latest 50) + notes/attachments (latest 20), sorted.
-  const latestPayments = await prisma.vendorPayment.findMany({
-    where: { companyAccountId: account.id },
-    orderBy: { paymentDate: "desc" },
+  const approvedIncomeDocuments = await prisma.income.findMany({
+    where: { companyAccountId: account.id, status: "APPROVED" },
+    orderBy: { date: "desc" },
     take: 50,
-    select: {
-      paymentNumber: true,
-      paymentDate: true,
-      status: true,
-      amount: true,
-      vendor: { select: { name: true } },
-    },
+    select: { id: true, date: true, source: true, status: true },
   });
+  for (const income of approvedIncomeDocuments) {
+    documents.push({
+      type: "INCOME",
+      number: income.source,
+      date: fmtDate(income.date),
+      status: income.status,
+      href: `/income?search=${encodeURIComponent(income.source)}`,
+    });
+  }
+
+  // Activity: payments + approved incomes + notes/attachments, sorted.
+  const [latestPayments, latestIncomes] = await Promise.all([
+    prisma.vendorPayment.findMany({
+      where: { companyAccountId: account.id },
+      orderBy: { paymentDate: "desc" },
+      take: 50,
+      select: {
+        paymentNumber: true,
+        paymentDate: true,
+        status: true,
+        amount: true,
+        vendor: { select: { name: true } },
+      },
+    }),
+    prisma.income.findMany({
+      where: { companyAccountId: account.id, status: "APPROVED" },
+      orderBy: { date: "desc" },
+      take: 50,
+      select: { source: true, category: true, date: true, amount: true, status: true },
+    }),
+  ]);
 
   const activity: CompanyAccountActivityRow[] = [];
   for (const p of latestPayments) {
@@ -324,6 +378,16 @@ export async function getCompanyAccountDetailForUser(args: {
       status: p.status,
       amount: Number(p.amount || 0),
       href: `/procurement/vendor-payments?search=${encodeURIComponent(p.paymentNumber)}`,
+    });
+  }
+  for (const i of latestIncomes) {
+    activity.push({
+      at: iso(i.date),
+      type: "INCOME",
+      label: `Income ${i.source} (${i.category})`,
+      status: i.status,
+      amount: Number(i.amount || 0),
+      href: `/income?search=${encodeURIComponent(i.source)}`,
     });
   }
   for (const e of notesHistory) {
@@ -356,4 +420,3 @@ export async function getCompanyAccountDetailForUser(args: {
 
   return { ok: true as const, status: 200 as const, data };
 }
-

@@ -56,6 +56,7 @@ describe("validation schemas (business rules)", () => {
       source: "Client payment",
       amount: 5000,
       paymentMode: "Bank Transfer",
+      companyAccountId: "acc_123",
     };
 
     const parsed = incomeSchema.safeParse(payload);
@@ -68,6 +69,7 @@ describe("validation schemas (business rules)", () => {
       source: "Client payment",
       amount: 5000,
       paymentMode: "Bank Transfer",
+      companyAccountId: "acc_123",
       receiptUrl: "not-a-url",
     };
 

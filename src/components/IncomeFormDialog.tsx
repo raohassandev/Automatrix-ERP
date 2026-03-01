@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
@@ -24,18 +24,43 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
   const [date, setDate] = useState<Date>();
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [projectRefreshKey, setProjectRefreshKey] = useState(0);
+  const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [form, setForm] = useState({
     source: "",
     amount: "",
     paymentMode: "",
+    companyAccountId: "",
     invoiceNumber: "",
     remarks: "",
     project: "",
   });
 
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/company-accounts")
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const list = Array.isArray(json?.data) ? json.data : [];
+        const active = list.filter((a: { isActive?: boolean }) => a.isActive !== false);
+        setAccounts(active);
+      })
+      .catch(() => {
+        if (!cancelled) setAccounts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   async function submit() {
     if (!date) {
       toast.error("Please select a date");
+      return;
+    }
+    if (!form.companyAccountId) {
+      toast.error("Please select a company account");
       return;
     }
 
@@ -48,6 +73,7 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
           source: form.source,
           amount: parseFloat(form.amount),
           paymentMode: form.paymentMode,
+          companyAccountId: form.companyAccountId,
           project: form.project || undefined,
           invoiceId: form.invoiceNumber || null,
           remarks: form.remarks || null,
@@ -68,6 +94,7 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
         source: "",
         amount: "",
         paymentMode: "",
+        companyAccountId: "",
         invoiceNumber: "",
         remarks: "",
         project: "",
@@ -154,6 +181,25 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
                 <SelectItem value="Check">Check</SelectItem>
                 <SelectItem value="Mobile Payment">Mobile Payment</SelectItem>
                 <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="companyAccountId">Company Account</Label>
+            <Select
+              value={form.companyAccountId}
+              onValueChange={(value) => setForm({ ...form, companyAccountId: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select cash/bank account" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name} ({account.type})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

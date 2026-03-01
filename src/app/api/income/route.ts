@@ -71,6 +71,7 @@ export async function POST(req: Request) {
       source: sanitizeString(parsed.data.source),
       category: sanitizeString(parsed.data.category || parsed.data.source),
       paymentMode: sanitizeString(parsed.data.paymentMode),
+      companyAccountId: sanitizeString(parsed.data.companyAccountId),
       project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
       receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
       receiptFileId: parsed.data.receiptFileId ? sanitizeString(parsed.data.receiptFileId) : undefined,
@@ -80,6 +81,17 @@ export async function POST(req: Request) {
 
     const approvalLevel = getIncomeApprovalLevel(sanitizedData.amount);
     const requiresApproval = approvalLevel === "L2";
+
+    const companyAccount = await prisma.companyAccount.findUnique({
+      where: { id: sanitizedData.companyAccountId },
+      select: { id: true, isActive: true },
+    });
+    if (!companyAccount || !companyAccount.isActive) {
+      return NextResponse.json(
+        { success: false, error: "Invalid or inactive company account" },
+        { status: 400 }
+      );
+    }
 
     let resolvedProjectId: string | null = null;
     if (sanitizedData.project) {
@@ -129,6 +141,7 @@ export async function POST(req: Request) {
         category: sanitizedData.category,
         amount: new Prisma.Decimal(sanitizedData.amount),
         paymentMode: sanitizedData.paymentMode,
+        companyAccountId: sanitizedData.companyAccountId,
         project: resolvedProjectId || undefined,
         approvalLevel,
         status: requiresApproval ? "PENDING" : "APPROVED",

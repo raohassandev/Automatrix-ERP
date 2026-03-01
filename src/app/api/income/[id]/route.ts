@@ -45,6 +45,26 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.category) data.category = parsed.data.category;
   if (parsed.data.amount) data.amount = new Prisma.Decimal(parsed.data.amount);
   if (parsed.data.paymentMode) data.paymentMode = parsed.data.paymentMode;
+  if (parsed.data.companyAccountId !== undefined) {
+    const companyAccountId = parsed.data.companyAccountId?.trim();
+    if (!companyAccountId) {
+      return NextResponse.json(
+        { success: false, error: "Company account is required" },
+        { status: 400 }
+      );
+    }
+    const account = await prisma.companyAccount.findUnique({
+      where: { id: companyAccountId },
+      select: { id: true, isActive: true },
+    });
+    if (!account || !account.isActive) {
+      return NextResponse.json(
+        { success: false, error: "Invalid or inactive company account" },
+        { status: 400 }
+      );
+    }
+    data.companyAccountId = companyAccountId;
+  }
   if (parsed.data.project !== undefined) {
     if (parsed.data.project === null || parsed.data.project === "") {
       data.project = null;

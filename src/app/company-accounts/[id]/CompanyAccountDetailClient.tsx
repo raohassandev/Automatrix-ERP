@@ -90,7 +90,7 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
               <div className="rounded-lg border p-4">
                 <div className="text-xs text-muted-foreground">Current balance (Phase 1)</div>
                 <div className="mt-2 text-lg font-semibold">{formatMoney(detail.header.currentBalance)}</div>
-                <div className="mt-1 text-xs text-muted-foreground">Outflow-only (no GL/inflow yet).</div>
+                <div className="mt-1 text-xs text-muted-foreground">Opening + approved income inflow - posted vendor payments.</div>
               </div>
               <div className="rounded-lg border p-4">
                 <div className="text-xs text-muted-foreground">Role</div>
@@ -279,7 +279,7 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
       {active === "activity" ? (
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Activity</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Chronological payments + audited notes/attachments.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Chronological inflows/outflows + audited notes/attachments.</p>
 
           <div className="mt-6">
             <h3 className="text-sm font-semibold">Notes & Attachments</h3>
@@ -404,28 +404,32 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
       {active === "summary" ? (
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Summary</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Month-wise totals (posted outflows only, Phase 1).</p>
+          <p className="mt-1 text-sm text-muted-foreground">Month-wise approved inflows and posted outflows.</p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="py-2">Month</th>
+                  <th className="py-2 text-right">Approved inflow</th>
                   <th className="py-2 text-right">Posted outflow</th>
+                  <th className="py-2 text-right">Net change</th>
                   <th className="py-2 text-right">Count</th>
                 </tr>
               </thead>
               <tbody>
                 {detail.summary.length === 0 ? (
                   <tr>
-                    <td className="py-3 text-sm text-muted-foreground" colSpan={3}>
-                      No posted payments in the last 12 months.
+                    <td className="py-3 text-sm text-muted-foreground" colSpan={5}>
+                      No inflow/outflow activity in the last 12 months.
                     </td>
                   </tr>
                 ) : (
                   detail.summary.map((r) => (
                     <tr key={r.month} className="border-b">
                       <td className="py-2">{r.month}</td>
+                      <td className="py-2 text-right">{formatMoney(r.approvedInflow)}</td>
                       <td className="py-2 text-right">{formatMoney(r.postedOutflow)}</td>
+                      <td className="py-2 text-right">{formatMoney(r.netChange)}</td>
                       <td className="py-2 text-right">{r.postedCount}</td>
                     </tr>
                   ))
@@ -439,7 +443,7 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
       {active === "documents" ? (
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Documents</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Linked payments and allocated bills (from current page).</p>
+          <p className="mt-1 text-sm text-muted-foreground">Linked income entries, payments and allocated bills.</p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

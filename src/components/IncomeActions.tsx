@@ -11,6 +11,7 @@ type IncomeEntry = {
   source: string;
   amount: number;
   paymentMode: string;
+  companyAccountId?: string | null;
   project?: string | null;
   invoiceId?: string | null;
   remarks?: string | null;

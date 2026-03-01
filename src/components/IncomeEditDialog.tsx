@@ -22,6 +22,7 @@ type IncomeEditDialogProps = {
     source: string;
     amount: number;
     paymentMode: string;
+    companyAccountId?: string | null;
     project?: string | null;
     invoiceId?: string | null;
     remarks?: string | null;
@@ -33,6 +34,7 @@ export function IncomeEditDialog({ open, onOpenChange, entry }: IncomeEditDialog
   const [pending, startTransition] = useTransition();
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [projectRefreshKey, setProjectRefreshKey] = useState(0);
+  const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [date, setDate] = useState<Date | undefined>(
     entry.date ? new Date(entry.date) : undefined
   );
@@ -40,6 +42,7 @@ export function IncomeEditDialog({ open, onOpenChange, entry }: IncomeEditDialog
     source: entry.source || "",
     amount: entry.amount ? String(entry.amount) : "",
     paymentMode: entry.paymentMode || "",
+    companyAccountId: entry.companyAccountId || "",
     invoiceNumber: entry.invoiceId || "",
     remarks: entry.remarks || "",
     project: entry.project || "",
@@ -52,11 +55,31 @@ export function IncomeEditDialog({ open, onOpenChange, entry }: IncomeEditDialog
       source: entry.source || "",
       amount: entry.amount ? String(entry.amount) : "",
       paymentMode: entry.paymentMode || "",
+      companyAccountId: entry.companyAccountId || "",
       invoiceNumber: entry.invoiceId || "",
       remarks: entry.remarks || "",
       project: entry.project || "",
     });
   }, [open, entry]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/company-accounts")
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const list = Array.isArray(json?.data) ? json.data : [];
+        const active = list.filter((a: { isActive?: boolean }) => a.isActive !== false);
+        setAccounts(active);
+      })
+      .catch(() => {
+        if (!cancelled) setAccounts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   async function submit() {
     if (!date) {
@@ -72,6 +95,7 @@ export function IncomeEditDialog({ open, onOpenChange, entry }: IncomeEditDialog
         paymentMode: form.paymentMode,
       };
       if (form.project) payload.project = form.project;
+      if (form.companyAccountId) payload.companyAccountId = form.companyAccountId;
       if (form.invoiceNumber) payload.invoiceId = form.invoiceNumber;
       if (form.remarks) payload.remarks = form.remarks;
 
@@ -161,6 +185,25 @@ export function IncomeEditDialog({ open, onOpenChange, entry }: IncomeEditDialog
                 <SelectItem value="Check">Check</SelectItem>
                 <SelectItem value="Mobile Payment">Mobile Payment</SelectItem>
                 <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="companyAccountId">Company Account</Label>
+            <Select
+              value={form.companyAccountId}
+              onValueChange={(value) => setForm({ ...form, companyAccountId: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select cash/bank account" />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name} ({account.type})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

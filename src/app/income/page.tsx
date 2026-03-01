@@ -48,6 +48,8 @@ export default async function IncomePage({
     amount: number;
     status: string;
     paymentMode: string;
+    companyAccountId: string | null;
+    companyAccountName: string | null;
     invoiceId: string | null;
     remarks: string | null;
     addedById: string | null;
@@ -79,6 +81,9 @@ export default async function IncomePage({
         orderBy: { createdAt: "desc" },
         skip,
         take,
+        include: {
+          companyAccount: { select: { name: true } },
+        },
       }),
       prisma.income.count({ where }),
     ]);
@@ -91,6 +96,8 @@ export default async function IncomePage({
       amount: Number(entry.amount),
       status: entry.status,
       paymentMode: entry.paymentMode,
+      companyAccountId: entry.companyAccountId,
+      companyAccountName: entry.companyAccount?.name || null,
       invoiceId: entry.invoiceId,
       remarks: entry.remarks,
       addedById: entry.addedById,
@@ -152,6 +159,7 @@ export default async function IncomePage({
                 <th className="py-2">Source</th>
                 <th className="py-2">Category</th>
                 <th className="py-2">Project</th>
+                <th className="py-2">Account</th>
                 <th className="py-2">Amount</th>
                 <th className="py-2">Status</th>
                 <th className="py-2">Actions</th>
@@ -164,6 +172,7 @@ export default async function IncomePage({
                   <td className="py-2">{entry.source}</td>
                   <td className="py-2">{entry.category}</td>
                   <td className="py-2">{entry.project || "-"}</td>
+                  <td className="py-2">{entry.companyAccountName || "-"}</td>
                   <td className="py-2">{formatMoney(Number(entry.amount))}</td>
                   <td className="py-2">{entry.status}</td>
                   <td className="py-2">
@@ -186,6 +195,7 @@ export default async function IncomePage({
                 { label: "Amount", value: formatMoney(Number(entry.amount)) },
                 { label: "Category", value: entry.category },
                 { label: "Project", value: entry.project || "-" },
+                { label: "Account", value: entry.companyAccountName || "-" },
                 { label: "Status", value: entry.status },
                 { label: "Date", value: new Date(entry.date).toLocaleDateString() },
               ]}
