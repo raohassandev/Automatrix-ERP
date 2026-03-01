@@ -188,4 +188,21 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     expect(engineerRes.status()).toBe(403);
     await engineerApi.dispose();
   });
+
+  test("Project finance report page: finance and engineer can load report scope", async ({ browser, baseURL }) => {
+    {
+      const ctx = await browser.newContext({ baseURL, storageState: states.finance });
+      const page = await ctx.newPage();
+      await page.goto("/reports/projects");
+      await expect(page.getByRole("heading", { name: "Project Financial Report" })).toBeVisible();
+      await ctx.close();
+    }
+    {
+      const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
+      const page = await ctx.newPage();
+      await page.goto("/reports/projects");
+      await expect(page.getByRole("heading", { name: "Project Financial Report" })).toBeVisible();
+      await ctx.close();
+    }
+  });
 });

@@ -390,6 +390,35 @@ pnpm test
 E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- project-detail-rbac vendor-item-workhub-actions
 ```
 
+## Project financial report page upgrade (finance-first)
+
+### What changed
+- Upgraded `/reports/projects` from expense-only to project finance snapshot:
+  - approved income
+  - approved expenses
+  - posted AP bills
+  - project profit
+  - pending recovery
+  - cost %
+- Added direct navigation and export actions from report rows/cards:
+  - open project detail
+  - export per-project finance CSV
+- Added e2e coverage for report-page RBAC:
+  - finance can access `/reports/projects`
+  - engineer gets forbidden message
+
+### Files changed
+- `src/app/reports/projects/page.tsx`
+- `playwright/tests/project-detail-rbac.spec.ts`
+
+### Verification
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- project-detail-rbac
+```
+
 ## Wallet Transfer Accounting Consistency (company account linkage)
 
 ### What changed
