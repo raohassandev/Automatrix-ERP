@@ -172,6 +172,10 @@ Rules:
 - No public signup.
 - Allowlist via Employee(ACTIVE) or explicit allowed-user table.
 - Unknown emails denied (no auto user creation).
+- Temporary staging-only QA exception (locked):
+  - Credentials login may be enabled on staging for role-by-role Playwright/manual testing.
+  - Must stay OFF in production.
+  - Must be removed after full QA stabilization cycle and before final production hardening signoff.
 
 ---
 

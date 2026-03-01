@@ -118,3 +118,17 @@ pnpm prisma:seed
 Notes:
 - The seed is guarded and only runs when `SEED_TEST_USERS=1` and the environment is dev/staging.
 - In E2E mode, Playwright login can also bootstrap these users automatically via the E2E Credentials provider.
+
+## Staging role testing (temporary credentials mode)
+
+For staging-only QA runs (manual + Playwright role checks), credentials login can be enabled temporarily:
+
+```bash
+AUTH_ENABLE_CREDENTIALS=1
+NEXT_PUBLIC_ENABLE_CREDENTIALS_LOGIN=1
+```
+
+Rules:
+- Staging only; never enable this on production.
+- Keep allowlist policy enforced (only ACTIVE employees can sign in).
+- Disable/remove credentials mode after QA stabilization and before production hardening signoff.
