@@ -327,6 +327,23 @@ pnpm typecheck
 pnpm test
 ```
 
+## Employee Access UX (inspect shortcut)
+
+### What changed
+- Added a direct `Inspect` action in Employees table (desktop + mobile cards) to open employee dashboard preview:
+  - `/employees/[id]/dashboard-preview`
+- This improves CEO/Owner/Finance review flow without session switching.
+
+### Files changed
+- `src/components/EmployeesTable.tsx`
+
+### Verification
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+```
+
 ---
 
 ## Item Detail (RBAC + mobile) — Inventory truth hub
