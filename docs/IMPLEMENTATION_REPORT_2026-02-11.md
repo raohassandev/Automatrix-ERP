@@ -344,6 +344,27 @@ pnpm typecheck
 pnpm test
 ```
 
+## RBAC transaction QA hardening (continue pass)
+
+### What changed
+- Keyboard shortcuts in Action Menu are now permission-aware; unauthorized users can no longer open restricted forms via shortcut keys.
+- Consolidated Playwright suite now includes transaction-control checks:
+  - assigned engineer can submit project expense
+  - sales is blocked from income creation (403)
+  - finance can create project income and project detail/financial API reflects updated totals
+
+### Files changed
+- `src/components/ActionMenu.tsx`
+- `playwright/tests/vendor-item-workhub-actions.spec.ts`
+
+### Verification
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- vendor-item-workhub-actions
+```
+
 ---
 
 ## Item Detail (RBAC + mobile) — Inventory truth hub

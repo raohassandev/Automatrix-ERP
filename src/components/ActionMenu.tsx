@@ -38,35 +38,34 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
   const canAccess = (permissions?: string[]) =>
     !permissions || permissions.some((permission) => hasPermission(roleName, permission));
 
+  const openIfAllowed = (form: FormType, permissions?: string[]) => {
+    if (!canAccess(permissions)) return;
+    setOpenFormDialog(form);
+    onClose();
+  };
+
   // Register keyboard shortcuts
   useKeyboardShortcuts({
     'cmd+e': () => {
-      setOpenFormDialog('expense');
-      onClose();
+      openIfAllowed("expense", ["expenses.submit"]);
     },
     'cmd+i': () => {
-      setOpenFormDialog('income');
-      onClose();
+      openIfAllowed("income", ["income.add"]);
     },
     'cmd+shift+e': () => {
-      setOpenFormDialog('employee');
-      onClose();
+      openIfAllowed("employee", ["employees.view_all"]);
     },
     'cmd+shift+p': () => {
-      setOpenFormDialog('project');
-      onClose();
+      openIfAllowed("project", ["projects.edit"]);
     },
     'cmd+shift+c': () => {
-      setOpenFormDialog('client');
-      onClose();
+      openIfAllowed("client", ["clients.edit"]);
     },
     'cmd+shift+i': () => {
-      setOpenFormDialog('inventory');
-      onClose();
+      openIfAllowed("inventory", ["inventory.adjust"]);
     },
     'cmd+shift+n': () => {
-      setOpenFormDialog('invoice');
-      onClose();
+      openIfAllowed("invoice", ["invoices.create"]);
     },
   });
 

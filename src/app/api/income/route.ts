@@ -9,7 +9,7 @@ import { createNotification } from "@/lib/notifications";
 import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
-import { resolveProjectId } from "@/lib/projects";
+import { resolveProjectDbId, resolveProjectId } from "@/lib/projects";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -93,10 +93,12 @@ export async function POST(req: Request) {
       );
     }
 
-    let resolvedProjectId: string | null = null;
+    let resolvedProjectRef: string | null = null;
+    let resolvedProjectDbId: string | null = null;
     if (sanitizedData.project) {
-      resolvedProjectId = await resolveProjectId(sanitizedData.project);
-      if (!resolvedProjectId) {
+      resolvedProjectRef = await resolveProjectId(sanitizedData.project);
+      resolvedProjectDbId = await resolveProjectDbId(sanitizedData.project);
+      if (!resolvedProjectRef || !resolvedProjectDbId) {
         return NextResponse.json(
           { success: false, error: "Invalid project reference" },
           { status: 400 }
@@ -114,7 +116,7 @@ export async function POST(req: Request) {
           );
         }
         const assigned = await prisma.projectAssignment.findFirst({
-          where: { projectId: resolvedProjectId, userId: session.user.id },
+          where: { projectId: resolvedProjectDbId, userId: session.user.id },
           select: { id: true },
         });
         if (!assigned) {
@@ -123,7 +125,7 @@ export async function POST(req: Request) {
             entity: "Income",
             entityId: "NEW",
             reason: "User attempted to submit income for unassigned project",
-            newValue: JSON.stringify({ projectId: resolvedProjectId }),
+            newValue: JSON.stringify({ projectRef: resolvedProjectRef, projectId: resolvedProjectDbId }),
             userId: session.user.id,
           });
           return NextResponse.json(
@@ -142,7 +144,7 @@ export async function POST(req: Request) {
         amount: new Prisma.Decimal(sanitizedData.amount),
         paymentMode: sanitizedData.paymentMode,
         companyAccountId: sanitizedData.companyAccountId,
-        project: resolvedProjectId || undefined,
+        project: resolvedProjectRef || undefined,
         approvalLevel,
         status: requiresApproval ? "PENDING" : "APPROVED",
         addedById: session.user.id,
@@ -181,8 +183,8 @@ export async function POST(req: Request) {
       message: `Income logged for ${sanitizedData.amount}.`,
     });
 
-    if (!requiresApproval && resolvedProjectId) {
-      await recalculateProjectFinancials(resolvedProjectId);
+    if (!requiresApproval && resolvedProjectRef) {
+      await recalculateProjectFinancials(resolvedProjectRef);
     }
 
     return NextResponse.json({ success: true, data: created, requiresApproval });

@@ -9,7 +9,7 @@ import { getExpenseApprovalLevel } from '@/lib/approvals';
 import { createNotification } from '@/lib/notifications';
 import { Prisma } from '@prisma/client';
 import { sanitizeString } from '@/lib/sanitize';
-import { recalculateProjectFinancials, resolveProjectId } from '@/lib/projects';
+import { recalculateProjectFinancials, resolveProjectDbId, resolveProjectId } from '@/lib/projects';
 
 const STOCK_KEYS_BLOCKED_IN_EXPENSES = [
   "addToInventory",
@@ -295,10 +295,12 @@ export async function POST(req: Request) {
       }
     }
 
-    let resolvedProjectId: string | null = null;
+    let resolvedProjectRef: string | null = null;
+    let resolvedProjectDbId: string | null = null;
     if (sanitizedData.project) {
-      resolvedProjectId = await resolveProjectId(sanitizedData.project);
-      if (!resolvedProjectId) {
+      resolvedProjectRef = await resolveProjectId(sanitizedData.project);
+      resolvedProjectDbId = await resolveProjectDbId(sanitizedData.project);
+      if (!resolvedProjectRef || !resolvedProjectDbId) {
         return NextResponse.json(
           { success: false, error: 'Invalid project reference' },
           { status: 400 },
@@ -316,7 +318,7 @@ export async function POST(req: Request) {
           );
         }
         const assigned = await prisma.projectAssignment.findFirst({
-          where: { projectId: resolvedProjectId, userId: session.user.id },
+          where: { projectId: resolvedProjectDbId, userId: session.user.id },
           select: { id: true },
         });
         if (!assigned) {
@@ -325,7 +327,7 @@ export async function POST(req: Request) {
             entity: 'Expense',
             entityId: 'NEW',
             reason: 'User attempted to submit expense for unassigned project',
-            newValue: JSON.stringify({ projectId: resolvedProjectId }),
+            newValue: JSON.stringify({ projectRef: resolvedProjectRef, projectId: resolvedProjectDbId }),
             userId: session.user.id,
           });
           return NextResponse.json(
@@ -433,7 +435,7 @@ export async function POST(req: Request) {
           paymentSource: paymentSource as 'EMPLOYEE_WALLET' | 'COMPANY_DIRECT' | 'COMPANY_ACCOUNT',
           companyAccountId: resolvedCompanyAccountId || undefined,
           expenseType,
-          project: resolvedProjectId,
+          project: resolvedProjectRef,
           approvalLevel,
           status,
           submittedById: session.user.id,
@@ -510,8 +512,8 @@ export async function POST(req: Request) {
       }
     }
 
-    if (resolvedProjectId && ['APPROVED', 'PARTIALLY_APPROVED', 'PAID'].includes(status)) {
-      await recalculateProjectFinancials(resolvedProjectId);
+    if (resolvedProjectRef && ['APPROVED', 'PARTIALLY_APPROVED', 'PAID'].includes(status)) {
+      await recalculateProjectFinancials(resolvedProjectRef);
     }
 
     return NextResponse.json({ success: true, data: result.created });

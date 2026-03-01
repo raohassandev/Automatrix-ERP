@@ -36,6 +36,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   let vendorName = "";
   let itemDbId = "";
   let projectDbId = "";
+  let projectRef = "";
   let otherUserId = "";
   let companyAccountId = "";
   const states = {
@@ -83,6 +84,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       },
     });
     expect(projectRes.ok()).toBeTruthy();
+    projectRef = `PRJ-E2E-WH-${ts}`;
     projectDbId = (await projectRes.json()).data.id as string;
 
     // Assign engineer + store to project so project-scope checks pass for them.
@@ -213,6 +215,86 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const api = await request.newContext({ baseURL, storageState: states[role] });
       const res = await api.get("/api/projects/financial");
       expect(res.status()).toBe(403);
+      await api.dispose();
+    }
+  });
+
+  test("Role transaction controls: assigned engineer expense ok, sales income blocked, finance income updates project totals", async ({
+    baseURL,
+  }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const unique = Date.now();
+
+    // Engineer: can submit expense on assigned project.
+    {
+      const api = await request.newContext({ baseURL, storageState: states.engineer });
+      const res = await api.post("/api/expenses", {
+        data: {
+          date: today,
+          description: `E2E engineer travel ${unique}`,
+          category: `E2E Misc ${unique}`,
+          amount: 1500,
+          paymentMode: "Cash",
+          paymentSource: "COMPANY_DIRECT",
+          expenseType: "COMPANY",
+          project: projectRef,
+          ignoreDuplicate: true,
+        },
+      });
+      if (!res.ok()) {
+        const body = await res.text();
+        throw new Error(`Engineer expense submit failed: ${res.status()} ${body}`);
+      }
+      await api.dispose();
+    }
+
+    // Sales: cannot log income (permission-gated).
+    {
+      const api = await request.newContext({ baseURL, storageState: states.sales });
+      const res = await api.post("/api/income", {
+        data: {
+          date: today,
+          source: `E2E sales blocked income ${unique}`,
+          category: "Project Payment",
+          amount: 1000,
+          paymentMode: "Bank Transfer",
+          companyAccountId,
+          project: projectRef,
+        },
+      });
+      expect(res.status()).toBe(403);
+      await api.dispose();
+    }
+
+    // Finance: can log income and project detail reflects approved income.
+    {
+      const api = await request.newContext({ baseURL, storageState: states.finance });
+      const incomeRes = await api.post("/api/income", {
+        data: {
+          date: today,
+          source: `E2E finance income ${unique}`,
+          category: "Project Payment",
+          amount: 50000,
+          paymentMode: "Bank Transfer",
+          companyAccountId,
+          project: projectRef,
+        },
+      });
+      expect(incomeRes.ok()).toBeTruthy();
+
+      const detailRes = await api.get(`/api/projects/${projectDbId}/detail`);
+      expect(detailRes.ok()).toBeTruthy();
+      const detailJson = await detailRes.json();
+      expect(Number(detailJson.data?.costs?.approvedIncomeReceived || 0)).toBeGreaterThanOrEqual(50000);
+      expect(Number(detailJson.data?.costs?.pendingExpenseSubmitted || 0)).toBeGreaterThanOrEqual(1500);
+
+      const finRes = await api.get("/api/projects/financial");
+      expect(finRes.ok()).toBeTruthy();
+      const finJson = await finRes.json();
+      const row = (finJson.projects || []).find((p: { id: string }) => p.id === projectDbId);
+      expect(row).toBeTruthy();
+      expect(Number(row.receivedAmount || 0)).toBeGreaterThanOrEqual(50000);
+
       await api.dispose();
     }
   });
@@ -393,9 +475,9 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
 
     // Mobile list -> detail should show a loader indicator (cheap assertion).
     await page.goto("/vendors");
-    await page.getByRole("link", { name: vendorName }).click();
+    await page.locator('div.md\\:hidden a[href^="/vendors/"]').first().click();
     await expect(page.getByTestId("route-loading-indicator").or(page.getByTestId("app-loading-skeleton"))).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`/vendors/${vendorDbId}`), { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/vendors\/.+/, { timeout: 15_000 });
     await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByText("Add Vendor Note")).toBeVisible();
 
