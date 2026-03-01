@@ -110,6 +110,7 @@ model Expense {
   amount          Decimal
   paymentMode     String
   paymentSource   String @default("COMPANY_DIRECT")
+  companyAccountId String?
   expenseType     String @default("COMPANY")
   project         String?
   status          String @default("PENDING")
@@ -128,7 +129,10 @@ model Expense {
 
   submittedBy     User          @relation("ExpenseSubmittedBy", fields: [submittedById], references: [id])
   approvedBy      User?         @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+  companyAccount  CompanyAccount? @relation(fields: [companyAccountId], references: [id])
   approvals       Approval[]
+
+  @@index([companyAccountId])
 }
 
 model Income {
@@ -561,6 +565,7 @@ model CompanyAccount {
 
   vendorPayments VendorPayment[]
   incomes        Income[]
+  expenses       Expense[]
 }
 
 // AP (finance-lite) — Vendor Bill + Payment + allocation (no GL yet).

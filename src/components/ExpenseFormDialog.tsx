@@ -42,6 +42,8 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     category: "",
     amount: "",
     paymentMode: "",
+    paymentSource: "COMPANY_DIRECT",
+    companyAccountId: "",
     project: "",
     receiptUrl: "",
     receiptFileId: "",
@@ -53,6 +55,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
   const [duplicateItems, setDuplicateItems] = useState<DuplicateExpense[]>([]);
   const [categories, setCategories] = useState<CategoryMeta[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -81,6 +84,25 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/company-accounts")
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const list = Array.isArray(json?.data) ? json.data : [];
+        const active = list.filter((a: { isActive?: boolean }) => a.isActive !== false);
+        setAccounts(active);
+      })
+      .catch(() => {
+        if (!cancelled) setAccounts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   const selectedCategory = useMemo(
     () => categories.find((category) => category.name === form.category),
     [categories, form.category]
@@ -100,6 +122,10 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           return;
         }
       }
+      if (form.paymentSource === "COMPANY_ACCOUNT" && !form.companyAccountId) {
+        toast.error("Please select a company account");
+        return;
+      }
       if (
         selectedCategory?.enforceStrict &&
         typeof selectedCategory.maxAmount === "number" &&
@@ -118,6 +144,8 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           category: form.category,
           amount: parseFloat(form.amount),
           paymentMode: form.paymentMode,
+          paymentSource: form.paymentSource,
+          companyAccountId: form.paymentSource === "COMPANY_ACCOUNT" ? form.companyAccountId : undefined,
           expenseType: form.expenseType,
           project: form.project,
           receiptUrl: form.receiptUrl || undefined,
@@ -161,6 +189,8 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
         category: "",
         amount: "",
         paymentMode: "",
+        paymentSource: "COMPANY_DIRECT",
+        companyAccountId: "",
         project: "",
         receiptUrl: "",
         receiptFileId: "",
@@ -270,6 +300,50 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
                 onChange={(value) => setForm({ ...form, paymentMode: value })}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="paymentSource">Payment Source</Label>
+              <Select
+                value={form.paymentSource}
+                onValueChange={(value) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    paymentSource: value,
+                    companyAccountId: value === "COMPANY_ACCOUNT" ? prev.companyAccountId : "",
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select payment source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="COMPANY_DIRECT">Company Direct</SelectItem>
+                  <SelectItem value="COMPANY_ACCOUNT">Company Account</SelectItem>
+                  <SelectItem value="EMPLOYEE_WALLET">Employee Wallet</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {form.paymentSource === "COMPANY_ACCOUNT" ? (
+              <div className="space-y-2">
+                <Label htmlFor="companyAccountId">Company Account</Label>
+                <Select
+                  value={form.companyAccountId}
+                  onValueChange={(value) => setForm({ ...form, companyAccountId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select cash/bank account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name} ({account.type})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="expenseType">Expense Type</Label>

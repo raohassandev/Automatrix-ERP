@@ -119,6 +119,7 @@ export async function GET(req: Request) {
         include: {
           submittedBy: { select: { id: true, email: true, name: true } },
           approvedBy: { select: { id: true, email: true, name: true } },
+          companyAccount: { select: { id: true, name: true } },
         },
         orderBy,
         skip,
@@ -132,6 +133,7 @@ export async function GET(req: Request) {
       ...expense,
       amount: Number(expense.amount),
       approvedAmount: expense.approvedAmount ? Number(expense.approvedAmount) : null,
+      companyAccountName: expense.companyAccount?.name || null,
     }));
 
     return NextResponse.json({
@@ -201,6 +203,9 @@ export async function POST(req: Request) {
       description: sanitizeString(parsed.data.description),
       category: sanitizeString(parsed.data.category),
       paymentMode: sanitizeString(parsed.data.paymentMode),
+      companyAccountId: parsed.data.companyAccountId
+        ? sanitizeString(parsed.data.companyAccountId)
+        : undefined,
       project: parsed.data.project ? sanitizeString(parsed.data.project) : undefined,
       receiptUrl: parsed.data.receiptUrl ? sanitizeString(parsed.data.receiptUrl) : undefined,
       receiptFileId: parsed.data.receiptFileId
@@ -339,6 +344,7 @@ export async function POST(req: Request) {
 
     // Check if payment source is EMPLOYEE_WALLET
     const paymentSource = sanitizedData.paymentSource || 'COMPANY_DIRECT';
+    let resolvedCompanyAccountId: string | null = null;
 
     // Owner personal expenses auto-approve and cannot use employee wallet
     if (expenseType === 'OWNER_PERSONAL') {
@@ -351,6 +357,26 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
+    }
+
+    if (paymentSource === 'COMPANY_ACCOUNT') {
+      if (!sanitizedData.companyAccountId) {
+        return NextResponse.json(
+          { success: false, error: 'Company account is required when payment source is COMPANY_ACCOUNT' },
+          { status: 400 },
+        );
+      }
+      const account = await prisma.companyAccount.findUnique({
+        where: { id: sanitizedData.companyAccountId },
+        select: { id: true, isActive: true },
+      });
+      if (!account || !account.isActive) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid or inactive company account' },
+          { status: 400 },
+        );
+      }
+      resolvedCompanyAccountId = account.id;
     }
     let employeeRecord: {
       id: string;
@@ -405,6 +431,7 @@ export async function POST(req: Request) {
           amount: new Prisma.Decimal(sanitizedData.amount),
           paymentMode: sanitizedData.paymentMode,
           paymentSource: paymentSource as 'EMPLOYEE_WALLET' | 'COMPANY_DIRECT' | 'COMPANY_ACCOUNT',
+          companyAccountId: resolvedCompanyAccountId || undefined,
           expenseType,
           project: resolvedProjectId,
           approvalLevel,

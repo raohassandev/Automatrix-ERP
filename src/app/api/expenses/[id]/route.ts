@@ -84,6 +84,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.category) data.category = parsed.data.category;
   if (parsed.data.amount) data.amount = new Prisma.Decimal(parsed.data.amount);
   if (parsed.data.paymentMode) data.paymentMode = parsed.data.paymentMode;
+  if (parsed.data.paymentSource) data.paymentSource = parsed.data.paymentSource;
   if (parsed.data.expenseType) data.expenseType = parsed.data.expenseType;
   if (parsed.data.project !== undefined) {
     if (parsed.data.project === null || parsed.data.project === "") {
@@ -105,6 +106,43 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.categoryRequest !== undefined) data.categoryRequest = parsed.data.categoryRequest;
 
   const nextExpenseType = parsed.data.expenseType || expense.expenseType || "COMPANY";
+  const nextPaymentSource = parsed.data.paymentSource || expense.paymentSource || "COMPANY_DIRECT";
+  if (
+    parsed.data.paymentSource &&
+    parsed.data.paymentSource !== expense.paymentSource &&
+    (parsed.data.paymentSource === "EMPLOYEE_WALLET" || expense.paymentSource === "EMPLOYEE_WALLET")
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Changing payment source to/from EMPLOYEE_WALLET is not allowed after submission.",
+      },
+      { status: 400 },
+    );
+  }
+  if (nextPaymentSource === "COMPANY_ACCOUNT") {
+    const candidateAccountId =
+      parsed.data.companyAccountId?.trim() || expense.companyAccountId;
+    if (!candidateAccountId) {
+      return NextResponse.json(
+        { success: false, error: "Company account is required when payment source is COMPANY_ACCOUNT" },
+        { status: 400 }
+      );
+    }
+    const account = await prisma.companyAccount.findUnique({
+      where: { id: candidateAccountId },
+      select: { id: true, isActive: true },
+    });
+    if (!account || !account.isActive) {
+      return NextResponse.json(
+        { success: false, error: "Invalid or inactive company account" },
+        { status: 400 }
+      );
+    }
+    data.companyAccountId = account.id;
+  } else if (parsed.data.companyAccountId !== undefined || parsed.data.paymentSource !== undefined) {
+    data.companyAccountId = null;
+  }
   const nextProject =
     parsed.data.project !== undefined
       ? parsed.data.project

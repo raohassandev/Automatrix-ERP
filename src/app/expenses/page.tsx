@@ -25,6 +25,7 @@ const COLUMNS = [
   { key: 'categoryRequest', label: 'Category Request', visible: true },
   { key: 'remarks', label: 'Remarks', visible: false },
   { key: 'project', label: 'Project', visible: true },
+  { key: 'paymentSource', label: 'Source', visible: true },
   { key: 'amount', label: 'Amount', visible: true },
   { key: 'status', label: 'Status', visible: true },
 ];
@@ -41,6 +42,9 @@ interface Expense {
   amount: number;
   status: string;
   paymentMode: string;
+  paymentSource?: string | null;
+  companyAccountId?: string | null;
+  companyAccountName?: string | null;
   receiptUrl?: string | null;
   receiptFileId?: string | null;
   submittedById?: string | null;
@@ -184,6 +188,8 @@ function ExpensesPageContent() {
                           ? expense.remarks || "-"
                           : col.key === 'project'
                           ? expense.project || "-"
+                          : col.key === 'paymentSource'
+                          ? expense.paymentSource || "-"
                           : col.key === 'status'
                           ? (
                               <div className="flex flex-wrap items-center gap-2">
@@ -230,6 +236,8 @@ function ExpensesPageContent() {
                 { label: "Category Request", value: expense.categoryRequest || "-" },
                 { label: "Remarks", value: expense.remarks || "-" },
                 { label: "Project", value: expense.project || "-" },
+                { label: "Source", value: expense.paymentSource || "-" },
+                { label: "Account", value: expense.companyAccountName || "-" },
                 { label: "Amount", value: formatMoney(Number(expense.amount)) },
                 { label: "Status", value: `${expense.status}${expense.inventoryLedgerId ? " (LEGACY)" : ""}` },
                 { label: "Date", value: new Date(expense.date).toLocaleDateString() },

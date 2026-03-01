@@ -12,6 +12,8 @@ type Expense = {
   category: string;
   amount: number;
   paymentMode: string;
+  paymentSource?: string | null;
+  companyAccountId?: string | null;
   expenseType?: string | null;
   project?: string | null;
   remarks?: string | null;

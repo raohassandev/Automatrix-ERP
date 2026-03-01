@@ -38,7 +38,7 @@ export type CompanyAccountNotesHistoryRow = {
 
 export type CompanyAccountActivityRow = {
   at: string; // ISO
-  type: "PAYMENT" | "INCOME" | "NOTE" | "ATTACHMENT";
+  type: "PAYMENT" | "INCOME" | "EXPENSE" | "NOTE" | "ATTACHMENT";
   label: string;
   status?: string | null;
   amount?: number | null;
@@ -60,13 +60,14 @@ export type CompanyAccountPaymentRow = {
 export type CompanyAccountSummaryRow = {
   month: string; // yyyy-mm
   approvedInflow: number;
+  approvedExpenseOutflow: number;
   postedOutflow: number;
   netChange: number;
   postedCount: number;
 };
 
 export type CompanyAccountDocumentRow = {
-  type: "PAYMENT" | "BILL" | "INCOME";
+  type: "PAYMENT" | "BILL" | "INCOME" | "EXPENSE";
   number: string;
   date: string;
   status: string;
@@ -150,7 +151,7 @@ export async function getCompanyAccountDetailForUser(args: {
     return { ok: false as const, status: 404 as const, error: "Not found" };
   }
 
-  const [attachmentsCount, postedOutflowAgg, approvedInflowAgg, auditRows] = await Promise.all([
+  const [attachmentsCount, postedOutflowAgg, approvedInflowAgg, approvedExpenseOutflowAgg, auditRows] = await Promise.all([
     prisma.attachment.count({ where: { type: "company_account", recordId: account.id } }),
     prisma.vendorPayment.aggregate({
       where: { companyAccountId: account.id, status: "POSTED" },
@@ -159,6 +160,14 @@ export async function getCompanyAccountDetailForUser(args: {
     prisma.income.aggregate({
       where: { companyAccountId: account.id, status: "APPROVED" },
       _sum: { amount: true },
+    }),
+    prisma.expense.aggregate({
+      where: {
+        companyAccountId: account.id,
+        paymentSource: "COMPANY_ACCOUNT",
+        status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+      },
+      _sum: { amount: true, approvedAmount: true },
     }),
     prisma.auditLog.findMany({
       where: {
@@ -202,7 +211,10 @@ export async function getCompanyAccountDetailForUser(args: {
   const openingBalance = Number(account.openingBalance || 0);
   const postedOutflow = Number(postedOutflowAgg._sum.amount || 0);
   const approvedInflow = Number(approvedInflowAgg._sum.amount || 0);
-  const currentBalance = openingBalance + approvedInflow - postedOutflow;
+  const approvedExpenseOutflow = Number(
+    approvedExpenseOutflowAgg._sum.approvedAmount || approvedExpenseOutflowAgg._sum.amount || 0,
+  );
+  const currentBalance = openingBalance + approvedInflow - postedOutflow - approvedExpenseOutflow;
 
   const header: CompanyAccountDetailHeader = {
     id: account.id,
@@ -264,7 +276,7 @@ export async function getCompanyAccountDetailForUser(args: {
   // Summary: month-wise approved inflows + posted outflows (last 12 months)
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1, 0, 0, 0));
-  const [postedRows, approvedIncomeRows] = await Promise.all([
+  const [postedRows, approvedIncomeRows, approvedExpenseRows] = await Promise.all([
     prisma.vendorPayment.findMany({
       where: {
         companyAccountId: account.id,
@@ -283,30 +295,52 @@ export async function getCompanyAccountDetailForUser(args: {
       select: { date: true, amount: true },
       orderBy: { date: "asc" },
     }),
+    prisma.expense.findMany({
+      where: {
+        companyAccountId: account.id,
+        paymentSource: "COMPANY_ACCOUNT",
+        status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+        date: { gte: start },
+      },
+      select: { date: true, amount: true, approvedAmount: true, status: true },
+      orderBy: { date: "asc" },
+    }),
   ]);
 
-  const summaryMap = new Map<string, { inflow: number; outflow: number; count: number }>();
+  const summaryMap = new Map<string, { inflow: number; paymentOutflow: number; expenseOutflow: number; count: number }>();
   for (const row of postedRows) {
     const d = row.paymentDate;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-    const cur = summaryMap.get(key) || { inflow: 0, outflow: 0, count: 0 };
-    cur.outflow += Number(row.amount || 0);
+    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, count: 0 };
+    cur.paymentOutflow += Number(row.amount || 0);
     cur.count += 1;
     summaryMap.set(key, cur);
   }
   for (const row of approvedIncomeRows) {
     const d = row.date;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-    const cur = summaryMap.get(key) || { inflow: 0, outflow: 0, count: 0 };
+    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, count: 0 };
     cur.inflow += Number(row.amount || 0);
+    summaryMap.set(key, cur);
+  }
+  for (const row of approvedExpenseRows) {
+    const d = row.date;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, count: 0 };
+    const used =
+      row.status === "PARTIALLY_APPROVED" && row.approvedAmount != null
+        ? Number(row.approvedAmount)
+        : Number(row.amount);
+    cur.expenseOutflow += Number.isFinite(used) ? used : 0;
     summaryMap.set(key, cur);
   }
   const summary: CompanyAccountSummaryRow[] = Array.from(summaryMap.entries())
     .map(([month, v]) => ({
       month,
       approvedInflow: v.inflow,
-      postedOutflow: v.outflow,
-      netChange: v.inflow - v.outflow,
+      approvedExpenseOutflow: v.expenseOutflow,
+      postedOutflow: v.paymentOutflow,
+      netChange: v.inflow - v.paymentOutflow - v.expenseOutflow,
       postedCount: v.count,
     }))
     .sort((a, b) => b.month.localeCompare(a.month));
@@ -346,9 +380,28 @@ export async function getCompanyAccountDetailForUser(args: {
       href: `/income?search=${encodeURIComponent(income.source)}`,
     });
   }
+  const approvedExpenseDocuments = await prisma.expense.findMany({
+    where: {
+      companyAccountId: account.id,
+      paymentSource: "COMPANY_ACCOUNT",
+      status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+    },
+    orderBy: { date: "desc" },
+    take: 50,
+    select: { id: true, date: true, description: true, status: true },
+  });
+  for (const expense of approvedExpenseDocuments) {
+    documents.push({
+      type: "EXPENSE",
+      number: expense.description,
+      date: fmtDate(expense.date),
+      status: expense.status,
+      href: `/expenses?search=${encodeURIComponent(expense.description)}`,
+    });
+  }
 
   // Activity: payments + approved incomes + notes/attachments, sorted.
-  const [latestPayments, latestIncomes] = await Promise.all([
+  const [latestPayments, latestIncomes, latestExpenses] = await Promise.all([
     prisma.vendorPayment.findMany({
       where: { companyAccountId: account.id },
       orderBy: { paymentDate: "desc" },
@@ -366,6 +419,16 @@ export async function getCompanyAccountDetailForUser(args: {
       orderBy: { date: "desc" },
       take: 50,
       select: { source: true, category: true, date: true, amount: true, status: true },
+    }),
+    prisma.expense.findMany({
+      where: {
+        companyAccountId: account.id,
+        paymentSource: "COMPANY_ACCOUNT",
+        status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+      },
+      orderBy: { date: "desc" },
+      take: 50,
+      select: { description: true, category: true, date: true, amount: true, approvedAmount: true, status: true },
     }),
   ]);
 
@@ -388,6 +451,20 @@ export async function getCompanyAccountDetailForUser(args: {
       status: i.status,
       amount: Number(i.amount || 0),
       href: `/income?search=${encodeURIComponent(i.source)}`,
+    });
+  }
+  for (const e of latestExpenses) {
+    const used =
+      e.status === "PARTIALLY_APPROVED" && e.approvedAmount != null
+        ? Number(e.approvedAmount)
+        : Number(e.amount);
+    activity.push({
+      at: iso(e.date),
+      type: "EXPENSE",
+      label: `Expense ${e.category}: ${e.description}`,
+      status: e.status,
+      amount: Number.isFinite(used) ? used : 0,
+      href: `/expenses?search=${encodeURIComponent(e.description.slice(0, 20))}`,
     });
   }
   for (const e of notesHistory) {
