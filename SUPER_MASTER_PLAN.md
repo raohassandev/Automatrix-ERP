@@ -377,11 +377,111 @@ CEO dashboard (Phase 1):
 
 ---
 
-## 11) ROADMAP (High level)
+## 11) COMPLETE ERP MODULES (Target End-State) — LOCKED
 
-Phase 1: Purchasing + Inventory + Controls + truthful reporting
-Phase 2: Accounting backbone (COA/GL/Journals + bank recon + taxes)
-Phase 3: HR/Payroll maturity
-Phase 4: Projects/Tasks
+1. Identity, RBAC, and Security
+2. Organization and Settings
+3. Master Data Management
+4. CRM and Pre-Sales
+5. Sales (O2C)
+6. Procurement (P2P)
+7. Inventory and Store
+8. Project Management (commercial + execution)
+9. Engineering and Site Operations
+10. Expense Management
+11. Employee Wallet and Advances
+12. HRMS
+13. Payroll and Compensation
+14. Finance and Accounting Core
+15. Treasury and Banking
+16. Approvals Engine
+17. Audit, Compliance, and Governance
+18. Reporting and BI
+19. Document Management
+20. Integrations and Data Ops
+
+---
+
+## 12) PHASED ROADMAP (Execution Order, DoD, Dependencies)
+
+### Phase 1 (staging-first, then prod cutover)
+- Scope: modules 1, 2, 3, 6, 7, 8, 10, 11, 15, 16, 17, 18, 19, 20 (minimum operational ERP spine)
+- Hard rule: no expense-to-inventory stock posting; inventory enters only via GRN.
+- DoD:
+  - document lifecycles enforced
+  - role-based API controls + masking
+  - audit logging for critical actions
+  - truthful project/account/inventory drilldowns
+  - Playwright role suites passing on disposable DB + staging smoke pass
+
+### Phase 2 (commercial + accounting backbone)
+- Scope: modules 4, 5, 14 (+ deepen 15 and 18)
+- Deliverables:
+  - full O2C chain (quotation -> SO -> delivery -> invoice -> receipt -> allocations)
+  - COA, journals, GL, period close/lock, trial balance, P&L, balance sheet
+  - AR/AP aging and collection workflows tied to source docs
+- Dependency: Phase 1 posting traceability (`sourceType/sourceId`) must be complete.
+
+### Phase 3 (people operations)
+- Scope: modules 12 and 13 (+ deepen 11)
+- Deliverables:
+  - employee master lifecycle, attendance/leave (phaseable), self-service
+  - monthly payroll runs, salary structures, deductions with approvals
+  - project incentives/commissions tied to project closure and policy
+- Dependency: Phase 2 accounting core must exist for payroll journals.
+
+### Phase 4 (execution depth)
+- Scope: module 9 (+ deepen 8)
+- Deliverables:
+  - BOQ/material plans, site logs, commissioning checklists
+  - project consumption mapping and variation controls
+  - tighter project profitability actual-vs-plan
+- Dependency: stable Inventory + Projects + Procurement integrations from prior phases.
+
+### Phase 5 (optimization and scale)
+- Scope: deepen modules 18, 19, 20 and enterprise controls
+- Deliverables:
+  - executive BI packs, forecasting, exception intelligence
+  - hardened integrations/webhooks, disaster recovery drills, SLO monitoring
+  - multi-branch/multi-company readiness when approved
+
+---
+
+## 13) CROSS-MODULE POSTING CONTRACT (Non-negotiable)
+
+Every financial/stock transaction must update all impacted ledgers consistently from one source document chain.
+
+- Income entry:
+  - creates income document
+  - updates company account movement
+  - updates project received/profitability when project-linked
+  - writes audit trail
+- Vendor bill:
+  - creates AP obligation
+  - updates project cost when project-linked
+  - participates in vendor aging until payment allocation
+- GRN:
+  - writes InventoryLedger (+qty, valuation impact)
+  - never bypasses procurement document chain
+- Expense (non-stock only):
+  - updates expense records and project cost (if linked)
+  - updates wallet hold/settlement or direct company account impact as applicable
+  - never writes InventoryLedger
+- Wallet transfer/top-up:
+  - updates wallet ledger and company account outflow trace
+  - visible in finance and employee history based on RBAC
+
+If any screen writes data outside this contract, it is a defect and must be blocked.
+
+---
+
+## 14) EXECUTION GOVERNANCE (How this plan is managed)
+
+- Staging is the active build environment until full acceptance.
+- Production gets only approved, tested, migration-safe releases.
+- Each module feature is tracked as:
+  - `Planned -> In Progress -> QA on Staging -> Accepted -> Released`
+- `SUPER_MASTER_PLAN.md` remains the single planning reference; it must be updated whenever scope/status changes.
+- No hidden work: each implemented item must be reflected in `docs/IMPLEMENTATION_REPORT_YYYY-MM-DD.md`.
 
 ---
