@@ -175,4 +175,17 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
     await ctx.close();
   });
+
+  test("Project finance export API: finance allowed, engineer forbidden", async ({ baseURL }) => {
+    const financeApi = await request.newContext({ baseURL, storageState: states.finance });
+    const financeRes = await financeApi.get(`/api/reports/projects/${projectDbId}/export`);
+    expect(financeRes.status()).toBe(200);
+    expect((await financeRes.text()).includes("Project Profit")).toBeTruthy();
+    await financeApi.dispose();
+
+    const engineerApi = await request.newContext({ baseURL, storageState: states.engineer });
+    const engineerRes = await engineerApi.get(`/api/reports/projects/${projectDbId}/export`);
+    expect(engineerRes.status()).toBe(403);
+    await engineerApi.dispose();
+  });
 });

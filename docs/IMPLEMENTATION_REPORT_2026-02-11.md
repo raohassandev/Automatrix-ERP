@@ -358,6 +358,38 @@ pnpm test
 E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- project-detail-rbac vendor-item-workhub-actions
 ```
 
+## Project finance drilldown export + inventory issue/return trace
+
+### What changed
+- Added project-level finance export endpoint:
+  - `GET /api/reports/projects/[id]/export`
+  - Includes project summary, AP billed/paid/outstanding, approved income, incentive split, pending amounts, total costs, project profit, and transaction trail.
+  - RBAC: requires `reports.export` and finance-level financial visibility via project detail policy.
+  - Audited with `EXPORT_PROJECT_FINANCE_CSV`.
+- Added direct export button on project costs tab:
+  - `Export Project Finance CSV` from `/projects/[id]`.
+- Added inventory issue/return trace cards on project inventory tab:
+  - issued to project
+  - returned from project
+  - net movement
+- Strengthened project detail source joins:
+  - procurement docs and inventory ledger now resolve by project aliases (`id`, `projectId`, `name`) to reduce missing historical links.
+
+### Files changed
+- `src/app/api/reports/projects/[id]/export/route.ts`
+- `src/app/projects/[id]/ProjectDetailClient.tsx`
+- `src/lib/project-detail-policy.ts`
+- `src/lib/projects.ts`
+- `playwright/tests/project-detail-rbac.spec.ts`
+
+### Verification
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public' pnpm test:e2e:prod -- project-detail-rbac vendor-item-workhub-actions
+```
+
 ## Wallet Transfer Accounting Consistency (company account linkage)
 
 ### What changed

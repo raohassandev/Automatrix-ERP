@@ -61,6 +61,22 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
       ),
     [detail.activity],
   );
+  const inventoryTrace = React.useMemo(() => {
+    const entries = detail.inventory?.entries || [];
+    return entries.reduce(
+      (acc, entry) => {
+        const qty = Number(entry.quantity || 0);
+        if (qty < 0) {
+          acc.issuedQty += Math.abs(qty);
+        } else if (qty > 0) {
+          acc.returnedQty += qty;
+        }
+        acc.netQty += qty;
+        return acc;
+      },
+      { issuedQty: 0, returnedQty: 0, netQty: 0 },
+    );
+  }, [detail.inventory?.entries]);
 
   React.useEffect(() => {
     if (!detail.policy.tabs[active]) {
@@ -487,10 +503,20 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
 
       {active === "costs" ? (
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Costs</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Phase 1 truth: posted AP bills + approved non-stock expenses (including incentives) against approved project income.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Costs</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Phase 1 truth: posted AP bills + approved non-stock expenses (including incentives) against approved project income.
+              </p>
+            </div>
+            <a
+              href={`/api/reports/projects/${detail.header.id}/export`}
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              Export Project Finance CSV
+            </a>
+          </div>
           {!detail.costs ? (
             <div className="mt-4 text-sm text-muted-foreground">No access.</div>
           ) : (
@@ -603,6 +629,21 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             <div className="mt-4 text-sm text-muted-foreground">No access.</div>
           ) : (
             <>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Issued to project</div>
+                  <div className="mt-2 text-lg font-semibold">{inventoryTrace.issuedQty.toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Returned from project</div>
+                  <div className="mt-2 text-lg font-semibold">{inventoryTrace.returnedQty.toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-xs text-muted-foreground">Net movement</div>
+                  <div className="mt-2 text-lg font-semibold">{inventoryTrace.netQty.toLocaleString()}</div>
+                </div>
+              </div>
+
               {detail.inventory.totals ? (
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <div className="rounded-lg border p-4">
