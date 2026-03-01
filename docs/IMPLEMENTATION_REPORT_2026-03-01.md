@@ -70,6 +70,61 @@
 
 ---
 
+## Update — Cash controls + accounting backfill safety
+
+### What changed
+
+1. Added expense journal posting coverage:
+   - New helper: `postExpenseApprovalJournal(...)` in `src/lib/accounting.ts`
+   - Wired into:
+     - `src/lib/approval-engine.ts` (expense approval posts journals)
+     - `src/app/api/expenses/route.ts` (owner auto-approved expenses post journals)
+     - `src/app/api/expenses/[id]/mark-as-paid/route.ts` (idempotent posting on mark-as-paid)
+
+2. Added safe accounting backfill engine for existing real records:
+   - `src/lib/accounting-backfill.ts`
+   - Admin API: `POST /api/accounting/backfill`
+   - Supports dry-run and apply modes; idempotent via `PostingBatch(sourceType, sourceId)`.
+   - Covers missing journals for:
+     - Income
+     - Invoice
+     - Expense
+     - Vendor Bill
+     - Vendor Payment
+
+3. Added owner cash visibility report:
+   - Data service: `getCashPosition(...)` in `src/lib/accounting-reports.ts`
+   - API: `GET /api/reports/accounting/cash-position`
+   - Export API: `GET /api/reports/accounting/cash-position/export`
+   - UI page: `/reports/accounting/cash-position`
+   - Added navigation links in reports and sidebar.
+
+4. Strengthened Playwright procurement-chain assertions:
+   - `playwright/tests/rb4-procurement-chain.spec.ts`
+   - Now verifies:
+     - journal exists for posted vendor bill (`sourceType=VENDOR_BILL`)
+     - journal exists for posted vendor payment (`sourceType=VENDOR_PAYMENT`)
+     - debit/credit equality on those journals
+     - reconciliation endpoint reports balanced trial balance
+
+### Operational note
+
+- Backfill endpoint is designed to preserve existing entries and add missing journals without deleting/changing source business documents.
+
+### Staging execution snapshot (Hostinger VPS)
+
+1. Seeded GL defaults on staging (`pnpm prisma:seed`) to enable posting.
+2. Ran accounting backfill on staging data:
+   - Dry-run: candidates `38` (`7` income + `31` expense), with `7` income skipped due missing `companyAccountId`.
+   - Apply-run: created `31` expense journals + posting batches; no source record deletions.
+3. Post-run DB state:
+   - `JournalEntry=31`, `JournalLine=62`, `PostingBatch=31` (`sourceType=EXPENSE`).
+4. Staging availability fix:
+   - Corrected staging runtime port mismatch (`PM2 3031` vs `Nginx 3001`).
+   - Staging app now bound to `127.0.0.1:3001` and `https://staging.automatrix.pk/api/health` returns `200`.
+
+---
+
 ## Update — AR posting + accounting statement exports
 
 ### What changed

@@ -10,6 +10,7 @@ import { createNotification } from '@/lib/notifications';
 import { Prisma } from '@prisma/client';
 import { sanitizeString } from '@/lib/sanitize';
 import { recalculateProjectFinancials, resolveProjectDbId, resolveProjectId } from '@/lib/projects';
+import { postExpenseApprovalJournal } from '@/lib/accounting';
 
 const STOCK_KEYS_BLOCKED_IN_EXPENSES = [
   "addToInventory",
@@ -457,6 +458,20 @@ export async function POST(req: Request) {
               Number(employeeRecord.walletHold) + sanitizedData.amount,
             ),
           },
+        });
+      }
+
+      if (status === 'APPROVED' || status === 'PARTIALLY_APPROVED' || status === 'PAID') {
+        const amountToPost = approvedAmount !== null ? approvedAmount : sanitizedData.amount;
+        await postExpenseApprovalJournal(tx, {
+          expenseId: created.id,
+          amount: amountToPost,
+          expenseDate: created.date,
+          paymentSource,
+          companyAccountId: resolvedCompanyAccountId,
+          projectRef: resolvedProjectRef,
+          userId: session.user.id,
+          memo: 'Expense auto-approval posting',
         });
       }
 

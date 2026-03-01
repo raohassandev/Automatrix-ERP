@@ -297,3 +297,46 @@ export async function postInvoiceJournal(
     ],
   });
 }
+
+export async function postExpenseApprovalJournal(
+  tx: Tx,
+  input: {
+    expenseId: string;
+    amount: number;
+    expenseDate: Date;
+    paymentSource?: string | null;
+    companyAccountId?: string | null;
+    projectRef?: string | null;
+    userId?: string | null;
+    memo?: string | null;
+  },
+) {
+  const amount = round2(Number(input.amount || 0));
+  if (amount <= 0) {
+    throw new Error("Expense posting amount must be greater than zero.");
+  }
+
+  const projectId = await resolveProjectDbId(tx, input.projectRef);
+  const source = (input.paymentSource || "").toUpperCase();
+  let creditCode: string = GL_CODES.CASH_ON_HAND;
+  if (source === "EMPLOYEE_WALLET") {
+    creditCode = GL_CODES.WALLET_CLEARING;
+  } else if (input.companyAccountId) {
+    creditCode = await resolveCompanyAccountCashCode(tx, input.companyAccountId);
+  }
+
+  return createPostedJournal(tx, {
+    sourceType: "EXPENSE",
+    sourceId: input.expenseId,
+    documentDate: input.expenseDate,
+    postingDate: input.expenseDate,
+    createdById: input.userId || null,
+    postedById: input.userId || null,
+    voucherPrefix: "EXP",
+    memo: input.memo || "Expense approval posting",
+    lines: [
+      { glCode: GL_CODES.OPERATING_EXPENSE, debit: amount, projectId },
+      { glCode: creditCode, credit: amount, projectId },
+    ],
+  });
+}

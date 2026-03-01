@@ -40,7 +40,7 @@ Port  Service              Domain/Purpose
 
 #### **Staging Environment**
 - **Domain**: `erp-staging.automatrix.pk`
-- **Port**: `3031`
+- **Port**: `3001`
 - **Directory**: `/var/www/automatrix-erp-staging/`
 - **Database**: `automatrix_erp_staging`
 - **Process Manager**: PM2
@@ -83,7 +83,7 @@ NODE_ENV=development
 DATABASE_URL=postgresql://postgres:password@localhost:5432/automatrix_erp_staging
 NEXTAUTH_URL=https://erp-staging.automatrix.pk
 NEXTAUTH_SECRET=your-staging-secret
-PORT=3031
+PORT=3001
 ```
 
 ### **3. Nginx Configuration**
@@ -144,7 +144,7 @@ server {
     error_log /var/log/nginx/automatrix-erp-staging-error.log;
 
     location / {
-        proxy_pass http://127.0.0.1:3031;
+        proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -189,7 +189,7 @@ module.exports = {
     cwd: '/var/www/automatrix-erp-staging',
     env: {
       NODE_ENV: 'development',
-      PORT: 3031
+      PORT: 3001
     },
     instances: 1,
     exec_mode: 'fork',

@@ -154,6 +154,16 @@ test.describe("RB4 - Procurement chain", () => {
       expect(r.ok()).toBeTruthy();
     }
 
+    const billJournalRes = await api.get(`/api/accounting/journals?search=${encodeURIComponent(billId)}&take=10`);
+    expect(billJournalRes.ok()).toBeTruthy();
+    const billJournalJson = await billJournalRes.json();
+    const billJournal = (billJournalJson.data || []).find(
+      (row: { sourceType?: string; sourceId?: string }) => row.sourceType === "VENDOR_BILL" && row.sourceId === billId,
+    );
+    expect(billJournal).toBeTruthy();
+    expect(Number(billJournal?.debit || 0)).toBeGreaterThan(0);
+    expect(Number(billJournal?.debit || 0)).toBe(Number(billJournal?.credit || 0));
+
     // 6) Company account (use existing default)
     const accountsRes = await api.get("/api/company-accounts");
     expect(accountsRes.ok()).toBeTruthy();
@@ -198,11 +208,26 @@ test.describe("RB4 - Procurement chain", () => {
       expect(r.ok()).toBeTruthy();
     }
 
+    const paymentJournalRes = await api.get(`/api/accounting/journals?search=${encodeURIComponent(payId)}&take=10`);
+    expect(paymentJournalRes.ok()).toBeTruthy();
+    const paymentJournalJson = await paymentJournalRes.json();
+    const paymentJournal = (paymentJournalJson.data || []).find(
+      (row: { sourceType?: string; sourceId?: string }) =>
+        row.sourceType === "VENDOR_PAYMENT" && row.sourceId === payId,
+    );
+    expect(paymentJournal).toBeTruthy();
+    expect(Number(paymentJournal?.debit || 0)).toBe(Number(paymentJournal?.credit || 0));
+
     // Bill should now have outstanding ~0.
     const billGet = await api.get(`/api/procurement/vendor-bills/${billId}`);
     expect(billGet.ok()).toBeTruthy();
     const billGetJson = await billGet.json();
     expect(Number(billGetJson.data.outstandingAmount)).toBe(0);
+
+    const reconRes = await api.get("/api/reports/accounting/reconciliation");
+    expect(reconRes.ok()).toBeTruthy();
+    const reconJson = await reconRes.json();
+    expect(reconJson?.data?.checks?.trialBalanceBalanced).toBeTruthy();
 
     await api.dispose();
   });

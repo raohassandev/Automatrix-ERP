@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/rbac';
+import { postExpenseApprovalJournal } from '@/lib/accounting';
 
 export async function PUT(
   request: NextRequest,
@@ -34,9 +35,24 @@ export async function PUT(
     );
   }
 
-  const updatedExpense = await prisma.expense.update({
-    where: { id: params.id },
-    data: { status: 'PAID' },
+  const updatedExpense = await prisma.$transaction(async (tx) => {
+    const updated = await tx.expense.update({
+      where: { id: params.id },
+      data: { status: 'PAID' },
+    });
+
+    await postExpenseApprovalJournal(tx, {
+      expenseId: updated.id,
+      amount: Number(updated.approvedAmount || updated.amount),
+      expenseDate: updated.date,
+      paymentSource: updated.paymentSource,
+      companyAccountId: updated.companyAccountId,
+      projectRef: updated.project,
+      userId: session.user.id,
+      memo: 'Expense mark-as-paid posting',
+    });
+
+    return updated;
   });
 
   await logAudit({

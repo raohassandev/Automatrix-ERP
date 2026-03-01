@@ -3,7 +3,7 @@ import { prisma } from './prisma';
 import { createAuditLog } from './audit';
 import { getExpenseApprovalLevel, getIncomeApprovalLevel } from '@/lib/approvals';
 import { recalculateProjectFinancials } from '@/lib/projects';
-import { postIncomeApprovalJournal } from '@/lib/accounting';
+import { postExpenseApprovalJournal, postIncomeApprovalJournal } from '@/lib/accounting';
 import {
   type ApprovalModule,
   getAllowedRolesForPolicy,
@@ -170,6 +170,17 @@ export async function approveExpense(params: {
         data: { walletLedgerId: walletEntry.id },
       });
     }
+
+    await postExpenseApprovalJournal(tx, {
+      expenseId: expense.id,
+      amount: finalAmount,
+      expenseDate: expense.date,
+      paymentSource: expense.paymentSource,
+      companyAccountId: expense.companyAccountId,
+      projectRef: expense.project,
+      userId: approverId,
+      memo: "Expense approval posting",
+    });
 
     // Create audit log
     await createAuditLog({

@@ -77,6 +77,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { name: "Reports Home", href: "/reports", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Trial Balance", href: "/reports/accounting/trial-balance", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+      { name: "Cash Position", href: "/reports/accounting/cash-position", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Profit & Loss", href: "/reports/accounting/profit-loss", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Balance Sheet", href: "/reports/accounting/balance-sheet", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Procurement Report", href: "/reports/procurement", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
