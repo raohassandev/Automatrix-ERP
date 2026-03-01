@@ -63,6 +63,18 @@ describe("validation schemas (business rules)", () => {
     expect(parsed.success).toBe(true);
   });
 
+  test("incomeSchema: requires companyAccountId for account-linked inflow tracking", () => {
+    const payload = {
+      date: new Date().toISOString(),
+      source: "Client payment",
+      amount: 5000,
+      paymentMode: "Bank Transfer",
+    };
+
+    const parsed = incomeSchema.safeParse(payload);
+    expect(parsed.success).toBe(false);
+  });
+
   test("incomeSchema: rejects invalid receiptUrl", () => {
     const payload = {
       date: new Date().toISOString(),
