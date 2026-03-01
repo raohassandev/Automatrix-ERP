@@ -2,6 +2,7 @@ import { Expense, Income, Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { createAuditLog } from './audit';
 import { getExpenseApprovalLevel, getIncomeApprovalLevel } from '@/lib/approvals';
+import { recalculateProjectFinancials } from '@/lib/projects';
 import {
   type ApprovalModule,
   getAllowedRolesForPolicy,
@@ -196,6 +197,10 @@ export async function approveExpense(params: {
     return { updatedExpense, walletEntry, newBalance };
   });
 
+  if (expense.project) {
+    await recalculateProjectFinancials(expense.project);
+  }
+
   return result;
 }
 
@@ -361,6 +366,10 @@ export async function approveIncome(params: {
 
     return { updatedIncome };
   });
+
+  if (income.project) {
+    await recalculateProjectFinancials(income.project);
+  }
 
   return result;
 }
