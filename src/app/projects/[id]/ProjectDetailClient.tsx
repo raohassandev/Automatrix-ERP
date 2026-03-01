@@ -482,7 +482,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Costs</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Phase 1 truth: AP (posted bills minus posted allocations) + non-stock expenses + approved project income.
+            Phase 1 truth: posted AP bills + approved non-stock expenses against approved project income.
           </p>
           {!detail.costs ? (
             <div className="mt-4 text-sm text-muted-foreground">No access.</div>
@@ -505,11 +505,23 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.nonStockExpensesApproved)}</div>
               </div>
               <div className="rounded-lg border p-4">
+                <div className="text-xs text-muted-foreground">Pending expenses (submitted)</div>
+                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.pendingExpenseSubmitted)}</div>
+              </div>
+              <div className="rounded-lg border p-4">
                 <div className="text-xs text-muted-foreground">Project income (approved)</div>
                 <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
               </div>
               <div className="rounded-lg border p-4">
-                <div className="text-xs text-muted-foreground">Project profit (income - non-stock costs)</div>
+                <div className="text-xs text-muted-foreground">Pending income (submitted)</div>
+                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.pendingIncomeSubmitted)}</div>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="text-xs text-muted-foreground">Total project costs (posted AP + approved expenses)</div>
+                <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.totalProjectCosts)}</div>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="text-xs text-muted-foreground">Project profit (approved income - total project costs)</div>
                 <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.projectProfit)}</div>
               </div>
             </div>

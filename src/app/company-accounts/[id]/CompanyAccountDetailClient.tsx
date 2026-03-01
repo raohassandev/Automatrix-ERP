@@ -90,7 +90,7 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
               <div className="rounded-lg border p-4">
                 <div className="text-xs text-muted-foreground">Current balance (Phase 1)</div>
                 <div className="mt-2 text-lg font-semibold">{formatMoney(detail.header.currentBalance)}</div>
-                <div className="mt-1 text-xs text-muted-foreground">Opening + approved income inflow - posted vendor payments - approved account expenses.</div>
+                <div className="mt-1 text-xs text-muted-foreground">Opening + approved income inflow - posted vendor payments - approved account expenses - wallet top-ups.</div>
               </div>
               <div className="rounded-lg border p-4">
                 <div className="text-xs text-muted-foreground">Role</div>
@@ -404,7 +404,7 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
       {active === "summary" ? (
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Summary</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Month-wise approved inflows and posted outflows.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Month-wise approved inflows and all tracked outflows.</p>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -412,6 +412,7 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
                   <th className="py-2">Month</th>
                   <th className="py-2 text-right">Approved inflow</th>
                   <th className="py-2 text-right">Approved expense outflow</th>
+                  <th className="py-2 text-right">Wallet top-up outflow</th>
                   <th className="py-2 text-right">Posted outflow</th>
                   <th className="py-2 text-right">Net change</th>
                   <th className="py-2 text-right">Count</th>
@@ -420,7 +421,7 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
               <tbody>
                 {detail.summary.length === 0 ? (
                   <tr>
-                    <td className="py-3 text-sm text-muted-foreground" colSpan={6}>
+                    <td className="py-3 text-sm text-muted-foreground" colSpan={7}>
                       No inflow/outflow activity in the last 12 months.
                     </td>
                   </tr>
@@ -430,6 +431,7 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
                       <td className="py-2">{r.month}</td>
                       <td className="py-2 text-right">{formatMoney(r.approvedInflow)}</td>
                       <td className="py-2 text-right">{formatMoney(r.approvedExpenseOutflow)}</td>
+                      <td className="py-2 text-right">{formatMoney(r.walletTransferOutflow)}</td>
                       <td className="py-2 text-right">{formatMoney(r.postedOutflow)}</td>
                       <td className="py-2 text-right">{formatMoney(r.netChange)}</td>
                       <td className="py-2 text-right">{r.postedCount}</td>

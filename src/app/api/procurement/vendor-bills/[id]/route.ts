@@ -6,7 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { canUserApprove } from "@/lib/approval-engine";
-import { resolveProjectId } from "@/lib/projects";
+import { recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
 
 const billLineSchema = z
   .object({
@@ -199,6 +199,9 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
         return NextResponse.json({ success: false, error: "Only APPROVED bills can be posted." }, { status: 400 });
       }
       const updated = await prisma.vendorBill.update({ where: { id }, data: { status: "POSTED" } });
+      if (updated.projectRef) {
+        await recalculateProjectFinancials(updated.projectRef);
+      }
       await logAudit({
         action: "POST_VENDOR_BILL",
         entity: "VendorBill",

@@ -9,7 +9,7 @@ import { getExpenseApprovalLevel } from '@/lib/approvals';
 import { createNotification } from '@/lib/notifications';
 import { Prisma } from '@prisma/client';
 import { sanitizeString } from '@/lib/sanitize';
-import { resolveProjectId } from '@/lib/projects';
+import { recalculateProjectFinancials, resolveProjectId } from '@/lib/projects';
 
 const STOCK_KEYS_BLOCKED_IN_EXPENSES = [
   "addToInventory",
@@ -508,6 +508,10 @@ export async function POST(req: Request) {
           })),
         });
       }
+    }
+
+    if (resolvedProjectId && ['APPROVED', 'PARTIALLY_APPROVED', 'PAID'].includes(status)) {
+      await recalculateProjectFinancials(resolvedProjectId);
     }
 
     return NextResponse.json({ success: true, data: result.created });

@@ -60,6 +60,9 @@ export type ProjectDetailData = {
     apOutstanding: number;
     nonStockExpensesApproved: number;
     approvedIncomeReceived: number;
+    pendingIncomeSubmitted: number;
+    pendingExpenseSubmitted: number;
+    totalProjectCosts: number;
     projectProfit: number;
   };
   inventory?: {
@@ -185,10 +188,11 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
 
   // --- Data sources (Phase 1 single spine) ---
   const projectRef = project.projectId;
+  const projectAliases = Array.from(new Set([project.projectId, project.name].filter(Boolean)));
 
   const isSalesOrMarketing = policy.role === "Sales" || policy.role === "Marketing";
   const includeLedgerInResponse = policy.tabs.inventory;
-  const includeExpensesInResponse = policy.tabs.activity && !isSalesOrMarketing;
+  const includeExpensesInResponse = (policy.tabs.activity || policy.tabs.costs) && !isSalesOrMarketing;
 
   const billSelect: Record<string, unknown> = {
     id: true,
@@ -269,7 +273,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     amount?: unknown;
   };
 
-  const [pos, grns, bills, payments, ledger, expensesApproved, incomesApproved] = (await Promise.all([
+  const [pos, grns, bills, payments, ledger, expensesAll, incomesAll] = (await Promise.all([
     prisma.purchaseOrder.findMany({
       where: { projectRef },
       select: { id: true, poNumber: true, orderDate: true, status: true },
@@ -305,8 +309,8 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     includeExpensesInResponse
       ? prisma.expense.findMany({
           where: {
-            project: projectRef,
-            status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+            project: { in: projectAliases },
+            status: { notIn: ["REJECTED"] },
           },
           select: expenseSelect as never,
           orderBy: { date: "desc" },
@@ -316,8 +320,8 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     includeExpensesInResponse
       ? prisma.income.findMany({
           where: {
-            project: projectRef,
-            status: "APPROVED",
+            project: { in: projectAliases },
+            status: { not: "REJECTED" },
           },
           select: {
             id: true,
@@ -332,6 +336,13 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
         })
       : Promise.resolve([]),
   ])) as unknown as [PoRow[], GrnRow[], BillRow[], PaymentRow[], LedgerRow[], ExpenseRow[], IncomeRow[]];
+
+  const expensesApproved = expensesAll.filter((e) =>
+    ["APPROVED", "PARTIALLY_APPROVED", "PAID"].includes((e.status || "").toUpperCase()),
+  );
+  const incomesApproved = incomesAll.filter((i) => (i.status || "").toUpperCase() === "APPROVED");
+  const incomesPending = incomesAll.filter((i) => (i.status || "").toUpperCase().startsWith("PENDING"));
+  const expensesPending = expensesAll.filter((e) => (e.status || "").toUpperCase().startsWith("PENDING"));
 
   const documents: ProjectDocumentsRow[] = [
     ...pos.map((po) => ({
@@ -414,7 +425,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       href: l.sourceType === "GRN" && l.sourceId ? `/procurement/grn?search=${encodeURIComponent(l.reference || "")}` : null,
     });
   }
-  for (const e of expensesApproved) {
+  for (const e of expensesAll) {
     activity.push({
       at: formatIso(e.date),
       type: "EXPENSE",
@@ -433,7 +444,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       href: `/expenses?search=${encodeURIComponent(e.description.slice(0, 20))}`,
     });
   }
-  for (const i of incomesApproved) {
+  for (const i of incomesAll) {
     activity.push({
       at: formatIso(i.date),
       type: "INCOME",
@@ -479,7 +490,17 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       (sum, i) => sum + (Number.isFinite(Number(i.amount)) ? Number(i.amount) : 0),
       0,
     );
-    const projectProfit = approvedIncomeReceived - nonStockExpensesApproved;
+    const pendingIncomeSubmitted = incomesPending.reduce(
+      (sum, i) => sum + (Number.isFinite(Number(i.amount)) ? Number(i.amount) : 0),
+      0,
+    );
+    const pendingExpenseSubmitted = expensesPending.reduce((sum, e) => {
+      const v = e as { amount?: unknown };
+      const used = Number(v.amount);
+      return sum + (Number.isFinite(used) ? used : 0);
+    }, 0);
+    const totalProjectCosts = billedTotal + nonStockExpensesApproved;
+    const projectProfit = approvedIncomeReceived - totalProjectCosts;
 
     costs = {
       apBilledTotal: billedTotal,
@@ -487,6 +508,9 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       apOutstanding,
       nonStockExpensesApproved,
       approvedIncomeReceived,
+      pendingIncomeSubmitted,
+      pendingExpenseSubmitted,
+      totalProjectCosts,
       projectProfit,
     };
   }

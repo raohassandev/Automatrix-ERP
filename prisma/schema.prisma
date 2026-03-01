@@ -331,12 +331,14 @@ model WalletLedger {
   id         String     @id @default(cuid())
   date       DateTime
   employeeId String
+  companyAccountId String?
   type       String
   amount     Decimal    
   reference  String?
   balance    Decimal    
 
   employee   Employee   @relation(fields: [employeeId], references: [id])
+  companyAccount CompanyAccount? @relation(fields: [companyAccountId], references: [id])
 
   // Posting traceability (SOP non-negotiable). Nullable until all posting flows are migrated.
   sourceType String?
@@ -346,6 +348,8 @@ model WalletLedger {
   postedBy   User?      @relation("WalletLedgerPostedBy", fields: [postedById], references: [id])
 
   createdAt  DateTime @default(now())
+
+  @@index([companyAccountId])
 }
 
 model CompensationPolicy {
@@ -566,6 +570,7 @@ model CompanyAccount {
   vendorPayments VendorPayment[]
   incomes        Income[]
   expenses       Expense[]
+  walletLedgerEntries WalletLedger[]
 }
 
 // AP (finance-lite) — Vendor Bill + Payment + allocation (no GL yet).

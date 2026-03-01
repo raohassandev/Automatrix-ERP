@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
@@ -30,15 +30,40 @@ export function EmployeeWalletDialog({
 }: EmployeeWalletDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [form, setForm] = useState({
     type: "CREDIT",
     amount: "",
     reason: "",
+    companyAccountId: "",
   });
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/company-accounts")
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const list = Array.isArray(json?.data) ? json.data : [];
+        const active = list.filter((a: { isActive?: boolean }) => a.isActive !== false);
+        setAccounts(active);
+      })
+      .catch(() => {
+        if (!cancelled) setAccounts([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   async function submit() {
     if (!form.amount || parseFloat(form.amount) <= 0) {
       toast.error("Please enter a valid amount");
+      return;
+    }
+    if (form.type === "CREDIT" && !form.companyAccountId) {
+      toast.error("Please select a company account for wallet top-up");
       return;
     }
 
@@ -51,6 +76,7 @@ export function EmployeeWalletDialog({
           type: form.type,
           amount: parseFloat(form.amount),
           reference: form.reason,
+          companyAccountId: form.companyAccountId || undefined,
         }),
       });
 
@@ -67,6 +93,7 @@ export function EmployeeWalletDialog({
         type: "CREDIT",
         amount: "",
         reason: "",
+        companyAccountId: "",
       });
       
       // Close dialog
@@ -132,6 +159,30 @@ export function EmployeeWalletDialog({
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="companyAccountId">
+            Company Account {form.type === "CREDIT" ? "(Required)" : "(Optional)"}
+          </Label>
+          <Select
+            value={form.companyAccountId}
+            onValueChange={(value) =>
+              setForm({ ...form, companyAccountId: value === "none" ? "" : value })
+            }
+          >
+            <SelectTrigger id="companyAccountId">
+              <SelectValue placeholder="Select cash/bank account" />
+            </SelectTrigger>
+            <SelectContent>
+              {form.type !== "CREDIT" ? <SelectItem value="none">None</SelectItem> : null}
+              {accounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.name} ({account.type})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">

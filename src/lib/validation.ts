@@ -128,6 +128,7 @@ export const walletSchema = z.object({
   type: z.enum(["CREDIT", "DEBIT"]),
   amount: z.number().positive(),
   reference: z.string().optional(),
+  companyAccountId: z.string().optional(),
 });
 
 export const invoiceSchema = z.object({

@@ -296,6 +296,37 @@ pnpm typecheck
 pnpm test
 ```
 
+## Wallet Transfer Accounting Consistency (company account linkage)
+
+### What changed
+- Employee wallet manual transfers now support company-account linkage:
+  - wallet **credit** requires an active `CompanyAccount`
+  - wallet **debit** can optionally keep account linkage for audit traceability
+- Wallet ledger rows now persist posting trace fields on create:
+  - `sourceType`, `sourceId`, `postedById`, `postedAt`
+- Company Account detail now includes wallet top-ups as account outflow in:
+  - current balance
+  - monthly summary
+  - activity feed
+  - document list
+
+### Files changed
+- `prisma/schema.prisma`
+- `prisma/migrations/20260302010500_add_wallet_company_account/migration.sql`
+- `src/lib/validation.ts`
+- `src/app/api/employees/wallet/route.ts`
+- `src/components/EmployeeWalletDialog.tsx`
+- `src/lib/company-account-detail-policy.ts`
+- `src/app/company-accounts/[id]/CompanyAccountDetailClient.tsx`
+
+### Verification commands
+```bash
+pnpm prisma:generate
+pnpm lint
+pnpm typecheck
+pnpm test
+```
+
 ---
 
 ## Item Detail (RBAC + mobile) — Inventory truth hub
@@ -663,4 +694,34 @@ pnpm test
 # E2E (disposable DB)
 export E2E_DATABASE_URL='postgresql://postgres:postgres@localhost:5432/automatrix_erp_e2e?schema=public'
 pnpm test:e2e:prod -- vendor-item-workhub-actions
+```
+
+## Project Financial Consistency Pass (income/cost visibility + recalculation)
+
+### What changed
+- Project Detail now matches project transactions by both `projectId` and project `name` aliases for non-stock expenses and incomes, reducing missed rows from legacy naming variance.
+- Project activity now includes pending income/expense submissions (status-visible), while totals remain approval-safe.
+- Project cost cards now split:
+  - approved income
+  - pending income
+  - approved expenses
+  - pending expenses
+  - total project costs (`posted AP bills + approved non-stock expenses`)
+  - project profit (`approved income - total project costs`)
+- Project financial recalculation (`recalculateProjectFinancials`) now includes posted Vendor Bill totals as project cost input.
+- Vendor Bill `POST` action now triggers project financial recalculation.
+- Expense create now triggers recalculation when the created expense is immediately approved (e.g., owner-personal flow).
+
+### Files changed
+- `src/lib/project-detail-policy.ts`
+- `src/app/projects/[id]/ProjectDetailClient.tsx`
+- `src/lib/projects.ts`
+- `src/app/api/procurement/vendor-bills/[id]/route.ts`
+- `src/app/api/expenses/route.ts`
+
+### Verification commands
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
 ```

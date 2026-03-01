@@ -20,25 +20,35 @@ export async function resolveProjectId(projectRef?: string | null) {
 export async function recalculateProjectFinancials(projectRef: string) {
   const project = await findProjectByRef(projectRef);
   if (!project) return null;
+  const projectAliases = Array.from(
+    new Set([project.id, project.projectId, project.name].filter(Boolean)),
+  );
 
-  const [expenses, incomes, invoices] = await Promise.all([
+  const [expenses, incomes, invoices, postedBills] = await Promise.all([
     prisma.expense.findMany({
       where: {
-        project: { in: [project.projectId, project.name] },
-        status: { in: ["APPROVED", "PARTIALLY_APPROVED"] },
+        project: { in: projectAliases },
+        status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
       },
       select: { amount: true, approvedAmount: true, status: true },
     }),
     prisma.income.findMany({
       where: {
-        project: { in: [project.projectId, project.name] },
+        project: { in: projectAliases },
         status: "APPROVED",
       },
       select: { amount: true },
     }),
     prisma.invoice.findMany({
-      where: { projectId: project.projectId },
+      where: { projectId: { in: projectAliases } },
       select: { amount: true },
+    }),
+    prisma.vendorBill.findMany({
+      where: {
+        projectRef: { in: [project.projectId, project.name] },
+        status: "POSTED",
+      },
+      select: { totalAmount: true },
     }),
   ]);
 
@@ -50,9 +60,11 @@ export async function recalculateProjectFinancials(projectRef: string) {
   }, 0);
 
   const totalIncome = incomes.reduce((sum, inc) => sum + Number(inc.amount), 0);
+  const totalPostedProcurementCost = postedBills.reduce((sum, bill) => sum + Number(bill.totalAmount), 0);
+  const totalCosts = totalExpenses + totalPostedProcurementCost;
   const invoicedAmount = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
   const pendingRecovery = Math.max(0, invoicedAmount - totalIncome);
-  const grossMargin = totalIncome - totalExpenses;
+  const grossMargin = totalIncome - totalCosts;
   const marginPercent = totalIncome > 0 ? (grossMargin / totalIncome) * 100 : 0;
 
   return prisma.project.update({
@@ -61,7 +73,7 @@ export async function recalculateProjectFinancials(projectRef: string) {
       invoicedAmount: new Prisma.Decimal(invoicedAmount),
       receivedAmount: new Prisma.Decimal(totalIncome),
       pendingRecovery: new Prisma.Decimal(pendingRecovery),
-      costToDate: new Prisma.Decimal(totalExpenses),
+      costToDate: new Prisma.Decimal(totalCosts),
       grossMargin: new Prisma.Decimal(grossMargin),
       marginPercent: new Prisma.Decimal(marginPercent),
     },

@@ -26,10 +26,44 @@ export async function POST(req: Request) {
     );
   }
 
-  const { employeeId, type, amount, reference } = parsed.data;
+  const { employeeId, type, amount, reference, companyAccountId } = parsed.data;
   if (!reference || !reference.trim()) {
     return NextResponse.json({ success: false, error: "Reference is required" }, { status: 400 });
   }
+
+  let resolvedCompanyAccountId: string | null = null;
+  if (type === "CREDIT") {
+    if (!companyAccountId) {
+      return NextResponse.json(
+        { success: false, error: "Company account is required for wallet credit transfers" },
+        { status: 400 },
+      );
+    }
+    const account = await prisma.companyAccount.findUnique({
+      where: { id: companyAccountId },
+      select: { id: true, isActive: true },
+    });
+    if (!account || !account.isActive) {
+      return NextResponse.json(
+        { success: false, error: "Invalid or inactive company account" },
+        { status: 400 },
+      );
+    }
+    resolvedCompanyAccountId = account.id;
+  } else if (companyAccountId) {
+    const account = await prisma.companyAccount.findUnique({
+      where: { id: companyAccountId },
+      select: { id: true, isActive: true },
+    });
+    if (!account || !account.isActive) {
+      return NextResponse.json(
+        { success: false, error: "Invalid or inactive company account" },
+        { status: 400 },
+      );
+    }
+    resolvedCompanyAccountId = account.id;
+  }
+
   const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
   if (!employee) {
     return NextResponse.json({ success: false, error: "Employee not found" }, { status: 404 });
@@ -55,10 +89,15 @@ export async function POST(req: Request) {
       data: {
         date: new Date(),
         employeeId,
+        companyAccountId: resolvedCompanyAccountId || undefined,
         type,
         amount: new Prisma.Decimal(amount),
         reference: reference.trim(),
         balance: new Prisma.Decimal(newBalance),
+        sourceType: type === "CREDIT" ? "WALLET_TOPUP" : "WALLET_ADJUSTMENT",
+        sourceId: employeeId,
+        postedById: session.user.id,
+        postedAt: new Date(),
       },
     });
 
@@ -69,7 +108,7 @@ export async function POST(req: Request) {
     action: "WALLET_TRANSACTION",
     entity: "Employee",
     entityId: employeeId,
-    newValue: JSON.stringify(parsed.data),
+    newValue: JSON.stringify({ ...parsed.data, companyAccountId: resolvedCompanyAccountId }),
     userId: session.user.id,
   });
 

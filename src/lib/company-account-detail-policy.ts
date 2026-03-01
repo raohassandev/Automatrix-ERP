@@ -38,7 +38,7 @@ export type CompanyAccountNotesHistoryRow = {
 
 export type CompanyAccountActivityRow = {
   at: string; // ISO
-  type: "PAYMENT" | "INCOME" | "EXPENSE" | "NOTE" | "ATTACHMENT";
+  type: "PAYMENT" | "INCOME" | "EXPENSE" | "WALLET" | "NOTE" | "ATTACHMENT";
   label: string;
   status?: string | null;
   amount?: number | null;
@@ -61,13 +61,14 @@ export type CompanyAccountSummaryRow = {
   month: string; // yyyy-mm
   approvedInflow: number;
   approvedExpenseOutflow: number;
+  walletTransferOutflow: number;
   postedOutflow: number;
   netChange: number;
   postedCount: number;
 };
 
 export type CompanyAccountDocumentRow = {
-  type: "PAYMENT" | "BILL" | "INCOME" | "EXPENSE";
+  type: "PAYMENT" | "BILL" | "INCOME" | "EXPENSE" | "WALLET";
   number: string;
   date: string;
   status: string;
@@ -151,7 +152,7 @@ export async function getCompanyAccountDetailForUser(args: {
     return { ok: false as const, status: 404 as const, error: "Not found" };
   }
 
-  const [attachmentsCount, postedOutflowAgg, approvedInflowAgg, approvedExpenseOutflowAgg, auditRows] = await Promise.all([
+  const [attachmentsCount, postedOutflowAgg, approvedInflowAgg, approvedExpenseOutflowAgg, walletTransferOutflowAgg, auditRows] = await Promise.all([
     prisma.attachment.count({ where: { type: "company_account", recordId: account.id } }),
     prisma.vendorPayment.aggregate({
       where: { companyAccountId: account.id, status: "POSTED" },
@@ -168,6 +169,13 @@ export async function getCompanyAccountDetailForUser(args: {
         status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
       },
       _sum: { amount: true, approvedAmount: true },
+    }),
+    prisma.walletLedger.aggregate({
+      where: {
+        companyAccountId: account.id,
+        type: "CREDIT",
+      },
+      _sum: { amount: true },
     }),
     prisma.auditLog.findMany({
       where: {
@@ -214,7 +222,8 @@ export async function getCompanyAccountDetailForUser(args: {
   const approvedExpenseOutflow = Number(
     approvedExpenseOutflowAgg._sum.approvedAmount || approvedExpenseOutflowAgg._sum.amount || 0,
   );
-  const currentBalance = openingBalance + approvedInflow - postedOutflow - approvedExpenseOutflow;
+  const walletTransferOutflow = Number(walletTransferOutflowAgg._sum.amount || 0);
+  const currentBalance = openingBalance + approvedInflow - postedOutflow - approvedExpenseOutflow - walletTransferOutflow;
 
   const header: CompanyAccountDetailHeader = {
     id: account.id,
@@ -276,7 +285,7 @@ export async function getCompanyAccountDetailForUser(args: {
   // Summary: month-wise approved inflows + posted outflows (last 12 months)
   const now = new Date();
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1, 0, 0, 0));
-  const [postedRows, approvedIncomeRows, approvedExpenseRows] = await Promise.all([
+  const [postedRows, approvedIncomeRows, approvedExpenseRows, walletCreditRows] = await Promise.all([
     prisma.vendorPayment.findMany({
       where: {
         companyAccountId: account.id,
@@ -305,13 +314,22 @@ export async function getCompanyAccountDetailForUser(args: {
       select: { date: true, amount: true, approvedAmount: true, status: true },
       orderBy: { date: "asc" },
     }),
+    prisma.walletLedger.findMany({
+      where: {
+        companyAccountId: account.id,
+        type: "CREDIT",
+        date: { gte: start },
+      },
+      select: { date: true, amount: true },
+      orderBy: { date: "asc" },
+    }),
   ]);
 
-  const summaryMap = new Map<string, { inflow: number; paymentOutflow: number; expenseOutflow: number; count: number }>();
+  const summaryMap = new Map<string, { inflow: number; paymentOutflow: number; expenseOutflow: number; walletOutflow: number; count: number }>();
   for (const row of postedRows) {
     const d = row.paymentDate;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, count: 0 };
+    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, walletOutflow: 0, count: 0 };
     cur.paymentOutflow += Number(row.amount || 0);
     cur.count += 1;
     summaryMap.set(key, cur);
@@ -319,14 +337,14 @@ export async function getCompanyAccountDetailForUser(args: {
   for (const row of approvedIncomeRows) {
     const d = row.date;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, count: 0 };
+    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, walletOutflow: 0, count: 0 };
     cur.inflow += Number(row.amount || 0);
     summaryMap.set(key, cur);
   }
   for (const row of approvedExpenseRows) {
     const d = row.date;
     const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, count: 0 };
+    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, walletOutflow: 0, count: 0 };
     const used =
       row.status === "PARTIALLY_APPROVED" && row.approvedAmount != null
         ? Number(row.approvedAmount)
@@ -334,13 +352,21 @@ export async function getCompanyAccountDetailForUser(args: {
     cur.expenseOutflow += Number.isFinite(used) ? used : 0;
     summaryMap.set(key, cur);
   }
+  for (const row of walletCreditRows) {
+    const d = row.date;
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+    const cur = summaryMap.get(key) || { inflow: 0, paymentOutflow: 0, expenseOutflow: 0, walletOutflow: 0, count: 0 };
+    cur.walletOutflow += Number(row.amount || 0);
+    summaryMap.set(key, cur);
+  }
   const summary: CompanyAccountSummaryRow[] = Array.from(summaryMap.entries())
     .map(([month, v]) => ({
       month,
       approvedInflow: v.inflow,
       approvedExpenseOutflow: v.expenseOutflow,
+      walletTransferOutflow: v.walletOutflow,
       postedOutflow: v.paymentOutflow,
-      netChange: v.inflow - v.paymentOutflow - v.expenseOutflow,
+      netChange: v.inflow - v.paymentOutflow - v.expenseOutflow - v.walletOutflow,
       postedCount: v.count,
     }))
     .sort((a, b) => b.month.localeCompare(a.month));
@@ -399,9 +425,27 @@ export async function getCompanyAccountDetailForUser(args: {
       href: `/expenses?search=${encodeURIComponent(expense.description)}`,
     });
   }
+  const walletDocuments = await prisma.walletLedger.findMany({
+    where: {
+      companyAccountId: account.id,
+      type: "CREDIT",
+    },
+    orderBy: { date: "desc" },
+    take: 50,
+    select: { id: true, date: true, employee: { select: { name: true } }, type: true },
+  });
+  for (const entry of walletDocuments) {
+    documents.push({
+      type: "WALLET",
+      number: `Wallet top-up (${entry.employee.name})`,
+      date: fmtDate(entry.date),
+      status: entry.type,
+      href: `/wallets?search=${encodeURIComponent(entry.employee.name)}`,
+    });
+  }
 
   // Activity: payments + approved incomes + notes/attachments, sorted.
-  const [latestPayments, latestIncomes, latestExpenses] = await Promise.all([
+  const [latestPayments, latestIncomes, latestExpenses, latestWalletCredits] = await Promise.all([
     prisma.vendorPayment.findMany({
       where: { companyAccountId: account.id },
       orderBy: { paymentDate: "desc" },
@@ -429,6 +473,15 @@ export async function getCompanyAccountDetailForUser(args: {
       orderBy: { date: "desc" },
       take: 50,
       select: { description: true, category: true, date: true, amount: true, approvedAmount: true, status: true },
+    }),
+    prisma.walletLedger.findMany({
+      where: {
+        companyAccountId: account.id,
+        type: "CREDIT",
+      },
+      orderBy: { date: "desc" },
+      take: 50,
+      select: { date: true, amount: true, employee: { select: { name: true } } },
     }),
   ]);
 
@@ -465,6 +518,15 @@ export async function getCompanyAccountDetailForUser(args: {
       status: e.status,
       amount: Number.isFinite(used) ? used : 0,
       href: `/expenses?search=${encodeURIComponent(e.description.slice(0, 20))}`,
+    });
+  }
+  for (const w of latestWalletCredits) {
+    activity.push({
+      at: iso(w.date),
+      type: "WALLET",
+      label: `Wallet top-up → ${w.employee.name}`,
+      amount: Number(w.amount || 0),
+      href: `/wallets?search=${encodeURIComponent(w.employee.name)}`,
     });
   }
   for (const e of notesHistory) {
