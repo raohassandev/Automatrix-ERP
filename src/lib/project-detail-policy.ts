@@ -26,7 +26,7 @@ export type ProjectDetailHeader = {
 
 export type ProjectActivityRow = {
   at: string; // ISO
-  type: "PO" | "GRN" | "BILL" | "PAYMENT" | "LEDGER" | "EXPENSE";
+  type: "PO" | "GRN" | "BILL" | "PAYMENT" | "LEDGER" | "EXPENSE" | "INCOME";
   label: string;
   status?: string | null;
   amount?: number | null;
@@ -59,6 +59,8 @@ export type ProjectDetailData = {
     apPaidTotal: number;
     apOutstanding: number;
     nonStockExpensesApproved: number;
+    approvedIncomeReceived: number;
+    projectProfit: number;
   };
   inventory?: {
     entries: Array<{
@@ -258,8 +260,16 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     amount?: unknown;
     approvedAmount?: unknown;
   };
+  type IncomeRow = {
+    id: string;
+    date: Date;
+    source: string;
+    category: string;
+    status: string;
+    amount?: unknown;
+  };
 
-  const [pos, grns, bills, payments, ledger, expensesApproved] = (await Promise.all([
+  const [pos, grns, bills, payments, ledger, expensesApproved, incomesApproved] = (await Promise.all([
     prisma.purchaseOrder.findMany({
       where: { projectRef },
       select: { id: true, poNumber: true, orderDate: true, status: true },
@@ -303,7 +313,25 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
           take: 100,
         })
       : Promise.resolve([]),
-  ])) as unknown as [PoRow[], GrnRow[], BillRow[], PaymentRow[], LedgerRow[], ExpenseRow[]];
+    includeExpensesInResponse
+      ? prisma.income.findMany({
+          where: {
+            project: projectRef,
+            status: "APPROVED",
+          },
+          select: {
+            id: true,
+            date: true,
+            source: true,
+            category: true,
+            status: true,
+            amount: policy.canViewFinancialTotals || policy.tabs.costs,
+          },
+          orderBy: { date: "desc" },
+          take: 100,
+        })
+      : Promise.resolve([]),
+  ])) as unknown as [PoRow[], GrnRow[], BillRow[], PaymentRow[], LedgerRow[], ExpenseRow[], IncomeRow[]];
 
   const documents: ProjectDocumentsRow[] = [
     ...pos.map((po) => ({
@@ -405,6 +433,16 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       href: `/expenses?search=${encodeURIComponent(e.description.slice(0, 20))}`,
     });
   }
+  for (const i of incomesApproved) {
+    activity.push({
+      at: formatIso(i.date),
+      type: "INCOME",
+      label: `Income: ${i.source} (${i.category})`,
+      status: i.status,
+      amount: policy.canViewFinancialTotals ? Number(i.amount) : null,
+      href: `/income?search=${encodeURIComponent(i.source.slice(0, 20))}`,
+    });
+  }
   activity.sort((a, b) => (a.at < b.at ? 1 : -1));
 
   // Costs (Phase 1 truth): AP from posted bills minus posted allocations; plus non-stock expenses.
@@ -437,12 +475,19 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
           : Number(v.amount);
       return sum + (Number.isFinite(used) ? used : 0);
     }, 0);
+    const approvedIncomeReceived = incomesApproved.reduce(
+      (sum, i) => sum + (Number.isFinite(Number(i.amount)) ? Number(i.amount) : 0),
+      0,
+    );
+    const projectProfit = approvedIncomeReceived - nonStockExpensesApproved;
 
     costs = {
       apBilledTotal: billedTotal,
       apPaidTotal: paidTotal,
       apOutstanding,
       nonStockExpensesApproved,
+      approvedIncomeReceived,
+      projectProfit,
     };
   }
 
