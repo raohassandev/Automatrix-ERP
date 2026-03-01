@@ -25,7 +25,7 @@ export type CompanyAccountDetailHeader = {
   status: "ACTIVE" | "INACTIVE";
   currency: string; // Phase 1: PKR
   openingBalance: number;
-  currentBalance: number; // openingBalance - posted outflows (Phase 1 outflow-only)
+  currentBalance: number; // openingBalance + approved income inflows - posted outflows
   attachmentsCount: number;
 };
 
