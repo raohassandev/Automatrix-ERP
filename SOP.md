@@ -109,3 +109,15 @@ This SOP does not override Appendix B; it references it.
 - Default limit: max 3 files changed per task (unless the user explicitly asks otherwise).
 - Avoid repo-wide refactors; do targeted, minimal changes.
 - Prefer patching existing code over rewriting modules.
+
+---
+
+## 10) Execution cadence (owner-requested)
+- Do **not** interrupt with micro progress updates.
+- Do **not** push/deploy after small fixes unless explicitly requested.
+- Work in continuous batches and report only when a full batch is complete.
+- Return partial updates only if blocked by a hard dependency that requires owner input.
+- If live updates are requested, use a fixed cadence and keep each update to:
+  - files changed
+  - tests run
+  - current blockers

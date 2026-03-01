@@ -6,6 +6,7 @@ import { hasPermission } from "@/lib/permissions";
 import { logAudit } from "@/lib/audit";
 import { sanitizeString } from "@/lib/sanitize";
 import { z } from "zod";
+import { buildProjectAliases } from "@/lib/projects";
 
 const noteSchema = z.object({
   note: z.string().trim().min(1).max(4000),
@@ -23,9 +24,9 @@ async function canAccessVendor(args: { userId: string; vendorId: string }) {
 
   const assigned = await prisma.projectAssignment.findMany({
     where: { userId: args.userId },
-    select: { project: { select: { projectId: true } } },
+    select: { project: { select: { id: true, projectId: true, name: true } } },
   });
-  const refs = Array.from(new Set(assigned.map((a) => a.project.projectId).filter(Boolean)));
+  const refs = Array.from(new Set(assigned.flatMap((a) => buildProjectAliases(a.project)).filter(Boolean)));
   if (refs.length === 0) return { ok: false as const, status: 403 as const };
 
   const visible = await prisma.purchaseOrder.findFirst({
@@ -80,4 +81,3 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
   return NextResponse.json({ success: true });
 }
-

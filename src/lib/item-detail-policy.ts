@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getUserRoleName } from "@/lib/rbac";
 import { hasPermission, RoleName } from "@/lib/permissions";
+import { buildProjectAliases } from "@/lib/projects";
 
 export type ItemDetailTab = "activity" | "ledger" | "onhand" | "documents";
 
@@ -123,9 +124,10 @@ function buildPolicy(role: RoleName): ItemDetailPolicy {
 async function getAssignedProjectRefs(userId: string) {
   const rows = await prisma.projectAssignment.findMany({
     where: { userId },
-    select: { project: { select: { projectId: true } } },
+    select: { project: { select: { id: true, projectId: true, name: true } } },
   });
-  return Array.from(new Set(rows.map((r) => r.project.projectId).filter(Boolean)));
+  const refs = rows.flatMap((r) => buildProjectAliases(r.project));
+  return Array.from(new Set(refs.filter(Boolean)));
 }
 
 function buildHrefFromReference(ref: string | null) {

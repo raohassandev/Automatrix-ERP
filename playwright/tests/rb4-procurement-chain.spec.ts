@@ -159,8 +159,22 @@ test.describe("RB4 - Procurement chain", () => {
     expect(accountsRes.ok()).toBeTruthy();
     const accountsJson = await accountsRes.json();
     const accounts: Array<{ id: string; name: string }> = accountsJson.data || [];
-    expect(accounts.length).toBeGreaterThan(0);
-    const companyAccountId = accounts[0].id;
+    let companyAccountId: string | null = accounts[0]?.id ?? null;
+    if (!companyAccountId) {
+      const createAccountRes = await api.post("/api/company-accounts", {
+        data: {
+          name: `E2E Account ${ts}`,
+          type: "BANK",
+          currency: "PKR",
+          openingBalance: 0,
+          isActive: true,
+        },
+      });
+      expect(createAccountRes.ok()).toBeTruthy();
+      const createAccountJson = await createAccountRes.json();
+      companyAccountId = createAccountJson.data.id;
+    }
+    expect(companyAccountId).toBeTruthy();
 
     // 7) Vendor Payment (DRAFT -> SUBMITTED -> APPROVED -> POSTED)
     const payRes = await api.post("/api/procurement/vendor-payments", {
@@ -169,7 +183,7 @@ test.describe("RB4 - Procurement chain", () => {
         vendorId,
         projectRef,
         paymentDate: today,
-        companyAccountId,
+        companyAccountId: companyAccountId!,
         method: "Bank Transfer",
         amount: 200,
         allocations: [{ vendorBillId: billId, amount: 200 }],

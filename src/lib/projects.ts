@@ -2,9 +2,22 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
 async function findProjectByRef(projectRef: string) {
+  const raw = projectRef.trim();
+  const baseRefs = new Set<string>([raw]);
+  const splitDash = raw.split(" - ");
+  if (splitDash.length >= 2) {
+    baseRefs.add(splitDash[0].trim());
+    baseRefs.add(splitDash.slice(1).join(" - ").trim());
+  }
+  const firstToken = raw.split(" ").filter(Boolean)[0];
+  if (firstToken) {
+    baseRefs.add(firstToken.trim());
+  }
+  const refs = Array.from(baseRefs).filter(Boolean);
+
   return prisma.project.findFirst({
     where: {
-      OR: [{ projectId: projectRef }, { name: projectRef }],
+      OR: [{ id: { in: refs } }, { projectId: { in: refs } }, { name: { in: refs } }],
     },
   });
 }

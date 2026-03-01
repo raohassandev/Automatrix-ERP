@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getUserRoleName } from "@/lib/rbac";
 import { hasPermission, RoleName } from "@/lib/permissions";
+import { buildProjectAliases } from "@/lib/projects";
 
 export type VendorDetailTab = "activity" | "bills" | "payments" | "aging" | "documents";
 
@@ -130,9 +131,10 @@ function buildPolicy(role: RoleName): VendorDetailPolicy {
 async function getAssignedProjectRefs(userId: string) {
   const rows = await prisma.projectAssignment.findMany({
     where: { userId },
-    select: { project: { select: { projectId: true } } },
+    select: { project: { select: { id: true, projectId: true, name: true } } },
   });
-  return Array.from(new Set(rows.map((r) => r.project.projectId).filter(Boolean)));
+  const refs = rows.flatMap((r) => buildProjectAliases(r.project));
+  return Array.from(new Set(refs.filter(Boolean)));
 }
 
 async function isVendorVisibleViaAssignedProjects(args: {
@@ -148,8 +150,8 @@ async function isVendorVisibleViaAssignedProjects(args: {
     }),
     prisma.goodsReceipt.findFirst({
       where: {
-        projectRef: { in: args.assignedProjectRefs },
         purchaseOrder: { vendorId: args.vendorId },
+        OR: [{ projectRef: { in: args.assignedProjectRefs } }, { purchaseOrder: { projectRef: { in: args.assignedProjectRefs } } }],
       },
       select: { id: true },
     }),
@@ -278,7 +280,9 @@ export async function getVendorDetailForUser(args: { userId: string; vendorDbId:
     prisma.goodsReceipt.findMany({
       where: {
         purchaseOrder: { vendorId: vendor.id },
-        ...(assignedProjectRefs ? { projectRef: { in: assignedProjectRefs } } : {}),
+        ...(assignedProjectRefs
+          ? { OR: [{ projectRef: { in: assignedProjectRefs } }, { purchaseOrder: { projectRef: { in: assignedProjectRefs } } }] }
+          : {}),
       },
       select: {
         id: true,

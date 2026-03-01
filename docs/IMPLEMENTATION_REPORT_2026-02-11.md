@@ -296,6 +296,39 @@ pnpm typecheck
 pnpm test
 ```
 
+## Project/Vendor/Item scope + reference hardening (2026-03-02)
+
+### What changed
+- Project reference resolution now supports legacy/composite formats: DB id, `projectId`, project `name`, and `projectId - name`.
+- Vendor scope resolution for assigned-project users now uses full project aliases instead of `projectId` only.
+- Vendor GRN visibility in detail scope supports either GRN `projectRef` or linked PO `projectRef`.
+- Item detail engineer scope now uses alias-aware assigned project references.
+- RB4 procurement chain e2e now self-heals by creating a Company Account if none exists.
+
+### Files changed
+- `src/lib/projects.ts`
+- `src/lib/__tests__/projects.test.ts`
+- `src/lib/vendor-detail-policy.ts`
+- `src/lib/item-detail-policy.ts`
+- `src/app/api/vendors/[id]/notes/route.ts`
+- `src/app/api/vendors/[id]/attachments/route.ts`
+- `playwright/tests/rb4-procurement-chain.spec.ts`
+
+### Why
+- Historical/live rows use mixed project reference formats; strict single-field matching could hide valid records from detail pages and scoped roles.
+- RB4 test stability required removing hidden dependency on pre-seeded company accounts.
+
+### Verification
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+export E2E_DATABASE_URL='postgresql://automatrix:automatrix_password@localhost:5432/automatrix_erp_e2e?schema=public'
+pnpm test:e2e:prod
+pnpm test:e2e:prod -- vendor-detail-rbac
+pnpm test:e2e:prod -- rb4-procurement-chain
+```
+
 ## Finance + Projects + Employee consistency pass (current flow continuation)
 
 ### What changed
