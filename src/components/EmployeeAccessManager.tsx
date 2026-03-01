@@ -23,9 +23,8 @@ export default function EmployeeAccessManager() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [credentialsEnabled, setCredentialsEnabled] = useState(
-    process.env.NEXT_PUBLIC_ENABLE_CREDENTIALS_LOGIN === "1",
-  );
+  const [credentialsEnabled, setCredentialsEnabled] = useState(false);
+  const [tempPassword, setTempPassword] = useState("ChangeMe123!");
 
   const loadData = async () => {
     setLoading(true);
@@ -39,6 +38,7 @@ export default function EmployeeAccessManager() {
       }
       setEmployees(data.employees || []);
       setRoles(data.roles || []);
+      setCredentialsEnabled(Boolean(data.credentialsEnabled));
       const defaults: Record<string, string> = {};
       for (const employee of data.employees || []) {
         defaults[employee.id] = employee.userRole || employee.role || "Staff";
@@ -87,7 +87,6 @@ export default function EmployeeAccessManager() {
     setPendingId(employee.id);
     setStatus(null);
     try {
-      const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
       const res = await fetch("/api/users/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,11 +94,10 @@ export default function EmployeeAccessManager() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setStatus(data.error || "Failed to reset password.");
+      setStatus(data.error || "Failed to reset password.");
         return;
       }
-      setStatus(`Temporary password for ${employee.email}: ${tempPassword}`);
-      setCredentialsEnabled(true);
+      setStatus(`Temporary password set for ${employee.email}: ${tempPassword}`);
     } catch (error) {
       console.error(error);
       setStatus("Failed to reset password.");
@@ -132,6 +130,20 @@ export default function EmployeeAccessManager() {
         {credentialsEnabled ? (
           <div className="rounded-md border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-sm">
             Credentials login is enabled in this environment. Use temporary passwords only for staging/internal QA.
+          </div>
+        ) : null}
+        {credentialsEnabled ? (
+          <div className="rounded-md border p-3 text-sm">
+            <div className="mb-2 font-medium">Temporary Password Template</div>
+            <input
+              className="w-full rounded-md border px-3 py-2"
+              value={tempPassword}
+              onChange={(e) => setTempPassword(e.target.value)}
+              placeholder="Set temporary password"
+            />
+            <div className="mt-1 text-xs text-muted-foreground">
+              Minimum 8 characters. Use this for staging QA users and Playwright login.
+            </div>
           </div>
         ) : null}
         <div className="overflow-x-auto">
@@ -196,9 +208,9 @@ export default function EmployeeAccessManager() {
                           size="sm"
                           variant="outline"
                           onClick={() => resetPassword(employee)}
-                          disabled={pendingId === employee.id || !employee.userId}
+                          disabled={pendingId === employee.id || !employee.userId || tempPassword.length < 8}
                         >
-                          Reset Password
+                          Set Password
                         </Button>
                       ) : null}
                     </div>

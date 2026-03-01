@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/rbac";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { logAudit } from "@/lib/audit";
+import { isCredentialsModeAllowed } from "@/lib/auth-credentials-guard";
 
 const payloadSchema = z.object({
   email: z.string().trim().email(),
@@ -12,6 +13,13 @@ const payloadSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (!isCredentialsModeAllowed(process.env as Record<string, string | undefined>)) {
+    return NextResponse.json(
+      { success: false, error: "Credentials password operations are disabled in this environment." },
+      { status: 403 },
+    );
+  }
+
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -60,4 +68,3 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ success: true });
 }
-

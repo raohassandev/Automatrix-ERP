@@ -3,10 +3,15 @@
 import { useState, useTransition } from "react";
 import { signIn } from "next-auth/react";
 
-export function LoginClient({ error }: { error: string | null }) {
+export function LoginClient({
+  error,
+  credentialsEnabled,
+}: {
+  error: string | null;
+  credentialsEnabled: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const e2eEnabled = process.env.NEXT_PUBLIC_E2E_TEST_MODE === "1";
-  const credentialsEnabled = process.env.NEXT_PUBLIC_ENABLE_CREDENTIALS_LOGIN === "1";
   const [e2eEmail, setE2eEmail] = useState("");
   const [e2ePassword, setE2ePassword] = useState("");
   const [email, setEmail] = useState("");

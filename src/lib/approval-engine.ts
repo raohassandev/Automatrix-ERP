@@ -3,6 +3,7 @@ import { prisma } from './prisma';
 import { createAuditLog } from './audit';
 import { getExpenseApprovalLevel, getIncomeApprovalLevel } from '@/lib/approvals';
 import { recalculateProjectFinancials } from '@/lib/projects';
+import { postIncomeApprovalJournal } from '@/lib/accounting';
 import {
   type ApprovalModule,
   getAllowedRolesForPolicy,
@@ -318,6 +319,9 @@ export async function approveIncome(params: {
   if (income.status !== 'PENDING') {
     throw new Error(`Cannot approve income with status: ${income.status}`);
   }
+  if (!income.companyAccountId) {
+    throw new Error('Income is missing company account for posting.');
+  }
 
   // Check if user can approve this amount
   const finalAmount = approvedAmount || parseFloat(income.amount.toString());
@@ -333,13 +337,29 @@ export async function approveIncome(params: {
 
   // Start transaction
   const result = await prisma.$transaction(async (tx) => {
+    const approvedAmount = new Prisma.Decimal(finalAmount);
     // Update income status
     const updatedIncome = await tx.income.update({
       where: { id: incomeId },
       data: {
         status: 'APPROVED',
         approvedById: approverId,
+        amount: approvedAmount,
       },
+    });
+    if (!updatedIncome.companyAccountId) {
+      throw new Error('Income is missing company account for posting.');
+    }
+
+    await postIncomeApprovalJournal(tx, {
+      incomeId: updatedIncome.id,
+      amount: finalAmount,
+      incomeDate: new Date(updatedIncome.date),
+      companyAccountId: updatedIncome.companyAccountId,
+      invoiceId: updatedIncome.invoiceId || null,
+      projectRef: updatedIncome.project || null,
+      userId: approverId,
+      memo: `Income ${updatedIncome.id} approval`,
     });
 
     // Create audit log

@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { getIncomeApprovalLevel, isPendingIncomeStatus } from "@/lib/approvals";
 import { recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
+import { postIncomeApprovalJournal } from "@/lib/accounting";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -95,6 +96,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       data.status = "PENDING";
     }
   }
+  if (autoApprove && !((data.companyAccountId as string | undefined) || income.companyAccountId)) {
+    return NextResponse.json(
+      { success: false, error: "Company account is required for auto-approved income posting." },
+      { status: 400 }
+    );
+  }
 
   const result = await prisma.$transaction(async (tx) => {
     const updated = await tx.income.update({
@@ -103,6 +110,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     });
 
     if (autoApprove) {
+      if (!updated.companyAccountId) {
+        throw new Error("Company account is required for income posting.");
+      }
       await tx.approval.create({
         data: {
           type: "INCOME",
@@ -112,6 +122,17 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           incomeId: updated.id,
           approvedById: session.user.id,
         },
+      });
+
+      await postIncomeApprovalJournal(tx, {
+        incomeId: updated.id,
+        amount: Number(updated.amount),
+        incomeDate: new Date(updated.date),
+        companyAccountId: updated.companyAccountId,
+        invoiceId: updated.invoiceId || null,
+        projectRef: updated.project || null,
+        userId: session.user.id,
+        memo: `Income ${updated.id} auto-approved on update`,
       });
     }
 

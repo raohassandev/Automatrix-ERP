@@ -10,6 +10,7 @@ import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { resolveProjectDbId, resolveProjectId } from "@/lib/projects";
+import { postIncomeApprovalJournal } from "@/lib/accounting";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -136,24 +137,44 @@ export async function POST(req: Request) {
       }
     }
 
-    const created = await prisma.income.create({
-      data: {
-        date: new Date(sanitizedData.date),
-        source: sanitizedData.source,
-        category: sanitizedData.category,
-        amount: new Prisma.Decimal(sanitizedData.amount),
-        paymentMode: sanitizedData.paymentMode,
-        companyAccountId: sanitizedData.companyAccountId,
-        project: resolvedProjectRef || undefined,
-        approvalLevel,
-        status: requiresApproval ? "PENDING" : "APPROVED",
-        addedById: session.user.id,
-        approvedById: requiresApproval ? null : session.user.id,
-        receiptUrl: sanitizedData.receiptUrl,
-        receiptFileId: sanitizedData.receiptFileId,
-        invoiceId: sanitizedData.invoiceId,
-        remarks: sanitizedData.remarks,
-      },
+    const created = await prisma.$transaction(async (tx) => {
+      const createdIncome = await tx.income.create({
+        data: {
+          date: new Date(sanitizedData.date),
+          source: sanitizedData.source,
+          category: sanitizedData.category,
+          amount: new Prisma.Decimal(sanitizedData.amount),
+          paymentMode: sanitizedData.paymentMode,
+          companyAccountId: sanitizedData.companyAccountId,
+          project: resolvedProjectRef || undefined,
+          approvalLevel,
+          status: requiresApproval ? "PENDING" : "APPROVED",
+          addedById: session.user.id,
+          approvedById: requiresApproval ? null : session.user.id,
+          receiptUrl: sanitizedData.receiptUrl,
+          receiptFileId: sanitizedData.receiptFileId,
+          invoiceId: sanitizedData.invoiceId,
+          remarks: sanitizedData.remarks,
+        },
+      });
+
+      if (!requiresApproval) {
+        if (!createdIncome.companyAccountId) {
+          throw new Error("Company account is required for income posting.");
+        }
+        await postIncomeApprovalJournal(tx, {
+          incomeId: createdIncome.id,
+          amount: Number(createdIncome.amount),
+          incomeDate: new Date(createdIncome.date),
+          companyAccountId: createdIncome.companyAccountId,
+          invoiceId: createdIncome.invoiceId || null,
+          projectRef: createdIncome.project || null,
+          userId: session.user.id,
+          memo: `Income ${createdIncome.id} auto-approved`,
+        });
+      }
+
+      return createdIncome;
     });
 
     await logAudit({

@@ -1,6 +1,20 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+const glAccounts = [
+  { code: "1000", name: "Cash On Hand", type: "ASSET", normalSide: "DEBIT" },
+  { code: "1100", name: "Bank Current Account", type: "ASSET", normalSide: "DEBIT" },
+  { code: "1200", name: "Accounts Receivable Control", type: "ASSET", normalSide: "DEBIT" },
+  { code: "1300", name: "Inventory Asset", type: "ASSET", normalSide: "DEBIT" },
+  { code: "1400", name: "Wallet Clearing", type: "ASSET", normalSide: "DEBIT" },
+  { code: "2000", name: "Accounts Payable Control", type: "LIABILITY", normalSide: "CREDIT" },
+  { code: "2200", name: "Payroll Payable", type: "LIABILITY", normalSide: "CREDIT" },
+  { code: "4000", name: "Sales Revenue", type: "INCOME", normalSide: "CREDIT" },
+  { code: "5000", name: "Purchase Expense", type: "EXPENSE", normalSide: "DEBIT" },
+  { code: "5100", name: "Operating Expense", type: "EXPENSE", normalSide: "DEBIT" },
+  { code: "5200", name: "Payroll Expense", type: "EXPENSE", normalSide: "DEBIT" },
+];
+
 const roles = [
   "Owner",
   "CEO",
@@ -68,6 +82,8 @@ const permissions = [
   "attachments.view_all",
   "attachments.edit",
   "categories.manage",
+  "accounting.view",
+  "accounting.manage",
 ];
 
 const rolePermissionMap = {
@@ -99,6 +115,8 @@ const rolePermissionMap = {
     "reports.export",
     "employees.view_all",
     "employees.edit_wallet",
+    "accounting.view",
+    "accounting.manage",
   ],
   CFO: [
     "dashboard.view",
@@ -133,6 +151,8 @@ const rolePermissionMap = {
     "reports.export",
     "employees.view_all",
     "employees.edit_wallet",
+    "accounting.view",
+    "accounting.manage",
   ],
   Accountant: [
     "dashboard.view",
@@ -154,6 +174,8 @@ const rolePermissionMap = {
     "reports.export",
     "employees.view_all",
     "employees.edit_wallet",
+    "accounting.view",
+    "accounting.manage",
   ],
   "Finance Manager": [
     "dashboard.view",
@@ -188,6 +210,8 @@ const rolePermissionMap = {
     "reports.export",
     "employees.view_all",
     "employees.edit_wallet",
+    "accounting.view",
+    "accounting.manage",
   ],
   Manager: [
     "dashboard.view",
@@ -371,6 +395,19 @@ async function main() {
       skipDuplicates: true,
     });
   }
+
+  await prisma.glAccount.createMany({
+    data: glAccounts.map((acc) => ({
+      code: acc.code,
+      name: acc.name,
+      type: acc.type,
+      normalSide: acc.normalSide,
+      currency: "PKR",
+      isPosting: true,
+      isActive: true,
+    })),
+    skipDuplicates: true,
+  });
 
   // Dev/staging-only: optional role test users for RBAC QA.
   // This is guarded by an explicit env flag and must not run implicitly in production.

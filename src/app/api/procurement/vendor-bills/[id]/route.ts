@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { canUserApprove } from "@/lib/approval-engine";
 import { recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
+import { createPostedJournal, GL_CODES } from "@/lib/accounting";
 
 const billLineSchema = z
   .object({
@@ -198,20 +199,76 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       if (existing.status !== "APPROVED") {
         return NextResponse.json({ success: false, error: "Only APPROVED bills can be posted." }, { status: 400 });
       }
-      const updated = await prisma.vendorBill.update({ where: { id }, data: { status: "POSTED" } });
-      if (updated.projectRef) {
-        await recalculateProjectFinancials(updated.projectRef);
+      const totalAmount = Number(existing.totalAmount);
+      if (totalAmount <= 0) {
+        return NextResponse.json({ success: false, error: "Cannot post a zero-value vendor bill." }, { status: 400 });
+      }
+
+      const posted = await prisma.$transaction(async (tx) => {
+        const updated = await tx.vendorBill.update({ where: { id }, data: { status: "POSTED" } });
+        const project = existing.projectRef
+          ? await tx.project.findFirst({
+              where: {
+                OR: [
+                  { id: existing.projectRef },
+                  { projectId: existing.projectRef },
+                  { name: existing.projectRef },
+                ],
+              },
+              select: { id: true },
+            })
+          : null;
+
+        const debitByCode = new Map<string, number>();
+        for (const line of existing.lines) {
+          const lineTotal = Number(line.total || 0);
+          if (lineTotal <= 0) continue;
+          const code = line.itemId ? GL_CODES.INVENTORY_ASSET : GL_CODES.PURCHASE_EXPENSE;
+          debitByCode.set(code, (debitByCode.get(code) || 0) + lineTotal);
+        }
+
+        const debitLines = Array.from(debitByCode.entries()).map(([glCode, amount]) => ({
+          glCode,
+          debit: amount,
+          projectId: project?.id || null,
+          partyId: existing.vendorId,
+        }));
+
+        await createPostedJournal(tx, {
+          sourceType: "VENDOR_BILL",
+          sourceId: id,
+          documentDate: new Date(existing.billDate),
+          postingDate: new Date(existing.billDate),
+          createdById: session.user.id,
+          postedById: session.user.id,
+          voucherPrefix: "VB",
+          memo: `Vendor Bill ${existing.billNumber}`,
+          lines: [
+            ...debitLines,
+            {
+              glCode: GL_CODES.AP_CONTROL,
+              credit: totalAmount,
+              projectId: project?.id || null,
+              partyId: existing.vendorId,
+            },
+          ],
+        });
+
+        return updated;
+      });
+      if (posted.projectRef) {
+        await recalculateProjectFinancials(posted.projectRef);
       }
       await logAudit({
         action: "POST_VENDOR_BILL",
         entity: "VendorBill",
         entityId: id,
         oldValue: existing.status,
-        newValue: updated.status,
+        newValue: posted.status,
         reason: parsed.data.reason || null,
         userId: session.user.id,
       });
-      return NextResponse.json({ success: true, data: updated });
+      return NextResponse.json({ success: true, data: posted });
     }
 
     if (action === "VOID") {

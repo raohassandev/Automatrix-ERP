@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { canUserApprove } from "@/lib/approval-engine";
 import { resolveProjectId } from "@/lib/projects";
+import { createPostedJournal, GL_CODES } from "@/lib/accounting";
 
 const allocationSchema = z.object({
   vendorBillId: z.string().trim().min(1),
@@ -171,6 +172,10 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       if (existing.status !== "APPROVED") {
         return NextResponse.json({ success: false, error: "Only APPROVED payments can be posted." }, { status: 400 });
       }
+      const paymentAmount = Number(existing.amount);
+      if (paymentAmount <= 0) {
+        return NextResponse.json({ success: false, error: "Cannot post a zero-value vendor payment." }, { status: 400 });
+      }
 
       // Enforce allocation does not overpay bills (considering only POSTED payments as "real").
       const allocations = await prisma.vendorPaymentAllocation.findMany({
@@ -246,6 +251,49 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
             postedById: session.user.id,
             postedAt: payment.paymentDate,
           },
+        });
+
+        const companyAccount = await tx.companyAccount.findUnique({
+          where: { id: payment.companyAccountId },
+          select: { type: true },
+        });
+        if (!companyAccount) {
+          throw new Error("Company account not found for vendor payment posting.");
+        }
+
+        const project = payment.projectRef
+          ? await tx.project.findFirst({
+              where: {
+                OR: [{ id: payment.projectRef }, { projectId: payment.projectRef }, { name: payment.projectRef }],
+              },
+              select: { id: true },
+            })
+          : null;
+
+        const cashCode = (companyAccount.type || "").toUpperCase() === "BANK" ? GL_CODES.BANK_MAIN : GL_CODES.CASH_ON_HAND;
+        await createPostedJournal(tx, {
+          sourceType: "VENDOR_PAYMENT",
+          sourceId: id,
+          documentDate: new Date(payment.paymentDate),
+          postingDate: new Date(payment.paymentDate),
+          createdById: session.user.id,
+          postedById: session.user.id,
+          voucherPrefix: "VP",
+          memo: `Vendor Payment ${payment.paymentNumber}`,
+          lines: [
+            {
+              glCode: GL_CODES.AP_CONTROL,
+              debit: paymentAmount,
+              projectId: project?.id || null,
+              partyId: payment.vendorId,
+            },
+            {
+              glCode: cashCode,
+              credit: paymentAmount,
+              projectId: project?.id || null,
+              partyId: payment.vendorId,
+            },
+          ],
         });
         return payment;
       });

@@ -58,6 +58,8 @@ export const PERMISSIONS = {
     "commissions.approve",
     "company_accounts.view",
     "company_accounts.manage",
+    "accounting.view",
+    "accounting.manage",
   ],
   CFO: [
     "dashboard.view",
@@ -120,6 +122,8 @@ export const PERMISSIONS = {
     "commissions.approve",
     "company_accounts.view",
     "company_accounts.manage",
+    "accounting.view",
+    "accounting.manage",
   ],
   Accountant: [
     "dashboard.view",
@@ -168,6 +172,8 @@ export const PERMISSIONS = {
     "commissions.approve",
     "company_accounts.view",
     "company_accounts.manage",
+    "accounting.view",
+    "accounting.manage",
   ],
   Marketing: [
     "dashboard.view",
@@ -308,6 +314,8 @@ export const PERMISSIONS = {
     "commissions.approve",
     "company_accounts.view",
     "company_accounts.manage",
+    "accounting.view",
+    "accounting.manage",
   ],
   Manager: [
     "dashboard.view",

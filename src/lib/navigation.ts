@@ -52,6 +52,9 @@ export const navGroups: NavGroup[] = [
       // Phase 1: Vendor Payments are finance/AP only (server-enforced).
       { name: "Vendor Payments", href: "/procurement/vendor-payments", icon: CreditCard, permissions: ["company_accounts.manage"] },
       { name: "Company Accounts", href: "/company-accounts", icon: CreditCard, permissions: ["company_accounts.manage"] },
+      { name: "Chart of Accounts", href: "/accounting/accounts", icon: Receipt, permissions: ["accounting.view"] },
+      { name: "Journals", href: "/accounting/journals", icon: FileText, permissions: ["accounting.view"] },
+      { name: "Fiscal Periods", href: "/accounting/fiscal-periods", icon: Settings, permissions: ["accounting.manage"] },
       { name: "AP Aging", href: "/reports/ap", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
     ],
   },
@@ -73,6 +76,9 @@ export const navGroups: NavGroup[] = [
     title: "Reports",
     items: [
       { name: "Reports Home", href: "/reports", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+      { name: "Trial Balance", href: "/reports/accounting/trial-balance", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+      { name: "Profit & Loss", href: "/reports/accounting/profit-loss", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+      { name: "Balance Sheet", href: "/reports/accounting/balance-sheet", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Procurement Report", href: "/reports/procurement", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Inventory Report", href: "/reports/inventory", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Project Reports", href: "/reports/projects", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },

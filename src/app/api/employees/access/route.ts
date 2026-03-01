@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
+import { isCredentialsModeAllowed } from "@/lib/auth-credentials-guard";
 
 export async function GET() {
   const session = await auth();
@@ -45,6 +46,7 @@ export async function GET() {
       };
     }),
     roles: roles.map((role) => ({ id: role.id, name: role.name })),
+    credentialsEnabled: isCredentialsModeAllowed(process.env as Record<string, string | undefined>),
   });
 }
 

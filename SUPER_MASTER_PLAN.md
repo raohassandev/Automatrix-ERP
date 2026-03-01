@@ -368,14 +368,38 @@ CEO dashboard (Phase 1):
 
 ---
 
-## 10) “Codex economical mode” rules (to prevent token burn)
+## 10) OWNER DIRECTIVE — CASH-FIRST ACCELERATION (LOCKED)
 
-- Before coding: 10-line plan + list files to touch.
-- Max 3 files changed per task unless explicitly approved.
-- No repo-wide refactors without a ticket.
-- If missing context, request 1–3 specific files, do not scan.
+This directive overrides sequencing preferences when there is conflict.
+
+### 10.1 Primary business objective
+
+- Immediate and reliable cash-flow control.
+- Professional double-entry accounting system (non-negotiable).
+- End-to-end ERP completion after cash/controls backbone is stable.
+
+### 10.2 Execution priority (locked order)
+
+1. Finance & accounting core (double-entry + close controls)
+2. Inventory truth hardening (valuation + stock controls)
+3. Project commercial control (cost-to-date, margin, recovery, cash impact)
+4. Employee/HRMS finance-impacting modules (advances, payroll postings)
+5. Remaining CRM/sales/execution depth/integrations
+
+### 10.3 Anti-disruption rule (for ad-hoc requests)
+
+- Any incoming request is classified as:
+  - **P0 blocker:** security, data loss, production outage, posting corruption
+  - **P1 core-path:** directly required for phases 10.2(1-4)
+  - **P2 side-path:** useful but not blocking cash-control completion
+- Rule:
+  - P0 interrupts immediately
+  - P1 can preempt current task if dependency-critical
+  - P2 is parked in backlog and executed only at sprint boundary
+- Every interruption must be logged in implementation notes with impact on timeline.
 
 ---
+
 
 ## 11) COMPLETE ERP MODULES (Target End-State) — LOCKED
 
@@ -485,3 +509,100 @@ If any screen writes data outside this contract, it is a defect and must be bloc
 - No hidden work: each implemented item must be reflected in `docs/IMPLEMENTATION_REPORT_YYYY-MM-DD.md`.
 
 ---
+
+## 15) DOUBLE-ENTRY ACCOUNTING BACKBONE (Implementation Contract) — LOCKED
+
+### 15.1 Core accounting data model
+
+- `GlAccount` (COA tree; type: ASSET/LIABILITY/EQUITY/INCOME/EXPENSE)
+- `Journal` (header: voucher no, date, postingDate, status, sourceType/sourceId)
+- `JournalLine` (accountId, debit, credit, projectId?, partyId?, employeeId?)
+- `FiscalPeriod` (open/closed, close locks)
+- `PostingBatch` (idempotency + source trace)
+
+Rules:
+- Sum(debit) must equal Sum(credit) per journal.
+- No direct balance writes; balances are report-derived from posted lines.
+- No edit/delete after POSTED; only reversal journals.
+
+### 15.2 Mandatory posting map (Phase 2 accounting core)
+
+- Vendor Bill (POST):
+  - Dr Expense/Inventory/Project Cost
+  - Cr Accounts Payable
+- Vendor Payment (POST):
+  - Dr Accounts Payable
+  - Cr Cash/Bank (CompanyAccount-mapped GL)
+- Income/Invoice (POST):
+  - Dr Accounts Receivable or Cash/Bank
+  - Cr Revenue
+- Receipt Allocation (POST):
+  - Dr Cash/Bank
+  - Cr Accounts Receivable
+- Expense (non-stock, POST):
+  - Dr Expense
+  - Cr Cash/Bank or Wallet Clearing
+- Salary/Payroll (POST):
+  - Dr Payroll Expense
+  - Cr Salary Payable / Cash/Bank (per step)
+
+### 15.3 Accounting controls
+
+- Period lock: blocked postings to closed periods unless owner override + audit reason.
+- Backdate rule: finance/owner only with mandatory reason and explicit audit action.
+- Trial balance integrity check required before every release.
+- P&L and Balance Sheet must reconcile with trial balance totals.
+
+### 15.4 Cash control dashboard (owner-critical)
+
+- Daily Cash Position by company account (opening, inflow, outflow, closing)
+- AP aging with due buckets (current, 1-30, 31-60, 61-90, 90+)
+- AR aging with collection status
+- 14-day and 30-day cash forecast (expected receipts vs planned disbursements)
+- Top cash leakage alerts (unapproved outflows, overdue receivables, negative margin projects)
+
+---
+
+## 16) DELIVERY PROGRAM (Fast-track, calendar-based)
+
+### Sprint A (7 days) — Accounting Foundation
+
+- COA schema + migrations
+- Journal/JournalLine schema + posting service (idempotent)
+- Posting adapter for Vendor Bill + Vendor Payment
+- Trial Balance API/report
+- Tests: unit (posting), integration (lifecycle->journals), e2e smoke
+
+### Sprint B (7 days) — Cash Visibility & Controls
+
+- Daily cash position report + owner dashboard
+- AP aging hardening + payment due calendar
+- AR aging baseline from existing invoice/income chain
+- Fiscal period + posting lock APIs
+- Tests + staging UAT script
+
+### Sprint C (7 days) — Inventory + Project Financial Truth
+
+- Warehouse mandatory for new stock postings
+- Inventory valuation audit checks
+- Project P&L from posted accounting + procurement + expenses only
+- Project cash-in/cash-out drilldown
+- Tests + reconciliation checklist
+
+### Sprint D (7 days) — Employee Finance + HRMS Core
+
+- Employee master lifecycle hardening
+- Salary advances + wallet + payroll postings into journals
+- Payroll payable and settlement visibility
+- Role-based HR/finance approvals and audit expansion
+- Tests + staging signoff checklist
+
+### Program DoD (completion gate)
+
+- Double-entry journals cover all value-bearing flows
+- Trial balance, P&L, and balance sheet are internally consistent
+- Cash dashboard is owner-usable daily without manual spreadsheets
+- Inventory/project/employee finance modules post correctly to accounting spine
+- CI green (lint, typecheck, unit, integration/e2e critical suites)
+- Staging acceptance completed with documented reconciliation evidence
+

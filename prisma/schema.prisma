@@ -38,6 +38,10 @@ model User {
   walletLedgerPosts    WalletLedger[]    @relation("WalletLedgerPostedBy")
   vendorPaymentAllocationPosts VendorPaymentAllocation[] @relation("VendorPaymentAllocationPostedBy")
   projectAssignments ProjectAssignment[]
+  fiscalPeriodsClosed FiscalPeriod[] @relation("FiscalPeriodClosedBy")
+  journalsCreated JournalEntry[] @relation("JournalCreatedBy")
+  journalsPosted  JournalEntry[] @relation("JournalPostedBy")
+  postingBatchesPosted PostingBatch[] @relation("PostingBatchPostedBy")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -246,6 +250,7 @@ model Project {
   costToDate     Decimal  
   grossMargin    Decimal  
   marginPercent  Decimal  
+  journalLines   JournalLine[]
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -325,6 +330,7 @@ model Employee {
   commissions   CommissionEntry[]
   payrollEntries PayrollEntry[]
   salaryAdvances SalaryAdvance[]
+  journalLines   JournalLine[]
 }
 
 model WalletLedger {
@@ -571,6 +577,108 @@ model CompanyAccount {
   incomes        Income[]
   expenses       Expense[]
   walletLedgerEntries WalletLedger[]
+}
+
+// Double-entry accounting backbone (Phase 2+), isolated from auth Account/Session tables.
+model GlAccount {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  name       String
+  type       String   // ASSET | LIABILITY | EQUITY | INCOME | EXPENSE
+  normalSide String?  // DEBIT | CREDIT
+  parentId   String?
+  isPosting  Boolean  @default(true)
+  isActive   Boolean  @default(true)
+  currency   String   @default("PKR")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  parent     GlAccount?  @relation("GlAccountHierarchy", fields: [parentId], references: [id])
+  children   GlAccount[] @relation("GlAccountHierarchy")
+  journalLines JournalLine[]
+}
+
+model FiscalPeriod {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  startDate   DateTime
+  endDate     DateTime
+  status      String   @default("OPEN") // OPEN | CLOSED
+  closeReason String?
+  closedAt    DateTime?
+  closedById  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  closedBy    User?    @relation("FiscalPeriodClosedBy", fields: [closedById], references: [id])
+  journals    JournalEntry[]
+
+  @@index([status, startDate, endDate])
+}
+
+model PostingBatch {
+  id         String   @id @default(cuid())
+  sourceType String
+  sourceId   String
+  status     String   @default("POSTED") // POSTED | REVERSED
+  postedAt   DateTime @default(now())
+  postedById String?
+  createdAt  DateTime @default(now())
+
+  postedBy   User?          @relation("PostingBatchPostedBy", fields: [postedById], references: [id])
+  journals   JournalEntry[]
+
+  @@unique([sourceType, sourceId])
+}
+
+model JournalEntry {
+  id             String   @id @default(cuid())
+  voucherNo      String   @unique
+  documentDate   DateTime
+  postingDate    DateTime
+  status         String   @default("DRAFT") // DRAFT | POSTED | REVERSED
+  sourceType     String?
+  sourceId       String?
+  memo           String?
+  fiscalPeriodId String?
+  batchId        String?
+  createdById    String?
+  postedById     String?
+  postedAt       DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  fiscalPeriod   FiscalPeriod? @relation(fields: [fiscalPeriodId], references: [id])
+  batch          PostingBatch? @relation(fields: [batchId], references: [id])
+  createdBy      User?         @relation("JournalCreatedBy", fields: [createdById], references: [id])
+  postedBy       User?         @relation("JournalPostedBy", fields: [postedById], references: [id])
+  lines          JournalLine[]
+
+  @@index([postingDate, status])
+  @@index([sourceType, sourceId])
+}
+
+model JournalLine {
+  id             String   @id @default(cuid())
+  journalEntryId String
+  glAccountId    String
+  debit          Decimal  @default(0)
+  credit         Decimal  @default(0)
+  projectId      String?
+  partyId        String?
+  employeeId     String?
+  memo           String?
+  createdAt      DateTime @default(now())
+
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  glAccount      GlAccount    @relation(fields: [glAccountId], references: [id])
+  project        Project?     @relation(fields: [projectId], references: [id])
+  employee       Employee?    @relation(fields: [employeeId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([glAccountId])
+  @@index([projectId])
+  @@index([employeeId])
 }
 
 // AP (finance-lite) — Vendor Bill + Payment + allocation (no GL yet).

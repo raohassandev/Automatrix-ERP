@@ -5,15 +5,17 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import type { Adapter, AdapterUser } from "next-auth/adapters";
 import { assertE2eTestModeAllowed } from "@/lib/auth-e2e-guard";
+import { assertCredentialsModeAllowed, isCredentialsModeAllowed } from "@/lib/auth-credentials-guard";
 import bcrypt from "bcryptjs";
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const e2eMode = process.env.E2E_TEST_MODE === "1";
-const credentialsMode = process.env.AUTH_ENABLE_CREDENTIALS === "1";
+const credentialsMode = isCredentialsModeAllowed(process.env as Record<string, string | undefined>);
 
 // Fail-fast: prevent accidental enablement of E2E mode in staging/prod.
 assertE2eTestModeAllowed(process.env as Record<string, string | undefined>);
+assertCredentialsModeAllowed(process.env as Record<string, string | undefined>);
 
 if ((!googleClientId || !googleClientSecret) && !e2eMode) {
   // Phase 1: Google OAuth is the only supported auth method in real environments.

@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { postInvoiceJournal } from "@/lib/accounting";
 
 export async function GET() {
   const session = await auth();
@@ -52,16 +53,32 @@ export async function POST(req: Request) {
     notes: parsed.data.notes ? sanitizeString(parsed.data.notes) : undefined,
   };
 
-  const created = await prisma.invoice.create({
-    data: {
-      invoiceNo: sanitizedData.invoiceNo,
-      projectId: sanitizedData.projectId,
-      date: new Date(sanitizedData.date),
-      amount: new Prisma.Decimal(sanitizedData.amount),
-      dueDate: new Date(sanitizedData.dueDate),
-      status: sanitizedData.status,
-      notes: sanitizedData.notes,
-    },
+  const created = await prisma.$transaction(async (tx) => {
+    const createdInvoice = await tx.invoice.create({
+      data: {
+        invoiceNo: sanitizedData.invoiceNo,
+        projectId: sanitizedData.projectId,
+        date: new Date(sanitizedData.date),
+        amount: new Prisma.Decimal(sanitizedData.amount),
+        dueDate: new Date(sanitizedData.dueDate),
+        status: sanitizedData.status,
+        notes: sanitizedData.notes,
+      },
+    });
+
+    // Create AR posting when invoice is issued (non-draft).
+    if (createdInvoice.status !== "DRAFT") {
+      await postInvoiceJournal(tx, {
+        invoiceId: createdInvoice.id,
+        amount: Number(createdInvoice.amount),
+        invoiceDate: new Date(createdInvoice.date),
+        projectRef: createdInvoice.projectId,
+        userId: session.user.id,
+        memo: `Invoice ${createdInvoice.invoiceNo} posted`,
+      });
+    }
+
+    return createdInvoice;
   });
 
   await logAudit({

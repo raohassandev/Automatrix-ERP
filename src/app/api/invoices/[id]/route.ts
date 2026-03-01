@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/rbac";
 import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { postInvoiceJournal } from "@/lib/accounting";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -31,7 +32,23 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (body.dueDate) data.dueDate = new Date(body.dueDate);
   if (body.amount !== undefined) data.amount = new Prisma.Decimal(body.amount);
 
-  const updated = await prisma.invoice.update({ where: { id }, data });
+  const nextStatus = (data.status as string | undefined) || existing.status;
+  const shouldPostInvoice = existing.status === "DRAFT" && nextStatus !== "DRAFT";
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const invoice = await tx.invoice.update({ where: { id }, data });
+    if (shouldPostInvoice) {
+      await postInvoiceJournal(tx, {
+        invoiceId: invoice.id,
+        amount: Number(invoice.amount),
+        invoiceDate: new Date(invoice.date),
+        projectRef: invoice.projectId,
+        userId: session.user.id,
+        memo: `Invoice ${invoice.invoiceNo} posted on status transition`,
+      });
+    }
+    return invoice;
+  });
 
   await logAudit({
     action: "UPDATE_INVOICE",
