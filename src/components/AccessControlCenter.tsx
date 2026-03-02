@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Check, ChevronDown, ChevronRight, Search, Shield } from "lucide-react";
+import { Check, Search } from "lucide-react";
 
 type PermissionCatalogGroup = {
   module: string;
@@ -146,9 +147,9 @@ export default function AccessControlCenter() {
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
   const [roleDraft, setRoleDraft] = useState<Set<string>>(new Set());
   const [savingRole, setSavingRole] = useState(false);
-  const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
   const [roleSearch, setRoleSearch] = useState("");
-  const [activeModule, setActiveModule] = useState("");
+  const [roleListSearch, setRoleListSearch] = useState("");
+  const [selectedModule, setSelectedModule] = useState("");
 
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [userCatalog, setUserCatalog] = useState<PermissionCatalogGroup[]>([]);
@@ -164,6 +165,22 @@ export default function AccessControlCenter() {
   const [loading, setLoading] = useState(true);
 
   const selectedRole = useMemo(() => roles.find((role) => role.id === selectedRoleId) || null, [roles, selectedRoleId]);
+  const filteredRoles = useMemo(() => {
+    const q = roleListSearch.trim().toLowerCase();
+    if (!q) return roles;
+    return roles.filter((role) => role.name.toLowerCase().includes(q));
+  }, [roles, roleListSearch]);
+  const activeRoleGroup = useMemo(
+    () => roleCatalog.find((group) => group.module === selectedModule) ?? roleCatalog[0] ?? null,
+    [roleCatalog, selectedModule]
+  );
+  const roleRows = useMemo(() => {
+    if (!activeRoleGroup) return [];
+    const q = roleSearch.trim().toLowerCase();
+    return toPermissionRows(activeRoleGroup).filter((row) =>
+      q ? `${row.label} ${row.key}`.toLowerCase().includes(q) : true
+    );
+  }, [activeRoleGroup, roleSearch]);
 
   const loadRoleTemplates = async () => {
     const res = await fetch("/api/access-control/roles", { cache: "no-store" });
@@ -174,6 +191,9 @@ export default function AccessControlCenter() {
 
     setRoles(data.roles || []);
     setRoleCatalog(data.permissionCatalog || []);
+    if (!selectedModule && data.permissionCatalog?.[0]?.module) {
+      setSelectedModule(data.permissionCatalog[0].module);
+    }
 
     const firstRoleId = (data.roles?.[0]?.id as string | undefined) || "";
     const nextRoleId = selectedRoleId || firstRoleId;
@@ -250,8 +270,6 @@ export default function AccessControlCenter() {
   const openRoleDialog = (role: RoleTemplate) => {
     setSelectedRoleId(role.id);
     setRoleDraft(new Set(role.permissionKeys));
-    setRoleSearch("");
-    setActiveModule("");
   };
 
   const saveRoleTemplate = async () => {
@@ -374,173 +392,144 @@ export default function AccessControlCenter() {
 
       <CardContent>
         {tab === "roles" && (
-          <div className="grid gap-4 xl:grid-cols-[380px,1fr]">
+          <div className="grid gap-4 xl:grid-cols-[280px,1fr,260px]">
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-              <div className="border-b bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">Role Templates</div>
-              <div className="max-h-[740px] space-y-2 overflow-y-auto p-3">
-                {roles.map((role) => {
+              <div className="border-b px-3 py-3">
+                <div className="mb-2 text-sm font-semibold text-slate-800">Roles</div>
+                <Input
+                  placeholder="Search role..."
+                  value={roleListSearch}
+                  onChange={(event) => setRoleListSearch(event.target.value)}
+                />
+              </div>
+              <div className="max-h-[680px] space-y-2 overflow-y-auto p-3">
+                {filteredRoles.map((role) => {
                   const selected = role.id === selectedRoleId;
                   return (
                     <button
                       key={role.id}
                       type="button"
                       onClick={() => openRoleDialog(role)}
-                      className={`w-full rounded-lg border px-3 py-3 text-left transition ${
+                      className={`w-full rounded-lg border px-3 py-2.5 text-left transition ${
                         selected ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white hover:bg-slate-50"
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="font-semibold text-slate-900">{role.name}</div>
-                        {selected ? <Badge className="bg-sky-600 text-white">Selected</Badge> : null}
-                      </div>
-                      <div className="mt-1 text-xs text-slate-500">{role.permissionKeys.length} enabled features</div>
+                      <div className="font-medium text-slate-900">{role.name}</div>
+                      <div className="text-xs text-slate-500">{role.permissionKeys.length} permissions</div>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
-              <div className="border-b bg-slate-900 px-6 py-4 text-white">
-                <div className="text-xl font-semibold">Role Permissions: {selectedRole?.name || "Select role"}</div>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-200">
-                  <span className="rounded bg-slate-800 px-2 py-1">{roleDraft.size} enabled</span>
-                  <span className="rounded bg-slate-800 px-2 py-1">Full-page editor</span>
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="border-b px-4 py-3">
+                <div className="text-lg font-semibold text-slate-900">{selectedRole?.name || "Select a role"}</div>
+                <div className="mt-3 grid gap-2 md:grid-cols-[220px,1fr]">
+                  <Select value={activeRoleGroup?.module || ""} onValueChange={setSelectedModule}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select module" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roleCatalog.map((group) => (
+                        <SelectItem key={group.module} value={group.module}>
+                          {moduleLabel(group.module)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Input
+                      className="pl-9"
+                      placeholder="Search permission..."
+                      value={roleSearch}
+                      onChange={(event) => setRoleSearch(event.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid gap-0 md:grid-cols-[240px,1fr]">
-                <div className="border-r bg-slate-50 p-4">
-                  <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Modules</div>
-                  <div className="space-y-1">
-                    {roleCatalog.map((group) => {
-                      const rows = toPermissionRows(group);
-                      const selected = activeModule ? activeModule === group.module : false;
-                      return (
-                        <button
-                          key={group.module}
-                          type="button"
-                          onClick={() => setActiveModule(group.module)}
-                          className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm ${
-                            selected ? "bg-sky-100 text-sky-900" : "text-slate-700 hover:bg-slate-200"
-                          }`}
-                        >
-                          <span>{moduleLabel(group.module)}</span>
-                          <Badge variant="outline" className="bg-white">{rows.length}</Badge>
-                        </button>
-                      );
-                    })}
-                  </div>
+              <div className="max-h-[680px] overflow-y-auto">
+                <div className="grid grid-cols-[1fr,auto] border-b bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  <div>Permission</div>
+                  <div>Access</div>
                 </div>
-
-                <div className="space-y-4 p-4 md:p-6">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <div className="relative">
-                      <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <Input
-                        className="pl-9"
-                        placeholder="Search permission..."
-                        value={roleSearch}
-                        onChange={(e) => setRoleSearch(e.target.value)}
-                      />
-                    </div>
-                    <p className="mt-2 text-xs text-slate-500">
-                      `Self` is available where own-scope exists. `Custom` currently maps to self-scope.
-                    </p>
-                  </div>
-
-                  {roleCatalog
-                    .filter((group) => !activeModule || group.module === activeModule)
-                    .map((group) => {
-                      const rows = toPermissionRows(group).filter((row) =>
-                        roleSearch.trim()
-                          ? `${row.label} ${row.key}`.toLowerCase().includes(roleSearch.trim().toLowerCase())
-                          : true
-                      );
-                      const isCollapsed = collapsedModules[group.module] === true;
-                      return (
-                        <div key={group.module} className="rounded-lg border border-slate-200 bg-white shadow-sm">
-                          <button
-                            type="button"
-                            className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
-                            onClick={() =>
-                              setCollapsedModules((prev) => ({
-                                ...prev,
-                                [group.module]: !prev[group.module],
-                              }))
-                            }
-                          >
-                            <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
-                              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                              <Shield className="h-4 w-4 text-slate-500" />
-                              {moduleLabel(group.module)}
-                            </div>
-                            <Badge variant="outline">{rows.length} actions</Badge>
-                          </button>
-
-                          {!isCollapsed && (
-                            <div className="border-t">
-                              {rows.length === 0 ? (
-                                <div className="px-4 py-6 text-sm text-slate-500">No permissions match search.</div>
-                              ) : (
-                                rows.map((row) => {
-                                  const mode = getRoleMode(row, roleDraft);
-                                  const selfEnabled = row.supportsSelf;
-                                  return (
-                                    <div key={row.key} className="flex flex-col gap-2 border-b px-4 py-3 last:border-b-0 md:flex-row md:items-center md:justify-between">
-                                      <div>
-                                        <div className="font-medium text-slate-800">{row.label}</div>
-                                        <div className="text-xs text-slate-500">{row.key}</div>
-                                      </div>
-                                      <div className="flex flex-wrap gap-2">
-                                        {(["YES", "NO", "SELF", "CUSTOM"] as const).map((option) => {
-                                          const disabled = !selfEnabled && (option === "SELF" || option === "CUSTOM");
-                                          const checked = mode === option;
-                                          return (
-                                            <button
-                                              key={option}
-                                              type="button"
-                                              disabled={disabled}
-                                              onClick={() => setRoleDraft((prev) => applyRoleMode(row, option, prev))}
-                                              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                                                checked
-                                                  ? "border-sky-600 bg-sky-600 text-white"
-                                                  : disabled
-                                                    ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                                                    : "border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
-                                              }`}
-                                            >
-                                              {checked ? <Check className="h-3 w-3" /> : null}
-                                              {option}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  );
-                                })
-                              )}
-                            </div>
-                          )}
+                {roleRows.length === 0 ? (
+                  <div className="px-4 py-8 text-sm text-slate-500">No permissions found for this module/search.</div>
+                ) : (
+                  roleRows.map((row) => {
+                    const mode = getRoleMode(row, roleDraft);
+                    const selfEnabled = row.supportsSelf;
+                    return (
+                      <div key={row.key} className="grid grid-cols-[1fr,auto] gap-3 border-b px-4 py-3">
+                        <div>
+                          <div className="font-medium text-slate-800">{row.label}</div>
+                          <div className="text-xs text-slate-500">{row.key}</div>
                         </div>
-                      );
-                    })}
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          {(["YES", "NO", "SELF", "CUSTOM"] as const).map((option) => {
+                            const disabled = !selfEnabled && (option === "SELF" || option === "CUSTOM");
+                            const checked = mode === option;
+                            return (
+                              <button
+                                key={option}
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => setRoleDraft((prev) => applyRoleMode(row, option, prev))}
+                                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                                  checked
+                                    ? "border-sky-600 bg-sky-600 text-white"
+                                    : disabled
+                                      ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                      : "border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+                                }`}
+                              >
+                                {checked ? <Check className="h-3 w-3" /> : null}
+                                {option}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
 
-                  <div className="flex justify-end gap-2 border-t pt-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        if (!selectedRole) return;
-                        setRoleDraft(new Set(selectedRole.permissionKeys));
-                      }}
-                    >
-                      Reset
-                    </Button>
-                    <Button onClick={saveRoleTemplate} disabled={savingRole || !selectedRoleId} className="bg-sky-600 hover:bg-sky-700">
-                      {savingRole ? "Saving..." : "Save Permissions"}
-                    </Button>
-                  </div>
-                </div>
+            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
+              <div className="text-sm font-semibold text-slate-800">Summary</div>
+              <div className="rounded-md border bg-slate-50 p-3 text-sm">
+                <div className="text-slate-600">Selected role</div>
+                <div className="font-semibold text-slate-900">{selectedRole?.name || "None"}</div>
+              </div>
+              <div className="rounded-md border bg-slate-50 p-3 text-sm">
+                <div className="text-slate-600">Enabled permissions</div>
+                <div className="font-semibold text-slate-900">{roleDraft.size}</div>
+              </div>
+              <div className="rounded-md border bg-slate-50 p-3 text-sm">
+                <div className="text-slate-600">Editing module</div>
+                <div className="font-semibold text-slate-900">{activeRoleGroup ? moduleLabel(activeRoleGroup.module) : "None"}</div>
+              </div>
+              <div className="border-t pt-3">
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => {
+                    if (!selectedRole) return;
+                    setRoleDraft(new Set(selectedRole.permissionKeys));
+                  }}
+                >
+                  Reset Changes
+                </Button>
+                <Button
+                  className="mt-2 w-full bg-sky-600 hover:bg-sky-700"
+                  onClick={saveRoleTemplate}
+                  disabled={savingRole || !selectedRoleId}
+                >
+                  {savingRole ? "Saving..." : "Save Permissions"}
+                </Button>
               </div>
             </div>
           </div>
