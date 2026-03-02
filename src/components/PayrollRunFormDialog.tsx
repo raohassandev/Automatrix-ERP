@@ -27,6 +27,15 @@ type PayrollRun = {
   entries: PayrollEntry[];
 };
 
+function defaultPreviousMonthRange() {
+  const now = new Date();
+  const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const month = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+  const start = new Date(year, month, 1).toISOString().slice(0, 10);
+  const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  return { start, end };
+}
+
 const emptyEntry = (employeeId?: string): PayrollEntry => ({
   employeeId: employeeId || "",
   baseSalary: "",
@@ -43,8 +52,8 @@ type PayrollRunFormDialogProps = {
 };
 
 const buildInitialForm = (run: PayrollRun | null | undefined) => ({
-  periodStart: run?.periodStart?.slice(0, 10) || new Date().toISOString().slice(0, 10),
-  periodEnd: run?.periodEnd?.slice(0, 10) || new Date().toISOString().slice(0, 10),
+  periodStart: run?.periodStart?.slice(0, 10) || defaultPreviousMonthRange().start,
+  periodEnd: run?.periodEnd?.slice(0, 10) || defaultPreviousMonthRange().end,
   notes: run?.notes || "",
 });
 
@@ -205,7 +214,7 @@ function PayrollRunFormDialogInner({
         className="space-y-4"
       >
         <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-          Keep one employee per row. If deductions are entered, write the reason for audit clarity.
+          Keep one employee per row. Default period is previous month only. If deductions are entered, write the reason for audit clarity.
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
@@ -301,6 +310,17 @@ function PayrollRunFormDialogInner({
                     onChange={(e) => updateEntry(index, "deductionReason", e.target.value)}
                     placeholder="Required if deductions applied"
                   />
+                </div>
+                <div className="rounded-md border border-emerald-200 bg-emerald-50/60 p-2 text-xs text-emerald-800 md:col-span-4">
+                  Estimated Net Pay:{" "}
+                  {(
+                    Number(entry.baseSalary || 0) +
+                    Number(entry.incentiveTotal || 0) -
+                    Number(entry.deductions || 0)
+                  ).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </div>
                 {entries.length > 1 ? (
                   <div className="md:col-span-4">
