@@ -14,15 +14,15 @@ const states = {
 
 async function loginByEmail(page: import("@playwright/test").Page, email: string, password: string) {
   await page.goto("/login", { waitUntil: "networkidle" });
-  const emailInput = page.getByPlaceholder("Email").first();
-  const passInput = page.getByPlaceholder("Password").first();
-  await emailInput.click();
-  await emailInput.press("Control+a");
-  await emailInput.type(email, { delay: 10 });
-  await passInput.click();
-  await passInput.press("Control+a");
-  await passInput.type(password, { delay: 10 });
-  const submit = page.getByRole("button", { name: "Sign in with Email" }).first();
+  const credentialsPanel = page.locator("div").filter({ hasText: "Email login (staging/internal)" }).first();
+  const emailInput = credentialsPanel.getByPlaceholder("Email").first();
+  const passInput = credentialsPanel.getByPlaceholder("Password").first();
+  await expect(emailInput).toBeVisible();
+  await expect(passInput).toBeVisible();
+  await emailInput.fill(email);
+  await passInput.fill(password);
+  const submit = credentialsPanel.getByRole("button", { name: "Sign in with Email" }).first();
+  await expect(credentialsPanel).toBeVisible();
   await expect(submit).toBeEnabled();
   await submit.click();
   await expect(page).toHaveURL(/\/dashboard/);

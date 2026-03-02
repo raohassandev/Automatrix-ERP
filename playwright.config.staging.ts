@@ -1,10 +1,10 @@
-import { PlaywrightTestConfig } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
 
-const config: PlaywrightTestConfig = {
+export default defineConfig({
   testDir: "playwright/tests",
-  timeout: 120 * 1000,
-  expect: { timeout: 15 * 1000 },
-  reporter: [["list"], ["html", { outputFolder: "playwright-report-staging", open: "never" }]],
+  timeout: 90_000,
+  expect: { timeout: 10_000 },
+  reporter: "list",
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "https://erp-staging.automatrix.pk",
     trace: "retain-on-failure",
@@ -13,6 +13,4 @@ const config: PlaywrightTestConfig = {
     ignoreHTTPSErrors: true,
   },
   workers: 1,
-};
-
-export default config;
+});

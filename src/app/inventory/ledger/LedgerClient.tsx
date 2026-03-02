@@ -47,6 +47,7 @@ export function LedgerClient({
   const warehouseId = (searchParams?.warehouseId || "").trim();
   const take = 25;
   const totalPages = Math.max(1, Math.ceil(total / take));
+  const formatStableDate = (value: Date | string) => new Date(value).toISOString().slice(0, 10);
 
   return (
     <div className="grid gap-6">
@@ -135,7 +136,7 @@ export function LedgerClient({
             <tbody>
               {entries.map((entry) => (
                 <tr key={entry.id} className="border-b">
-                  <td className="py-2">{new Date(entry.date).toLocaleDateString()}</td>
+                  <td className="py-2">{formatStableDate(entry.date)}</td>
                   <td className="py-2">{entry.item?.name || "-"}</td>
                   <td className="py-2">{entry.type}</td>
                   <td className="py-2">{Number(entry.quantity)}</td>
@@ -158,7 +159,7 @@ export function LedgerClient({
           {entries.map((entry) => (
             <div key={entry.id} className="border rounded-lg p-4 text-sm space-y-1">
               <div className="font-semibold">{entry.item?.name || "-"}</div>
-              <div>Date: {new Date(entry.date).toLocaleDateString()}</div>
+              <div>Date: {formatStableDate(entry.date)}</div>
               <div>Type: {entry.type}</div>
               <div>Qty: {Number(entry.quantity)}</div>
               {canViewCost ? (
