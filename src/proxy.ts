@@ -16,7 +16,7 @@ const ROUTE_RULES: Array<{ pattern: RegExp; any: string[] }> = [
   { pattern: /^\/projects/, any: ["projects.view_all", "projects.view_assigned"] },
   {
     pattern: /^\/employees/,
-    any: ["employees.view_all", "employees.view_team", "employees.view_own"],
+    any: ["employees.view_all", "employees.view_team"],
   },
   { pattern: /^\/departments/, any: ["departments.view_all"] },
   { pattern: /^\/designations/, any: ["designations.view_all"] },
