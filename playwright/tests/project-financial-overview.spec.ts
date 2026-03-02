@@ -11,7 +11,7 @@ test.describe("Project financial UX coverage", () => {
   test("projects overview and detail show owner-friendly financial summary", async ({ page }) => {
     await page.goto("/projects", { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
-    await expect(page.getByText(/cash to recover/i)).toBeVisible();
+    await expect(page.getByText("Cash To Recover", { exact: true }).first()).toBeVisible();
 
     const firstProjectLink = page.locator('main table tbody tr').first().locator('a[href^="/projects/"]').first();
     await expect(firstProjectLink).toBeVisible();
@@ -34,9 +34,9 @@ test.describe("Project financial UX coverage", () => {
   test("project financial dashboard uses live metrics layout without overflow", async ({ page }) => {
     await page.goto("/projects/financial", { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: "Project Financial Dashboard" })).toBeVisible();
-    await expect(page.getByText(/money in/i)).toBeVisible();
-    await expect(page.getByText(/current profit/i)).toBeVisible();
-    await expect(page.getByText(/cash risk projects/i)).toBeVisible();
+    await expect(page.getByText("Money In", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Current Profit", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Cash Risk Projects", { exact: true }).first()).toBeVisible();
 
     const hasOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth + 8,
