@@ -219,7 +219,15 @@ export default async function EmployeeDetailPage({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Wallet Ledger</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Wallet Ledger</h2>
+            <a
+              href={`/wallets?employeeId=${employee.id}`}
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
+            >
+              Full History
+            </a>
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Incoming, outgoing, and hold-affecting wallet movements.
           </p>

@@ -29,6 +29,7 @@ interface Approval {
 
 interface HistoryItem {
   id: string;
+  type: "EXPENSE" | "INCOME";
   date: Date;
   category: string;
   amount: number | string;
@@ -755,6 +756,13 @@ function ApprovalHistory({ history }: { history: HistoryItem[] }) {
                   }`}
                 >
                   {item.status}
+                </span>
+                <span
+                  className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${
+                    item.type === "INCOME" ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {item.type}
                 </span>
                 <span className="text-sm font-medium text-foreground">{item.category}</span>
                 <span className="text-sm text-muted-foreground">

@@ -12,7 +12,15 @@ import Link from "next/link";
 export default async function WalletLedgerPage({
   searchParams,
 }: {
-  searchParams: { search?: string; page?: string; type?: string; from?: string; to?: string };
+  searchParams: {
+    search?: string;
+    page?: string;
+    type?: string;
+    sourceType?: string;
+    from?: string;
+    to?: string;
+    employeeId?: string;
+  };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -35,19 +43,32 @@ export default async function WalletLedgerPage({
   const params = searchParams;
   const search = (params.search || "").trim();
   const type = (params.type || "").trim();
+  const sourceType = (params.sourceType || "").trim();
+  const employeeId = (params.employeeId || "").trim();
   const from = params.from;
   const to = params.to;
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;
   const skip = (page - 1) * take;
 
+  const ownEmployee = session.user.email
+    ? await prisma.employee.findUnique({ where: { email: session.user.email }, select: { id: true } })
+    : null;
+
   let baseWhere: import("@prisma/client").Prisma.WalletLedgerWhereInput = {};
-  if (!canViewAll && !canEdit && session.user.email) {
-    const employee = await prisma.employee.findUnique({ where: { email: session.user.email } });
-    if (employee) {
-      baseWhere = { employeeId: employee.id };
+  if (!canViewAll && !canEdit) {
+    if (ownEmployee?.id) {
+      baseWhere = { employeeId: ownEmployee.id };
     } else {
       baseWhere = { employeeId: "__none__" };
+    }
+  }
+
+  if (employeeId) {
+    if (!canViewAll && !canEdit && employeeId !== ownEmployee?.id) {
+      baseWhere = { employeeId: "__none__" };
+    } else {
+      baseWhere = { ...baseWhere, employeeId };
     }
   }
 
@@ -67,6 +88,9 @@ export default async function WalletLedgerPage({
   if (type) {
     where.type = type;
   }
+  if (sourceType) {
+    where.sourceType = sourceType;
+  }
   if (from || to) {
     const range: { gte?: Date; lte?: Date } = {};
     if (from) range.gte = new Date(from);
@@ -78,7 +102,11 @@ export default async function WalletLedgerPage({
     prisma.walletLedger.findMany({
       where,
       orderBy: { date: "desc" },
-      include: { employee: true },
+      include: {
+        employee: true,
+        companyAccount: { select: { id: true, name: true, type: true } },
+        postedBy: { select: { id: true, name: true, email: true } },
+      },
       skip,
       take,
     }),
@@ -107,10 +135,25 @@ export default async function WalletLedgerPage({
                 { label: "Debit", value: "DEBIT" },
               ]}
             />
+            <QuerySelect
+              param="sourceType"
+              placeholder="All sources"
+              options={[
+                { label: "Top-up", value: "WALLET_TOPUP" },
+                { label: "Adjustment", value: "WALLET_ADJUSTMENT" },
+                { label: "Expense Hold", value: "EXPENSE_HOLD" },
+                { label: "Expense Release", value: "EXPENSE_HOLD_RELEASE" },
+                { label: "Expense Settlement", value: "EXPENSE_SETTLEMENT" },
+                { label: "Payroll", value: "PAYROLL" },
+                { label: "Advance", value: "SALARY_ADVANCE" },
+              ]}
+            />
             <Link
               href={`/api/wallets/export?${new URLSearchParams({
                 ...(search ? { search } : {}),
                 ...(type ? { type } : {}),
+                ...(sourceType ? { sourceType } : {}),
+                ...(employeeId ? { employeeId } : {}),
                 ...(from ? { from } : {}),
                 ...(to ? { to } : {}),
               }).toString()}`}
@@ -132,7 +175,10 @@ export default async function WalletLedgerPage({
                 <th className="py-2">Type</th>
                 <th className="py-2">Amount</th>
                 <th className="py-2">Balance</th>
+                <th className="py-2">Source</th>
+                <th className="py-2">Company Account</th>
                 <th className="py-2">Reference</th>
+                <th className="py-2">Posted By</th>
               </tr>
             </thead>
             <tbody>
@@ -143,7 +189,10 @@ export default async function WalletLedgerPage({
                   <td className="py-2">{entry.type}</td>
                   <td className="py-2">{formatMoney(Number(entry.amount))}</td>
                   <td className="py-2">{formatMoney(Number(entry.balance))}</td>
+                  <td className="py-2">{entry.sourceType || "-"}</td>
+                  <td className="py-2">{entry.companyAccount?.name || "-"}</td>
                   <td className="py-2">{entry.reference || "-"}</td>
+                  <td className="py-2">{entry.postedBy?.name || entry.postedBy?.email || "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -160,7 +209,10 @@ export default async function WalletLedgerPage({
               <div className="text-sm">Type: {entry.type}</div>
               <div className="text-sm">Amount: {formatMoney(Number(entry.amount))}</div>
               <div className="text-sm">Balance: {formatMoney(Number(entry.balance))}</div>
+              <div className="text-sm">Source: {entry.sourceType || "-"}</div>
+              <div className="text-sm">Company Account: {entry.companyAccount?.name || "-"}</div>
               <div className="text-sm">Reference: {entry.reference || "-"}</div>
+              <div className="text-sm">Posted By: {entry.postedBy?.name || entry.postedBy?.email || "-"}</div>
             </div>
           ))}
         </div>

@@ -210,7 +210,15 @@ export default async function MyDashboardPage() {
         </div>
 
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Recent Wallet Activity</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Recent Wallet Activity</h2>
+            <a
+              href={`/wallets?employeeId=${employee.id}`}
+              className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
+            >
+              Full History
+            </a>
+          </div>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>

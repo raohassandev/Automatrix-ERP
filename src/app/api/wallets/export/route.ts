@@ -33,6 +33,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const search = (searchParams.get("search") || "").trim();
   const type = (searchParams.get("type") || "").trim();
+  const sourceType = (searchParams.get("sourceType") || "").trim();
+  const employeeId = (searchParams.get("employeeId") || "").trim();
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
@@ -48,10 +50,20 @@ export async function GET(req: Request) {
     userId: session.user.id,
   });
 
+  const ownEmployee = session.user.email
+    ? await prisma.employee.findUnique({ where: { email: session.user.email }, select: { id: true } })
+    : null;
+
   let baseWhere: Record<string, unknown> = {};
-  if (!canViewAll && !canEdit && session.user.email) {
-    const employee = await prisma.employee.findUnique({ where: { email: session.user.email } });
-    baseWhere = employee ? { employeeId: employee.id } : { employeeId: "__none__" };
+  if (!canViewAll && !canEdit) {
+    baseWhere = ownEmployee?.id ? { employeeId: ownEmployee.id } : { employeeId: "__none__" };
+  }
+  if (employeeId) {
+    if (!canViewAll && !canEdit && employeeId !== ownEmployee?.id) {
+      baseWhere = { employeeId: "__none__" };
+    } else {
+      baseWhere = { ...baseWhere, employeeId };
+    }
   }
 
   const where: Record<string, unknown> = { ...baseWhere };
@@ -68,6 +80,7 @@ export async function GET(req: Request) {
     ];
   }
   if (type) where.type = type;
+  if (sourceType) where.sourceType = sourceType;
   if (from || to) {
     const range: { gte?: Date; lte?: Date } = {};
     if (from) range.gte = new Date(from);
@@ -77,12 +90,27 @@ export async function GET(req: Request) {
 
   const ledgers = await prisma.walletLedger.findMany({
     where,
-    include: { employee: true },
+    include: {
+      employee: true,
+      companyAccount: { select: { id: true, name: true, type: true } },
+      postedBy: { select: { id: true, name: true, email: true } },
+    },
     orderBy: { date: "desc" },
   });
 
   const rows = [
-    ["Date", "Employee", "Email", "Type", "Amount", "Balance", "Reference"],
+    [
+      "Date",
+      "Employee",
+      "Email",
+      "Type",
+      "Amount",
+      "Balance",
+      "Source",
+      "Company Account",
+      "Reference",
+      "Posted By",
+    ],
     ...ledgers.map((entry) => [
       entry.date.toISOString(),
       entry.employee?.name || "",
@@ -90,7 +118,10 @@ export async function GET(req: Request) {
       entry.type,
       entry.amount.toString(),
       entry.balance.toString(),
+      entry.sourceType || "",
+      entry.companyAccount?.name || "",
       entry.reference || "",
+      entry.postedBy?.name || entry.postedBy?.email || "",
     ]),
   ];
 

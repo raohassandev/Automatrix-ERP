@@ -31,6 +31,7 @@ interface Approval {
 
 interface HistoryItem {
   id: string;
+  type: "EXPENSE" | "INCOME";
   date: Date;
   category: string;
   amount: number | string;
@@ -167,37 +168,76 @@ export default async function ApprovalsPage() {
       ...incomeApprovals,
     ];
 
-    // Fetch recent approval history (last 10 approved/rejected)
-    const recentHistoryRaw = await prisma.expense.findMany({
-      where: {
-        status: { in: ['APPROVED', 'REJECTED'] },
-        approvedById: session.user.id,
-      },
-      include: {
-        submittedBy: { select: { id: true, email: true, name: true } },
-        approvedBy: { select: { id: true, email: true, name: true } },
-      },
-      orderBy: { updatedAt: 'desc' },
-      take: 10,
-    });
+    // Fetch recent approval history (expenses + income, last 10)
+    const [recentExpenseHistoryRaw, recentIncomeHistoryRaw] = await Promise.all([
+      prisma.expense.findMany({
+        where: {
+          status: { in: ["APPROVED", "REJECTED"] },
+          approvedById: session.user.id,
+        },
+        include: {
+          submittedBy: { select: { id: true, email: true, name: true } },
+          approvedBy: { select: { id: true, email: true, name: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 10,
+      }),
+      prisma.income.findMany({
+        where: {
+          status: { in: ["APPROVED", "REJECTED"] },
+          approvedById: session.user.id,
+        },
+        include: {
+          addedBy: { select: { id: true, email: true, name: true } },
+          approvedBy: { select: { id: true, email: true, name: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 10,
+      }),
+    ]);
 
-    // Convert to HistoryItem format for component compatibility
-    recentHistory = recentHistoryRaw.map((item) => ({
+    const expenseHistory: HistoryItem[] = recentExpenseHistoryRaw.map((item) => ({
       id: item.id,
+      type: "EXPENSE",
       date: item.date,
       category: item.category,
       amount: parseFloat(item.amount.toString()),
       status: item.status,
-      submittedBy: { 
-        email: item.submittedBy?.email || '', 
-        name: item.submittedBy?.name || null 
+      submittedBy: {
+        email: item.submittedBy?.email || "",
+        name: item.submittedBy?.name || null,
       },
-      approvedBy: item.approvedBy ? {
-        email: item.approvedBy.email || '',
-        name: item.approvedBy.name || null
-      } : null,
+      approvedBy: item.approvedBy
+        ? {
+            email: item.approvedBy.email || "",
+            name: item.approvedBy.name || null,
+          }
+        : null,
       updatedAt: item.updatedAt,
     }));
+    const incomeHistory: HistoryItem[] = recentIncomeHistoryRaw.map((item) => ({
+      id: item.id,
+      type: "INCOME",
+      date: item.date,
+      category: item.category || item.source || "Income",
+      amount: parseFloat(item.amount.toString()),
+      status: item.status,
+      submittedBy: {
+        email: item.addedBy?.email || "",
+        name: item.addedBy?.name || null,
+      },
+      approvedBy: item.approvedBy
+        ? {
+            email: item.approvedBy.email || "",
+            name: item.approvedBy.name || null,
+          }
+        : null,
+      updatedAt: item.updatedAt,
+    }));
+
+    recentHistory = [...expenseHistory, ...incomeHistory]
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .slice(0, 10);
   } catch (error) {
     console.error("Error fetching approvals data:", error);
     return (
