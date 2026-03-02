@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { ChevronDown, ChevronRight } from "lucide-react";
 
 type PermissionCatalogGroup = {
   module: string;
@@ -54,12 +56,87 @@ type ApprovalRouteModule = {
 };
 
 type RoleOption = { id: string; name: string };
-
 type AccessTab = "roles" | "users" | "routes";
 type OverrideEffect = "INHERIT" | "ALLOW" | "DENY";
+type AccessMode = "YES" | "NO" | "SELF" | "CUSTOM";
+
+type PermissionRow = {
+  key: string;
+  label: string;
+  supportsSelf: boolean;
+  ownKey?: string;
+};
 
 function moduleLabel(module: string) {
   return module.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function toPermissionRows(group: PermissionCatalogGroup): PermissionRow[] {
+  const keySet = new Set(group.permissions.map((p) => p.key));
+  const rows: PermissionRow[] = [];
+
+  for (const permission of group.permissions) {
+    if (permission.key.endsWith(".view_own")) {
+      const allKey = permission.key.replace(/\.view_own$/, ".view_all");
+      if (keySet.has(allKey)) {
+        continue;
+      }
+    }
+
+    if (permission.key.endsWith(".view_all")) {
+      const ownKey = permission.key.replace(/\.view_all$/, ".view_own");
+      rows.push({
+        key: permission.key,
+        label: permission.label,
+        supportsSelf: keySet.has(ownKey),
+        ownKey: keySet.has(ownKey) ? ownKey : undefined,
+      });
+      continue;
+    }
+
+    rows.push({
+      key: permission.key,
+      label: permission.label,
+      supportsSelf: false,
+    });
+  }
+
+  return rows;
+}
+
+function getRoleMode(row: PermissionRow, selected: Set<string>): AccessMode {
+  if (row.supportsSelf && row.ownKey) {
+    if (selected.has(row.key)) return "YES";
+    if (selected.has(row.ownKey)) return "SELF";
+    return "NO";
+  }
+
+  return selected.has(row.key) ? "YES" : "NO";
+}
+
+function applyRoleMode(row: PermissionRow, mode: AccessMode, selected: Set<string>) {
+  const next = new Set(selected);
+
+  if (row.supportsSelf && row.ownKey) {
+    next.delete(row.key);
+    next.delete(row.ownKey);
+    if (mode === "YES") {
+      next.add(row.key);
+    } else if (mode === "SELF") {
+      next.add(row.ownKey);
+    } else if (mode === "CUSTOM") {
+      // For now, custom behaves as self-scope until rule-builder is added.
+      next.add(row.ownKey);
+    }
+    return next;
+  }
+
+  if (mode === "YES") {
+    next.add(row.key);
+  } else {
+    next.delete(row.key);
+  }
+  return next;
 }
 
 export default function AccessControlCenter() {
@@ -70,6 +147,8 @@ export default function AccessControlCenter() {
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
   const [roleDraft, setRoleDraft] = useState<Set<string>>(new Set());
   const [savingRole, setSavingRole] = useState(false);
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
 
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [userCatalog, setUserCatalog] = useState<PermissionCatalogGroup[]>([]);
@@ -168,16 +247,10 @@ export default function AccessControlCenter() {
     };
   }, []);
 
-  const toggleRolePermission = (permissionKey: string) => {
-    setRoleDraft((prev) => {
-      const next = new Set(prev);
-      if (next.has(permissionKey)) {
-        next.delete(permissionKey);
-      } else {
-        next.add(permissionKey);
-      }
-      return next;
-    });
+  const openRoleDialog = (role: RoleTemplate) => {
+    setSelectedRoleId(role.id);
+    setRoleDraft(new Set(role.permissionKeys));
+    setRoleDialogOpen(true);
   };
 
   const saveRoleTemplate = async () => {
@@ -193,7 +266,8 @@ export default function AccessControlCenter() {
       if (!res.ok) {
         throw new Error(data.error || "Failed to save role template");
       }
-      toast.success("Role template updated");
+      toast.success("Role permissions updated");
+      setRoleDialogOpen(false);
       await loadRoleTemplates();
       await loadUserOverrides(selectedUserId || undefined);
     } catch (error) {
@@ -278,7 +352,7 @@ export default function AccessControlCenter() {
       <Card>
         <CardHeader>
           <CardTitle>Access Control Center</CardTitle>
-          <CardDescription>Loading role templates, feature matrix, and approval routes...</CardDescription>
+          <CardDescription>Loading roles and permissions...</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -289,106 +363,130 @@ export default function AccessControlCenter() {
       <CardHeader>
         <CardTitle className="text-xl text-slate-900">Access Control Center</CardTitle>
         <CardDescription className="text-slate-600">
-          Business-first access governance: role templates, user feature toggles, and approval routes by amount.
+          Configure role templates, user-level access, and approval routes with business-friendly controls.
         </CardDescription>
         <div className="mt-2 flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant={tab === "roles" ? "default" : "outline"}
-            onClick={() => setTab("roles")}
-            className={tab === "roles" ? "bg-blue-600 hover:bg-blue-700" : "border-blue-200 text-blue-700 hover:bg-blue-50"}
-          >
-            Role Templates
-          </Button>
-          <Button
-            type="button"
-            variant={tab === "users" ? "default" : "outline"}
-            onClick={() => setTab("users")}
-            className={tab === "users" ? "bg-emerald-600 hover:bg-emerald-700" : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"}
-          >
-            User Feature Access
-          </Button>
-          <Button
-            type="button"
-            variant={tab === "routes" ? "default" : "outline"}
-            onClick={() => setTab("routes")}
-            className={tab === "routes" ? "bg-amber-600 hover:bg-amber-700" : "border-amber-200 text-amber-700 hover:bg-amber-50"}
-          >
-            Approval Routes
-          </Button>
+          <Button type="button" variant={tab === "roles" ? "default" : "outline"} onClick={() => setTab("roles")}>Role Templates</Button>
+          <Button type="button" variant={tab === "users" ? "default" : "outline"} onClick={() => setTab("users")}>User Access</Button>
+          <Button type="button" variant={tab === "routes" ? "default" : "outline"} onClick={() => setTab("routes")}>Approval Routes</Button>
         </div>
       </CardHeader>
 
       <CardContent>
-        {tab === "roles" ? (
-          <div className="grid gap-4 lg:grid-cols-[280px,1fr]">
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-slate-700">Role templates</div>
-              <div className="space-y-2">
-                {roles.map((role) => (
-                  <button
-                    key={role.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedRoleId(role.id);
-                      setRoleDraft(new Set(role.permissionKeys));
-                    }}
-                    className={`w-full rounded-lg border p-3 text-left transition ${
-                      selectedRoleId === role.id
-                        ? "border-blue-300 bg-blue-50"
-                        : "border-slate-200 bg-white hover:bg-slate-50"
-                    }`}
-                  >
-                    <div className="font-medium text-slate-900">{role.name}</div>
-                    <div className="text-xs text-slate-500">{role.permissionKeys.length} features enabled</div>
-                  </button>
-                ))}
+        {tab === "roles" && (
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="grid grid-cols-[1.2fr,140px,360px] gap-3 border-b bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                <div>Role Name</div>
+                <div>Archived</div>
+                <div>Actions</div>
               </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3">
-                <div>
-                  <div className="text-sm text-slate-500">Editing template</div>
-                  <div className="text-lg font-semibold text-slate-900">{selectedRole?.name || "Select role"}</div>
-                </div>
-                <Badge variant="outline" className="border-blue-200 text-blue-700">
-                  {roleDraft.size} enabled features
-                </Badge>
-              </div>
-
-              {roleCatalog.map((group) => (
-                <div key={group.module} className="rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="mb-2 text-sm font-semibold text-slate-800">{moduleLabel(group.module)}</div>
-                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                    {group.permissions.map((permission) => (
-                      <label
-                        key={permission.key}
-                        className="flex items-center gap-2 rounded border border-slate-100 bg-slate-50 px-2 py-1.5 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={roleDraft.has(permission.key)}
-                          onChange={() => toggleRolePermission(permission.key)}
-                        />
-                        <span className="text-slate-700">{permission.label}</span>
-                      </label>
-                    ))}
+              {roles.map((role) => (
+                <div key={role.id} className="grid grid-cols-[1.2fr,140px,360px] gap-3 border-b px-4 py-3 text-sm last:border-b-0">
+                  <div>
+                    <div className="font-semibold text-slate-900">{role.name}</div>
+                    <div className="text-xs text-slate-500">{role.permissionKeys.length} enabled features</div>
+                  </div>
+                  <div className="text-slate-600">No</div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => openRoleDialog(role)}>View Permissions</Button>
+                    <Button size="sm" variant="outline" onClick={() => openRoleDialog(role)}>Update</Button>
                   </div>
                 </div>
               ))}
-
-              <div className="flex justify-end">
-                <Button onClick={saveRoleTemplate} disabled={savingRole || !selectedRoleId} className="bg-blue-600 hover:bg-blue-700">
-                  {savingRole ? "Saving..." : "Save Role Template"}
-                </Button>
-              </div>
             </div>
-          </div>
-        ) : null}
 
-        {tab === "users" ? (
+            <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+              <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-5xl">
+                <DialogHeader>
+                  <DialogTitle>View Role: {selectedRole?.name}</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-5">
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                    `Self` is enabled where `view_all / view_own` pair exists. `Custom` currently maps to self-scope until custom rule builder is added.
+                  </div>
+
+                  {roleCatalog.map((group) => {
+                    const rows = toPermissionRows(group);
+                    const isCollapsed = collapsedModules[group.module] === true;
+
+                    return (
+                      <div key={group.module} className="rounded-lg border border-slate-200 bg-white">
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                          onClick={() =>
+                            setCollapsedModules((prev) => ({
+                              ...prev,
+                              [group.module]: !prev[group.module],
+                            }))
+                          }
+                        >
+                          <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {moduleLabel(group.module)}
+                          </div>
+                          <Badge variant="outline">{rows.length} actions</Badge>
+                        </button>
+
+                        {!isCollapsed && (
+                          <div className="border-t">
+                            <div className="grid grid-cols-[1.4fr,120px,120px,120px,120px] gap-2 border-b bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700">
+                              <div>Permission</div>
+                              <div>Yes</div>
+                              <div>No</div>
+                              <div>Self</div>
+                              <div>Custom</div>
+                            </div>
+
+                            {rows.map((row) => {
+                              const mode = getRoleMode(row, roleDraft);
+                              const selfEnabled = row.supportsSelf;
+                              return (
+                                <div key={row.key} className="grid grid-cols-[1.4fr,120px,120px,120px,120px] gap-2 border-b px-4 py-2 text-sm last:border-b-0">
+                                  <div className="text-slate-800">{row.label}</div>
+                                  {(["YES", "NO", "SELF", "CUSTOM"] as const).map((option) => (
+                                    <label
+                                      key={option}
+                                      className={`flex items-center gap-2 ${
+                                        !selfEnabled && (option === "SELF" || option === "CUSTOM")
+                                          ? "cursor-not-allowed text-slate-300"
+                                          : "cursor-pointer text-slate-700"
+                                      }`}
+                                    >
+                                      <input
+                                        type="radio"
+                                        name={`${group.module}-${row.key}`}
+                                        disabled={!selfEnabled && (option === "SELF" || option === "CUSTOM")}
+                                        checked={mode === option}
+                                        onChange={() => setRoleDraft((prev) => applyRoleMode(row, option, prev))}
+                                      />
+                                      {option.charAt(0) + option.slice(1).toLowerCase()}
+                                    </label>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>Close</Button>
+                    <Button onClick={saveRoleTemplate} disabled={savingRole}>
+                      {savingRole ? "Saving..." : "Save Permissions"}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        )}
+
+        {tab === "users" && (
           <div className="grid gap-4 lg:grid-cols-[320px,1fr]">
             <div className="space-y-2">
               <div className="text-sm font-medium text-slate-700">Users</div>
@@ -408,12 +506,8 @@ export default function AccessControlCenter() {
                     <div className="text-xs text-slate-500">{user.email}</div>
                     <div className="mt-2 flex flex-wrap gap-1">
                       <Badge variant="outline">{user.roleName}</Badge>
-                      <Badge variant="outline" className="border-emerald-200 text-emerald-700">
-                        {user.allowCount} allow
-                      </Badge>
-                      <Badge variant="outline" className="border-rose-200 text-rose-700">
-                        {user.denyCount} deny
-                      </Badge>
+                      <Badge variant="outline" className="border-emerald-200 text-emerald-700">{user.allowCount} allow</Badge>
+                      <Badge variant="outline" className="border-rose-200 text-rose-700">{user.denyCount} deny</Badge>
                     </div>
                   </button>
                 ))}
@@ -463,27 +557,21 @@ export default function AccessControlCenter() {
               ))}
 
               <div className="flex justify-end">
-                <Button
-                  onClick={saveUserOverrides}
-                  disabled={savingUser || !selectedUserId}
-                  className="bg-emerald-600 hover:bg-emerald-700"
-                >
+                <Button onClick={saveUserOverrides} disabled={savingUser || !selectedUserId} className="bg-emerald-600 hover:bg-emerald-700">
                   {savingUser ? "Saving..." : "Save User Access"}
                 </Button>
               </div>
             </div>
           </div>
-        ) : null}
+        )}
 
-        {tab === "routes" ? (
+        {tab === "routes" && (
           <div className="space-y-4">
             {approvalModules.map((moduleEntry) => (
               <div key={moduleEntry.module} className="rounded-lg border border-slate-200 bg-white p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-lg font-semibold text-slate-900">{moduleEntry.moduleLabel} approval routes</h3>
-                  <Badge variant="outline" className="border-amber-200 text-amber-700">
-                    {moduleEntry.stages.length} stages
-                  </Badge>
+                  <Badge variant="outline" className="border-amber-200 text-amber-700">{moduleEntry.stages.length} stages</Badge>
                 </div>
 
                 <div className="space-y-3">
@@ -538,15 +626,9 @@ export default function AccessControlCenter() {
                                     onChange={() =>
                                       updateApprovalStage(moduleEntry.module, stage.id, (prev) => {
                                         const set = new Set(prev.roleIds);
-                                        if (set.has(role.id)) {
-                                          set.delete(role.id);
-                                        } else {
-                                          set.add(role.id);
-                                        }
-                                        return {
-                                          ...prev,
-                                          roleIds: Array.from(set),
-                                        };
+                                        if (set.has(role.id)) set.delete(role.id);
+                                        else set.add(role.id);
+                                        return { ...prev, roleIds: Array.from(set) };
                                       })
                                     }
                                   />
@@ -557,11 +639,7 @@ export default function AccessControlCenter() {
                           </div>
 
                           <div className="flex justify-end">
-                            <Button
-                              onClick={() => saveApprovalStage(moduleEntry.module, stage)}
-                              disabled={savingRouteId === stage.id}
-                              className="bg-amber-600 hover:bg-amber-700"
-                            >
+                            <Button onClick={() => saveApprovalStage(moduleEntry.module, stage)} disabled={savingRouteId === stage.id} className="bg-amber-600 hover:bg-amber-700">
                               {savingRouteId === stage.id ? "Saving..." : "Save Stage"}
                             </Button>
                           </div>
@@ -573,7 +651,7 @@ export default function AccessControlCenter() {
               </div>
             ))}
           </div>
-        ) : null}
+        )}
       </CardContent>
     </Card>
   );
