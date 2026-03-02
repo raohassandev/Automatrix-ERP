@@ -187,6 +187,45 @@
 
 ---
 
+## Update — AR receipt-allocation guardrails + income/invoice form clarity
+
+### What changed
+
+1. Added strict invoice receipt allocation guard (server-side):
+   - `src/lib/invoice-allocation.ts`
+   - Ensures income linked to invoice cannot exceed invoice outstanding amount.
+   - Enforces draft-invoice block and project mismatch block.
+
+2. Applied guard in all critical income posting paths:
+   - `src/app/api/income/route.ts` (create + auto-approve path)
+   - `src/app/api/income/[id]/route.ts` (update + auto-approve path)
+   - `src/lib/approval-engine.ts` (manual approval path)
+
+3. Added outstanding-invoice API for UX:
+   - `src/app/api/invoices/outstanding/route.ts`
+   - Returns invoice-wise outstanding balances for safe receipt linkage.
+
+4. Improved income/invoice entry UX for non-accounting users:
+   - `src/components/IncomeFormDialog.tsx`
+   - `src/components/IncomeForm.tsx`
+   - `src/components/InvoiceFormDialog.tsx`
+   - Replaced raw invoice-ID entry with readable outstanding invoice selection.
+   - Added plain-language helper guidance and stronger date/amount validation.
+
+### Validation
+
+- `pnpm typecheck` ✅
+- `pnpm lint` ✅
+- `pnpm test` ✅
+- `playwright/tests/rb4-procurement-chain.spec.ts` ✅
+
+### Staging
+
+- Deployed to ERP staging and verified:
+  - `https://erp-staging.automatrix.pk/api/health` returns `200 OK`.
+
+---
+
 ## Update — AR posting + accounting statement exports
 
 ### What changed

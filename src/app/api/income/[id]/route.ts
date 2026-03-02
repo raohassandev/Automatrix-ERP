@@ -8,6 +8,7 @@ import { getIncomeApprovalLevel, isPendingIncomeStatus } from "@/lib/approvals";
 import { recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { postIncomeApprovalJournal } from "@/lib/accounting";
+import { assertInvoiceReceiptWithinOutstanding } from "@/lib/invoice-allocation";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -83,6 +84,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.receiptUrl) data.receiptUrl = parsed.data.receiptUrl;
   if (parsed.data.receiptFileId) data.receiptFileId = parsed.data.receiptFileId;
   if (parsed.data.invoiceId) data.invoiceId = parsed.data.invoiceId;
+  if (parsed.data.invoiceId === null || parsed.data.invoiceId === "") data.invoiceId = null;
 
   let autoApprove = false;
   if (parsed.data.amount) {
@@ -104,6 +106,31 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   const result = await prisma.$transaction(async (tx) => {
+    const nextInvoiceId =
+      (data.invoiceId as string | null | undefined) !== undefined
+        ? ((data.invoiceId as string | null) || null)
+        : income.invoiceId || null;
+    const nextProjectRef =
+      (data.project as string | null | undefined) !== undefined
+        ? ((data.project as string | null) || null)
+        : income.project || null;
+    const nextAmount =
+      (data.amount as Prisma.Decimal | undefined) !== undefined
+        ? Number(data.amount as Prisma.Decimal)
+        : Number(income.amount);
+
+    if (nextInvoiceId) {
+      const { invoice } = await assertInvoiceReceiptWithinOutstanding(tx, {
+        invoiceId: nextInvoiceId,
+        receiptAmount: nextAmount,
+        excludeIncomeId: income.id,
+        projectRef: nextProjectRef,
+      });
+      if (!nextProjectRef && invoice?.projectId) {
+        data.project = invoice.projectId;
+      }
+    }
+
     const updated = await tx.income.update({
       where: { id },
       data,

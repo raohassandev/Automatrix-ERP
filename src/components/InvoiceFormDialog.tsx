@@ -67,6 +67,22 @@ export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFo
 
   async function submit() {
     try {
+      if (!isEdit && (!form.invoiceNo.trim() || !form.projectId || !form.date)) {
+        toast.error("Invoice number, project, and issue date are required.");
+        return;
+      }
+      if (!form.dueDate) {
+        toast.error("Due date is required.");
+        return;
+      }
+      if (!Number.isFinite(Number(form.amount)) || Number(form.amount) <= 0) {
+        toast.error("Invoice amount must be greater than zero.");
+        return;
+      }
+      if (form.date && form.dueDate && new Date(form.dueDate) < new Date(form.date)) {
+        toast.error("Due date cannot be earlier than issue date.");
+        return;
+      }
       const res = await fetch(isEdit ? `/api/invoices/${initialData?.id}` : "/api/invoices", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,7 +96,7 @@ export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFo
                 paymentDate: form.paymentDate || undefined,
               }
             : {
-                invoiceNo: form.invoiceNo,
+                invoiceNo: form.invoiceNo.trim(),
                 projectId: form.projectId,
                 date: form.date,
                 dueDate: form.dueDate,
@@ -118,7 +134,7 @@ export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFo
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit Invoice" : "Create Invoice"}
-      description={isEdit ? "Update invoice details" : "Generate a new invoice for a client"}
+      description={isEdit ? "Update invoice details and commercial status." : "Simple setup: invoice number, project, dates, amount."}
     >
       <form
         onSubmit={(e) => {
@@ -127,6 +143,9 @@ export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFo
         }}
         className="space-y-4"
       >
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Use status Draft while preparing. Move to Sent when issued; accounting posting happens on non-draft.
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="invoiceNo">Invoice Number</Label>

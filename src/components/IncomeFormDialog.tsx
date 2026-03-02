@@ -25,12 +25,22 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [projectRefreshKey, setProjectRefreshKey] = useState(0);
   const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
+  const [invoices, setInvoices] = useState<
+    Array<{
+      id: string;
+      invoiceNo: string;
+      projectId: string;
+      outstandingAmount: number;
+      date: string;
+      dueDate: string;
+    }>
+  >([]);
   const [form, setForm] = useState({
     source: "",
     amount: "",
     paymentMode: "",
     companyAccountId: "",
-    invoiceNumber: "",
+    invoiceId: "",
     remarks: "",
     project: "",
   });
@@ -54,13 +64,43 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/invoices/outstanding")
+      .then((r) => r.json())
+      .then((json) => {
+        if (cancelled) return;
+        const list = Array.isArray(json?.data) ? json.data : [];
+        setInvoices(list);
+      })
+      .catch(() => {
+        if (!cancelled) setInvoices([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
   async function submit() {
     if (!date) {
-      toast.error("Please select a date");
+      toast.error("Please select a date.");
+      return;
+    }
+    if (!form.source.trim()) {
+      toast.error("Please select income source.");
+      return;
+    }
+    if (!Number.isFinite(Number(form.amount)) || Number(form.amount) <= 0) {
+      toast.error("Amount must be greater than zero.");
+      return;
+    }
+    if (!form.paymentMode.trim()) {
+      toast.error("Please select payment mode.");
       return;
     }
     if (!form.companyAccountId) {
-      toast.error("Please select a company account");
+      toast.error("Please select a company account.");
       return;
     }
 
@@ -75,7 +115,7 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
           paymentMode: form.paymentMode,
           companyAccountId: form.companyAccountId,
           project: form.project || undefined,
-          invoiceId: form.invoiceNumber || null,
+          invoiceId: form.invoiceId || undefined,
           remarks: form.remarks || null,
         }),
       });
@@ -95,7 +135,7 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
         amount: "",
         paymentMode: "",
         companyAccountId: "",
-        invoiceNumber: "",
+        invoiceId: "",
         remarks: "",
         project: "",
       });
@@ -116,7 +156,7 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
       open={open}
       onOpenChange={onOpenChange}
       title="Log Income"
-      description="Record income received by the organization"
+      description="Simple flow: source, amount, payment mode, account, optional invoice link."
     >
       <form
         onSubmit={(e) => {
@@ -125,6 +165,9 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
         }}
         className="space-y-4"
       >
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          If this receipt is for an invoice, select invoice below. System blocks over-receipt automatically.
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
@@ -205,13 +248,42 @@ export function IncomeFormDialog({ open, onOpenChange }: IncomeFormDialogProps) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="invoiceNumber">Invoice Number (Optional)</Label>
-            <Input
-              id="invoiceNumber"
-              placeholder="INV-001"
-              value={form.invoiceNumber}
-              onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
-            />
+            <Label htmlFor="invoiceId">Invoice (Optional)</Label>
+            <Select
+              value={form.invoiceId}
+              onValueChange={(value) => {
+                const selected = invoices.find((invoice) => invoice.id === value);
+                setForm((prev) => ({
+                  ...prev,
+                  invoiceId: value,
+                  project: prev.project || selected?.projectId || "",
+                }));
+              }}
+            >
+              <SelectTrigger id="invoiceId">
+                <SelectValue placeholder="Select outstanding invoice (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                {invoices.map((invoice) => (
+                  <SelectItem key={invoice.id} value={invoice.id}>
+                    {invoice.invoiceNo} | {invoice.projectId} | Outstanding PKR {invoice.outstandingAmount.toLocaleString()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.invoiceId ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setForm((prev) => ({ ...prev, invoiceId: "" }))}
+              >
+                Clear invoice link
+              </Button>
+            ) : null}
+            {invoices.length === 0 ? (
+              <div className="text-xs text-muted-foreground">No outstanding invoices found.</div>
+            ) : null}
           </div>
 
           <div className="space-y-2 md:col-span-2">

@@ -4,6 +4,7 @@ import { createAuditLog } from './audit';
 import { getExpenseApprovalLevel, getIncomeApprovalLevel } from '@/lib/approvals';
 import { recalculateProjectFinancials } from '@/lib/projects';
 import { postExpenseApprovalJournal, postIncomeApprovalJournal } from '@/lib/accounting';
+import { assertInvoiceReceiptWithinOutstanding } from '@/lib/invoice-allocation';
 import {
   type ApprovalModule,
   getAllowedRolesForPolicy,
@@ -348,6 +349,14 @@ export async function approveIncome(params: {
 
   // Start transaction
   const result = await prisma.$transaction(async (tx) => {
+    if (income.invoiceId) {
+      await assertInvoiceReceiptWithinOutstanding(tx, {
+        invoiceId: income.invoiceId,
+        receiptAmount: finalAmount,
+        excludeIncomeId: income.id,
+        projectRef: income.project || null,
+      });
+    }
     const approvedAmount = new Prisma.Decimal(finalAmount);
     // Update income status
     const updatedIncome = await tx.income.update({

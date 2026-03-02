@@ -11,6 +11,7 @@ import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { resolveProjectDbId, resolveProjectId } from "@/lib/projects";
 import { postIncomeApprovalJournal } from "@/lib/accounting";
+import { assertInvoiceReceiptWithinOutstanding } from "@/lib/invoice-allocation";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -138,6 +139,16 @@ export async function POST(req: Request) {
     }
 
     const created = await prisma.$transaction(async (tx) => {
+      let invoiceProjectRef: string | null = null;
+      if (sanitizedData.invoiceId) {
+        const { invoice } = await assertInvoiceReceiptWithinOutstanding(tx, {
+          invoiceId: sanitizedData.invoiceId,
+          receiptAmount: sanitizedData.amount,
+          projectRef: resolvedProjectRef || null,
+        });
+        invoiceProjectRef = invoice?.projectId || null;
+      }
+
       const createdIncome = await tx.income.create({
         data: {
           date: new Date(sanitizedData.date),
@@ -146,7 +157,7 @@ export async function POST(req: Request) {
           amount: new Prisma.Decimal(sanitizedData.amount),
           paymentMode: sanitizedData.paymentMode,
           companyAccountId: sanitizedData.companyAccountId,
-          project: resolvedProjectRef || undefined,
+          project: resolvedProjectRef || invoiceProjectRef || undefined,
           approvalLevel,
           status: requiresApproval ? "PENDING" : "APPROVED",
           addedById: session.user.id,
@@ -161,6 +172,12 @@ export async function POST(req: Request) {
       if (!requiresApproval) {
         if (!createdIncome.companyAccountId) {
           throw new Error("Company account is required for income posting.");
+        }
+        if (createdIncome.invoiceId) {
+          await assertInvoiceReceiptWithinOutstanding(tx, {
+            invoiceId: createdIncome.invoiceId,
+            receiptAmount: Number(createdIncome.amount),
+          });
         }
         await postIncomeApprovalJournal(tx, {
           incomeId: createdIncome.id,
