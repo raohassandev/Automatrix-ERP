@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { hasPermission, type RoleName } from "@/lib/permissions";
 import {
   getPendingApprovalsForUser,
   approveExpense,
@@ -13,16 +12,18 @@ import { ZodError } from "zod";
 import { approvalSchema } from "@/lib/validation-schemas";
 import { logger } from "@/lib/logger";
 import { userHasApprovalAssignment } from "@/lib/approval-policies";
+import { requirePermission } from "@/lib/rbac";
 
-function canApproveWithRole(roleName: RoleName) {
-  return (
-    hasPermission(roleName, "expenses.approve_low") ||
-    hasPermission(roleName, "expenses.approve_medium") ||
-    hasPermission(roleName, "expenses.approve_high") ||
-    hasPermission(roleName, "approvals.approve_low") ||
-    hasPermission(roleName, "approvals.approve_high") ||
-    hasPermission(roleName, "approvals.partial_approve")
-  );
+async function canApproveWithUser(userId: string) {
+  const checks = await Promise.all([
+    requirePermission(userId, "expenses.approve_low"),
+    requirePermission(userId, "expenses.approve_medium"),
+    requirePermission(userId, "expenses.approve_high"),
+    requirePermission(userId, "approvals.approve_low"),
+    requirePermission(userId, "approvals.approve_high"),
+    requirePermission(userId, "approvals.partial_approve"),
+  ]);
+  return checks.some(Boolean);
 }
 
 /**
@@ -34,10 +35,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
-  const canViewAll = hasPermission(roleName, "approvals.view_all");
-  const canViewPending =
-    hasPermission(roleName, "approvals.view_pending") || canApproveWithRole(roleName);
+  const canViewAll = await requirePermission(session.user.id, "approvals.view_all");
+  const canApprove = await canApproveWithUser(session.user.id);
+  const canViewPending = (await requirePermission(session.user.id, "approvals.view_pending")) || canApprove;
   const hasAssignments = await userHasApprovalAssignment(session.user.id);
 
   if (!canViewAll && !canViewPending && !hasAssignments) {
@@ -84,11 +84,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
   const hasAssignments = await userHasApprovalAssignment(session.user.id);
   
   // Check if user has approval permissions
-  if (!canApproveWithRole(roleName) && !hasAssignments) {
+  if (!(await canApproveWithUser(session.user.id)) && !hasAssignments) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -231,10 +230,9 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
   const hasAssignments = await userHasApprovalAssignment(session.user.id);
   
-  if (!canApproveWithRole(roleName) && !hasAssignments) {
+  if (!(await canApproveWithUser(session.user.id)) && !hasAssignments) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

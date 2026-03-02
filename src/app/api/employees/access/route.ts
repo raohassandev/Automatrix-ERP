@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { isCredentialsModeAllowed } from "@/lib/auth-credentials-guard";
+import { invalidatePermissionCache } from "@/lib/access-control";
 
 export async function GET() {
   const session = await auth();
@@ -117,6 +118,8 @@ export async function POST(request: Request) {
     }),
     userId: session.user.id,
   });
+
+  invalidatePermissionCache(user.id);
 
   return NextResponse.json({
     success: true,

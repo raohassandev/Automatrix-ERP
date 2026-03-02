@@ -22,7 +22,8 @@ import {
   Paperclip,
   Tags,
 } from "lucide-react";
-import { hasPermission, type RoleName } from "@/lib/permissions";
+import { type RoleName } from "@/lib/permissions";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
 import {
   CommandDialog,
@@ -39,8 +40,7 @@ export function CommandPalette() {
   const router = useRouter();
   const { data: session } = useSession();
   const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
-  const canAccess = (permissions?: string[]) =>
-    !permissions || permissions.some((permission) => hasPermission(roleName, permission));
+  const { canAccess } = useEffectivePermissions(roleName);
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -101,7 +101,7 @@ export function CommandPalette() {
             { href: "/notifications", label: "Notifications", icon: Bell, permissions: ["dashboard.view", "reports.view_all"] },
             { href: "/attachments", label: "Attachments", icon: Paperclip, permissions: ["reports.view_all"] },
             { href: "/audit", label: "Audit Log", icon: FileText, permissions: ["reports.view_all"] },
-            { href: "/settings", label: "Settings", icon: Settings, permissions: ["dashboard.view"] },
+            { href: "/settings", label: "Settings", icon: Settings, permissions: ["employees.view_all", "accounting.manage", "company_accounts.manage"] },
             { href: "/reports", label: "Reports", icon: FileText, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
             { href: "/reports/accounting/bank-reconciliation", label: "Bank Reconciliation", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own", "company_accounts.view"] },
             { href: "/categories", label: "Categories", icon: Tags, permissions: ["categories.manage"] },

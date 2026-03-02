@@ -6,15 +6,15 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
-import { hasPermission, type RoleName } from '@/lib/permissions';
+import { type RoleName } from '@/lib/permissions';
 import { navGroups } from '@/lib/navigation';
+import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
 
 export default function MobileMenu() {
   const [open, setOpen] = useState(false);
   const { data: session } = useSession();
   const roleName = ((session?.user as { role?: string })?.role || 'Guest') as RoleName;
-  const canAccess = (permissions?: string[]) =>
-    !permissions || permissions.some((permission) => hasPermission(roleName, permission));
+  const { canAccess } = useEffectivePermissions(roleName);
 
   return (
     <>

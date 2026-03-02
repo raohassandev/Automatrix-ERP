@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { hasPermission, RoleName } from "@/lib/permissions";
+import { RoleName } from "@/lib/permissions";
+import { userHasEffectivePermission } from "@/lib/access-control";
 
 export async function getUserRoleName(userId: string): Promise<RoleName> {
   const user = await prisma.user.findUnique({
@@ -12,6 +13,5 @@ export async function getUserRoleName(userId: string): Promise<RoleName> {
 }
 
 export async function requirePermission(userId: string, permission: string) {
-  const role = await getUserRoleName(userId);
-  return hasPermission(role, permission);
+  return userHasEffectivePermission(userId, permission);
 }

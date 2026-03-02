@@ -24,7 +24,7 @@ const ROUTE_RULES: Array<{ pattern: RegExp; any: string[] }> = [
   { pattern: /^\/vendors/, any: ["vendors.view_all", "procurement.view_all", "projects.view_all", "projects.view_assigned"] },
   { pattern: /^\/commissions/, any: ["commissions.view_all", "employees.view_own"] },
   { pattern: /^\/reports/, any: ["reports.view_all", "reports.view_team", "reports.view_own"] },
-  { pattern: /^\/settings/, any: ["settings.view"] },
+  { pattern: /^\/settings/, any: ["employees.view_all", "accounting.manage", "company_accounts.manage"] },
 ];
 
 async function logApiRequest(request: NextRequest, userId: string) {

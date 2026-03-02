@@ -5,19 +5,19 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { hasPermission, type RoleName } from "@/lib/permissions";
+import { type RoleName } from "@/lib/permissions";
 import { navGroups } from "@/lib/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
 import { UserNav } from "./UserNav";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
-  const canAccess = (permissions?: string[]) =>
-    !permissions || permissions.some((permission) => hasPermission(roleName, permission));
+  const { canAccess } = useEffectivePermissions(roleName);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     if (typeof window === "undefined") {
       return {};

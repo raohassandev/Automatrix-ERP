@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { sanitizeString } from "@/lib/sanitize";
 import { logAudit } from "@/lib/audit";
+import { invalidatePermissionCache } from "@/lib/access-control";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -41,6 +42,8 @@ export async function POST(req: Request) {
     where: { email },
     data: { roleId: role.id },
   });
+
+  invalidatePermissionCache(updated.id);
 
   await logAudit({
     action: "UPDATE_USER_ROLE",
