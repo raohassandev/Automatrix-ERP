@@ -7,7 +7,7 @@ import { LedgerClient } from "./LedgerClient";
 export default async function InventoryLedgerPage({
   searchParams,
 }: {
-  searchParams: { page?: string; q?: string; type?: string; from?: string; to?: string };
+  searchParams: { page?: string; q?: string; type?: string; from?: string; to?: string; warehouseId?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -31,6 +31,7 @@ export default async function InventoryLedgerPage({
   const page = Math.max(parseInt(searchParams.page || "1", 10), 1);
   const query = (searchParams.q || "").trim();
   const type = (searchParams.type || "").trim();
+  const warehouseId = (searchParams.warehouseId || "").trim();
   const from = searchParams.from;
   const to = searchParams.to;
   const take = 25;
@@ -47,6 +48,7 @@ export default async function InventoryLedgerPage({
 
   const where: Record<string, unknown> = {};
   if (type) where.type = type;
+  if (warehouseId) where.warehouseId = warehouseId;
   if (query) {
     where.OR = [
       { reference: { contains: query, mode: "insensitive" } },
@@ -65,7 +67,7 @@ export default async function InventoryLedgerPage({
     prisma.inventoryLedger.findMany({
       where,
       orderBy: { date: "desc" },
-      include: { item: true },
+      include: { item: true, warehouse: true },
       skip,
       take,
     }),
@@ -75,6 +77,11 @@ export default async function InventoryLedgerPage({
   const items = await prisma.inventoryItem.findMany({
     orderBy: { name: "asc" },
     select: { id: true, name: true },
+  });
+  const warehouses = await prisma.warehouse.findMany({
+    where: { isActive: true },
+    orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+    select: { id: true, name: true, isDefault: true },
   });
 
   const serializedEntries = entries.map((entry) => ({
@@ -86,6 +93,7 @@ export default async function InventoryLedgerPage({
     total: Number(entry.total),
     project: entry.project,
     reference: entry.reference,
+    warehouseName: entry.warehouse?.name || null,
     item: entry.item ? { name: entry.item.name } : null,
   }));
 
@@ -94,6 +102,7 @@ export default async function InventoryLedgerPage({
       entries={serializedEntries}
       total={total}
       items={items}
+      warehouses={warehouses.map((w) => ({ id: w.id, name: w.name, isDefault: w.isDefault }))}
       canViewCost={canViewCost}
       searchParams={searchParams}
     />

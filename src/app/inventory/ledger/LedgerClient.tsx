@@ -21,26 +21,30 @@ interface LedgerEntry {
   total: number;
   project: string | null;
   reference: string | null;
+  warehouseName: string | null;
 }
 
 interface LedgerClientProps {
   entries: LedgerEntry[];
   total: number;
   items: { id: string; name: string }[];
+  warehouses: { id: string; name: string; isDefault: boolean }[];
   canViewCost: boolean;
-  searchParams: { page?: string; q?: string; type?: string; from?: string; to?: string };
+  searchParams: { page?: string; q?: string; type?: string; from?: string; to?: string; warehouseId?: string };
 }
 
 export function LedgerClient({
   entries,
   total,
   items,
+  warehouses,
   canViewCost,
   searchParams,
 }: LedgerClientProps) {
   const page = Math.max(parseInt(searchParams?.page || "1", 10), 1);
   const query = (searchParams?.q || "").trim();
   const type = (searchParams?.type || "").trim();
+  const warehouseId = (searchParams?.warehouseId || "").trim();
   const take = 25;
   const totalPages = Math.max(1, Math.ceil(total / take));
 
@@ -80,11 +84,28 @@ export function LedgerClient({
               <option value="TRANSFER">TRANSFER</option>
             </select>
           </div>
+          <div className="min-w-[220px]">
+            <label className="text-sm font-medium">Warehouse</label>
+            <select
+              name="warehouseId"
+              defaultValue={warehouseId}
+              className="mt-1 w-full rounded-md border px-3 py-2"
+            >
+              <option value="">All</option>
+              {warehouses.map((warehouse) => (
+                <option key={warehouse.id} value={warehouse.id}>
+                  {warehouse.name}
+                  {warehouse.isDefault ? " (Default)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
           <button className="rounded-md bg-black px-4 py-2 text-white">Apply</button>
           <Link
             href={`/api/inventory/ledger/export?${new URLSearchParams({
               ...(query ? { q: query } : {}),
               ...(type ? { type } : {}),
+              ...(warehouseId ? { warehouseId } : {}),
               ...(searchParams.from ? { from: searchParams.from } : {}),
               ...(searchParams.to ? { to: searchParams.to } : {}),
             }).toString()}`}
@@ -106,6 +127,7 @@ export function LedgerClient({
                 <th className="py-2">Qty</th>
                 {canViewCost ? <th className="py-2">Unit Cost</th> : null}
                 {canViewCost ? <th className="py-2">Total</th> : null}
+                <th className="py-2">Warehouse</th>
                 <th className="py-2">Project</th>
                 <th className="py-2">Reference</th>
               </tr>
@@ -123,6 +145,7 @@ export function LedgerClient({
                   {canViewCost ? (
                     <td className="py-2">{formatMoney(Number(entry.total))}</td>
                   ) : null}
+                  <td className="py-2">{entry.warehouseName || "-"}</td>
                   <td className="py-2">{entry.project || "-"}</td>
                   <td className="py-2">{entry.reference || "-"}</td>
                 </tr>
@@ -144,6 +167,7 @@ export function LedgerClient({
               {canViewCost ? (
                 <div>Total: {formatMoney(Number(entry.total))}</div>
               ) : null}
+              <div>Warehouse: {entry.warehouseName || "-"}</div>
               <div>Project: {entry.project || "-"}</div>
               <div>Ref: {entry.reference || "-"}</div>
             </div>

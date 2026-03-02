@@ -31,6 +31,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const query = (searchParams.get("q") || "").trim();
   const type = (searchParams.get("type") || "").trim();
+  const warehouseId = (searchParams.get("warehouseId") || "").trim();
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
@@ -57,6 +58,7 @@ export async function GET(req: Request) {
 
   const where: Record<string, unknown> = {};
   if (type) where.type = type;
+  if (warehouseId) where.warehouseId = warehouseId;
   if (query) {
     where.OR = [
       { reference: { contains: query, mode: "insensitive" as const } },
@@ -73,13 +75,13 @@ export async function GET(req: Request) {
 
   const entries = await prisma.inventoryLedger.findMany({
     where,
-    include: { item: true },
+    include: { item: true, warehouse: true },
     orderBy: { date: "desc" },
   });
 
   const header = canViewCost
-    ? ["Date", "Item", "Type", "Quantity", "Unit Cost", "Total", "Project", "Reference"]
-    : ["Date", "Item", "Type", "Quantity", "Project", "Reference"];
+    ? ["Date", "Item", "Type", "Quantity", "Unit Cost", "Total", "Warehouse", "Project", "Reference"]
+    : ["Date", "Item", "Type", "Quantity", "Warehouse", "Project", "Reference"];
   const rows = [
     header,
     ...entries.map((entry) =>
@@ -91,6 +93,7 @@ export async function GET(req: Request) {
             entry.quantity.toString(),
             entry.unitCost.toString(),
             entry.total.toString(),
+            entry.warehouse?.name || "",
             entry.project || "",
             entry.reference || "",
           ]
@@ -99,6 +102,7 @@ export async function GET(req: Request) {
             entry.item?.name || "",
             entry.type,
             entry.quantity.toString(),
+            entry.warehouse?.name || "",
             entry.project || "",
             entry.reference || "",
           ]
