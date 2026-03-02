@@ -338,3 +338,37 @@
   - `src/lib/project-detail-policy.ts`
   - `src/app/projects/[id]/ProjectDetailClient.tsx`
   - `SUPER_MASTER_PLAN.md`
+
+## Organization + Master Data + Expense management focus pass
+- Organization and Settings:
+  - Added persistent organization defaults model (`OrganizationSetting`) and migration.
+  - Added settings API: `GET/PATCH /api/settings/organization`.
+  - Added `OrganizationSettingsManager` UI to manage:
+    - company profile, currency, timezone
+    - fiscal-year start month
+    - default customer/vendor terms days
+    - expense receipt threshold
+  - Updated settings page to include organization defaults section and quick links to master data/expenses.
+
+- Master Data Management:
+  - Added centralized Master Data Center page: `/master-data`.
+  - Added quality/volume counters and direct links to Clients, Vendors, Categories, Departments, Designations, and Item Master.
+  - Added sidebar navigation entry for `Master Data`.
+
+- Expense Management:
+  - Added bulk paid operation API:
+    - `PUT /api/expenses/bulk-mark-paid` (permission: `expenses.mark_paid`)
+    - returns marked and skipped result sets.
+  - Added expense page bulk-selection + bulk mark-paid workflow for approved expenses.
+  - Added explicit non-stock policy banner on expense page for operator clarity.
+
+- Files:
+  - `prisma/schema.prisma`
+  - `prisma/migrations/20260302150000_add_organization_settings/migration.sql`
+  - `src/app/api/settings/organization/route.ts`
+  - `src/components/OrganizationSettingsManager.tsx`
+  - `src/app/settings/page.tsx`
+  - `src/app/master-data/page.tsx`
+  - `src/lib/navigation.ts`
+  - `src/app/api/expenses/bulk-mark-paid/route.ts`
+  - `src/app/expenses/page.tsx`

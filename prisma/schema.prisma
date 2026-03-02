@@ -999,6 +999,21 @@ model Attachment {
   createdAt DateTime @default(now())
 }
 
+model OrganizationSetting {
+  id                       String   @id @default(cuid())
+  companyName              String
+  legalName                String?
+  currency                 String   @default("PKR")
+  timezone                 String   @default("Asia/Karachi")
+  fiscalYearStartMonth     Int      @default(7)
+  defaultCustomerTermsDays Int      @default(30)
+  defaultVendorTermsDays   Int      @default(30)
+  expenseReceiptThreshold  Decimal  @default(0)
+  updatedById              String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
 model Notification {
   id        String   @id @default(cuid())
   userId    String?

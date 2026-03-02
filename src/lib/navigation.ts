@@ -72,6 +72,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { name: "Approvals", href: "/approvals", icon: FileCheck, permissions: ["approvals.view_all", "approvals.view_pending", "approvals.approve_low", "approvals.approve_high", "expenses.approve_low", "expenses.approve_medium", "expenses.approve_high"] },
       { name: "Audit Log", href: "/audit", icon: FileText, permissions: ["audit.view"] },
+      { name: "Master Data", href: "/master-data", icon: Building2, permissions: ["clients.view_all", "vendors.view_all", "categories.manage", "departments.view_all", "designations.view_all"] },
       { name: "Settings", href: "/settings", icon: Settings, permissions: ["dashboard.view"] },
     ],
   },

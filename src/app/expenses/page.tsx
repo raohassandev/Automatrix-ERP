@@ -14,7 +14,9 @@ import QuerySelect from "@/components/QuerySelect";
 import { Badge } from "@/components/ui/badge";
 import { ExpenseActions } from "@/components/ExpenseActions";
 import { PageCreateButton } from "@/components/PageCreateButton";
+import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { hasPermission, type RoleName } from "@/lib/permissions";
 
 const COLUMNS = [
@@ -69,6 +71,8 @@ function ExpensesPageContent() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [columns, setColumns] = useState(COLUMNS);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkPending, setBulkPending] = useState(false);
   const canCreate = hasPermission(roleName, "expenses.submit");
   const canEditAny = hasPermission(roleName, "expenses.edit");
   const canMarkPaid = hasPermission(roleName, "expenses.mark_paid");
@@ -95,6 +99,7 @@ function ExpensesPageContent() {
       const data = await res.json();
       setExpenses(data.data?.expenses || []); // Access expenses from nested data object
       setTotalPages(data.data?.pagination?.totalPages || 0);
+      setSelectedIds(new Set());
     };
     fetchExpenses();
   }, [searchParams]);
@@ -110,6 +115,38 @@ function ExpensesPageContent() {
     },
     { total: 0, pending: 0, approved: 0, paid: 0 },
   );
+
+  const selectableApproved = expenses.filter((row) => row.status === "APPROVED").map((row) => row.id);
+  const allApprovedSelected =
+    selectableApproved.length > 0 && selectableApproved.every((id) => selectedIds.has(id));
+
+  async function bulkMarkPaid() {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkPending(true);
+    try {
+      const res = await fetch("/api/expenses/bulk-mark-paid", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expenseIds: ids }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || "Bulk mark paid failed");
+      }
+      const marked = Array.isArray(json?.data?.markedPaid) ? json.data.markedPaid.length : 0;
+      const skipped = Array.isArray(json?.data?.skipped) ? json.data.skipped.length : 0;
+      toast.success(`Bulk mark paid completed. Marked: ${marked}, Skipped: ${skipped}`);
+      const refreshRes = await fetch(`/api/expenses?${searchParams.toString()}&limit=25`);
+      const refreshData = await refreshRes.json();
+      setExpenses(refreshData.data?.expenses || []);
+      setSelectedIds(new Set());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Bulk mark paid failed");
+    } finally {
+      setBulkPending(false);
+    }
+  }
 
 
   return (
@@ -187,11 +224,45 @@ function ExpensesPageContent() {
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-900">
+          Expense rule: expenses are non-stock only. Material purchasing must flow through Procurement (PO → GRN → Vendor Bill).
+        </div>
+        {canMarkPaid ? (
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 p-3">
+            <div className="text-sm text-muted-foreground">
+              Selected approved expenses: {selectedIds.size}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (allApprovedSelected) {
+                    setSelectedIds(new Set());
+                  } else {
+                    setSelectedIds(new Set(selectableApproved));
+                  }
+                }}
+                disabled={selectableApproved.length === 0}
+              >
+                {allApprovedSelected ? "Clear Approved" : "Select All Approved"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={bulkMarkPaid}
+                disabled={bulkPending || selectedIds.size === 0}
+              >
+                {bulkPending ? "Posting..." : "Bulk Mark Paid"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
         {/* Desktop: Table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
+                {canMarkPaid ? <th className="py-2">Pick</th> : null}
                 {columns.map((col) =>
                   col.visible ? (
                     <th key={col.key} className="py-2">
@@ -205,6 +276,23 @@ function ExpensesPageContent() {
             <tbody>
               {expenses.map((expense) => (
                 <tr key={expense.id} className="border-b">
+                  {canMarkPaid ? (
+                    <td className="py-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(expense.id)}
+                        disabled={expense.status !== "APPROVED"}
+                        onChange={(e) => {
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(expense.id);
+                            else next.delete(expense.id);
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
+                  ) : null}
                   {columns.map((col) =>
                     col.visible ? (
                       <td key={col.key} className="py-2">
