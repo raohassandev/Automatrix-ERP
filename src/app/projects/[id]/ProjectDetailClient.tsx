@@ -16,6 +16,7 @@ import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
 import { GoodsReceiptFormDialog } from "@/components/GoodsReceiptFormDialog";
 import { VendorBillFormDialog } from "@/components/VendorBillFormDialog";
 import { withLoadingToast } from "@/lib/withLoadingToast";
+import { ProjectExecutiveSummary } from "@/components/projects/ProjectExecutiveSummary";
 
 function tabLabel(tab: ProjectDetailTab) {
   switch (tab) {
@@ -32,6 +33,16 @@ function tabLabel(tab: ProjectDetailTab) {
     case "documents":
       return "Documents";
   }
+}
+
+function statusPillClass(status: string) {
+  const normalized = String(status || "").toUpperCase();
+  if (normalized === "ACTIVE") return "border-emerald-200 bg-emerald-100 text-emerald-900";
+  if (normalized === "ON_HOLD") return "border-amber-200 bg-amber-100 text-amber-900";
+  if (normalized === "COMPLETED" || normalized === "CLOSED") {
+    return "border-slate-200 bg-slate-100 text-slate-800";
+  }
+  return "border-sky-200 bg-sky-100 text-sky-900";
 }
 
 export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
@@ -214,36 +225,43 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-card p-6 shadow-sm">
+      <div className="relative overflow-hidden rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-6 shadow-sm">
+        <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-sky-200/40" />
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="min-w-0">
-            <div className="text-sm text-muted-foreground">{detail.header.projectId}</div>
+          <div className="min-w-0 relative z-10">
+            <div className="text-sm font-medium text-sky-700">{detail.header.projectId}</div>
             <h1 className="mt-1 truncate text-2xl font-semibold">{detail.header.name}</h1>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span
+                className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${statusPillClass(detail.header.status)}`}
+              >
+                {detail.header.status.replaceAll("_", " ")}
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
               <span>
                 Client:{" "}
-                <Link className="underline underline-offset-2" href={`/clients?search=${encodeURIComponent(detail.header.client.name)}`}>
+                <Link className="font-medium text-sky-800 underline underline-offset-2" href={`/clients?search=${encodeURIComponent(detail.header.client.name)}`}>
                   {detail.header.client.name}
                 </Link>
               </span>
-              <span>Status: {detail.header.status}</span>
               <span>Start: {detail.header.startDate}</span>
               <span>End: {detail.header.endDate || "-"}</span>
               <span>
                 Manager:{" "}
                 {detail.header.manager ? (
-                  <span className="text-foreground">{detail.header.manager.name}</span>
+                  <span className="font-medium text-slate-900">{detail.header.manager.name}</span>
                 ) : (
                   "-"
                 )}
               </span>
             </div>
           </div>
-          <div className="text-xs text-muted-foreground">
+          <div className="relative z-10 text-xs text-slate-600">
             Role: <span className="font-medium text-foreground">{detail.policy.role}</span>
           </div>
           {anyActions ? (
-            <div className="md:ml-4">
+            <div className="relative z-10 md:ml-4">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" data-testid="workhub-actions-button">
@@ -287,6 +305,48 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           ) : null}
         </div>
       </div>
+
+      {detail.costs ? (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4">
+            <div className="text-xs font-medium text-emerald-800">Money In (Approved)</div>
+            <div className="mt-2 text-xl font-semibold text-emerald-900">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
+            <div className="mt-1 text-xs text-emerald-700">Pending income: {formatMoney(detail.costs.pendingIncomeSubmitted)}</div>
+          </div>
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
+            <div className="text-xs font-medium text-rose-800">Money Out (Cost to Date)</div>
+            <div className="mt-2 text-xl font-semibold text-rose-900">{formatMoney(detail.costs.costToDate)}</div>
+            <div className="mt-1 text-xs text-rose-700">Pending expenses: {formatMoney(detail.costs.pendingExpenseSubmitted)}</div>
+          </div>
+          <div
+            className={`rounded-lg border p-4 ${
+              detail.costs.projectProfit >= 0
+                ? "border-emerald-200 bg-emerald-50/60"
+                : "border-red-200 bg-red-50/70"
+            }`}
+          >
+            <div className="text-xs font-medium text-slate-700">Current Profit</div>
+            <div className="mt-2 text-xl font-semibold">{formatMoney(detail.costs.projectProfit)}</div>
+            <div className="mt-1 text-xs text-slate-600">Margin: {detail.costs.marginPercent.toFixed(1)}%</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4">
+            <div className="text-xs font-medium text-amber-900">Cash to Recover</div>
+            <div className="mt-2 text-xl font-semibold text-amber-900">{formatMoney(detail.costs.pendingRecovery)}</div>
+            <div className="mt-1 text-xs text-amber-800">Overdue: {formatMoney(detail.costs.risk.overdueRecoveryAmount)}</div>
+          </div>
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-4">
+            <div className="text-xs font-medium text-indigo-900">Unpaid Vendor Bills</div>
+            <div className="mt-2 text-xl font-semibold text-indigo-900">{formatMoney(detail.costs.apOutstanding)}</div>
+            <div className="mt-1 text-xs text-indigo-800">
+              Billed {formatMoney(detail.costs.apBilledTotal)} / Paid {formatMoney(detail.costs.apPaidTotal)}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {detail.costs ? (
+        <ProjectExecutiveSummary costs={detail.costs} projectId={detail.header.projectId} />
+      ) : null}
 
       {/* Work Hub dialogs (Phase 1 safe; no ad-hoc posting logic) */}
       <PurchaseOrderFormDialog
@@ -562,9 +622,9 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold">Costs</h2>
+              <h2 className="text-lg font-semibold">Finance Summary</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Phase 1 truth: posted AP bills + approved non-stock expenses (including incentives) against approved project income.
+                Project totals are calculated from approved income, approved expenses, posted vendor bills, posted vendor payments, and non-draft invoices.
               </p>
             </div>
             <a
@@ -578,42 +638,33 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             <div className="mt-4 text-sm text-muted-foreground">No access.</div>
           ) : (
             <>
-              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
-                  <div className="text-xs text-sky-700">Contract Value</div>
-                  <div className="mt-2 text-lg font-semibold text-sky-900">
-                    {formatMoney(detail.costs.contractValue)}
-                  </div>
-                </div>
-                <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
-                  <div className="text-xs text-indigo-700">Invoiced / Received</div>
-                  <div className="mt-2 text-lg font-semibold text-indigo-900">
-                    {formatMoney(detail.costs.invoicedAmount)} / {formatMoney(detail.costs.receivedAmount)}
-                  </div>
-                  <div className="mt-1 text-xs text-indigo-700">
-                    Pending recovery: {formatMoney(detail.costs.pendingRecovery)}
-                  </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4">
+                  <div className="text-xs font-medium text-emerald-800">Money In (Approved)</div>
+                  <div className="mt-2 text-lg font-semibold text-emerald-900">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
                 </div>
                 <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
-                  <div className="text-xs text-rose-700">Cost to Date</div>
-                  <div className="mt-2 text-lg font-semibold text-rose-900">
-                    {formatMoney(detail.costs.costToDate)}
-                  </div>
+                  <div className="text-xs font-medium text-rose-800">Money Out (Total Cost)</div>
+                  <div className="mt-2 text-lg font-semibold text-rose-900">{formatMoney(detail.costs.totalProjectCosts)}</div>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4">
+                  <div className="text-xs font-medium text-amber-800">Cash to Recover</div>
+                  <div className="mt-2 text-lg font-semibold text-amber-900">{formatMoney(detail.costs.pendingRecovery)}</div>
+                </div>
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-4">
+                  <div className="text-xs font-medium text-indigo-800">Vendor Outstanding</div>
+                  <div className="mt-2 text-lg font-semibold text-indigo-900">{formatMoney(detail.costs.apOutstanding)}</div>
                 </div>
                 <div
                   className={`rounded-lg border p-4 ${
-                    detail.costs.grossMargin >= 0
+                    detail.costs.projectProfit >= 0
                       ? "border-emerald-200 bg-emerald-50/60"
                       : "border-red-200 bg-red-50/70"
                   }`}
                 >
-                  <div className="text-xs text-muted-foreground">Gross Margin</div>
-                  <div className="mt-2 text-lg font-semibold">
-                    {formatMoney(detail.costs.grossMargin)}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {detail.costs.marginPercent.toFixed(1)}%
-                  </div>
+                  <div className="text-xs font-medium text-slate-700">Current Profit</div>
+                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.projectProfit)}</div>
+                  <div className="mt-1 text-xs text-slate-600">{detail.costs.marginPercent.toFixed(1)}% margin</div>
                 </div>
               </div>
 
@@ -630,82 +681,110 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 )}
               </div>
 
-              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">AP billed (posted)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apBilledTotal)}</div>
-                  <div className="mt-1 text-xs">
-                    <Link
-                      className="text-blue-700 underline underline-offset-2"
-                      href={`/procurement/vendor-bills?search=${encodeURIComponent(detail.header.projectId)}`}
-                    >
-                      Open vendor bills
-                    </Link>
+              <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+                  <h3 className="text-sm font-semibold text-sky-900">Revenue & Recovery</h3>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sky-800">Contract value</span>
+                      <span className="font-semibold text-sky-900">{formatMoney(detail.costs.contractValue)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sky-800">Invoiced</span>
+                      <span className="font-semibold text-sky-900">{formatMoney(detail.costs.invoicedAmount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sky-800">Received (approved)</span>
+                      <span className="font-semibold text-sky-900">{formatMoney(detail.costs.receivedAmount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sky-800">Pending recovery</span>
+                      <span className="font-semibold text-sky-900">{formatMoney(detail.costs.pendingRecovery)}</span>
+                    </div>
                   </div>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">AP paid (posted allocations)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apPaidTotal)}</div>
-                  <div className="mt-1 text-xs">
+                  <div className="mt-3 text-xs">
                     <Link
-                      className="text-blue-700 underline underline-offset-2"
-                      href={`/procurement/vendor-payments?search=${encodeURIComponent(detail.header.projectId)}`}
-                    >
-                      Open vendor payments
-                    </Link>
-                  </div>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">AP outstanding</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apOutstanding)}</div>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">Non-stock expenses (approved)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.nonStockExpensesApproved)}</div>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">Incentives (approved)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.incentivesApproved)}</div>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">Other non-stock expenses (approved)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.otherNonStockExpensesApproved)}</div>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">Pending expenses (submitted)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.pendingExpenseSubmitted)}</div>
-                  <div className="mt-1 text-xs">
-                    <Link
-                      className="text-blue-700 underline underline-offset-2"
-                      href={`/expenses/by-project?project=${encodeURIComponent(detail.header.projectId)}`}
-                    >
-                      Open expenses
-                    </Link>
-                  </div>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">Project income (approved)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
-                  <div className="mt-1 text-xs">
-                    <Link
-                      className="text-blue-700 underline underline-offset-2"
+                      className="font-medium text-sky-800 underline underline-offset-2"
                       href={`/income?search=${encodeURIComponent(detail.header.projectId)}`}
                     >
                       Open income entries
                     </Link>
                   </div>
                 </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">Pending income (submitted)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.pendingIncomeSubmitted)}</div>
+
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
+                  <h3 className="text-sm font-semibold text-indigo-900">Payables & Costs</h3>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-indigo-800">AP billed (posted)</span>
+                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.apBilledTotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-indigo-800">AP paid (posted)</span>
+                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.apPaidTotal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-indigo-800">AP outstanding</span>
+                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.apOutstanding)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-indigo-800">Non-stock approved</span>
+                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.nonStockExpensesApproved)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-indigo-800">Incentives</span>
+                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.incentivesApproved)}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs">
+                    <Link
+                      className="font-medium text-indigo-800 underline underline-offset-2"
+                      href={`/procurement/vendor-bills?search=${encodeURIComponent(detail.header.projectId)}`}
+                    >
+                      Open vendor bills
+                    </Link>
+                    <span className="mx-1 text-indigo-700">•</span>
+                    <Link
+                      className="font-medium text-indigo-800 underline underline-offset-2"
+                      href={`/procurement/vendor-payments?search=${encodeURIComponent(detail.header.projectId)}`}
+                    >
+                      Open vendor payments
+                    </Link>
+                  </div>
                 </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">Total project costs (posted AP + approved expenses)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.totalProjectCosts)}</div>
-                </div>
-                <div className="rounded-lg border p-4">
-                  <div className="text-xs text-muted-foreground">Project profit (approved income - total project costs)</div>
-                  <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.projectProfit)}</div>
+
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+                  <h3 className="text-sm font-semibold text-emerald-900">Profitability View</h3>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-emerald-800">Total project costs</span>
+                      <span className="font-semibold text-emerald-900">{formatMoney(detail.costs.totalProjectCosts)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-emerald-800">Current profit</span>
+                      <span className="font-semibold text-emerald-900">{formatMoney(detail.costs.projectProfit)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-emerald-800">Gross margin</span>
+                      <span className="font-semibold text-emerald-900">{formatMoney(detail.costs.grossMargin)}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-emerald-800">Margin %</span>
+                      <span className="font-semibold text-emerald-900">{detail.costs.marginPercent.toFixed(1)}%</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-emerald-800">Pending expenses</span>
+                      <span className="font-semibold text-emerald-900">{formatMoney(detail.costs.pendingExpenseSubmitted)}</span>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs">
+                    <Link
+                      className="font-medium text-emerald-800 underline underline-offset-2"
+                      href={`/expenses/by-project?project=${encodeURIComponent(detail.header.projectId)}`}
+                    >
+                      Open expenses
+                    </Link>
+                  </div>
                 </div>
               </div>
 

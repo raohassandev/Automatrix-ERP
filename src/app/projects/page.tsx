@@ -8,6 +8,7 @@ import { ProjectsTable } from "@/components/ProjectsTable";
 import { PageCreateButton } from "@/components/PageCreateButton";
 import QuerySelect from "@/components/QuerySelect";
 import { formatMoney } from "@/lib/format";
+import { computeProjectFinancialSnapshot } from "@/lib/projects";
 
 export default async function ProjectsPage({
   searchParams,
@@ -93,18 +94,23 @@ export default async function ProjectsPage({
     }),
     prisma.project.count({ where }),
   ]);
-  const serializedProjects = projects.map((project) => ({
-    id: project.id,
-    projectId: project.projectId,
-    name: project.name,
-    clientName: project.client?.name || "-",
-    clientId: project.clientId,
-    status: project.status,
-    contractValue: canViewFinancials ? Number(project.contractValue) : 0,
-    pendingRecovery: canViewFinancials ? Number(project.pendingRecovery) : 0,
-    startDate: project.startDate.toISOString().slice(0, 10),
-    endDate: project.endDate ? project.endDate.toISOString().slice(0, 10) : null,
-  }));
+  const serializedProjects = await Promise.all(
+    projects.map(async (project) => {
+      const snapshot = canViewFinancials ? await computeProjectFinancialSnapshot(project) : null;
+      return {
+        id: project.id,
+        projectId: project.projectId,
+        name: project.name,
+        clientName: project.client?.name || "-",
+        clientId: project.clientId,
+        status: project.status,
+        contractValue: canViewFinancials ? Number(snapshot?.contractValue || 0) : 0,
+        pendingRecovery: canViewFinancials ? Number(snapshot?.pendingRecovery || 0) : 0,
+        startDate: project.startDate.toISOString().slice(0, 10),
+        endDate: project.endDate ? project.endDate.toISOString().slice(0, 10) : null,
+      };
+    }),
+  );
   const totalPages = Math.max(1, Math.ceil(total / take));
   const stats = serializedProjects.reduce(
     (acc, project) => {
@@ -120,11 +126,11 @@ export default async function ProjectsPage({
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-indigo-50 p-8 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Projects</h1>
-            <p className="mt-2 text-muted-foreground">Projects overview.</p>
+            <p className="mt-2 text-slate-600">Track project health, timeline status, and cash recovery.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-[220px]">
@@ -148,22 +154,22 @@ export default async function ProjectsPage({
           </div>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4">
             <div className="text-sm text-emerald-700">Active</div>
             <div className="text-xl font-semibold text-emerald-800">{stats.active}</div>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+          <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4">
             <div className="text-sm text-amber-700">On Hold</div>
             <div className="text-xl font-semibold text-amber-800">{stats.onHold}</div>
           </div>
-          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
-            <div className="text-sm text-sky-700">Contract Value</div>
+          <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-4">
+            <div className="text-sm text-sky-700">Total Contract</div>
             <div className="text-xl font-semibold text-sky-800">
               {canViewFinancials ? formatMoney(stats.contract) : "-"}
             </div>
           </div>
           <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
-            <div className="text-sm text-rose-700">Pending Recovery</div>
+            <div className="text-sm text-rose-700">Cash To Recover</div>
             <div className="text-xl font-semibold text-rose-800">
               {canViewFinancials ? formatMoney(stats.pending) : "-"}
             </div>

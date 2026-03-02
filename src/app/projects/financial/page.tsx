@@ -10,7 +10,7 @@ import Link from "next/link";
 import SearchInput from "@/components/SearchInput";
 import QuerySelect from "@/components/QuerySelect";
 import PaginationControls from "@/components/PaginationControls";
-import { buildProjectAliases } from "@/lib/projects";
+import { buildProjectAliases, computeProjectFinancialSnapshot } from "@/lib/projects";
 
 type FinancialProjectRow = {
   id: string;
@@ -83,59 +83,52 @@ export default async function ProjectFinancialPage({
 
   const projects = await prisma.project.findMany({
     where,
-    orderBy: [{ costToDate: "desc" }, { name: "asc" }],
+    orderBy: [{ name: "asc" }],
     include: { client: true },
   });
 
   const projectsWithExpenseData = await Promise.all(
     projects.map(async (project) => {
       const aliases = buildProjectAliases(project);
-      const expenseData = await prisma.expense.aggregate({
-        where: { project: { in: aliases } },
-        _count: true,
-      });
-      const overdueInvoices = await prisma.invoice.aggregate({
-        where: {
-          projectId: { in: aliases },
-          dueDate: { lt: new Date() },
-          status: { notIn: ["PAID", "CANCELLED", "DRAFT"] },
-        },
-        _sum: { amount: true },
-        _count: true,
-      });
-
-      const latestExpense = await prisma.expense.findFirst({
-        where: { project: { in: aliases } },
-        orderBy: { date: "desc" },
-        select: { date: true },
-      });
+      const [snapshot, expenseData, latestExpense] = await Promise.all([
+        computeProjectFinancialSnapshot(project),
+        prisma.expense.aggregate({
+          where: { project: { in: aliases } },
+          _count: true,
+        }),
+        prisma.expense.findFirst({
+          where: { project: { in: aliases } },
+          orderBy: { date: "desc" },
+          select: { date: true },
+        }),
+      ]);
 
       const row: FinancialProjectRow = {
         id: project.id,
         projectId: project.projectId,
         name: project.name,
         clientName: project.client?.name || "",
-        contractValue: Number(project.contractValue),
-        costToDate: Number(project.costToDate),
-        receivedAmount: Number(project.receivedAmount),
-        invoicedAmount: Number(project.invoicedAmount),
-        pendingRecovery: Number(project.pendingRecovery),
-        grossMargin: Number(project.grossMargin),
-        marginPercent: Number(project.marginPercent),
+        contractValue: snapshot.contractValue,
+        costToDate: snapshot.costToDate,
+        receivedAmount: snapshot.receivedAmount,
+        invoicedAmount: snapshot.invoicedAmount,
+        pendingRecovery: snapshot.pendingRecovery,
+        grossMargin: snapshot.grossMargin,
+        marginPercent: snapshot.marginPercent,
         status: project.status,
         expenseCount: expenseData._count,
         lastExpenseDate: latestExpense?.date ? latestExpense.date.toISOString() : null,
-        overdueRecoveryAmount: Number(overdueInvoices._sum.amount || 0),
-        overdueInvoiceCount: overdueInvoices._count || 0,
-        negativeMargin: Number(project.grossMargin) < 0 || Number(project.marginPercent) < 0,
-        highVendorExposure:
-          Number(project.pendingRecovery) > 0 &&
-          Number(project.costToDate) > Number(project.receivedAmount) * 1.5,
+        overdueRecoveryAmount: snapshot.overdueRecoveryAmount,
+        overdueInvoiceCount: snapshot.overdueInvoiceCount || 0,
+        negativeMargin: snapshot.negativeMargin,
+        highVendorExposure: snapshot.highUnpaidVendorExposure,
       };
 
       return row;
     })
   );
+
+  projectsWithExpenseData.sort((a, b) => b.costToDate - a.costToDate || a.name.localeCompare(b.name));
 
   const statusOptions = Array.from(
     new Set(projectsWithExpenseData.map((p) => p.status).filter(Boolean))
@@ -171,11 +164,11 @@ export default async function ProjectFinancialPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-8 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Project Financial Dashboard</h1>
-            <p className="mt-2 text-muted-foreground">Budget vs actual costs and profitability analysis.</p>
+            <p className="mt-2 text-slate-600">Live view of project cash in, cash out, recoveries, and risk signals.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-[220px]">
@@ -189,8 +182,8 @@ export default async function ProjectFinancialPage({
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-7">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-7">
+        <Card className="border-emerald-200 bg-emerald-50/70">
           <CardHeader>
             <CardTitle>Total Contract Value</CardTitle>
           </CardHeader>
@@ -199,7 +192,7 @@ export default async function ProjectFinancialPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-rose-200 bg-rose-50/70">
           <CardHeader>
             <CardTitle>Total Costs</CardTitle>
           </CardHeader>
@@ -208,16 +201,16 @@ export default async function ProjectFinancialPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-sky-200 bg-sky-50/70">
           <CardHeader>
-            <CardTitle>Total Received</CardTitle>
+            <CardTitle>Money In</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-blue-600">{formatMoney(totalReceived)}</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-amber-200 bg-amber-50/70">
           <CardHeader>
             <CardTitle>Pending Recovery</CardTitle>
           </CardHeader>
@@ -228,20 +221,20 @@ export default async function ProjectFinancialPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={totalGrossMargin >= 0 ? "border-emerald-200 bg-emerald-50/70" : "border-red-200 bg-red-50/70"}>
           <CardHeader>
-            <CardTitle>Gross Margin</CardTitle>
+            <CardTitle>Current Profit</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={`text-2xl font-bold ${totalGrossMargin >= 0 ? "text-green-600" : "text-red-600"}`}>
               {formatMoney(totalGrossMargin)}
             </p>
             <p className="text-sm text-muted-foreground">
-              {totalContractValue > 0 ? `${((totalGrossMargin / totalContractValue) * 100).toFixed(1)}% margin` : "No contract values set"}
+              {totalReceived > 0 ? `${((totalGrossMargin / totalReceived) * 100).toFixed(1)}% margin` : "No approved income yet"}
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className={totalOverdueRecovery > 0 ? "border-red-200 bg-red-50/70" : "border-slate-200 bg-slate-50/60"}>
           <CardHeader>
             <CardTitle>Overdue Recovery</CardTitle>
           </CardHeader>
@@ -251,7 +244,7 @@ export default async function ProjectFinancialPage({
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className={highRiskCount > 0 ? "border-red-200 bg-red-50/70" : "border-slate-200 bg-slate-50/60"}>
           <CardHeader>
             <CardTitle>Cash Risk Projects</CardTitle>
           </CardHeader>
@@ -272,15 +265,18 @@ export default async function ProjectFinancialPage({
             project.invoicedAmount > 0 ? Math.min((project.receivedAmount / project.invoicedAmount) * 100, 100) : 0;
 
           return (
-            <Card key={project.id} className={isOverBudget ? "border-red-200" : ""}>
+            <Card key={project.id} className={isOverBudget ? "border-red-200 bg-red-50/10" : "border-slate-200"}>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <CardTitle className="text-lg">{project.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      {project.projectId} • {project.clientName || "Unknown client"} • {project.status}
+                    <p className="text-sm text-slate-600">
+                      {project.projectId} • {project.clientName || "Unknown client"}
                     </p>
                   </div>
+                  <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                    {project.status.replaceAll("_", " ")}
+                  </span>
                   <div className="text-right">
                     <div className="text-sm text-muted-foreground">
                       {project.expenseCount} expenses
@@ -310,28 +306,35 @@ export default async function ProjectFinancialPage({
                   </div>
                 </div>
 
-                  <div className="grid gap-4 md:grid-cols-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Contract Value</p>
-                    <p className="font-semibold text-green-600">{formatMoney(project.contractValue)}</p>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5 text-sm">
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
+                    <p className="text-xs text-emerald-800">Contract</p>
+                    <p className="font-semibold text-emerald-900">{formatMoney(project.contractValue)}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Actual Costs</p>
-                    <p className="font-semibold text-red-600">{formatMoney(project.costToDate)}</p>
+                  <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3">
+                    <p className="text-xs text-rose-800">Cost to date</p>
+                    <p className="font-semibold text-rose-900">{formatMoney(project.costToDate)}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Received</p>
-                    <p className="font-semibold text-blue-600">{formatMoney(project.receivedAmount)}</p>
-                    <p className="text-xs text-muted-foreground">Pending: {formatMoney(project.pendingRecovery)}</p>
+                  <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-3">
+                    <p className="text-xs text-sky-800">Money in</p>
+                    <p className="font-semibold text-sky-900">{formatMoney(project.receivedAmount)}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Gross Margin</p>
-                    <p className={`font-semibold ${project.grossMargin >= 0 ? "text-green-600" : "text-red-600"}`}>
-                      {formatMoney(project.grossMargin)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{project.marginPercent.toFixed(1)}%</p>
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+                    <p className="text-xs text-amber-800">Pending recovery</p>
+                    <p className="font-semibold text-amber-900">{formatMoney(project.pendingRecovery)}</p>
                   </div>
+                  <div
+                    className={`rounded-lg border p-3 ${
+                      project.grossMargin >= 0
+                        ? "border-emerald-200 bg-emerald-50/60"
+                        : "border-red-200 bg-red-50/70"
+                    }`}
+                  >
+                    <p className="text-xs text-slate-700">Current profit</p>
+                    <p className="font-semibold">{formatMoney(project.grossMargin)}</p>
+                    <p className="text-xs text-slate-600">{project.marginPercent.toFixed(1)}%</p>
                   </div>
+                </div>
 
                   {(project.negativeMargin || project.overdueRecoveryAmount > 0 || project.highVendorExposure) ? (
                     <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3">

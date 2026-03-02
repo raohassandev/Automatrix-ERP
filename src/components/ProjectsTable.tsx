@@ -53,7 +53,7 @@ export function ProjectsTable({
                 <th className="py-2">Client</th>
                 <th className="py-2">Status</th>
                 {canViewFinancials ? <th className="py-2">Contract</th> : null}
-                {canViewFinancials ? <th className="py-2">Pending</th> : null}
+                {canViewFinancials ? <th className="py-2">Cash to Recover</th> : null}
                 {canEdit ? <th className="py-2">Actions</th> : null}
               </tr>
             </thead>
@@ -72,6 +72,7 @@ export function ProjectsTable({
                     >
                       {project.name}
                     </Link>
+                    <div className="text-xs font-normal text-muted-foreground">{project.projectId}</div>
                   </td>
                   <td className="py-2">{project.clientName || "-"}</td>
                   <td className="py-2">
@@ -117,10 +118,11 @@ export function ProjectsTable({
               href={`/projects/${project.id}`}
               fields={[
                 { label: "Status", value: <StatusBadge status={project.status} /> },
+                { label: "Project ID", value: project.projectId },
                 ...(canViewFinancials
                   ? [
                       { label: "Contract", value: formatMoney(Number(project.contractValue)) },
-                      { label: "Pending", value: formatMoney(Number(project.pendingRecovery)) },
+                      { label: "Cash to Recover", value: formatMoney(Number(project.pendingRecovery)) },
                     ]
                   : []),
               ]}

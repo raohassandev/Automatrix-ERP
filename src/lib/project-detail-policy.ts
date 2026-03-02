@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getUserRoleName } from "@/lib/rbac";
 import { hasPermission, RoleName } from "@/lib/permissions";
-import { buildProjectAliases } from "@/lib/projects";
+import { buildProjectAliases, computeProjectFinancialSnapshot } from "@/lib/projects";
 
 export type ProjectDetailTab = "activity" | "costs" | "inventory" | "people" | "execution" | "documents";
 
@@ -413,13 +413,6 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   ];
   const taskRows = tasks as unknown as ProjectTaskRow[];
 
-  const expensesApproved = expensesAll.filter((e) =>
-    ["APPROVED", "PARTIALLY_APPROVED", "PAID"].includes((e.status || "").toUpperCase()),
-  );
-  const incomesApproved = incomesAll.filter((i) => (i.status || "").toUpperCase() === "APPROVED");
-  const incomesPending = incomesAll.filter((i) => (i.status || "").toUpperCase().startsWith("PENDING"));
-  const expensesPending = expensesAll.filter((e) => (e.status || "").toUpperCase().startsWith("PENDING"));
-
   const documents: ProjectDocumentsRow[] = [
     ...pos.map((po) => ({
       type: "PO" as const,
@@ -535,111 +528,40 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   // Costs (Phase 1 truth): AP from posted bills minus posted allocations; plus non-stock expenses.
   let costs: ProjectDetailData["costs"] | undefined = undefined;
   if (policy.tabs.costs) {
-    const postedBills = bills.filter((b) => (b.status || "").toUpperCase() === "POSTED");
-    const postedBillIds = postedBills.map((b) => b.id);
-    const paidAgg =
-      postedBillIds.length === 0
-        ? { _sum: { amount: null } }
-        : await prisma.vendorPaymentAllocation.aggregate({
-            where: {
-              vendorBillId: { in: postedBillIds },
-              vendorPayment: { status: "POSTED" },
-            },
-            _sum: { amount: true },
-          });
-    const billedTotal = postedBills.reduce(
-      (sum, b) => sum + Number((b as { totalAmount?: unknown }).totalAmount),
-      0,
-    );
-    const paidTotal = Number(paidAgg._sum.amount || 0);
-    const apOutstanding = Math.max(0, billedTotal - paidTotal);
-    const contractValue = Number(project.contractValue || 0);
-    const invoicedAmount = Number(project.invoicedAmount || 0);
-    const receivedAmount = Number(project.receivedAmount || 0);
-    const costToDate = Number(project.costToDate || 0);
-    const pendingRecovery = Number(project.pendingRecovery || 0);
-    const grossMargin = Number(project.grossMargin || 0);
-    const marginPercent = Number(project.marginPercent || 0);
-
-    const overdueAgg = await prisma.invoice.aggregate({
-      where: {
-        projectId: { in: projectAliases },
-        dueDate: { lt: new Date() },
-        status: { notIn: ["PAID", "CANCELLED", "DRAFT"] },
-      },
-      _sum: { amount: true },
-      _count: true,
-    });
-    const overdueRecoveryAmount = Number(overdueAgg._sum.amount || 0);
-    const overdueInvoiceCount = overdueAgg._count || 0;
-
-    const nonStockExpensesApproved = expensesApproved.reduce((sum, e) => {
-      const v = e as { amount?: unknown; approvedAmount?: unknown };
-      const used =
-        e.status === "PARTIALLY_APPROVED" && v.approvedAmount != null
-          ? Number(v.approvedAmount)
-          : Number(v.amount);
-      return sum + (Number.isFinite(used) ? used : 0);
-    }, 0);
-    const incentivesApproved = expensesApproved
-      .filter((e) => (e.category || "").toLowerCase() === "incentive")
-      .reduce((sum, e) => {
-        const v = e as { amount?: unknown; approvedAmount?: unknown };
-        const used =
-          e.status === "PARTIALLY_APPROVED" && v.approvedAmount != null
-            ? Number(v.approvedAmount)
-            : Number(v.amount);
-        return sum + (Number.isFinite(used) ? used : 0);
-      }, 0);
-    const otherNonStockExpensesApproved = Math.max(0, nonStockExpensesApproved - incentivesApproved);
-    const approvedIncomeReceived = incomesApproved.reduce(
-      (sum, i) => sum + (Number.isFinite(Number(i.amount)) ? Number(i.amount) : 0),
-      0,
-    );
-    const pendingIncomeSubmitted = incomesPending.reduce(
-      (sum, i) => sum + (Number.isFinite(Number(i.amount)) ? Number(i.amount) : 0),
-      0,
-    );
-    const pendingExpenseSubmitted = expensesPending.reduce((sum, e) => {
-      const v = e as { amount?: unknown };
-      const used = Number(v.amount);
-      return sum + (Number.isFinite(used) ? used : 0);
-    }, 0);
-    const totalProjectCosts = billedTotal + nonStockExpensesApproved;
-    const projectProfit = approvedIncomeReceived - totalProjectCosts;
-    const highUnpaidVendorExposure = apOutstanding > Math.max(100000, approvedIncomeReceived * 0.6);
-    const negativeMargin = projectProfit < 0 || grossMargin < 0;
+    const snapshot = await computeProjectFinancialSnapshot(project);
+    const highUnpaidVendorExposure = snapshot.highUnpaidVendorExposure;
+    const negativeMargin = snapshot.negativeMargin;
     const alerts: string[] = [];
     if (negativeMargin) alerts.push("Negative project margin detected.");
-    if (overdueRecoveryAmount > 0)
+    if (snapshot.overdueRecoveryAmount > 0)
       alerts.push(
-        `${overdueInvoiceCount} overdue invoice(s): ${overdueRecoveryAmount.toLocaleString()} still unrecovered.`,
+        `${snapshot.overdueInvoiceCount} overdue invoice(s): ${snapshot.overdueRecoveryAmount.toLocaleString()} still unrecovered.`,
       );
     if (highUnpaidVendorExposure)
       alerts.push("High unpaid vendor exposure versus current recovered income.");
 
     costs = {
-      contractValue,
-      invoicedAmount,
-      receivedAmount,
-      costToDate,
-      pendingRecovery,
-      grossMargin,
-      marginPercent,
-      apBilledTotal: billedTotal,
-      apPaidTotal: paidTotal,
-      apOutstanding,
-      incentivesApproved,
-      otherNonStockExpensesApproved,
-      nonStockExpensesApproved,
-      approvedIncomeReceived,
-      pendingIncomeSubmitted,
-      pendingExpenseSubmitted,
-      totalProjectCosts,
-      projectProfit,
+      contractValue: snapshot.contractValue,
+      invoicedAmount: snapshot.invoicedAmount,
+      receivedAmount: snapshot.receivedAmount,
+      costToDate: snapshot.costToDate,
+      pendingRecovery: snapshot.pendingRecovery,
+      grossMargin: snapshot.grossMargin,
+      marginPercent: snapshot.marginPercent,
+      apBilledTotal: snapshot.apBilledTotal,
+      apPaidTotal: snapshot.apPaidTotal,
+      apOutstanding: snapshot.apOutstanding,
+      incentivesApproved: snapshot.incentivesApproved,
+      otherNonStockExpensesApproved: snapshot.otherNonStockExpensesApproved,
+      nonStockExpensesApproved: snapshot.nonStockExpensesApproved,
+      approvedIncomeReceived: snapshot.approvedIncomeReceived,
+      pendingIncomeSubmitted: snapshot.pendingIncomeSubmitted,
+      pendingExpenseSubmitted: snapshot.pendingExpenseSubmitted,
+      totalProjectCosts: snapshot.totalProjectCosts,
+      projectProfit: snapshot.projectProfit,
       risk: {
-        overdueRecoveryAmount,
-        overdueInvoiceCount,
+        overdueRecoveryAmount: snapshot.overdueRecoveryAmount,
+        overdueInvoiceCount: snapshot.overdueInvoiceCount,
         negativeMargin,
         highUnpaidVendorExposure,
         alerts,
