@@ -40,7 +40,33 @@ const vendorBillUpdateSchema = z.object({
   lines: z.array(billLineSchema).min(1).optional(),
   action: z.enum(["SUBMIT", "APPROVE", "POST", "VOID"]).optional(),
   reason: z.string().trim().optional(),
+  ignoreDuplicate: z.boolean().optional(),
 });
+
+async function findPotentialDuplicateBill(args: {
+  vendorId: string;
+  projectRef: string;
+  billDate: string;
+  totalAmount: number;
+  excludeId?: string;
+}) {
+  const billDate = new Date(args.billDate);
+  const start = new Date(billDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(billDate);
+  end.setHours(23, 59, 59, 999);
+  return prisma.vendorBill.findFirst({
+    where: {
+      id: args.excludeId ? { not: args.excludeId } : undefined,
+      vendorId: args.vendorId,
+      projectRef: args.projectRef,
+      billDate: { gte: start, lte: end },
+      totalAmount: new Prisma.Decimal(args.totalAmount.toFixed(2)),
+      status: { not: "VOID" },
+    },
+    select: { id: true, billNumber: true, status: true },
+  });
+}
 
 function isEditableStatus(status: string) {
   return status === "DRAFT";
@@ -322,8 +348,46 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       })
     : null;
 
-  const totalAmount =
-    normalizedLines?.reduce((sum, line) => sum + Number(line.total), 0) ?? Number(existing.totalAmount);
+  const totalAmount = Number(
+    (normalizedLines?.reduce((sum, line) => sum + Number(line.total), 0) ?? Number(existing.totalAmount)).toFixed(2)
+  );
+
+  if (!parsed.data.ignoreDuplicate) {
+    const effectiveVendorId = parsed.data.vendorId ?? existing.vendorId;
+    const effectiveBillDate = parsed.data.billDate ?? existing.billDate.toISOString();
+    const duplicate = await findPotentialDuplicateBill({
+      vendorId: effectiveVendorId,
+      projectRef: effectiveProjectRef,
+      billDate: effectiveBillDate,
+      totalAmount,
+      excludeId: id,
+    });
+    if (duplicate) {
+      await logAudit({
+        action: "BLOCK_POTENTIAL_DUPLICATE_VENDOR_BILL",
+        entity: "VendorBill",
+        entityId: duplicate.id,
+        userId: session.user.id,
+        reason: "Potential duplicate vendor bill detected on update.",
+        newValue: JSON.stringify({
+          duplicateBillNumber: duplicate.billNumber,
+          vendorId: effectiveVendorId,
+          projectRef: effectiveProjectRef,
+          billDate: effectiveBillDate,
+          totalAmount,
+        }),
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Potential duplicate vendor bill found (${duplicate.billNumber}). Use ignoreDuplicate=true to proceed if intentional.`,
+          duplicateBillId: duplicate.id,
+          duplicateBillNumber: duplicate.billNumber,
+        },
+        { status: 409 }
+      );
+    }
+  }
 
   try {
     if (nextLines) {

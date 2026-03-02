@@ -6,6 +6,7 @@ import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { Prisma } from "@prisma/client";
 import { resolveProjectId } from "@/lib/projects";
+import { getWarehouseItemQuantity } from "@/lib/inventory-balance";
 
 const transferSchema = z.object({
   itemId: z.string().min(1),
@@ -60,10 +61,6 @@ export async function POST(req: Request) {
   if (!fromWarehouse?.isActive || !toWarehouse?.isActive) {
     return NextResponse.json({ success: false, error: "Warehouse is invalid or inactive." }, { status: 400 });
   }
-  if (Number(item.quantity) < quantity) {
-    return NextResponse.json({ success: false, error: "Insufficient item stock for transfer." }, { status: 400 });
-  }
-
   let resolvedProject: string | null = null;
   if (project) {
     resolvedProject = await resolveProjectId(project);
@@ -77,58 +74,76 @@ export async function POST(req: Request) {
   const transferRef = `TRF-${now.getTime()}`;
   const userReference = reference?.trim() || transferRef;
 
-  const result = await prisma.$transaction(async (tx) => {
-    const baseQty = Number(item.quantity || 0);
-    const qty = Math.abs(quantity);
-    const total = qty * effectiveCost;
+  let result;
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      const qty = Math.abs(quantity);
+      const total = qty * effectiveCost;
+      const sourceQty = await getWarehouseItemQuantity(tx, itemId, fromWarehouseId);
+      const destinationQty = await getWarehouseItemQuantity(tx, itemId, toWarehouseId);
+      if (sourceQty < qty - 0.00001) {
+        throw new Error("Insufficient stock in source warehouse for transfer.");
+      }
 
-    const outEntry = await tx.inventoryLedger.create({
-      data: {
-        date: now,
-        itemId,
-        warehouseId: fromWarehouseId,
-        type: "TRANSFER",
-        quantity: new Prisma.Decimal(-qty),
-        unitCost: new Prisma.Decimal(effectiveCost),
-        total: new Prisma.Decimal(-total),
-        reference: `${userReference} (to ${toWarehouse.name})`,
-        project: resolvedProject || undefined,
-        userId: session.user.id,
-        runningBalance: new Prisma.Decimal(baseQty - qty),
-        sourceType: "INVENTORY_TRANSFER",
-        sourceId: transferRef,
-        postedById: session.user.id,
-        postedAt: now,
-      },
+      const outEntry = await tx.inventoryLedger.create({
+        data: {
+          date: now,
+          itemId,
+          warehouseId: fromWarehouseId,
+          type: "TRANSFER",
+          quantity: new Prisma.Decimal(-qty),
+          unitCost: new Prisma.Decimal(effectiveCost),
+          total: new Prisma.Decimal(-total),
+          reference: `${userReference} (to ${toWarehouse.name})`,
+          project: resolvedProject || undefined,
+          userId: session.user.id,
+          runningBalance: new Prisma.Decimal(sourceQty - qty),
+          sourceType: "INVENTORY_TRANSFER",
+          sourceId: transferRef,
+          postedById: session.user.id,
+          postedAt: now,
+        },
+      });
+
+      const inEntry = await tx.inventoryLedger.create({
+        data: {
+          date: now,
+          itemId,
+          warehouseId: toWarehouseId,
+          type: "TRANSFER",
+          quantity: new Prisma.Decimal(qty),
+          unitCost: new Prisma.Decimal(effectiveCost),
+          total: new Prisma.Decimal(total),
+          reference: `${userReference} (from ${fromWarehouse.name})`,
+          project: resolvedProject || undefined,
+          userId: session.user.id,
+          runningBalance: new Prisma.Decimal(destinationQty + qty),
+          sourceType: "INVENTORY_TRANSFER",
+          sourceId: transferRef,
+          postedById: session.user.id,
+          postedAt: now,
+        },
+      });
+
+      await tx.inventoryItem.update({
+        where: { id: item.id },
+        data: { lastUpdated: now },
+      });
+
+      return {
+        transferRef,
+        outEntryId: outEntry.id,
+        inEntryId: inEntry.id,
+        sourceBalance: sourceQty - qty,
+        destinationBalance: destinationQty + qty,
+      };
     });
-
-    const inEntry = await tx.inventoryLedger.create({
-      data: {
-        date: now,
-        itemId,
-        warehouseId: toWarehouseId,
-        type: "TRANSFER",
-        quantity: new Prisma.Decimal(qty),
-        unitCost: new Prisma.Decimal(effectiveCost),
-        total: new Prisma.Decimal(total),
-        reference: `${userReference} (from ${fromWarehouse.name})`,
-        project: resolvedProject || undefined,
-        userId: session.user.id,
-        runningBalance: new Prisma.Decimal(baseQty),
-        sourceType: "INVENTORY_TRANSFER",
-        sourceId: transferRef,
-        postedById: session.user.id,
-        postedAt: now,
-      },
-    });
-
-    await tx.inventoryItem.update({
-      where: { id: item.id },
-      data: { lastUpdated: now },
-    });
-
-    return { transferRef, outEntryId: outEntry.id, inEntryId: inEntry.id };
-  });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : "Failed to post transfer." },
+      { status: 400 },
+    );
+  }
 
   await logAudit({
     action: "INVENTORY_TRANSFER",

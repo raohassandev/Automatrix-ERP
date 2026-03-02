@@ -36,6 +36,11 @@ function isLifecycleStatus(status: string | null | undefined) {
   return s === "DRAFT" || s === "SUBMITTED" || s === "APPROVED" || s === "VOID";
 }
 
+function isReceivablePoStatus(status: string | null | undefined) {
+  const s = (status || "").toUpperCase();
+  return s === "ORDERED" || s === "RECEIVED" || s === "PARTIALLY_RECEIVED";
+}
+
 async function recalcPurchaseOrderReceipts(
   tx: Prisma.TransactionClient,
   purchaseOrderId: string
@@ -266,6 +271,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             where: { id: existing.purchaseOrderId },
             include: { items: true },
           });
+          if (po && !isReceivablePoStatus(po.status)) {
+            return NextResponse.json(
+              { success: false, error: "Linked PO is not receivable. Move PO to ORDERED before submitting GRN." },
+              { status: 400 }
+            );
+          }
           const inferred = po?.projectRef || po?.items.find((i) => i.project)?.project || null;
           const resolved = inferred ? await resolveProjectId(inferred) : null;
           if (!resolved) {
@@ -471,6 +482,15 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     : null;
   if (targetPurchaseOrderId && !purchaseOrder) {
     return NextResponse.json({ success: false, error: "Purchase order not found" }, { status: 400 });
+  }
+  if (purchaseOrder && !isReceivablePoStatus(purchaseOrder.status)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Linked PO is not receivable. Only ORDERED/RECEIVED/PARTIALLY_RECEIVED PO is allowed.",
+      },
+      { status: 400 }
+    );
   }
 
   // Phase 1 rule: one-project-per-document.

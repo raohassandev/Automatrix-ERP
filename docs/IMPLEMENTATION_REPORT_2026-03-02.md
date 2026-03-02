@@ -555,3 +555,46 @@
 - Staging Playwright:
   - `pnpm playwright test --config=playwright.config.staging.ts playwright/tests/mobile-owner-critical-layout.spec.ts playwright/tests/item-detail-and-me-portal.spec.ts playwright/tests/project-detail-rbac.spec.ts playwright/tests/project-financial-overview.spec.ts`
   - Result: `15 passed`
+
+## Procurement + Inventory control hardening pass
+
+### Scope
+- Enforced warehouse-level stock controls to prevent cross-warehouse negative moves.
+- Tightened GRN eligibility rules against non-receivable PO states.
+- Added potential duplicate vendor-bill protection to reduce accidental duplicate AP entries.
+
+### Backend controls added
+- Inventory ledger manual posting:
+  - blocked manual `TRANSFER` entries (must use dedicated transfer flow).
+  - outflow now checks warehouse-level quantity before posting.
+  - running balance now records warehouse-level running quantity.
+- Inventory transfer:
+  - checks source warehouse stock (not only global item stock).
+  - updates running balances using source/destination warehouse quantities.
+- GRN create/edit/submit:
+  - linked PO must be in `ORDERED | RECEIVED | PARTIALLY_RECEIVED`.
+  - blocks GRN operations when PO is not receivable.
+- Vendor bill create/update:
+  - detects potential duplicates by `vendor + project + billDate(day) + total`.
+  - returns `409` with duplicate reference unless `ignoreDuplicate=true`.
+  - logs control audit action: `BLOCK_POTENTIAL_DUPLICATE_VENDOR_BILL`.
+
+### Files
+- `src/lib/inventory-balance.ts` (new)
+- `src/app/api/inventory/ledger/route.ts`
+- `src/app/api/inventory/transfer/route.ts`
+- `src/app/api/procurement/grn/route.ts`
+- `src/app/api/procurement/grn/[id]/route.ts`
+- `src/app/api/procurement/vendor-bills/route.ts`
+- `src/app/api/procurement/vendor-bills/[id]/route.ts`
+- `playwright/tests/procurement-inventory-controls.spec.ts` (new)
+
+### Validation
+- Local:
+  - `pnpm typecheck` passed
+  - `pnpm lint` passed
+  - `pnpm test` passed
+  - `pnpm build` passed
+- Staging regression check:
+  - `pnpm playwright test --config=playwright.config.staging.ts playwright/tests/rb4-procurement-chain.spec.ts`
+  - Result: `2 passed`

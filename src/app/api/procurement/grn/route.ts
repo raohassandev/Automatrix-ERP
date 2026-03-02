@@ -21,6 +21,8 @@ type PurchaseOrderItem = {
 const normalizeKey = (value?: string | null) => value?.trim().toLowerCase() || "";
 const buildItemKey = (name: string, unit?: string | null) =>
   `${normalizeKey(name)}::${normalizeKey(unit)}`;
+const isReceivablePoStatus = (status: string | null | undefined) =>
+  ["ORDERED", "RECEIVED", "PARTIALLY_RECEIVED"].includes(String(status || "").toUpperCase());
 
 function inferProjectRefFromPo(po: { projectRef?: string | null; items: Array<{ project: string | null }> }) {
   if (po.projectRef && po.projectRef.trim()) return po.projectRef.trim();
@@ -98,6 +100,15 @@ export async function POST(req: Request) {
   if (sanitized.purchaseOrderId) {
     if (!purchaseOrder) {
       return NextResponse.json({ success: false, error: "Purchase order not found" }, { status: 400 });
+    }
+    if (!isReceivablePoStatus(purchaseOrder.status)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "GRN can only be created for ORDERED/RECEIVED/PARTIALLY_RECEIVED purchase orders.",
+        },
+        { status: 400 }
+      );
     }
   }
 

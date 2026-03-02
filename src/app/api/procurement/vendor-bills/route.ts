@@ -36,7 +36,31 @@ const vendorBillCreateSchema = z.object({
   currency: z.string().trim().min(1).default("PKR"),
   notes: z.string().trim().optional(),
   lines: z.array(billLineSchema).min(1),
+  ignoreDuplicate: z.boolean().optional(),
 });
+
+async function findPotentialDuplicateBill(args: {
+  vendorId: string;
+  projectRef: string;
+  billDate: string;
+  totalAmount: number;
+}) {
+  const billDate = new Date(args.billDate);
+  const start = new Date(billDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(billDate);
+  end.setHours(23, 59, 59, 999);
+  return prisma.vendorBill.findFirst({
+    where: {
+      vendorId: args.vendorId,
+      projectRef: args.projectRef,
+      billDate: { gte: start, lte: end },
+      totalAmount: new Prisma.Decimal(args.totalAmount.toFixed(2)),
+      status: { not: "VOID" },
+    },
+    select: { id: true, billNumber: true, status: true },
+  });
+}
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -217,7 +241,40 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const totalAmount = normalizedLines.reduce((sum, line) => sum + Number(line.total), 0);
+  const totalAmount = Number(normalizedLines.reduce((sum, line) => sum + Number(line.total), 0).toFixed(2));
+  if (!parsed.data.ignoreDuplicate) {
+    const duplicate = await findPotentialDuplicateBill({
+      vendorId: parsed.data.vendorId,
+      projectRef: resolvedProjectRef,
+      billDate: parsed.data.billDate,
+      totalAmount,
+    });
+    if (duplicate) {
+      await logAudit({
+        action: "BLOCK_POTENTIAL_DUPLICATE_VENDOR_BILL",
+        entity: "VendorBill",
+        entityId: duplicate.id,
+        userId: session.user.id,
+        reason: "Potential duplicate vendor bill detected on create.",
+        newValue: JSON.stringify({
+          duplicateBillNumber: duplicate.billNumber,
+          vendorId: parsed.data.vendorId,
+          projectRef: resolvedProjectRef,
+          billDate: parsed.data.billDate,
+          totalAmount,
+        }),
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Potential duplicate vendor bill found (${duplicate.billNumber}). Use ignoreDuplicate=true to proceed if intentional.`,
+          duplicateBillId: duplicate.id,
+          duplicateBillNumber: duplicate.billNumber,
+        },
+        { status: 409 }
+      );
+    }
+  }
 
     const created = await prisma.vendorBill.create({
       data: {
