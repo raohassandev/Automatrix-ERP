@@ -46,6 +46,7 @@ model User {
   leaveRequestsApproved LeaveRequest[] @relation("LeaveApprovedBy")
   leaveRequestsCreated LeaveRequest[] @relation("LeaveCreatedBy")
   bankReconciliationSnapshots BankReconciliationSnapshot[] @relation("BankReconciliationCreatedBy")
+  bankStatementImports BankStatementLine[] @relation("BankStatementImportedBy")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -516,6 +517,32 @@ model BankReconciliationSnapshot {
   @@index([companyAccountId, asOfDate])
 }
 
+model BankStatementLine {
+  id                String   @id @default(cuid())
+  companyAccountId  String
+  statementDate     DateTime
+  description       String?
+  reference         String?
+  debit             Decimal  @default(0)
+  credit            Decimal  @default(0)
+  amount            Decimal
+  runningBalance    Decimal?
+  status            String   @default("UNMATCHED") // UNMATCHED | MATCHED | EXCLUDED
+  matchedSourceType String?
+  matchedSourceId   String?
+  matchedAt         DateTime?
+  importedById      String?
+  importBatchNo     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  companyAccount    CompanyAccount @relation(fields: [companyAccountId], references: [id])
+  importedBy        User?          @relation("BankStatementImportedBy", fields: [importedById], references: [id])
+
+  @@index([companyAccountId, statementDate])
+  @@index([companyAccountId, status])
+}
+
 model Invoice {
   id         String        @id @default(cuid())
   invoiceNo  String        @unique
@@ -647,6 +674,7 @@ model CompanyAccount {
   expenses       Expense[]
   walletLedgerEntries WalletLedger[]
   bankReconciliationSnapshots BankReconciliationSnapshot[]
+  bankStatementLines BankStatementLine[]
 }
 
 // Double-entry accounting backbone (Phase 2+), isolated from auth Account/Session tables.

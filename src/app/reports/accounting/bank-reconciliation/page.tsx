@@ -27,6 +27,9 @@ export default async function BankReconciliationPage({
       </div>
     );
   }
+  const canManage =
+    (await requirePermission(session.user.id, "accounting.manage")) ||
+    (await requirePermission(session.user.id, "company_accounts.manage"));
 
   const accounts = await prisma.companyAccount.findMany({
     where: { isActive: true },
@@ -52,6 +55,13 @@ export default async function BankReconciliationPage({
         include: { createdBy: { select: { id: true, name: true, email: true } } },
       })
     : [];
+  const statementLines = selectedAccountId
+    ? await prisma.bankStatementLine.findMany({
+        where: { companyAccountId: selectedAccountId, statementDate: { lte: asOf } },
+        orderBy: [{ statementDate: "desc" }, { createdAt: "desc" }],
+        take: 200,
+      })
+    : [];
 
   return (
     <div className="grid gap-6">
@@ -75,6 +85,23 @@ export default async function BankReconciliationPage({
           bookBalance,
           statementBalance,
           difference,
+          canManage,
+          statementLines: statementLines.map((row) => ({
+            id: row.id,
+            statementDate: row.statementDate.toISOString(),
+            description: row.description,
+            reference: row.reference,
+            debit: Number(row.debit),
+            credit: Number(row.credit),
+            amount: Number(row.amount),
+            runningBalance: row.runningBalance === null ? null : Number(row.runningBalance),
+            status: row.status,
+            matchedSourceType: row.matchedSourceType,
+            matchedSourceId: row.matchedSourceId,
+          })),
+          exceptionCount: statementLines.filter((row) => row.status === "UNMATCHED").length,
+          matchedCount: statementLines.filter((row) => row.status === "MATCHED").length,
+          excludedCount: statementLines.filter((row) => row.status === "EXCLUDED").length,
           snapshots: snapshots.map((row) => ({
             id: row.id,
             asOfDate: row.asOfDate.toISOString(),

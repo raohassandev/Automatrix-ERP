@@ -62,6 +62,17 @@ export async function GET(req: Request) {
     take: 20,
     include: { createdBy: { select: { id: true, name: true, email: true } } },
   });
+  const statementLines = await prisma.bankStatementLine.findMany({
+    where: {
+      companyAccountId,
+      statementDate: { lte: asOfDate },
+    },
+    orderBy: [{ statementDate: "desc" }, { createdAt: "desc" }],
+    take: 200,
+  });
+  const exceptionCount = statementLines.filter((row) => row.status === "UNMATCHED").length;
+  const matchedCount = statementLines.filter((row) => row.status === "MATCHED").length;
+  const excludedCount = statementLines.filter((row) => row.status === "EXCLUDED").length;
 
   return NextResponse.json({
     success: true,
@@ -72,7 +83,33 @@ export async function GET(req: Request) {
       bookBalance,
       statementBalance,
       difference,
-      snapshots,
+      statementLines: statementLines.map((row) => ({
+        id: row.id,
+        statementDate: row.statementDate.toISOString(),
+        description: row.description,
+        reference: row.reference,
+        debit: Number(row.debit),
+        credit: Number(row.credit),
+        amount: Number(row.amount),
+        runningBalance: row.runningBalance === null ? null : Number(row.runningBalance),
+        status: row.status,
+        matchedSourceType: row.matchedSourceType,
+        matchedSourceId: row.matchedSourceId,
+      })),
+      exceptionCount,
+      matchedCount,
+      excludedCount,
+      snapshots: snapshots.map((row) => ({
+        id: row.id,
+        asOfDate: row.asOfDate.toISOString(),
+        bookBalance: Number(row.bookBalance),
+        statementBalance: Number(row.statementBalance),
+        difference: Number(row.difference),
+        status: row.status,
+        notes: row.notes,
+        createdBy: row.createdBy,
+        createdAt: row.createdAt.toISOString(),
+      })),
     },
   });
 }

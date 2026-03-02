@@ -445,7 +445,7 @@ Legend:
 12. `[~]` HRMS
 13. `[~]` Payroll and Compensation
 14. `[~]` Finance and Accounting Core
-15. `[~]` Treasury and Banking
+15. `[x]` Treasury and Banking
 16. `[~]` Approvals Engine
 17. `[~]` Audit, Compliance, and Governance
 18. `[~]` Reporting and BI
@@ -470,8 +470,8 @@ Legend:
   - Implemented: employee records baseline, wallet/advances, payroll baseline with posting integration path, clearer payroll/employee operational status surfacing for non-accounting users, HRMS attendance register, leave request and approval workflow.
   - Remaining for end-state: deeper self-service depth, attendance policy automation (shift/late/absence rule engine), complete payroll policy-depth.
 
-**Completed target end-state modules right now:** none (`[x]` = 0).  
-Reason: several core modules are strong but still partial against the locked end-state definition.
+**Completed target end-state modules right now:** Treasury and Banking (`15`) (`[x]` = 1).  
+Reason: bank accounts, cash position/forecast, statement import, auto/assisted matching, exception handling, and reconciliation close snapshots are now implemented in the locked flow.
 
 ---
 

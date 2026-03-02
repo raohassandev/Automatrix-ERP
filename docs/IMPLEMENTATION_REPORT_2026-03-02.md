@@ -87,3 +87,25 @@
   - `pnpm typecheck`
   - `pnpm lint`
   - `pnpm test`
+
+## Treasury completion pass (Module 15)
+- Added bank statement ingestion and reconciliation operations:
+  - New model:
+    - `BankStatementLine`
+  - New migration:
+    - `prisma/migrations/20260302070000_add_bank_statement_lines/migration.sql`
+- Added statement import parser and import endpoint:
+  - `src/lib/bank-statement-import.ts`
+  - `src/app/api/reports/accounting/bank-reconciliation/import/route.ts`
+- Added auto-match and manual exception actions:
+  - `src/lib/bank-reconciliation.ts` (`autoMatchStatementLines`)
+  - `src/app/api/reports/accounting/bank-reconciliation/auto-match/route.ts`
+  - `src/app/api/reports/accounting/bank-reconciliation/line/[id]/route.ts`
+- Added reconciliation close endpoint with unmatched-line guard and force-close option:
+  - `src/app/api/reports/accounting/bank-reconciliation/close/route.ts`
+- Expanded reconciliation API/page/UI with exception queue and actions:
+  - `src/app/api/reports/accounting/bank-reconciliation/route.ts`
+  - `src/app/reports/accounting/bank-reconciliation/page.tsx`
+  - `src/components/BankReconciliationManager.tsx`
+- Updated master plan status:
+  - `SUPER_MASTER_PLAN.md` marks module `15` (Treasury & Banking) as completed `[x]`.

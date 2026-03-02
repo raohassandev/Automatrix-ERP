@@ -27,6 +27,20 @@ type Snapshot = {
   createdAt: string;
 };
 
+type StatementLine = {
+  id: string;
+  statementDate: string;
+  description: string | null;
+  reference: string | null;
+  debit: number;
+  credit: number;
+  amount: number;
+  runningBalance: number | null;
+  status: string;
+  matchedSourceType: string | null;
+  matchedSourceId: string | null;
+};
+
 type Dataset = {
   accounts: Account[];
   selectedAccountId: string | null;
@@ -34,6 +48,11 @@ type Dataset = {
   bookBalance: number;
   statementBalance: number | null;
   difference: number | null;
+  canManage: boolean;
+  statementLines: StatementLine[];
+  exceptionCount: number;
+  matchedCount: number;
+  excludedCount: number;
   snapshots: Snapshot[];
 };
 
@@ -48,6 +67,7 @@ export function BankReconciliationManager({ initialData }: { initialData: Datase
     statementBalance: initialData.statementBalance?.toString() || "",
     notes: "",
   });
+  const [file, setFile] = useState<File | null>(null);
 
   const computedDifference = useMemo(() => {
     const statement = Number(form.statementBalance || 0);
@@ -66,7 +86,20 @@ export function BankReconciliationManager({ initialData }: { initialData: Datase
       toast.error(json.error || "Failed to load reconciliation data.");
       return;
     }
-    setData(json.data);
+    setData((prev) => ({
+      ...json.data,
+      canManage: prev.canManage,
+      statementLines: (json.data.statementLines || []).map((row: StatementLine) => ({
+        ...row,
+        debit: Number((row as unknown as { debit: number | string }).debit || 0),
+        credit: Number((row as unknown as { credit: number | string }).credit || 0),
+        amount: Number((row as unknown as { amount: number | string }).amount || 0),
+        runningBalance:
+          (row as unknown as { runningBalance: number | string | null }).runningBalance === null
+            ? null
+            : Number((row as unknown as { runningBalance: number | string | null }).runningBalance || 0),
+      })),
+    }));
   };
 
   useEffect(() => {
@@ -106,6 +139,91 @@ export function BankReconciliationManager({ initialData }: { initialData: Datase
     }
     toast.success("Reconciliation snapshot saved.");
     setForm((prev) => ({ ...prev, notes: "" }));
+    await load(form.companyAccountId, form.asOfDate, form.statementBalance);
+    router.refresh();
+  };
+
+  const importStatement = async () => {
+    if (!file || !form.companyAccountId) {
+      toast.error("Select account and statement file first.");
+      return;
+    }
+    const body = new FormData();
+    body.append("companyAccountId", form.companyAccountId);
+    body.append("file", file);
+    const res = await fetch("/api/reports/accounting/bank-reconciliation/import", {
+      method: "POST",
+      body,
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      toast.error(json.error || "Statement import failed.");
+      return;
+    }
+    toast.success(`Imported ${json.data.importedRows} statement lines.`);
+    setFile(null);
+    await load(form.companyAccountId, form.asOfDate, form.statementBalance);
+    router.refresh();
+  };
+
+  const runAutoMatch = async () => {
+    if (!form.companyAccountId) {
+      toast.error("Select account first.");
+      return;
+    }
+    const res = await fetch("/api/reports/accounting/bank-reconciliation/auto-match", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ companyAccountId: form.companyAccountId, asOfDate: form.asOfDate }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      toast.error(json.error || "Auto-match failed.");
+      return;
+    }
+    toast.success(`Auto-match complete. Matched ${json.data.matched} lines.`);
+    await load(form.companyAccountId, form.asOfDate, form.statementBalance);
+    router.refresh();
+  };
+
+  const closeReconciliation = async (forceClose: boolean) => {
+    if (!form.companyAccountId || !form.statementBalance) {
+      toast.error("Account and statement balance are required.");
+      return;
+    }
+    const res = await fetch("/api/reports/accounting/bank-reconciliation/close", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        companyAccountId: form.companyAccountId,
+        asOfDate: form.asOfDate,
+        statementBalance: Number(form.statementBalance),
+        notes: form.notes || undefined,
+        forceClose,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      toast.error(json.error || "Close failed.");
+      return;
+    }
+    toast.success(`Reconciliation closed: ${json.data.status}`);
+    await load(form.companyAccountId, form.asOfDate, form.statementBalance);
+    router.refresh();
+  };
+
+  const updateLine = async (lineId: string, action: "EXCLUDE" | "UNMATCH") => {
+    const res = await fetch(`/api/reports/accounting/bank-reconciliation/line/${lineId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      toast.error(json.error || "Line update failed.");
+      return;
+    }
+    toast.success("Line updated.");
     await load(form.companyAccountId, form.asOfDate, form.statementBalance);
     router.refresh();
   };
@@ -159,6 +277,28 @@ export function BankReconciliationManager({ initialData }: { initialData: Datase
             />
           </div>
         </div>
+        {data.canManage ? (
+          <div className="mt-4 grid gap-3 rounded-lg border border-border/70 bg-muted/20 p-4 md:grid-cols-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label>Import Statement (CSV/XLSX)</Label>
+              <Input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+            </div>
+            <div className="flex items-end">
+              <Button variant="outline" disabled={pending || !file} onClick={() => startTransition(importStatement)}>
+                {pending ? "Importing..." : "Import Statement"}
+              </Button>
+            </div>
+            <div className="flex items-end">
+              <Button variant="outline" disabled={pending} onClick={() => startTransition(runAutoMatch)}>
+                {pending ? "Matching..." : "Auto Match"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
@@ -178,12 +318,90 @@ export function BankReconciliationManager({ initialData }: { initialData: Datase
             </div>
           </div>
         </div>
-
-        <div className="mt-4">
-          <Button disabled={pending} onClick={() => startTransition(saveSnapshot)}>
-            {pending ? "Saving..." : "Save Reconciliation Snapshot"}
-          </Button>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
+            <div className="text-sm text-rose-700">Exceptions (Unmatched)</div>
+            <div className="text-xl font-semibold text-rose-800">{data.exceptionCount}</div>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm text-emerald-700">Matched</div>
+            <div className="text-xl font-semibold text-emerald-800">{data.matchedCount}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+            <div className="text-sm text-slate-700">Excluded</div>
+            <div className="text-xl font-semibold text-slate-800">{data.excludedCount}</div>
+          </div>
         </div>
+
+        {data.canManage ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button disabled={pending} onClick={() => startTransition(saveSnapshot)}>
+              {pending ? "Saving..." : "Save Snapshot"}
+            </Button>
+            <Button variant="outline" disabled={pending} onClick={() => startTransition(() => closeReconciliation(false))}>
+              Close Reconciliation
+            </Button>
+            <Button variant="destructive" disabled={pending} onClick={() => startTransition(() => closeReconciliation(true))}>
+              Force Close
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Statement Lines and Exceptions</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2">Date</th>
+                <th className="py-2">Description</th>
+                <th className="py-2">Reference</th>
+                <th className="py-2">Amount</th>
+                <th className="py-2">Status</th>
+                <th className="py-2">Matched Source</th>
+                <th className="py-2">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.statementLines.map((row) => (
+                <tr key={row.id} className="border-b">
+                  <td className="py-2">{new Date(row.statementDate).toLocaleDateString()}</td>
+                  <td className="py-2">{row.description || "-"}</td>
+                  <td className="py-2">{row.reference || "-"}</td>
+                  <td className="py-2">{formatMoney(Number(row.amount || 0))}</td>
+                  <td className="py-2">
+                    <StatusBadge status={row.status} />
+                  </td>
+                  <td className="py-2">
+                    {row.matchedSourceType && row.matchedSourceId
+                      ? `${row.matchedSourceType}:${row.matchedSourceId}`
+                      : "-"}
+                  </td>
+                  <td className="py-2">
+                    {data.canManage ? (
+                      <div className="flex flex-wrap gap-2">
+                        {row.status === "UNMATCHED" ? (
+                          <Button size="sm" variant="outline" onClick={() => startTransition(() => updateLine(row.id, "EXCLUDE"))}>
+                            Exclude
+                          </Button>
+                        ) : null}
+                        {row.status !== "UNMATCHED" ? (
+                          <Button size="sm" variant="outline" onClick={() => startTransition(() => updateLine(row.id, "UNMATCH"))}>
+                            Unmatch
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {data.statementLines.length === 0 ? (
+          <div className="py-8 text-center text-muted-foreground">No statement lines available.</div>
+        ) : null}
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
