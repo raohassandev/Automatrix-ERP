@@ -30,7 +30,7 @@ export function InventoryLedgerDialog({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
-    type: defaultType || "PURCHASE",
+    type: defaultType || "ADJUSTMENT",
     quantity: "",
     unitCost: "",
     reference: "",
@@ -41,7 +41,7 @@ export function InventoryLedgerDialog({
     if (open) {
       setForm((prev) => ({
         ...prev,
-        type: defaultType || "PURCHASE",
+        type: defaultType || "ADJUSTMENT",
       }));
     }
   }, [open, defaultType]);
@@ -76,7 +76,7 @@ export function InventoryLedgerDialog({
 
       toast.success("Inventory updated");
       setForm({
-        type: "PURCHASE",
+        type: "ADJUSTMENT",
         quantity: "",
         unitCost: "",
         reference: "",
@@ -94,7 +94,7 @@ export function InventoryLedgerDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={`Inventory Movement — ${itemName}`}
-      description="Record stock in/out and project allocation."
+      description="Manual inventory adjustment only. Stock-in purchases must be posted through PO -> GRN."
     >
       <form
         onSubmit={(e) => {
@@ -110,7 +110,6 @@ export function InventoryLedgerDialog({
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="PURCHASE">Purchase (Stock In)</SelectItem>
               <SelectItem value="SALE">Sale (Stock Out)</SelectItem>
               <SelectItem value="PROJECT_ALLOCATION">Project Allocation</SelectItem>
               <SelectItem value="ADJUSTMENT">Adjustment</SelectItem>
