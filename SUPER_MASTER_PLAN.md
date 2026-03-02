@@ -455,19 +455,19 @@ Legend:
 ### 11.2 Owner-Critical Module Status (Requested)
 
 - Finance & Accounting Core (`14`): `[~]` In Progress
-  - Implemented: COA, journals, fiscal periods, posting adapters (income/expense/vendor bill/vendor payment/invoice), TB/P&L/Balance Sheet/Cash Position/AR Aging/Cash Forecast.
-  - Remaining for end-state: full O2C receipt allocation workflow, bank reconciliation, final close controls + release-grade reconciliation and UAT signoff.
+  - Implemented: COA, journals, fiscal periods, posting adapters (income/expense/vendor bill/vendor payment/invoice), TB/P&L/Balance Sheet/Cash Position/AR Aging/Cash Forecast, server-side invoice receipt allocation limits for income, guided invoice-outstanding receipt selection UX.
+  - Remaining for end-state: full O2C lifecycle closure with final allocation/reconciliation operations, bank reconciliation, final close controls + release-grade reconciliation and UAT signoff.
 
 - Inventory & Store (`7`): `[~]` In Progress
-  - Implemented: item master, inventory ledger postings via GRN, stock-in controls, reporting baseline.
+  - Implemented: item master, inventory ledger postings via GRN, stock-in controls, reporting baseline, stock-health visibility with low-stock/reorder indicators in operational lists.
   - Remaining for end-state: full store operations depth, stricter warehouse controls everywhere, advanced valuation/control scenarios.
 
 - Project Management (`8`): `[~]` In Progress
-  - Implemented: project master, assignments, finance-linked project cost/recovery rollups in current flows.
+  - Implemented: project master, assignments, finance-linked project cost/recovery rollups in current flows, owner-friendly operational summaries and status-filter visibility.
   - Remaining for end-state: full execution workflows, deeper commercial controls, phase-4 engineering/site integrations.
 
 - Employee Modules (`11`,`12`,`13`): `[~]` In Progress
-  - Implemented: employee records baseline, wallet/advances, payroll baseline with posting integration path.
+  - Implemented: employee records baseline, wallet/advances, payroll baseline with posting integration path, clearer payroll/employee operational status surfacing for non-accounting users.
   - Remaining for end-state: mature HRMS lifecycle (attendance/leave/self-service), complete payroll operations and policy-depth.
 
 **Completed target end-state modules right now:** none (`[x]` = 0).  

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ProjectFormDialog } from "@/components/ProjectFormDialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { StatusBadge } from "@/components/StatusBadge";
 
 interface ProjectRow {
   id: string;
@@ -73,7 +74,9 @@ export function ProjectsTable({
                     </Link>
                   </td>
                   <td className="py-2">{project.clientName || "-"}</td>
-                  <td className="py-2">{project.status}</td>
+                  <td className="py-2">
+                    <StatusBadge status={project.status} />
+                  </td>
                   {canViewFinancials ? (
                     <td className="py-2">{formatMoney(Number(project.contractValue))}</td>
                   ) : null}
@@ -113,7 +116,7 @@ export function ProjectsTable({
               subtitle={project.clientName || "-"}
               href={`/projects/${project.id}`}
               fields={[
-                { label: "Status", value: project.status },
+                { label: "Status", value: <StatusBadge status={project.status} /> },
                 ...(canViewFinancials
                   ? [
                       { label: "Contract", value: formatMoney(Number(project.contractValue)) },

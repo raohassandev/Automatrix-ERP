@@ -42,6 +42,27 @@ export function InventoryTable({
     defaultType?: string;
   }>({ open: false, itemId: "", itemName: "" });
   const [editItem, setEditItem] = useState<InventoryItemRow | null>(null);
+  const getStockTone = (item: InventoryItemRow) => {
+    const qty = Number(item.quantity || 0);
+    const minStock = Number(item.minStock || 0);
+    if (minStock > 0 && qty <= minStock) {
+      return {
+        text: "Low",
+        className: "border-rose-300 bg-rose-50 text-rose-700",
+      };
+    }
+    const reorderQty = Number(item.reorderQty || 0);
+    if (reorderQty > 0 && qty <= reorderQty) {
+      return {
+        text: "Reorder",
+        className: "border-amber-300 bg-amber-50 text-amber-700",
+      };
+    }
+    return {
+      text: "Healthy",
+      className: "border-emerald-300 bg-emerald-50 text-emerald-700",
+    };
+  };
 
   return (
     <div className="rounded-xl border bg-card p-6 shadow-sm">
@@ -56,12 +77,15 @@ export function InventoryTable({
               {canViewCost ? <th className="py-2">Avg Cost</th> : null}
               {canViewCost ? <th className="py-2">Last Purchase</th> : null}
               {canViewSelling ? <th className="py-2">Selling Price</th> : null}
+              <th className="py-2">Stock Health</th>
               {canViewCost ? <th className="py-2">Total</th> : null}
               {canAdjust ? <th className="py-2">Actions</th> : null}
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {items.map((item) => {
+              const tone = getStockTone(item);
+              return (
               <tr key={item.id} className="border-b">
                 <td className="py-2">
                   <Link className="underline underline-offset-2" href={`/inventory/items/${item.id}`}>
@@ -70,7 +94,7 @@ export function InventoryTable({
                 </td>
                 <td className="py-2">{item.sku || "-"}</td>
                 <td className="py-2">{item.category}</td>
-                <td className="py-2">{Number(item.quantity)}</td>
+                <td className="py-2 font-medium">{Number(item.quantity)}</td>
                 {canViewCost ? (
                   <td className="py-2">
                     {item.unitCost === null ? "-" : formatMoney(Number(item.unitCost))}
@@ -88,6 +112,11 @@ export function InventoryTable({
                     {item.sellingPrice === null ? "-" : formatMoney(Number(item.sellingPrice))}
                   </td>
                 ) : null}
+                <td className="py-2">
+                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${tone.className}`}>
+                    {tone.text}
+                  </span>
+                </td>
                 {canViewCost ? (
                   <td className="py-2">
                     {item.totalValue === null ? "-" : formatMoney(Number(item.totalValue))}
@@ -124,7 +153,7 @@ export function InventoryTable({
                   </td>
                 ) : null}
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>
@@ -154,6 +183,10 @@ export function InventoryTable({
               ...(canViewSelling
                 ? [{ label: "Selling Price", value: item.sellingPrice === null ? "-" : formatMoney(Number(item.sellingPrice)) }]
                 : []),
+              {
+                label: "Stock Health",
+                value: getStockTone(item).text,
+              },
               ...(canViewCost
                 ? [{ label: "Total Value", value: item.totalValue === null ? "-" : formatMoney(Number(item.totalValue)) }]
                 : []),

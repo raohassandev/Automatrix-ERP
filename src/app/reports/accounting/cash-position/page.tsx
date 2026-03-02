@@ -62,21 +62,21 @@ export default async function CashPositionPage({
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Opening</div>
-          <div className="mt-2 text-xl font-semibold">{formatMoney(data.totals.opening)}</div>
+        <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-6 shadow-sm">
+          <div className="text-sm text-sky-700">Opening</div>
+          <div className="mt-2 text-xl font-semibold text-sky-800">{formatMoney(data.totals.opening)}</div>
         </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Inflow</div>
-          <div className="mt-2 text-xl font-semibold text-emerald-600">{formatMoney(data.totals.inflow)}</div>
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm">
+          <div className="text-sm text-emerald-700">Inflow</div>
+          <div className="mt-2 text-xl font-semibold text-emerald-800">{formatMoney(data.totals.inflow)}</div>
         </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Outflow</div>
-          <div className="mt-2 text-xl font-semibold text-red-600">{formatMoney(data.totals.outflow)}</div>
+        <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-6 shadow-sm">
+          <div className="text-sm text-rose-700">Outflow</div>
+          <div className="mt-2 text-xl font-semibold text-rose-800">{formatMoney(data.totals.outflow)}</div>
         </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Closing</div>
-          <div className="mt-2 text-xl font-semibold">{formatMoney(data.totals.closing)}</div>
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-6 shadow-sm">
+          <div className="text-sm text-indigo-700">Closing</div>
+          <div className="mt-2 text-xl font-semibold text-indigo-800">{formatMoney(data.totals.closing)}</div>
         </div>
       </div>
 

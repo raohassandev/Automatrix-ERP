@@ -11,6 +11,8 @@ import QuerySelect from "@/components/QuerySelect";
 import DateRangePicker from "@/components/DateRangePicker";
 import { PageCreateButton } from "@/components/PageCreateButton";
 import { IncomeActions } from "@/components/IncomeActions";
+import { StatusBadge } from "@/components/StatusBadge";
+import type { Prisma } from "@prisma/client";
 
 export default async function IncomePage({
   searchParams,
@@ -55,9 +57,19 @@ export default async function IncomePage({
     addedById: string | null;
   }> = [];
   let total = 0;
+  let approvedAmount = 0;
+  let pendingAmount = 0;
+  let rejectedAmount = 0;
+  let approvedCount = 0;
+  let pendingCount = 0;
+  let rejectedCount = 0;
   try {
-    const baseWhere = canViewAll ? {} : canViewOwn ? { addedById: userId } : { id: "__none__" };
-    const where: Record<string, unknown> = { ...baseWhere };
+    const baseWhere: Prisma.IncomeWhereInput = canViewAll
+      ? {}
+      : canViewOwn
+        ? { addedById: userId }
+        : { id: "__none__" };
+    const where: Prisma.IncomeWhereInput = { ...baseWhere };
     if (search) {
       where.AND = [
         baseWhere,
@@ -75,7 +87,7 @@ export default async function IncomePage({
       where.status = status;
     }
 
-    const [entriesResult, totalResult] = await Promise.all([
+    const [entriesResult, totalResult, grouped] = await Promise.all([
       prisma.income.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -86,6 +98,12 @@ export default async function IncomePage({
         },
       }),
       prisma.income.count({ where }),
+      prisma.income.groupBy({
+        by: ["status"],
+        where,
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
     ]);
     entries = entriesResult.map((entry) => ({
       id: entry.id,
@@ -103,6 +121,19 @@ export default async function IncomePage({
       addedById: entry.addedById,
     }));
     total = totalResult;
+    for (const row of grouped) {
+      const amount = Number(row._sum.amount || 0);
+      if (row.status === "APPROVED") {
+        approvedAmount += amount;
+        approvedCount = row._count._all;
+      } else if (row.status === "PENDING") {
+        pendingAmount += amount;
+        pendingCount = row._count._all;
+      } else if (row.status === "REJECTED") {
+        rejectedAmount += amount;
+        rejectedCount = row._count._all;
+      }
+    }
   } catch (error) {
     console.error("Error fetching income entries:", error);
     return (
@@ -147,6 +178,28 @@ export default async function IncomePage({
             {canCreate ? <PageCreateButton label="Log Income" formType="income" /> : null}
           </div>
         </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm text-emerald-700">Approved</div>
+            <div className="text-xl font-semibold text-emerald-800">{formatMoney(approvedAmount)}</div>
+            <div className="text-xs text-emerald-700/80">{approvedCount} entries</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <div className="text-sm text-amber-700">Pending</div>
+            <div className="text-xl font-semibold text-amber-800">{formatMoney(pendingAmount)}</div>
+            <div className="text-xs text-amber-700/80">{pendingCount} entries</div>
+          </div>
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
+            <div className="text-sm text-rose-700">Rejected</div>
+            <div className="text-xl font-semibold text-rose-800">{formatMoney(rejectedAmount)}</div>
+            <div className="text-xs text-rose-700/80">{rejectedCount} entries</div>
+          </div>
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+            <div className="text-sm text-sky-700">Net Approved</div>
+            <div className="text-xl font-semibold text-sky-800">{formatMoney(approvedAmount - rejectedAmount)}</div>
+            <div className="text-xs text-sky-700/80">Approved minus rejected</div>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
@@ -174,7 +227,9 @@ export default async function IncomePage({
                   <td className="py-2">{entry.project || "-"}</td>
                   <td className="py-2">{entry.companyAccountName || "-"}</td>
                   <td className="py-2">{formatMoney(Number(entry.amount))}</td>
-                  <td className="py-2">{entry.status}</td>
+                  <td className="py-2">
+                    <StatusBadge status={entry.status} />
+                  </td>
                   <td className="py-2">
                     <IncomeActions entry={entry} canEditAny={canEditAny} currentUserId={userId} />
                   </td>
@@ -196,7 +251,7 @@ export default async function IncomePage({
                 { label: "Category", value: entry.category },
                 { label: "Project", value: entry.project || "-" },
                 { label: "Account", value: entry.companyAccountName || "-" },
-                { label: "Status", value: entry.status },
+                { label: "Status", value: <StatusBadge status={entry.status} /> },
                 { label: "Date", value: new Date(entry.date).toLocaleDateString() },
               ]}
               actions={<IncomeActions entry={entry} canEditAny={canEditAny} currentUserId={userId} />}

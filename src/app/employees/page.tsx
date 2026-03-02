@@ -6,6 +6,7 @@ import { EmployeesTable } from "@/components/EmployeesTable";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import { PageCreateButton } from "@/components/PageCreateButton";
+import { formatMoney } from "@/lib/format";
 
 export default async function EmployeesPage({
   searchParams,
@@ -114,6 +115,17 @@ export default async function EmployeesPage({
     );
   }
 
+  const summary = employees.reduce(
+    (acc, employee) => {
+      if (employee.status === "ACTIVE") acc.active += 1;
+      else acc.inactive += 1;
+      acc.wallet += Number(employee.walletBalance || 0);
+      acc.hold += Number(employee.walletHold || 0);
+      return acc;
+    },
+    { active: 0, inactive: 0, wallet: 0, hold: 0 },
+  );
+
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -129,6 +141,24 @@ export default async function EmployeesPage({
             {canCreate ? (
               <PageCreateButton label="Add Employee" formType="employee" />
             ) : null}
+          </div>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm text-emerald-700">Active</div>
+            <div className="text-xl font-semibold text-emerald-800">{summary.active}</div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+            <div className="text-sm text-slate-700">Inactive</div>
+            <div className="text-xl font-semibold text-slate-800">{summary.inactive}</div>
+          </div>
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+            <div className="text-sm text-sky-700">Wallet Balance</div>
+            <div className="text-xl font-semibold text-sky-800">{formatMoney(summary.wallet)}</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <div className="text-sm text-amber-700">Wallet Hold</div>
+            <div className="text-xl font-semibold text-amber-800">{formatMoney(summary.hold)}</div>
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { Button } from "./ui/button";
 import { Wallet } from "lucide-react";
 import { EmployeeFormDialog } from "@/components/EmployeeFormDialog";
 import Link from "next/link";
+import { StatusBadge } from "@/components/StatusBadge";
 
 interface Employee {
   id: string;
@@ -93,7 +94,9 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
                     Available: {formatMoney(Number(employee.walletBalance) - Number(employee.walletHold || 0))}
                   </div>
                 </td>
-                <td className="py-2 pr-3 w-[90px] whitespace-nowrap">{employee.status}</td>
+                <td className="py-2 pr-3 w-[90px] whitespace-nowrap">
+                  <StatusBadge status={employee.status} />
+                </td>
                 <td className="py-2 w-[240px]">
                   <div className="flex flex-wrap gap-2">
                     <Button asChild size="sm" variant="outline">
@@ -138,7 +141,7 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
                   label: "Available",
                   value: formatMoney(Number(employee.walletBalance) - Number(employee.walletHold || 0)),
                 },
-                { label: "Status", value: employee.status },
+                { label: "Status", value: <StatusBadge status={employee.status} /> },
               ]}
             actions={
               <>

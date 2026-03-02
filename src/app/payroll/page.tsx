@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/format";
 import PaginationControls from "@/components/PaginationControls";
 import { PayrollRunCreateButton } from "@/components/PayrollRunCreateButton";
 import { PayrollRunActions } from "@/components/PayrollRunActions";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export default async function PayrollPage({
   searchParams,
@@ -46,6 +47,16 @@ export default async function PayrollPage({
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / take));
+  const summary = runs.reduce(
+    (acc, run) => {
+      const net = run.entries.reduce((sum, entry) => sum + Number(entry.netPay), 0);
+      acc.totalNet += net;
+      acc.totalEntries += run.entries.length;
+      if (run.status === "APPROVED" || run.status === "POSTED") acc.approvedRuns += 1;
+      return acc;
+    },
+    { totalNet: 0, totalEntries: 0, approvedRuns: 0 },
+  );
 
   return (
     <div className="grid gap-6">
@@ -57,6 +68,24 @@ export default async function PayrollPage({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {canEdit ? <PayrollRunCreateButton employees={employees} /> : null}
+          </div>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+            <div className="text-sm text-sky-700">Runs on this page</div>
+            <div className="text-xl font-semibold text-sky-800">{runs.length}</div>
+          </div>
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
+            <div className="text-sm text-indigo-700">Payroll Entries</div>
+            <div className="text-xl font-semibold text-indigo-800">{summary.totalEntries}</div>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm text-emerald-700">Net Pay</div>
+            <div className="text-xl font-semibold text-emerald-800">{formatMoney(summary.totalNet)}</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <div className="text-sm text-amber-700">Approved/Posted</div>
+            <div className="text-xl font-semibold text-amber-800">{summary.approvedRuns}</div>
           </div>
         </div>
       </div>
@@ -84,7 +113,9 @@ export default async function PayrollPage({
                     </td>
                     <td className="py-2">{run.entries.length}</td>
                     <td className="py-2">{formatMoney(totalNet)}</td>
-                    <td className="py-2">{run.status}</td>
+                    <td className="py-2">
+                      <StatusBadge status={run.status} />
+                    </td>
                     <td className="py-2">
                       {canEdit ? (
                         <PayrollRunActions

@@ -5,11 +5,11 @@ import { InvoiceActions } from "@/components/InvoiceActions";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { MobileCard } from "@/components/MobileCard";
-import { Badge } from "@/components/ui/badge";
 import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import QuerySelect from "@/components/QuerySelect";
 import { PageCreateButton } from "@/components/PageCreateButton";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export default async function InvoicesPage({
   searchParams,
@@ -109,16 +109,6 @@ export default async function InvoicesPage({
     );
   }
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'PAID': return 'default';
-      case 'SENT': return 'secondary'; 
-      case 'OVERDUE': return 'destructive';
-      case 'DRAFT': return 'outline';
-      default: return 'outline';
-    }
-  };
-
   const totalPending = totalInvoiced - totalReceived;
   const totalPages = Math.max(1, Math.ceil(total / take));
 
@@ -150,21 +140,21 @@ export default async function InvoicesPage({
         
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-4 mt-6">
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="text-sm text-muted-foreground">Total Invoiced</div>
-            <div className="text-xl font-semibold text-blue-600">{formatMoney(totalInvoiced)}</div>
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+            <div className="text-sm text-sky-700">Total Invoiced</div>
+            <div className="text-xl font-semibold text-sky-800">{formatMoney(totalInvoiced)}</div>
           </div>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="text-sm text-muted-foreground">Received</div>
-            <div className="text-xl font-semibold text-green-600">{formatMoney(totalReceived)}</div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm text-emerald-700">Received</div>
+            <div className="text-xl font-semibold text-emerald-800">{formatMoney(totalReceived)}</div>
           </div>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="text-sm text-muted-foreground">Pending</div>
-            <div className="text-xl font-semibold text-yellow-600">{formatMoney(totalPending)}</div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <div className="text-sm text-amber-700">Pending</div>
+            <div className="text-xl font-semibold text-amber-800">{formatMoney(totalPending)}</div>
           </div>
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="text-sm text-muted-foreground">Overdue</div>
-            <div className="text-xl font-semibold text-red-600">{overdueCount} invoices</div>
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
+            <div className="text-sm text-rose-700">Overdue</div>
+            <div className="text-xl font-semibold text-rose-800">{overdueCount} invoices</div>
           </div>
         </div>
       </div>
@@ -189,9 +179,7 @@ export default async function InvoicesPage({
                   <td className="py-2">{invoice.projectId}</td>
                   <td className="py-2 font-semibold">{formatMoney(Number(invoice.amount))}</td>
                   <td className="py-2">
-                    <Badge variant={getStatusBadgeVariant(invoice.status)}>
-                      {invoice.status}
-                    </Badge>
+                    <StatusBadge status={invoice.status} />
                   </td>
                   <td className="py-2">{new Date(invoice.dueDate).toLocaleDateString()}</td>
                   <td className="py-2">
@@ -215,9 +203,7 @@ export default async function InvoicesPage({
                 { label: "Amount", value: formatMoney(Number(invoice.amount)) },
                 { 
                   label: "Status", 
-                  value: <Badge variant={getStatusBadgeVariant(invoice.status)}>
-                    {invoice.status}
-                  </Badge> 
+                  value: <StatusBadge status={invoice.status} />,
                 },
               ]}
               actions={<InvoiceActions invoice={invoice} canEdit={canEdit} />}

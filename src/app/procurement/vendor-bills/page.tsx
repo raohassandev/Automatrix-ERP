@@ -7,6 +7,7 @@ import PaginationControls from "@/components/PaginationControls";
 import { formatMoney } from "@/lib/format";
 import { VendorBillCreateButton } from "@/components/VendorBillCreateButton";
 import { VendorBillActions } from "@/components/VendorBillActions";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export default async function VendorBillsPage({
   searchParams,
@@ -72,6 +73,16 @@ export default async function VendorBillsPage({
   });
 
   const totalPages = Math.max(1, Math.ceil(total / take));
+  const summary = bills.reduce(
+    (acc, bill) => {
+      acc.total += bill.totalAmount;
+      acc.paid += bill.paidAmount;
+      if (bill.status === "OVERDUE") acc.overdue += 1;
+      if (bill.status === "DRAFT" || bill.status === "SUBMITTED") acc.inApproval += 1;
+      return acc;
+    },
+    { total: 0, paid: 0, overdue: 0, inApproval: 0 },
+  );
 
   return (
     <div className="grid gap-6">
@@ -86,6 +97,24 @@ export default async function VendorBillsPage({
               <SearchInput placeholder="Search bill or vendor..." />
             </div>
             {canEdit ? <VendorBillCreateButton /> : null}
+          </div>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+            <div className="text-sm text-sky-700">Bills on page</div>
+            <div className="text-xl font-semibold text-sky-800">{bills.length}</div>
+          </div>
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
+            <div className="text-sm text-indigo-700">Total Bills</div>
+            <div className="text-xl font-semibold text-indigo-800">{formatMoney(summary.total)}</div>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm text-emerald-700">Paid</div>
+            <div className="text-xl font-semibold text-emerald-800">{formatMoney(summary.paid)}</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <div className="text-sm text-amber-700">In Approval</div>
+            <div className="text-xl font-semibold text-amber-800">{summary.inApproval}</div>
           </div>
         </div>
       </div>
@@ -116,7 +145,9 @@ export default async function VendorBillsPage({
                   <td className="py-2">{new Date(bill.billDate).toLocaleDateString()}</td>
                   <td className="py-2">{bill.dueDate ? new Date(bill.dueDate).toLocaleDateString() : "-"}</td>
                   <td className="py-2">{bill.lineCount}</td>
-                  <td className="py-2">{bill.status}</td>
+                  <td className="py-2">
+                    <StatusBadge status={bill.status} />
+                  </td>
                   <td className="py-2">{formatMoney(bill.totalAmount)}</td>
                   <td className="py-2">{formatMoney(bill.paidAmount)}</td>
                   <td className="py-2">{canEdit ? <VendorBillActions billId={bill.id} /> : null}</td>

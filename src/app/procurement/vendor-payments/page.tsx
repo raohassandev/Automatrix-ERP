@@ -7,6 +7,7 @@ import PaginationControls from "@/components/PaginationControls";
 import { formatMoney } from "@/lib/format";
 import { VendorPaymentCreateButton } from "@/components/VendorPaymentCreateButton";
 import { VendorPaymentActions } from "@/components/VendorPaymentActions";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export default async function VendorPaymentsPage({
   searchParams,
@@ -70,6 +71,16 @@ export default async function VendorPaymentsPage({
   });
 
   const totalPages = Math.max(1, Math.ceil(total / take));
+  const summary = payments.reduce(
+    (acc, payment) => {
+      acc.amount += payment.amount;
+      acc.allocated += payment.allocatedAmount;
+      if (payment.status === "DRAFT" || payment.status === "SUBMITTED") acc.inApproval += 1;
+      if (payment.status === "POSTED") acc.posted += 1;
+      return acc;
+    },
+    { amount: 0, allocated: 0, inApproval: 0, posted: 0 },
+  );
 
   return (
     <div className="grid gap-6">
@@ -84,6 +95,24 @@ export default async function VendorPaymentsPage({
               <SearchInput placeholder="Search payment, vendor, account..." />
             </div>
             {canEdit ? <VendorPaymentCreateButton /> : null}
+          </div>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+            <div className="text-sm text-sky-700">Payments on page</div>
+            <div className="text-xl font-semibold text-sky-800">{payments.length}</div>
+          </div>
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
+            <div className="text-sm text-rose-700">Total Outflow</div>
+            <div className="text-xl font-semibold text-rose-800">{formatMoney(summary.amount)}</div>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm text-emerald-700">Allocated</div>
+            <div className="text-xl font-semibold text-emerald-800">{formatMoney(summary.allocated)}</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <div className="text-sm text-amber-700">In Approval</div>
+            <div className="text-xl font-semibold text-amber-800">{summary.inApproval}</div>
           </div>
         </div>
       </div>
@@ -114,7 +143,9 @@ export default async function VendorPaymentsPage({
                   <td className="py-2">{new Date(payment.paymentDate).toLocaleDateString()}</td>
                   <td className="py-2">{payment.accountName}</td>
                   <td className="py-2">{payment.method || "-"}</td>
-                  <td className="py-2">{payment.status}</td>
+                  <td className="py-2">
+                    <StatusBadge status={payment.status} />
+                  </td>
                   <td className="py-2">{formatMoney(payment.amount)}</td>
                   <td className="py-2">{formatMoney(payment.allocatedAmount)}</td>
                   <td className="py-2">{canEdit ? <VendorPaymentActions paymentId={payment.id} /> : null}</td>

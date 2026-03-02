@@ -6,11 +6,13 @@ import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import { ProjectsTable } from "@/components/ProjectsTable";
 import { PageCreateButton } from "@/components/PageCreateButton";
+import QuerySelect from "@/components/QuerySelect";
+import { formatMoney } from "@/lib/format";
 
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: Promise<{ search?: string; page?: string; status?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -37,6 +39,7 @@ export default async function ProjectsPage({
 
   const params = await searchParams;
   const search = (params.search || "").trim();
+  const status = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;
   const skip = (page - 1) * take;
@@ -70,12 +73,15 @@ export default async function ProjectsPage({
       }
     : {};
 
-  const where: import("@prisma/client").Prisma.ProjectWhereInput =
+  const whereBase: import("@prisma/client").Prisma.ProjectWhereInput =
     Object.keys(searchWhere).length > 0
       ? Object.keys(scopeWhere).length > 0
         ? { AND: [scopeWhere, searchWhere] }
         : searchWhere
       : scopeWhere;
+  const where: import("@prisma/client").Prisma.ProjectWhereInput = status
+    ? { AND: [whereBase, { status }] }
+    : whereBase;
 
   const [projects, total] = await Promise.all([
     prisma.project.findMany({
@@ -100,6 +106,17 @@ export default async function ProjectsPage({
     endDate: project.endDate ? project.endDate.toISOString().slice(0, 10) : null,
   }));
   const totalPages = Math.max(1, Math.ceil(total / take));
+  const stats = serializedProjects.reduce(
+    (acc, project) => {
+      if (project.status === "ACTIVE") acc.active += 1;
+      if (project.status === "ON_HOLD") acc.onHold += 1;
+      if (project.status === "COMPLETED" || project.status === "CLOSED") acc.closed += 1;
+      acc.contract += Number(project.contractValue || 0);
+      acc.pending += Number(project.pendingRecovery || 0);
+      return acc;
+    },
+    { active: 0, onHold: 0, closed: 0, contract: 0, pending: 0 },
+  );
 
   return (
     <div className="grid gap-6">
@@ -113,9 +130,43 @@ export default async function ProjectsPage({
             <div className="min-w-[220px]">
               <SearchInput placeholder="Search projects..." />
             </div>
+            <QuerySelect
+              param="status"
+              placeholder="All statuses"
+              options={[
+                { label: "Not Started", value: "NOT_STARTED" },
+                { label: "Upcoming", value: "UPCOMING" },
+                { label: "Active", value: "ACTIVE" },
+                { label: "On Hold", value: "ON_HOLD" },
+                { label: "Completed", value: "COMPLETED" },
+                { label: "Closed", value: "CLOSED" },
+              ]}
+            />
             {canEdit ? (
               <PageCreateButton label="Create Project" formType="project" />
             ) : null}
+          </div>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm text-emerald-700">Active</div>
+            <div className="text-xl font-semibold text-emerald-800">{stats.active}</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <div className="text-sm text-amber-700">On Hold</div>
+            <div className="text-xl font-semibold text-amber-800">{stats.onHold}</div>
+          </div>
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+            <div className="text-sm text-sky-700">Contract Value</div>
+            <div className="text-xl font-semibold text-sky-800">
+              {canViewFinancials ? formatMoney(stats.contract) : "-"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
+            <div className="text-sm text-rose-700">Pending Recovery</div>
+            <div className="text-xl font-semibold text-rose-800">
+              {canViewFinancials ? formatMoney(stats.pending) : "-"}
+            </div>
           </div>
         </div>
       </div>
