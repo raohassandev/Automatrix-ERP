@@ -150,7 +150,7 @@ function ExpensesPageContent() {
 
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 overflow-x-hidden">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
