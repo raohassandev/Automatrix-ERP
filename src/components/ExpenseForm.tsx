@@ -45,6 +45,7 @@ export default function ExpenseForm() {
   const [categories, setCategories] = useState<CategoryMeta[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [companyAccounts, setCompanyAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
+  const [receiptThreshold, setReceiptThreshold] = useState(0);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -86,6 +87,21 @@ export default function ExpenseForm() {
     fetchAccounts();
   }, []);
 
+  useEffect(() => {
+    const fetchOrgSettings = async () => {
+      try {
+        const res = await fetch("/api/settings/organization", { cache: "no-store" });
+        const data = await res.json();
+        if (res.ok && data?.success) {
+          setReceiptThreshold(Number(data?.data?.expenseReceiptThreshold || 0));
+        }
+      } catch {
+        setReceiptThreshold(0);
+      }
+    };
+    fetchOrgSettings();
+  }, []);
+
   // Phase 1: expenses are non-stock only (no Expense -> Inventory postings).
 
   const selectedCategory = useMemo(
@@ -93,6 +109,7 @@ export default function ExpenseForm() {
     [categories, form.category]
   );
   const parsedAmount = Number(form.amount);
+  const requiresReceipt = receiptThreshold > 0 && Number.isFinite(parsedAmount) && parsedAmount >= receiptThreshold;
 
   async function submit(ignoreDuplicate = false) {
     if (!form.date) {
@@ -121,6 +138,10 @@ export default function ExpenseForm() {
     }
     if (form.paymentSource === "COMPANY_ACCOUNT" && !form.companyAccountId) {
       toast.error("Select a company account when payment source is Company Paid (Account).");
+      return;
+    }
+    if (requiresReceipt && !form.receiptUrl.trim() && !form.receiptFileId.trim()) {
+      toast.error(`Receipt is required for expenses of PKR ${receiptThreshold.toLocaleString()} or above.`);
       return;
     }
     if (
@@ -316,6 +337,19 @@ export default function ExpenseForm() {
           value={form.receiptFileId}
           onChange={(e) => setForm({ ...form, receiptFileId: e.target.value })}
         />
+        {receiptThreshold > 0 ? (
+          <div
+            className={`rounded-md border px-3 py-2 text-xs md:col-span-2 ${
+              requiresReceipt
+                ? "border-rose-200 bg-rose-50 text-rose-800"
+                : "border-emerald-200 bg-emerald-50 text-emerald-800"
+            }`}
+          >
+            {requiresReceipt
+              ? `Receipt is required for this amount (threshold: PKR ${receiptThreshold.toLocaleString()}).`
+              : `Receipt becomes mandatory at PKR ${receiptThreshold.toLocaleString()}.`}
+          </div>
+        ) : null}
         <textarea
           className="rounded-md border px-3 py-2 md:col-span-2"
           placeholder="Remarks (optional)"
@@ -331,7 +365,7 @@ export default function ExpenseForm() {
         />
       </div>
       <button
-        className="mt-4 rounded-md bg-black px-4 py-2 text-white"
+        className="mt-4 rounded-md bg-sky-700 px-4 py-2 text-white hover:bg-sky-800"
         onClick={() => startTransition(() => submit())}
         disabled={pending}
       >
@@ -355,7 +389,7 @@ export default function ExpenseForm() {
             Cancel
           </button>
           <button
-            className="rounded-md bg-black px-4 py-2 text-white"
+            className="rounded-md bg-sky-700 px-4 py-2 text-white hover:bg-sky-800"
             onClick={() => {
               setDuplicateModalOpen(false);
               startTransition(() => submit(true));

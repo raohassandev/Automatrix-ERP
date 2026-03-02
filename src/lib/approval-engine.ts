@@ -572,18 +572,66 @@ export async function getPendingApprovalsForUser(
  * Get approval statistics
  */
 export async function getApprovalStats() {
-  const [pending, approved, rejected, total] = await Promise.all([
-    prisma.expense.count({ where: { status: 'PENDING' } }),
-    prisma.expense.count({ where: { status: 'APPROVED' } }),
-    prisma.expense.count({ where: { status: 'REJECTED' } }),
+  const now = Date.now();
+  const slaByLevelHours: Record<ApprovalLevel, number> = {
+    L1: 24,
+    L2: 48,
+    L3: 72,
+  };
+  const [pendingExpenseRows, pendingIncomeRows, approvedExpenses, approvedIncome, rejectedExpenses, rejectedIncome, totalExpenses, totalIncome, closedExpenseRows, closedIncomeRows] = await Promise.all([
+    prisma.expense.findMany({
+      where: { status: { startsWith: "PENDING" } },
+      select: { createdAt: true, amount: true, approvalLevel: true },
+    }),
+    prisma.income.findMany({
+      where: { status: "PENDING" },
+      select: { createdAt: true, amount: true, approvalLevel: true },
+    }),
+    prisma.expense.count({ where: { status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] } } }),
+    prisma.income.count({ where: { status: "APPROVED" } }),
+    prisma.expense.count({ where: { status: "REJECTED" } }),
+    prisma.income.count({ where: { status: "REJECTED" } }),
     prisma.expense.count(),
+    prisma.income.count(),
+    prisma.expense.findMany({
+      where: { status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID", "REJECTED"] } },
+      select: { createdAt: true, updatedAt: true },
+      take: 1000,
+      orderBy: { updatedAt: "desc" },
+    }),
+    prisma.income.findMany({
+      where: { status: { in: ["APPROVED", "REJECTED"] } },
+      select: { createdAt: true, updatedAt: true },
+      take: 1000,
+      orderBy: { updatedAt: "desc" },
+    }),
   ]);
 
-  const avgApprovalTime = await prisma.$queryRaw<{ avg: number }[]>`
-    SELECT AVG(EXTRACT(EPOCH FROM ("approvedAt" - "createdAt")) / 3600) as avg
-    FROM "Expense"
-    WHERE "approvedAt" IS NOT NULL
-  `;
+  const pending = pendingExpenseRows.length + pendingIncomeRows.length;
+  const approved = approvedExpenses + approvedIncome;
+  const rejected = rejectedExpenses + rejectedIncome;
+  const total = totalExpenses + totalIncome;
+
+  const overdueExpenses = pendingExpenseRows.filter((row) => {
+    const amount = parseFloat(row.amount.toString());
+    const level = resolveApprovalLevel("expense", amount, row.approvalLevel);
+    const elapsedHours = (now - row.createdAt.getTime()) / (1000 * 60 * 60);
+    return elapsedHours > slaByLevelHours[level];
+  }).length;
+  const overdueIncome = pendingIncomeRows.filter((row) => {
+    const amount = parseFloat(row.amount.toString());
+    const level = resolveApprovalLevel("income", amount, row.approvalLevel);
+    const elapsedHours = (now - row.createdAt.getTime()) / (1000 * 60 * 60);
+    return elapsedHours > slaByLevelHours[level];
+  }).length;
+
+  const approvalDurationsHours = [...closedExpenseRows, ...closedIncomeRows]
+    .map((row) => (row.updatedAt.getTime() - row.createdAt.getTime()) / (1000 * 60 * 60))
+    .filter((v) => Number.isFinite(v) && v >= 0);
+  const avgHours =
+    approvalDurationsHours.length > 0
+      ? approvalDurationsHours.reduce((sum, v) => sum + v, 0) / approvalDurationsHours.length
+      : 0;
 
   return {
     pending,
@@ -591,6 +639,9 @@ export async function getApprovalStats() {
     rejected,
     total,
     approvalRate: total > 0 ? ((approved / total) * 100).toFixed(1) : '0',
-    avgApprovalTimeHours: avgApprovalTime[0]?.avg?.toFixed(1) || '0',
+    avgApprovalTimeHours: avgHours.toFixed(1),
+    overdue: overdueExpenses + overdueIncome,
+    overdueExpenses,
+    overdueIncome,
   };
 }

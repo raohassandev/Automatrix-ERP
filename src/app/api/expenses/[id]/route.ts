@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { getExpenseApprovalLevel, isPendingExpenseStatus } from "@/lib/approvals";
 import { Prisma } from "@prisma/client";
 import { resolveProjectId } from "@/lib/projects";
+import { getOrganizationDefaults } from "@/lib/organization-settings";
 
 const STOCK_KEYS_BLOCKED_IN_EXPENSES = [
   "addToInventory",
@@ -173,21 +174,27 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       }
     }
   }
-  // TODO: This receipt validation is temporarily bypassed based on user request.
-  // It should ideally be moved to the frontend, configured by an Admin,
-  // to provide a better user experience and prevent unnecessary backend calls.
-  // if (
-  //   nextAmount >= RECEIPT_REQUIRED_THRESHOLD &&
-  //   !parsed.data.receiptUrl &&
-  //   !parsed.data.receiptFileId &&
-  //   !expense.receiptUrl &&
-  //   !expense.receiptFileId
-  // ) {
-  //   return NextResponse.json(
-  //     { success: false, error: "Receipt required for this amount" },
-  //     { status: 400 }
-  //   );
-  // }
+  const orgDefaults = await getOrganizationDefaults();
+  const threshold = Number(orgDefaults.expenseReceiptThreshold || 0);
+  const nextReceiptUrl = parsed.data.receiptUrl !== undefined ? parsed.data.receiptUrl : expense.receiptUrl;
+  const nextReceiptFileId =
+    parsed.data.receiptFileId !== undefined ? parsed.data.receiptFileId : expense.receiptFileId;
+  if (threshold > 0 && nextAmount >= threshold && !nextReceiptUrl && !nextReceiptFileId) {
+    await logAudit({
+      action: "BLOCK_EXPENSE_MISSING_RECEIPT",
+      entity: "Expense",
+      entityId: id,
+      reason: `Receipt required for amounts >= ${threshold}`,
+      userId: session.user.id,
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Receipt is required for expenses of PKR ${threshold.toLocaleString()} or above.`,
+      },
+      { status: 400 }
+    );
+  }
 
   if (parsed.data.amount) {
     const approvalLevel = getExpenseApprovalLevel(parsed.data.amount);

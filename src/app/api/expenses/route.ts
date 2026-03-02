@@ -11,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { sanitizeString } from '@/lib/sanitize';
 import { recalculateProjectFinancials, resolveProjectDbId, resolveProjectId } from '@/lib/projects';
 import { postExpenseApprovalJournal } from '@/lib/accounting';
+import { getOrganizationDefaults } from '@/lib/organization-settings';
 
 const STOCK_KEYS_BLOCKED_IN_EXPENSES = [
   "addToInventory",
@@ -241,19 +242,28 @@ export async function POST(req: Request) {
       }
     }
 
-    // TODO: This receipt validation is temporarily bypassed based on user request.
-    // It should ideally be moved to the frontend, configured by an Admin,
-    // to provide a better user experience and prevent unnecessary backend calls.
-    // if (
-    //   sanitizedData.amount >= RECEIPT_REQUIRED_THRESHOLD &&
-    //   !sanitizedData.receiptUrl &&
-    //   !sanitizedData.receiptFileId
-    // ) {
-    //   return NextResponse.json(
-    //     { success: false, error: 'Receipt required for this amount' },
-    //     { status: 400 },
-    //   );
-    // }
+    const orgDefaults = await getOrganizationDefaults();
+    if (
+      sanitizedData.amount >= Number(orgDefaults.expenseReceiptThreshold || 0) &&
+      Number(orgDefaults.expenseReceiptThreshold || 0) > 0 &&
+      !sanitizedData.receiptUrl &&
+      !sanitizedData.receiptFileId
+    ) {
+      await logAudit({
+        action: "BLOCK_EXPENSE_MISSING_RECEIPT",
+        entity: "Expense",
+        entityId: "NEW",
+        reason: `Receipt required for amounts >= ${orgDefaults.expenseReceiptThreshold}`,
+        userId: session.user.id,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Receipt is required for expenses of PKR ${Number(orgDefaults.expenseReceiptThreshold).toLocaleString()} or above.`,
+        },
+        { status: 400 },
+      );
+    }
 
     if (!body.ignoreDuplicate) {
       const duplicates = await checkDuplicateExpense({

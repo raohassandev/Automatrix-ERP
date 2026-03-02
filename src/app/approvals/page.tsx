@@ -30,6 +30,7 @@ interface Approval {
   categoryStrict?: boolean;
   requiredApprovalLevel: string;
   status: string;
+  createdAt: Date;
 }
 
 interface HistoryItem {
@@ -126,6 +127,7 @@ export default async function ApprovalsPage() {
           categoryStrict: categoryMeta?.enforceStrict || false,
           requiredApprovalLevel: requiredLevel,
           status: expense.status,
+          createdAt: expense.createdAt,
         };
       })
     );
@@ -163,6 +165,7 @@ export default async function ApprovalsPage() {
               ? (income.approvalLevel as "L1" | "L2" | "L3")
               : getIncomeApprovalLevel(parseFloat(income.amount.toString())),
           status: income.status,
+          createdAt: income.createdAt,
         };
       })
     );
@@ -310,6 +313,16 @@ export default async function ApprovalsPage() {
     );
   }
 
+  const staleAt = new Date();
+  staleAt.setHours(staleAt.getHours() - 48);
+  const overdueCount =
+    approvalsWithWalletInfo.filter((row) => {
+      return new Date(row.createdAt) <= staleAt;
+    }).length +
+    procurementApprovals.filter((row) => {
+      return new Date(row.date) <= staleAt;
+    }).length;
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-7xl">
@@ -375,6 +388,12 @@ export default async function ApprovalsPage() {
                 ).length +
                   procurementApprovals.filter((row: ProcurementApprovalItem) => row.requiredApprovalLevel === "L3").length
               }
+            </div>
+          </div>
+          <div className="rounded-lg bg-card p-4 shadow">
+            <div className="text-sm font-medium text-muted-foreground">Overdue (&gt;48h)</div>
+            <div className={`mt-2 text-3xl font-bold ${overdueCount > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+              {overdueCount}
             </div>
           </div>
         </div>

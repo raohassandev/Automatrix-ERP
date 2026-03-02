@@ -29,7 +29,7 @@ export default async function MasterDataPage() {
     );
   }
 
-  const [clientsCount, vendorsStats, categoryStats, departmentsTotal, designationsTotal, itemStats] =
+  const [clientsCount, vendorsStats, categoryStats, departmentsTotal, designationsTotal, itemStats, vendorsMissingContact] =
     await Promise.all([
       prisma.client.count(),
       prisma.vendor.groupBy({
@@ -45,6 +45,11 @@ export default async function MasterDataPage() {
       prisma.designation.count(),
       prisma.inventoryItem.aggregate({
         _count: { _all: true },
+      }),
+      prisma.vendor.count({
+        where: {
+          OR: [{ phone: null }, { email: null }],
+        },
       }),
     ]);
 
@@ -83,6 +88,22 @@ export default async function MasterDataPage() {
         <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
           <div className="text-sm text-indigo-700">Inventory Items</div>
           <div className="mt-2 text-2xl font-semibold text-indigo-900">{itemStats._count._all || 0}</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-5 shadow-sm">
+        <h2 className="text-base font-semibold">Master Data Quality</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Use this checklist to keep transaction masters clean.</p>
+        <div className="mt-3 grid gap-3 text-sm md:grid-cols-3">
+          <div className="rounded-md border border-amber-200 bg-amber-50/60 p-3">
+            Vendors missing phone/email: <span className="font-semibold">{vendorsMissingContact}</span>
+          </div>
+          <div className="rounded-md border border-sky-200 bg-sky-50/60 p-3">
+            Active expense categories: <span className="font-semibold">{expenseCategories}</span>
+          </div>
+          <div className="rounded-md border border-emerald-200 bg-emerald-50/60 p-3">
+            Departments + designations: <span className="font-semibold">{departmentsTotal + designationsTotal}</span>
+          </div>
         </div>
       </div>
 

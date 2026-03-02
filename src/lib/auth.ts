@@ -263,7 +263,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         select: { status: true },
       });
 
-      return Boolean(employee && employee.status === "ACTIVE");
+      const allowed = Boolean(employee && employee.status === "ACTIVE");
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: allowed ? "AUTH_SIGNIN_SUCCESS" : "AUTH_SIGNIN_DENIED",
+            entity: "Auth",
+            entityId: account?.provider || "google",
+            reason: allowed ? null : "Email not allowlisted or employee inactive",
+            userId: typeof user?.id === "string" ? user.id : null,
+            newValue: JSON.stringify({ email: email.toLowerCase() }),
+          },
+        });
+      } catch {
+        // Sign-in flow should not fail due to audit write errors.
+      }
+      return allowed;
     },
     jwt: async ({ token, user }) => {
       if (user) {
@@ -300,6 +315,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (pathname === "/api/health") return true;
       if (pathname.startsWith("/login")) return true;
       return !!auth?.user;
+    },
+  },
+  events: {
+    async signOut(message) {
+      const userId =
+        "token" in message && message.token && typeof message.token.id === "string"
+          ? message.token.id
+          : null;
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: "AUTH_SIGNOUT",
+            entity: "Auth",
+            entityId: "session",
+            userId,
+          },
+        });
+      } catch {
+        // Best-effort audit only.
+      }
     },
   },
 });

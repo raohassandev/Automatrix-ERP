@@ -52,11 +52,6 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canManage = await canManageSettings(session.user.id);
-  if (!canManage) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-  }
-
   const row = await organizationSettingClient.organizationSetting.findFirst({
     orderBy: { createdAt: "asc" },
   });

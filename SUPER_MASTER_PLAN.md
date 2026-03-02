@@ -431,30 +431,31 @@ Legend:
 - `[~]` In Progress (partially implemented)
 - `[ ]` Not Started / not enough implemented for target end-state
 
-1. `[~]` Identity, RBAC, and Security
-2. `[~]` Organization and Settings
-3. `[~]` Master Data Management
+1. `[x]` Identity, RBAC, and Security
+2. `[x]` Organization and Settings
+3. `[x]` Master Data Management
 4. `[ ]` CRM and Pre-Sales
 5. `[ ]` Sales (O2C)
 6. `[x]` Procurement (P2P)
 7. `[x]` Inventory and Store
 8. `[x]` Project Management (commercial + execution)
 9. `[ ]` Engineering and Site Operations
-10. `[~]` Expense Management
+10. `[x]` Expense Management
 11. `[x]` Employee Wallet and Advances
 12. `[x]` HRMS
 13. `[x]` Payroll and Compensation
 14. `[x]` Finance and Accounting Core
 15. `[x]` Treasury and Banking
-16. `[~]` Approvals Engine
-17. `[~]` Audit, Compliance, and Governance
-18. `[~]` Reporting and BI
+16. `[x]` Approvals Engine
+17. `[x]` Audit, Compliance, and Governance
+18. `[x]` Reporting and BI
 19. `[ ]` Document Management
 20. `[ ]` Integrations and Data Ops
 
 Snapshot note:
 - Modules `6`, `7`, `8` are now marked `[x]` for locked Phase-1 baseline after lifecycle, controls, and reporting hardening completion.
-- Remaining in-progress depth continues under modules `10`, `16`, `17`, `18`, `19`, `20`.
+- Modules `1`, `2`, `3`, `10`, `16`, `17`, `18` are now marked `[x]` after controls hardening (receipt policy enforcement, approvals SLA/queue visibility, audit/search API depth, and controls BI snapshots).
+- Remaining depth now continues under modules `19` and `20`.
 
 ### 11.2 Owner-Critical Module Status (Requested)
 

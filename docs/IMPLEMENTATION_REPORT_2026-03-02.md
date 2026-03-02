@@ -372,3 +372,74 @@
   - `src/lib/navigation.ts`
   - `src/app/api/expenses/bulk-mark-paid/route.ts`
   - `src/app/expenses/page.tsx`
+
+## Completion pass: Modules 1,2,3,10,16,17,18
+
+### Identity, RBAC, and Security
+- Added auth lifecycle audit events for traceability:
+  - successful/denied sign-ins are now audited (`AUTH_SIGNIN_SUCCESS`, `AUTH_SIGNIN_DENIED`)
+  - sign-out is now audited (`AUTH_SIGNOUT`)
+- File:
+  - `src/lib/auth.ts`
+
+### Organization and Settings
+- Added reusable organization defaults resolver for runtime policy usage:
+  - `src/lib/organization-settings.ts`
+- Organization settings API now allows authenticated read access for default-driven forms while keeping writes permission-gated.
+- File:
+  - `src/app/api/settings/organization/route.ts`
+
+### Master Data Management
+- Expanded Master Data Center with quality metrics panel (vendor contact completeness + category/HR dimensions).
+- File:
+  - `src/app/master-data/page.tsx`
+
+### Expense Management
+- Enforced organization-level receipt policy server-side on create/update:
+  - blocks expense submission/update when amount exceeds configured threshold and receipt is missing
+  - emits control audit action `BLOCK_EXPENSE_MISSING_RECEIPT`
+- Added client-side receipt-threshold guidance and validation in expense form for easier operator behavior.
+- Added `expenses.mark_paid` permission mapping in RBAC/seed role maps for finance workflows.
+- Files:
+  - `src/app/api/expenses/route.ts`
+  - `src/app/api/expenses/[id]/route.ts`
+  - `src/components/ExpenseForm.tsx`
+  - `src/lib/permissions.ts`
+  - `prisma/seed.js`
+
+### Approvals Engine
+- Hardened approval stats computation:
+  - includes real pending statuses (`PENDING_*`) and both Expense + Income streams
+  - removed invalid `approvedAt` dependency and computes avg approval cycle from `createdAt` -> `updatedAt`
+  - added overdue counters by SLA window and module
+- Added overdue count visibility on approvals page.
+- Files:
+  - `src/lib/approval-engine.ts`
+  - `src/app/approvals/page.tsx`
+
+### Audit, Compliance, and Governance
+- Upgraded `GET /api/audit` with enterprise filters + pagination:
+  - search/action/entity/date filters
+  - page + limit + total/totalPages metadata
+- File:
+  - `src/app/api/audit/route.ts`
+
+### Reporting and BI
+- Added controls KPI report page for operational governance signals:
+  - queue load (expense/income/procurement submitted)
+  - blocked events (30d)
+  - auth denied/success trends (30d)
+- Linked into reports home for discoverability.
+- Files:
+  - `src/app/reports/controls/page.tsx`
+  - `src/app/reports/page.tsx`
+
+### Plan status update
+- Updated `SUPER_MASTER_PLAN.md` section `11.1 Status Snapshot`:
+  - marked modules `1`, `2`, `3`, `10`, `16`, `17`, `18` as `[x]`
+  - remaining non-complete modules are now focused on `19` and `20`.
+
+### Validation
+- `pnpm typecheck` passed
+- `pnpm lint` passed
+- `pnpm test` passed
