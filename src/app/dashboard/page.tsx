@@ -11,6 +11,23 @@ export default async function DashboardPage() {
 
   const canViewCeo = await requirePermission(session.user.id, "dashboard.view_all_metrics");
   const canManageCompanyAccounts = await requirePermission(session.user.id, "company_accounts.manage");
+  const canViewProcurement = await requirePermission(session.user.id, "procurement.view_all");
+  const canEditProcurement = await requirePermission(session.user.id, "procurement.edit");
+  const canViewInventory = await requirePermission(session.user.id, "inventory.view");
+  const canViewApprovals = await requirePermission(session.user.id, "approvals.view_pending");
+  const canViewAllApprovals = await requirePermission(session.user.id, "approvals.view_all");
+  const canViewAudit = await requirePermission(session.user.id, "audit.view");
+  const canViewReportsOwn = await requirePermission(session.user.id, "reports.view_own");
+  const canViewReportsTeam = await requirePermission(session.user.id, "reports.view_team");
+  const canViewReportsAll = await requirePermission(session.user.id, "reports.view_all");
+  const canViewAccounting = await requirePermission(session.user.id, "accounting.view");
+  const canViewOwnEmployees = await requirePermission(session.user.id, "employees.view_own");
+  const canViewAllEmployees = await requirePermission(session.user.id, "employees.view_all");
+  const canSubmitExpense = await requirePermission(session.user.id, "expenses.submit");
+
+  const canViewReports = canViewReportsOwn || canViewReportsTeam || canViewReportsAll;
+  const canViewControls = canViewApprovals || canViewAllApprovals || canViewAudit;
+  const canViewWorkspace = canViewOwnEmployees || canViewAllEmployees || canSubmitExpense;
 
   return (
     <div className="grid gap-6">
@@ -29,82 +46,100 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Procurement</div>
-          <div className="mt-3 grid gap-2 text-sm">
-            <Link className="underline" href="/procurement/purchase-orders">
-              Purchase Orders
-            </Link>
-            <Link className="underline" href="/procurement/grn">
-              Goods Receipts (GRN)
-            </Link>
-            <Link className="underline" href="/procurement/vendor-bills">
-              Vendor Bills
-            </Link>
-            {canManageCompanyAccounts ? (
-              <Link className="underline" href="/procurement/vendor-payments">
-                Vendor Payments
+        {canViewProcurement || canEditProcurement ? (
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <div className="text-sm font-medium text-muted-foreground">Procurement</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              <Link className="underline" href="/procurement/purchase-orders">
+                Purchase Orders
               </Link>
-            ) : null}
+              <Link className="underline" href="/procurement/grn">
+                Goods Receipts (GRN)
+              </Link>
+              <Link className="underline" href="/procurement/vendor-bills">
+                Vendor Bills
+              </Link>
+              {canManageCompanyAccounts ? (
+                <Link className="underline" href="/procurement/vendor-payments">
+                  Vendor Payments
+                </Link>
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Inventory</div>
-          <div className="mt-3 grid gap-2 text-sm">
-            <Link className="underline" href="/inventory">
-              Items
-            </Link>
-            <Link className="underline" href="/inventory/ledger">
-              Stock Ledger
-            </Link>
-            <Link className="underline" href="/reports/inventory">
-              Inventory Report
-            </Link>
+        {canViewInventory ? (
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <div className="text-sm font-medium text-muted-foreground">Inventory</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              <Link className="underline" href="/inventory">
+                Items
+              </Link>
+              <Link className="underline" href="/inventory/ledger">
+                Stock Ledger
+              </Link>
+              <Link className="underline" href="/reports/inventory">
+                Inventory Report
+              </Link>
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Controls</div>
-          <div className="mt-3 grid gap-2 text-sm">
-            <Link className="underline" href="/approvals">
-              Approvals Queue
-            </Link>
-            <Link className="underline" href="/audit">
-              Audit Log
-            </Link>
+        {canViewControls ? (
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <div className="text-sm font-medium text-muted-foreground">Controls</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              {canViewApprovals || canViewAllApprovals ? (
+                <Link className="underline" href="/approvals">
+                  Approvals Queue
+                </Link>
+              ) : null}
+              {canViewAudit ? (
+                <Link className="underline" href="/audit">
+                  Audit Log
+                </Link>
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Reports</div>
-          <div className="mt-3 grid gap-2 text-sm">
-            <Link className="underline" href="/reports/ap">
-              AP Aging
-            </Link>
-            <Link className="underline" href="/reports/procurement">
-              Procurement (Stock-in)
-            </Link>
-            <Link className="underline" href="/reports">
-              All Reports
-            </Link>
+        {canViewReports ? (
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <div className="text-sm font-medium text-muted-foreground">Reports</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              {canViewAccounting || canViewReportsAll ? (
+                <Link className="underline" href="/reports/ap">
+                  AP Aging
+                </Link>
+              ) : null}
+              {canViewProcurement || canViewReportsAll || canViewReportsTeam ? (
+                <Link className="underline" href="/reports/procurement">
+                  Procurement (Stock-in)
+                </Link>
+              ) : null}
+              <Link className="underline" href="/reports">
+                All Reports
+              </Link>
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">My Workspace</div>
-          <div className="mt-3 grid gap-2 text-sm">
-            <Link className="underline" href="/me">
-              My Dashboard
-            </Link>
-            <Link className="underline" href="/wallets">
-              Wallets
-            </Link>
-            <Link className="underline" href="/expenses">
-              Expenses
-            </Link>
+        {canViewWorkspace ? (
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <div className="text-sm font-medium text-muted-foreground">My Workspace</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              <Link className="underline" href="/me">
+                My Dashboard
+              </Link>
+              <Link className="underline" href="/wallets">
+                Wallets
+              </Link>
+              <Link className="underline" href="/expenses">
+                Expenses
+              </Link>
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );
