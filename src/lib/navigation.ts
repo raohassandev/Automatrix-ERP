@@ -62,6 +62,8 @@ export const navGroups: NavGroup[] = [
     title: "People",
     items: [
       { name: "Employees", href: "/employees", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
+      { name: "Attendance", href: "/hrms/attendance", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
+      { name: "Leave", href: "/hrms/leave", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
     ],
   },
   {
@@ -79,6 +81,7 @@ export const navGroups: NavGroup[] = [
       { name: "Trial Balance", href: "/reports/accounting/trial-balance", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Cash Position", href: "/reports/accounting/cash-position", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Cash Forecast", href: "/reports/accounting/cash-forecast", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+      { name: "Bank Reconciliation", href: "/reports/accounting/bank-reconciliation", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own", "company_accounts.view"] },
       { name: "AR Aging", href: "/reports/accounting/ar-aging", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Profit & Loss", href: "/reports/accounting/profit-loss", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Balance Sheet", href: "/reports/accounting/balance-sheet", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },

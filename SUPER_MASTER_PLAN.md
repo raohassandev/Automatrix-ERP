@@ -456,7 +456,7 @@ Legend:
 
 - Finance & Accounting Core (`14`): `[~]` In Progress
   - Implemented: COA, journals, fiscal periods, posting adapters (income/expense/vendor bill/vendor payment/invoice), TB/P&L/Balance Sheet/Cash Position/AR Aging/Cash Forecast, server-side invoice receipt allocation limits for income, guided invoice-outstanding receipt selection UX.
-  - Remaining for end-state: full O2C lifecycle closure with final allocation/reconciliation operations, bank reconciliation, final close controls + release-grade reconciliation and UAT signoff.
+  - Remaining for end-state: full O2C lifecycle closure with final allocation/reconciliation operations, final close controls + release-grade reconciliation and UAT signoff.
 
 - Inventory & Store (`7`): `[~]` In Progress
   - Implemented: item master, inventory ledger postings via GRN, stock-in controls, reporting baseline, stock-health visibility with low-stock/reorder indicators in operational lists.
@@ -467,8 +467,8 @@ Legend:
   - Remaining for end-state: full execution workflows, deeper commercial controls, phase-4 engineering/site integrations.
 
 - Employee Modules (`11`,`12`,`13`): `[~]` In Progress
-  - Implemented: employee records baseline, wallet/advances, payroll baseline with posting integration path, clearer payroll/employee operational status surfacing for non-accounting users.
-  - Remaining for end-state: mature HRMS lifecycle (attendance/leave/self-service), complete payroll operations and policy-depth.
+  - Implemented: employee records baseline, wallet/advances, payroll baseline with posting integration path, clearer payroll/employee operational status surfacing for non-accounting users, HRMS attendance register, leave request and approval workflow.
+  - Remaining for end-state: deeper self-service depth, attendance policy automation (shift/late/absence rule engine), complete payroll policy-depth.
 
 **Completed target end-state modules right now:** none (`[x]` = 0).  
 Reason: several core modules are strong but still partial against the locked end-state definition.

@@ -71,6 +71,8 @@ export function CommandPalette() {
             { href: "/expenses", label: "Expenses", icon: CreditCard, permissions: ["expenses.view_all", "expenses.view_own"] },
             { href: "/income", label: "Income", icon: TrendingUp, permissions: ["income.view_all", "income.view_own"] },
             { href: "/employees", label: "Employees", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
+            { href: "/hrms/attendance", label: "Attendance", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
+            { href: "/hrms/leave", label: "Leave", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
             { href: "/departments", label: "Departments", icon: Tags, permissions: ["departments.view_all"] },
             { href: "/designations", label: "Designations", icon: Tags, permissions: ["designations.view_all"] },
             { href: "/wallets", label: "Wallet Ledger", icon: Wallet, permissions: ["employees.view_all", "employees.view_own", "employees.edit_wallet"] },
@@ -101,6 +103,7 @@ export function CommandPalette() {
             { href: "/audit", label: "Audit Log", icon: FileText, permissions: ["reports.view_all"] },
             { href: "/settings", label: "Settings", icon: Settings, permissions: ["dashboard.view"] },
             { href: "/reports", label: "Reports", icon: FileText, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+            { href: "/reports/accounting/bank-reconciliation", label: "Bank Reconciliation", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own", "company_accounts.view"] },
             { href: "/categories", label: "Categories", icon: Tags, permissions: ["categories.manage"] },
           ]
             .filter((item) => canAccess(item.permissions))

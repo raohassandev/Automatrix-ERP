@@ -42,6 +42,10 @@ model User {
   journalsCreated JournalEntry[] @relation("JournalCreatedBy")
   journalsPosted  JournalEntry[] @relation("JournalPostedBy")
   postingBatchesPosted PostingBatch[] @relation("PostingBatchPostedBy")
+  attendanceEntriesCreated AttendanceEntry[] @relation("AttendanceCreatedBy")
+  leaveRequestsApproved LeaveRequest[] @relation("LeaveApprovedBy")
+  leaveRequestsCreated LeaveRequest[] @relation("LeaveCreatedBy")
+  bankReconciliationSnapshots BankReconciliationSnapshot[] @relation("BankReconciliationCreatedBy")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -330,6 +334,8 @@ model Employee {
   commissions   CommissionEntry[]
   payrollEntries PayrollEntry[]
   salaryAdvances SalaryAdvance[]
+  attendanceEntries AttendanceEntry[]
+  leaveRequests LeaveRequest[]
   journalLines   JournalLine[]
 }
 
@@ -445,6 +451,69 @@ model SalaryAdvance {
 
   employee      Employee @relation(fields: [employeeId], references: [id])
   approvedBy    User?    @relation(fields: [approvedById], references: [id])
+}
+
+model AttendanceEntry {
+  id          String   @id @default(cuid())
+  employeeId  String
+  date        DateTime
+  status      String   @default("PRESENT") // PRESENT | ABSENT | LATE | HALF_DAY | WFH | LEAVE
+  checkIn     DateTime?
+  checkOut    DateTime?
+  notes       String?
+  source      String   @default("MANUAL") // MANUAL | SELF
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  createdBy   User?    @relation("AttendanceCreatedBy", fields: [createdById], references: [id])
+
+  @@unique([employeeId, date])
+  @@index([date, status])
+}
+
+model LeaveRequest {
+  id             String   @id @default(cuid())
+  employeeId     String
+  leaveType      String   @default("ANNUAL") // ANNUAL | SICK | CASUAL | UNPAID | OTHER
+  startDate      DateTime
+  endDate        DateTime
+  totalDays      Decimal  @default(0)
+  reason         String?
+  status         String   @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  decisionNote   String?
+  approvedById   String?
+  approvedAt     DateTime?
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  employee       Employee @relation(fields: [employeeId], references: [id])
+  approvedBy     User?    @relation("LeaveApprovedBy", fields: [approvedById], references: [id])
+  createdBy      User?    @relation("LeaveCreatedBy", fields: [createdById], references: [id])
+
+  @@index([employeeId, status])
+  @@index([startDate, endDate])
+}
+
+model BankReconciliationSnapshot {
+  id                    String   @id @default(cuid())
+  companyAccountId      String
+  asOfDate              DateTime
+  bookBalance           Decimal
+  statementBalance      Decimal
+  difference            Decimal
+  status                String   @default("UNRECONCILED") // RECONCILED | UNRECONCILED | REVIEW
+  notes                 String?
+  createdById           String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  companyAccount        CompanyAccount @relation(fields: [companyAccountId], references: [id])
+  createdBy             User?          @relation("BankReconciliationCreatedBy", fields: [createdById], references: [id])
+
+  @@index([companyAccountId, asOfDate])
 }
 
 model Invoice {
@@ -577,6 +646,7 @@ model CompanyAccount {
   incomes        Income[]
   expenses       Expense[]
   walletLedgerEntries WalletLedger[]
+  bankReconciliationSnapshots BankReconciliationSnapshot[]
 }
 
 // Double-entry accounting backbone (Phase 2+), isolated from auth Account/Session tables.

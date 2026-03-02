@@ -4,6 +4,8 @@
 - Finance guardrails and guided form UX for invoice-linked income receipts.
 - Color and readability upgrade across owner-critical modules: Finance, Inventory, Projects, Employees, Payroll, Procurement AP.
 - Module status snapshot refresh in `SUPER_MASTER_PLAN.md` (still in-progress, but with newly completed sub-capabilities logged).
+- Added HRMS attendance + leave workflows (with access scoping and approval actions).
+- Added Bank Reconciliation workflow (book vs statement comparison + saved snapshots).
 
 ## Functional changes
 - Enforced receipt allocation safety in finance flow (no over-allocation against invoice outstanding):
@@ -18,6 +20,32 @@
   - clearer validation and helper messaging
   - `src/components/IncomeFormDialog.tsx`
   - `src/components/IncomeForm.tsx`
+
+## HRMS and Treasury completion increment
+- Added new additive data models:
+  - `AttendanceEntry`
+  - `LeaveRequest`
+  - `BankReconciliationSnapshot`
+  - Schema/migration:
+    - `prisma/schema.prisma`
+    - `prisma/migrations/20260302064000_add_hrms_attendance_leave_and_bank_reconciliation/migration.sql`
+- HRMS backend:
+  - `src/lib/hrms-access.ts`
+  - `src/app/api/hrms/attendance/route.ts`
+  - `src/app/api/hrms/attendance/[id]/route.ts`
+  - `src/app/api/hrms/leave/route.ts`
+  - `src/app/api/hrms/leave/[id]/route.ts`
+- HRMS UI:
+  - `src/app/hrms/attendance/page.tsx`
+  - `src/app/hrms/leave/page.tsx`
+  - `src/components/hrms/AttendanceManager.tsx`
+  - `src/components/hrms/LeaveManager.tsx`
+- Treasury / Bank Reconciliation backend:
+  - `src/lib/bank-reconciliation.ts`
+  - `src/app/api/reports/accounting/bank-reconciliation/route.ts`
+- Treasury / Bank Reconciliation UI:
+  - `src/app/reports/accounting/bank-reconciliation/page.tsx`
+  - `src/components/BankReconciliationManager.tsx`
 
 ## UI/UX upgrades (color + clarity)
 - Added semantic status badge component and integrated it into key tables:
@@ -49,6 +77,10 @@
 ## Plan updates
 - Updated owner-critical module notes under:
   - `SUPER_MASTER_PLAN.md` -> `## 11.2 Owner-Critical Module Status (Requested)`
+- Updated navigation/report access surfaces:
+  - `src/lib/navigation.ts`
+  - `src/components/CommandPalette.tsx`
+  - `src/app/reports/page.tsx`
 
 ## Verification
 - Run after this change-set:
