@@ -109,3 +109,19 @@
   - `src/components/BankReconciliationManager.tsx`
 - Updated master plan status:
   - `SUPER_MASTER_PLAN.md` marks module `15` (Treasury & Banking) as completed `[x]`.
+
+## Employee module completion pass (Modules 11, 12, 13)
+- Added payroll policy engine and auto-fill generation:
+  - `src/lib/payroll-policy.ts`
+  - `src/app/api/payroll/runs/policy-preview/route.ts`
+  - integrated in payroll run dialog:
+    - `src/components/PayrollRunFormDialog.tsx`
+- Added payroll approval auto-settlement of approved salary advances (based on payroll deductions):
+  - `src/app/api/payroll/runs/[id]/route.ts`
+- Expanded self-service depth in My Portal:
+  - attendance monthly summary cards
+  - leave request summary table
+  - direct links to attendance/leave HRMS workflows
+  - `src/app/me/page.tsx`
+- Updated locked module status:
+  - `SUPER_MASTER_PLAN.md` marks modules `11`, `12`, and `13` as completed `[x]` for locked baseline.

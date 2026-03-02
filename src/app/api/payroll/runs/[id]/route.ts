@@ -168,6 +168,27 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             },
           });
         }
+
+        // Auto-settle approved salary advances through payroll deductions.
+        if (Number(entry.deductions) > 0) {
+          let remaining = Number(entry.deductions);
+          const advances = await tx.salaryAdvance.findMany({
+            where: {
+              employeeId: entry.employeeId,
+              status: "APPROVED",
+              createdAt: { lte: run.periodEnd },
+            },
+            orderBy: { createdAt: "asc" },
+          });
+          for (const adv of advances) {
+            if (remaining <= 0) break;
+            remaining -= Number(adv.amount || 0);
+            await tx.salaryAdvance.update({
+              where: { id: adv.id },
+              data: { status: "PAID" },
+            });
+          }
+        }
       }
     }
 

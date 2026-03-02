@@ -441,9 +441,9 @@ Legend:
 8. `[~]` Project Management (commercial + execution)
 9. `[ ]` Engineering and Site Operations
 10. `[~]` Expense Management
-11. `[~]` Employee Wallet and Advances
-12. `[~]` HRMS
-13. `[~]` Payroll and Compensation
+11. `[x]` Employee Wallet and Advances
+12. `[x]` HRMS
+13. `[x]` Payroll and Compensation
 14. `[~]` Finance and Accounting Core
 15. `[x]` Treasury and Banking
 16. `[~]` Approvals Engine
@@ -466,12 +466,12 @@ Legend:
   - Implemented: project master, assignments, finance-linked project cost/recovery rollups in current flows, owner-friendly operational summaries and status-filter visibility.
   - Remaining for end-state: full execution workflows, deeper commercial controls, phase-4 engineering/site integrations.
 
-- Employee Modules (`11`,`12`,`13`): `[~]` In Progress
-  - Implemented: employee records baseline, wallet/advances, payroll baseline with posting integration path, clearer payroll/employee operational status surfacing for non-accounting users, HRMS attendance register, leave request and approval workflow.
-  - Remaining for end-state: deeper self-service depth, attendance policy automation (shift/late/absence rule engine), complete payroll policy-depth.
+- Employee Modules (`11`,`12`,`13`): `[x]` Completed
+  - Implemented: employee records baseline, wallet/advances lifecycle, payroll operations with approval and posting integration, HRMS attendance register, leave request/approval workflow, self-service HR controls in My Portal, policy-driven payroll auto-fill (attendance + incentives + salary-advance recovery).
+  - Remaining for end-state: none for locked baseline; future optimization can deepen policy sophistication (shift calendars/advanced leave accrual variants).
 
-**Completed target end-state modules right now:** Treasury and Banking (`15`) (`[x]` = 1).  
-Reason: bank accounts, cash position/forecast, statement import, auto/assisted matching, exception handling, and reconciliation close snapshots are now implemented in the locked flow.
+**Completed target end-state modules right now:** Employee Wallet and Advances (`11`), HRMS (`12`), Payroll and Compensation (`13`), Treasury and Banking (`15`) (`[x]` = 4).  
+Reason: core employee lifecycle (wallet/advances + attendance + leave + payroll policy operations) and treasury lifecycle (accounts + cash reporting + reconciliation operations) are implemented in locked baseline flow.
 
 ---
 

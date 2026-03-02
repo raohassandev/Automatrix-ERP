@@ -72,6 +72,7 @@ function PayrollRunFormDialogInner({
 }: PayrollRunFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [policyLoading, setPolicyLoading] = useState(false);
   const [form, setForm] = useState(() => buildInitialForm(run));
   const [entries, setEntries] = useState<PayrollEntry[]>(() => buildInitialEntries(run, employees));
 
@@ -152,6 +153,43 @@ function PayrollRunFormDialogInner({
     router.refresh();
   }
 
+  async function loadFromPolicy() {
+    if (!form.periodStart || !form.periodEnd) {
+      toast.error("Set payroll period first.");
+      return;
+    }
+    setPolicyLoading(true);
+    try {
+      const params = new URLSearchParams({
+        periodStart: form.periodStart,
+        periodEnd: form.periodEnd,
+      });
+      const res = await fetch(`/api/payroll/runs/policy-preview?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to load policy entries.");
+        return;
+      }
+      const nextEntries = Array.isArray(data.data)
+        ? data.data.map((entry: PayrollEntry) => ({
+            employeeId: entry.employeeId,
+            baseSalary: String(entry.baseSalary || ""),
+            incentiveTotal: String(entry.incentiveTotal || 0),
+            deductions: String(entry.deductions || 0),
+            deductionReason: String(entry.deductionReason || ""),
+          }))
+        : [];
+      if (nextEntries.length === 0) {
+        toast.error("No active employees or compensation data found for policy generation.");
+        return;
+      }
+      setEntries(nextEntries);
+      toast.success(`Loaded ${nextEntries.length} entries from payroll policy.`);
+    } finally {
+      setPolicyLoading(false);
+    }
+  }
+
   return (
     <FormDialog
       open={open}
@@ -203,9 +241,14 @@ function PayrollRunFormDialogInner({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Entries</h3>
-            <Button type="button" variant="outline" onClick={addEntry}>
-              Add Entry
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={loadFromPolicy} disabled={policyLoading || pending}>
+                {policyLoading ? "Loading..." : "Auto-fill by Policy"}
+              </Button>
+              <Button type="button" variant="outline" onClick={addEntry}>
+                Add Entry
+              </Button>
+            </div>
           </div>
           <div className="space-y-3">
             {entries.map((entry, index) => (

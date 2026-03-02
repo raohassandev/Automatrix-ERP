@@ -45,7 +45,11 @@ export default async function MyDashboardPage() {
     );
   }
 
-  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances] = await Promise.all([
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests] = await Promise.all([
     prisma.projectAssignment.findMany({
       where: { userId: session.user.id },
       select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
@@ -93,6 +97,16 @@ export default async function MyDashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
+    prisma.attendanceEntry.groupBy({
+      by: ["status"],
+      where: { employeeId: employee.id, date: { gte: monthStart } },
+      _count: { _all: true },
+    }),
+    prisma.leaveRequest.findMany({
+      where: { employeeId: employee.id },
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
   ]);
 
   const walletBalance = Number(employee.walletBalance || 0);
@@ -100,6 +114,7 @@ export default async function MyDashboardPage() {
   const walletAvailable = walletBalance - walletHold;
   const expenseStatusMap = new Map(expenseCounts.map((row) => [row.status, row._count._all]));
   const assignedProjects = assignments.map((a) => a.project);
+  const attendanceMap = new Map(attendanceCounts.map((row) => [row.status, row._count._all]));
 
   return (
     <div className="grid gap-6">
@@ -122,6 +137,40 @@ export default async function MyDashboardPage() {
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Available</div>
           <div className="mt-2 text-xl font-semibold">{formatMoney(walletAvailable)}</div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm">
+          <div className="text-sm text-emerald-700">This Month Present</div>
+          <div className="mt-2 text-xl font-semibold text-emerald-800">{attendanceMap.get("PRESENT") || 0}</div>
+        </div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-6 shadow-sm">
+          <div className="text-sm text-amber-700">This Month Late</div>
+          <div className="mt-2 text-xl font-semibold text-amber-800">{attendanceMap.get("LATE") || 0}</div>
+        </div>
+        <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-6 shadow-sm">
+          <div className="text-sm text-rose-700">This Month Absent</div>
+          <div className="mt-2 text-xl font-semibold text-rose-800">{attendanceMap.get("ABSENT") || 0}</div>
+        </div>
+        <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-6 shadow-sm">
+          <div className="text-sm text-sky-700">Leave Requests</div>
+          <div className="mt-2 text-xl font-semibold text-sky-800">{leaveRequests.length}</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">HR Self-Service</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Mark attendance and submit leave directly from HRMS pages.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/hrms/attendance" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+            Open Attendance
+          </Link>
+          <Link href="/hrms/leave" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+            Open Leave
+          </Link>
         </div>
       </div>
 
@@ -342,6 +391,37 @@ export default async function MyDashboardPage() {
         {salaryAdvances.length === 0 && (
           <div className="py-6 text-center text-muted-foreground">No salary advances.</div>
         )}
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Recent Leave Requests</h2>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="py-2">Type</th>
+                <th className="py-2">Dates</th>
+                <th className="py-2">Days</th>
+                <th className="py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaveRequests.map((row) => (
+                <tr key={row.id} className="border-b">
+                  <td className="py-2">{row.leaveType}</td>
+                  <td className="py-2">
+                    {new Date(row.startDate).toLocaleDateString()} - {new Date(row.endDate).toLocaleDateString()}
+                  </td>
+                  <td className="py-2">{Number(row.totalDays)}</td>
+                  <td className="py-2">{row.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {leaveRequests.length === 0 ? (
+          <div className="py-6 text-center text-muted-foreground">No leave requests yet.</div>
+        ) : null}
       </div>
     </div>
   );
