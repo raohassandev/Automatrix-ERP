@@ -1,4 +1,5 @@
 import { test, expect, request, devices } from "@playwright/test";
+import { loginAs } from "./helpers/auth";
 
 const ROLE_EMAILS = {
   engineer: "engineer1@automatrix.pk",
@@ -7,13 +8,7 @@ const ROLE_EMAILS = {
 } as const;
 
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
-  const password = process.env.E2E_TEST_PASSWORD || "e2e";
-  await page.goto("/login");
-  const e2eBox = page.getByText("E2E login (local only)").locator("..");
-  await e2eBox.getByPlaceholder("Email").first().fill(email);
-  await e2eBox.getByPlaceholder("Password").first().fill(password);
-  await page.getByRole("button", { name: "E2E Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+  await loginAs(page, email);
 }
 
 async function ensureStorageState(

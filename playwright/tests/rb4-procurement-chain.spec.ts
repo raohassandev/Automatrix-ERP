@@ -1,14 +1,12 @@
 import { test, expect, request } from "@playwright/test";
+import { loginAs } from "./helpers/auth";
+
+const FINANCE_EMAIL = process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk";
+const ENGINEER_EMAIL = process.env.E2E_ENGINEER_EMAIL || "engineer1@automatrix.pk";
 
 async function e2eLogin(page: import("@playwright/test").Page) {
-  const email = process.env.E2E_TEST_EMAIL || "e2e-admin@automatrix.local";
-  const password = process.env.E2E_TEST_PASSWORD || "e2e";
-
-  await page.goto("/login");
-  await page.getByPlaceholder("Email").fill(email);
-  await page.getByPlaceholder("Password").fill(password);
-  await page.getByRole("button", { name: "E2E Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+  const email = process.env.E2E_TEST_EMAIL || FINANCE_EMAIL;
+  await loginAs(page, email);
 }
 
 test.describe("RB4 - Procurement chain", () => {
@@ -232,36 +230,47 @@ test.describe("RB4 - Procurement chain", () => {
     await api.dispose();
   });
 
-  test("Negative: expense stock-in attempt is rejected (Phase 1 single-spine)", async ({ page, baseURL }) => {
-    await e2eLogin(page);
-
-    const storageState = await page.context().storageState();
-    const api = await request.newContext({
-      baseURL,
-      storageState,
-    });
-
+  test("Negative: expense stock-in attempt is rejected with correct role behavior", async ({
+    browser,
+    baseURL,
+  }) => {
     const today = new Date().toISOString().slice(0, 10);
+    const payload = {
+      date: today,
+      description: `E2E blocked expense stock-in ${Date.now()}`,
+      category: "Material (Stock/Inventory)",
+      amount: 1,
+      paymentMode: "Cash",
+      project: "General Office",
+      // Blocked keys (Phase 1): must be rejected before validation when submit is allowed.
+      inventoryItemId: "not-a-uuid",
+    };
 
-    // Any attempt to use expense payload to touch stock must be blocked server-side.
-    const res = await api.post("/api/expenses", {
-      data: {
-        date: today,
-        description: "E2E blocked expense stock-in",
-        category: "Material (Stock/Inventory)",
-        amount: 1,
-        paymentMode: "Cash",
-        project: "General Office",
-        // Blocked keys (Phase 1): must be rejected before validation.
-        inventoryItemId: "not-a-uuid",
-      },
-    });
+    // Unauthorized submitter should fail with permissions error.
+    const financeCtx = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
+    const financePage = await financeCtx.newPage();
+    await loginAs(financePage, FINANCE_EMAIL);
+    const financeStorage = await financeCtx.storageState();
+    const financeApi = await request.newContext({ baseURL, storageState: financeStorage, ignoreHTTPSErrors: true });
+    const financeRes = await financeApi.post("/api/expenses", { data: payload });
+    expect(financeRes.status()).toBe(403);
+    const financeBody = await financeRes.json().catch(() => ({} as { error?: string }));
+    expect(String(financeBody.error || "")).toMatch(/permission|not allowed|forbidden/i);
+    await financeApi.dispose();
+    await financeCtx.close();
 
-    expect(res.status()).toBe(400);
-    const body = await res.json();
-    expect(body.success).toBeFalsy();
-    expect(String(body.error || "")).toContain("Stock purchases are not allowed in Expenses");
-
-    await api.dispose();
+    // Authorized submitter should hit business-policy block for stock via expenses.
+    const engineerCtx = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
+    const engineerPage = await engineerCtx.newPage();
+    await loginAs(engineerPage, ENGINEER_EMAIL);
+    const engineerStorage = await engineerCtx.storageState();
+    const engineerApi = await request.newContext({ baseURL, storageState: engineerStorage, ignoreHTTPSErrors: true });
+    const engineerRes = await engineerApi.post("/api/expenses", { data: payload });
+    expect(engineerRes.status()).toBe(400);
+    const engineerBody = await engineerRes.json().catch(() => ({} as { error?: string; success?: boolean }));
+    expect(engineerBody.success).toBeFalsy();
+    expect(String(engineerBody.error || "")).toContain("Stock purchases are not allowed in Expenses");
+    await engineerApi.dispose();
+    await engineerCtx.close();
   });
 });

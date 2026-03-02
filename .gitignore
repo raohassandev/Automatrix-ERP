@@ -16,6 +16,8 @@ prisma/**/*.db
 playwright/.auth/
 playwright/test-results/
 playwright-report/
+playwright-report-staging/
+playwright/screenshots/
 # Logs
 logs/
 *.log

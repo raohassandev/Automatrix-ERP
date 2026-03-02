@@ -1,4 +1,5 @@
 import { test, expect, request, devices } from "@playwright/test";
+import { loginAs } from "./helpers/auth";
 
 const ROLE_EMAILS = {
   sales: "sales1@automatrix.pk",
@@ -7,13 +8,7 @@ const ROLE_EMAILS = {
 } as const;
 
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
-  const password = process.env.E2E_TEST_PASSWORD || "e2e";
-  await page.goto("/login");
-  const e2eBox = page.getByText("E2E login (local only)").locator("..");
-  await e2eBox.getByPlaceholder("Email").fill(email);
-  await e2eBox.getByPlaceholder("Password").fill(password);
-  await page.getByRole("button", { name: "E2E Sign in" }).click();
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+  await loginAs(page, email);
 }
 
 async function ensureStorageState(
@@ -56,7 +51,7 @@ test.describe.serial("Item Detail + My Portal (RBAC + mobile)", () => {
 
     // Add a ledger entry so Activity/Ledger tabs have content.
     const ledgerRes = await api.post("/api/inventory/ledger", {
-      data: { itemId, type: "PURCHASE", quantity: 2, unitCost: 100, reference: `PO-${ts}` },
+      data: { itemId, type: "ADJUSTMENT", quantity: 2, unitCost: 100, reference: `ADJ-${ts}` },
     });
     expect(ledgerRes.ok()).toBeTruthy();
 
