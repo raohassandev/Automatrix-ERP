@@ -30,6 +30,24 @@ export async function POST(req: Request) {
   }
 
   const { itemId, type, warehouseId, quantity, unitCost, reference, project } = parsed.data;
+  if (type === "PURCHASE") {
+    await logAudit({
+      action: "BLOCK_MANUAL_PURCHASE_STOCK_IN",
+      entity: "InventoryItem",
+      entityId: itemId,
+      reason: "Manual PURCHASE stock-in is blocked. Use Procurement PO -> GRN posting flow.",
+      userId: session.user.id,
+      newValue: JSON.stringify({ type, reference: reference || null, project: project || null }),
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Manual PURCHASE stock-in is blocked. Receive inventory through Procurement (PO -> GRN -> POST).",
+      },
+      { status: 400 }
+    );
+  }
   if (unitCost !== undefined && !canViewCost) {
     return NextResponse.json({ success: false, error: "Purchase price permission required" }, { status: 403 });
   }
@@ -58,13 +76,7 @@ export async function POST(req: Request) {
 
   const currentAvgCost = Number(item.unitCost);
   const effectiveCost = unitCost ?? currentAvgCost;
-  const isPurchase = type === "PURCHASE";
-  let nextAvgCost = currentAvgCost;
-  if (isPurchase) {
-    const prevQty = Number(item.quantity);
-    const totalCost = prevQty * currentAvgCost + Math.abs(qtyChange) * effectiveCost;
-    nextAvgCost = newQty > 0 ? totalCost / newQty : effectiveCost;
-  }
+  const nextAvgCost = currentAvgCost;
   const total = Math.abs(qtyChange) * effectiveCost;
 
   const result = await prisma.$transaction(async (tx) => {
@@ -111,11 +123,11 @@ export async function POST(req: Request) {
       data: {
         quantity: new Prisma.Decimal(newQty),
         unitCost: new Prisma.Decimal(nextAvgCost),
-        lastPurchasePrice: isPurchase ? new Prisma.Decimal(effectiveCost) : item.lastPurchasePrice,
+        lastPurchasePrice: item.lastPurchasePrice,
         totalValue: new Prisma.Decimal(newQty * nextAvgCost),
         availableQty: new Prisma.Decimal(newQty - Number(item.reservedQty)),
         lastUpdated: new Date(),
-        lastPurchaseDate: isPurchase ? new Date() : item.lastPurchaseDate,
+        lastPurchaseDate: item.lastPurchaseDate,
       },
     });
 

@@ -255,3 +255,20 @@
 - Files:
   - `src/components/ProcurementApprovalQueue.tsx`
   - `src/app/approvals/page.tsx`
+
+## Procurement + Inventory completion hardening pass
+- Added Vendor Payment attachment support to complete procurement document parity:
+  - API endpoint: `GET/POST /api/procurement/vendor-payments/[id]/attachments`
+  - UI action integrated in Vendor Payments list actions via existing attachment dialog.
+  - Audit action added: `VENDOR_PAYMENT_ATTACHMENT_ADD`.
+- Improved Vendor Payments operational table readability:
+  - added Notes column to list view.
+  - action refresh now updates page state immediately after lifecycle transitions.
+- Enforced single-spine inventory rule server-side:
+  - manual inventory ledger route now blocks `PURCHASE` type stock-in and logs `BLOCK_MANUAL_PURCHASE_STOCK_IN`.
+  - stock-in is now enforced as procurement-only (`PO -> GRN -> POST`) at API layer, not only in UI.
+- Files:
+  - `src/app/api/procurement/vendor-payments/[id]/attachments/route.ts`
+  - `src/components/VendorPaymentActions.tsx`
+  - `src/app/procurement/vendor-payments/page.tsx`
+  - `src/app/api/inventory/ledger/route.ts`

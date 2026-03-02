@@ -67,6 +67,7 @@ export default async function VendorPaymentsPage({
       accountName: payment.companyAccount.name,
       amount: Number(payment.amount),
       allocatedAmount: allocated,
+      notes: payment.notes,
     };
   });
 
@@ -128,6 +129,7 @@ export default async function VendorPaymentsPage({
                 <th className="py-2">Date</th>
                 <th className="py-2">Account</th>
                 <th className="py-2">Method</th>
+                <th className="py-2">Notes</th>
                 <th className="py-2">Status</th>
                 <th className="py-2">Amount</th>
                 <th className="py-2">Allocated</th>
@@ -143,6 +145,7 @@ export default async function VendorPaymentsPage({
                   <td className="py-2">{new Date(payment.paymentDate).toLocaleDateString()}</td>
                   <td className="py-2">{payment.accountName}</td>
                   <td className="py-2">{payment.method || "-"}</td>
+                  <td className="py-2">{payment.notes || "-"}</td>
                   <td className="py-2">
                     <StatusBadge status={payment.status} />
                   </td>

@@ -1,18 +1,23 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { VendorPaymentFormDialog } from "@/components/VendorPaymentFormDialog";
+import { ProcurementAttachmentsDialog } from "@/components/ProcurementAttachmentsDialog";
 import { toast } from "sonner";
 
 type VendorPayment = {
   id: string;
+  paymentNumber: string;
   status: string;
 };
 
 export function VendorPaymentActions({ paymentId }: { paymentId: string }) {
+  const router = useRouter();
   const [payment, setPayment] = useState<VendorPayment | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -22,7 +27,11 @@ export function VendorPaymentActions({ paymentId }: { paymentId: string }) {
       .then((data) => {
         if (!active) return;
         if (data?.success && data.data) {
-          setPayment({ id: data.data.id, status: data.data.status });
+          setPayment({
+            id: data.data.id,
+            paymentNumber: data.data.paymentNumber,
+            status: data.data.status,
+          });
         }
       })
       .catch(() => {});
@@ -44,6 +53,7 @@ export function VendorPaymentActions({ paymentId }: { paymentId: string }) {
     }
     toast.success(`Payment ${action.toLowerCase()}d`);
     setPayment((prev) => (prev ? { ...prev, status: data.data?.status || prev.status } : prev));
+    router.refresh();
   };
 
   if (!payment) return null;
@@ -53,7 +63,17 @@ export function VendorPaymentActions({ paymentId }: { paymentId: string }) {
       <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} disabled={payment.status !== "DRAFT"}>
         Edit
       </Button>
+      <Button variant="outline" size="sm" onClick={() => setAttachmentsOpen(true)}>
+        Attachments
+      </Button>
       <VendorPaymentFormDialog open={editOpen} onOpenChange={setEditOpen} paymentId={paymentId} />
+      <ProcurementAttachmentsDialog
+        open={attachmentsOpen}
+        onOpenChange={setAttachmentsOpen}
+        title={`Vendor Payment Attachments — ${payment.paymentNumber}`}
+        endpoint={`/api/procurement/vendor-payments/${paymentId}/attachments`}
+        canEdit={payment.status === "DRAFT" || payment.status === "SUBMITTED" || payment.status === "APPROVED"}
+      />
 
       <Button
         variant="outline"
@@ -90,4 +110,3 @@ export function VendorPaymentActions({ paymentId }: { paymentId: string }) {
     </div>
   );
 }
-
