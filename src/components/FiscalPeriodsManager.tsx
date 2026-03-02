@@ -62,7 +62,13 @@ export default function FiscalPeriodsManager({
           body: JSON.stringify({ action, reason }),
         });
         const payload = await res.json().catch(() => ({}));
-        if (!res.ok || !payload.success) throw new Error(payload.error || "Failed to update period");
+        if (!res.ok || !payload.success) {
+          const issues = Array.isArray(payload?.data?.blockingIssues)
+            ? payload.data.blockingIssues.slice(0, 3).join(" ")
+            : "";
+          const message = [payload.error || "Failed to update period", issues].filter(Boolean).join(" ");
+          throw new Error(message);
+        }
         toast.success(`Period ${action === "CLOSE" ? "closed" : "reopened"}`);
         router.refresh();
       } catch (err) {

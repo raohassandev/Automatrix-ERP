@@ -6,7 +6,7 @@ import { requirePermission } from "@/lib/rbac";
 import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
-import { postInvoiceJournal } from "@/lib/accounting";
+import { assertDateInOpenFiscalPeriod, postInvoiceJournal } from "@/lib/accounting";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -36,6 +36,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const shouldPostInvoice = existing.status === "DRAFT" && nextStatus !== "DRAFT";
 
   const updated = await prisma.$transaction(async (tx) => {
+    if (shouldPostInvoice) {
+      await assertDateInOpenFiscalPeriod(tx, new Date(existing.date), "Invoice date");
+    }
     const invoice = await tx.invoice.update({ where: { id }, data });
     if (shouldPostInvoice) {
       await postInvoiceJournal(tx, {

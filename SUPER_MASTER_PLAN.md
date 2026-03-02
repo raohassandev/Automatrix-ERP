@@ -444,7 +444,7 @@ Legend:
 11. `[x]` Employee Wallet and Advances
 12. `[x]` HRMS
 13. `[x]` Payroll and Compensation
-14. `[~]` Finance and Accounting Core
+14. `[x]` Finance and Accounting Core
 15. `[x]` Treasury and Banking
 16. `[~]` Approvals Engine
 17. `[~]` Audit, Compliance, and Governance
@@ -454,9 +454,9 @@ Legend:
 
 ### 11.2 Owner-Critical Module Status (Requested)
 
-- Finance & Accounting Core (`14`): `[~]` In Progress
-  - Implemented: COA, journals, fiscal periods, posting adapters (income/expense/vendor bill/vendor payment/invoice), TB/P&L/Balance Sheet/Cash Position/AR Aging/Cash Forecast, server-side invoice receipt allocation limits for income, guided invoice-outstanding receipt selection UX.
-  - Remaining for end-state: full O2C lifecycle closure with final allocation/reconciliation operations, final close controls + release-grade reconciliation and UAT signoff.
+- Finance & Accounting Core (`14`): `[x]` Completed
+  - Implemented: COA, journals, fiscal periods, posting adapters (income/expense/vendor bill/vendor payment/invoice), TB/P&L/Balance Sheet/Cash Position/AR Aging/Cash Forecast, server-side invoice receipt allocation limits for income, guided invoice-outstanding receipt selection UX, O2C reconciliation report (invoice/receipt matching + exception buckets), period-close checklist controls (TB/BS/bank/O2C checks) and close guards, strict open-period date guards on invoice/income posting flows.
+  - Remaining for end-state: none for locked accounting-core baseline (module `14`); deeper commercial O2C lifecycle remains tracked under module `5`.
 
 - Inventory & Store (`7`): `[~]` In Progress
   - Implemented: item master, inventory ledger postings via GRN, stock-in controls, reporting baseline, stock-health visibility with low-stock/reorder indicators in operational lists.
@@ -470,8 +470,8 @@ Legend:
   - Implemented: employee records baseline, wallet/advances lifecycle, payroll operations with approval and posting integration, HRMS attendance register, leave request/approval workflow, self-service HR controls in My Portal, policy-driven payroll auto-fill (attendance + incentives + salary-advance recovery).
   - Remaining for end-state: none for locked baseline; future optimization can deepen policy sophistication (shift calendars/advanced leave accrual variants).
 
-**Completed target end-state modules right now:** Employee Wallet and Advances (`11`), HRMS (`12`), Payroll and Compensation (`13`), Treasury and Banking (`15`) (`[x]` = 4).  
-Reason: core employee lifecycle (wallet/advances + attendance + leave + payroll policy operations) and treasury lifecycle (accounts + cash reporting + reconciliation operations) are implemented in locked baseline flow.
+**Completed target end-state modules right now:** Employee Wallet and Advances (`11`), HRMS (`12`), Payroll and Compensation (`13`), Finance and Accounting Core (`14`), Treasury and Banking (`15`) (`[x]` = 5).  
+Reason: core employee lifecycle (wallet/advances + attendance + leave + payroll policy operations), accounting backbone controls (double-entry posting + period close controls + reconciliation checks), and treasury lifecycle (accounts + cash reporting + reconciliation operations) are implemented in locked baseline flow.
 
 ---
 

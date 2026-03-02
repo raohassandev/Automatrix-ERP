@@ -422,3 +422,368 @@ export async function getCashForecast(input: { asOf?: string | null } = {}) {
     ],
   };
 }
+
+type O2cRangeInput = {
+  from?: string | null;
+  to?: string | null;
+  asOf?: string | null;
+};
+
+type O2cInvoiceStatus = "OPEN" | "OVERDUE" | "PAID" | "OVERALLOCATED";
+type O2cReceiptExceptionType = "UNALLOCATED_RECEIPT" | "ORPHAN_ALLOCATION" | "PROJECT_MISMATCH";
+
+export type O2cInvoiceRow = {
+  invoiceId: string;
+  invoiceNo: string;
+  projectId: string;
+  invoiceDate: string;
+  dueDate: string;
+  totalAmount: number;
+  receivedAmount: number;
+  outstandingAmount: number;
+  overAllocatedAmount: number;
+  receiptCount: number;
+  overdueDays: number;
+  status: O2cInvoiceStatus;
+};
+
+export type O2cReceiptExceptionRow = {
+  incomeId: string;
+  date: string;
+  source: string;
+  invoiceId: string | null;
+  project: string | null;
+  amount: number;
+  type: O2cReceiptExceptionType;
+  message: string;
+};
+
+function startOfDay(date: Date) {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  return value;
+}
+
+function endOfDay(date: Date) {
+  const value = new Date(date);
+  value.setHours(23, 59, 59, 999);
+  return value;
+}
+
+export async function getO2cReconciliation(input: O2cRangeInput = {}) {
+  const asOfDate = endOfDay(input.asOf ? new Date(input.asOf) : new Date());
+  const fromDate = input.from ? startOfDay(new Date(input.from)) : null;
+  const toDate = input.to ? endOfDay(new Date(input.to)) : asOfDate;
+
+  const invoiceDateWhere: { gte?: Date; lte: Date } = { lte: toDate };
+  if (fromDate) invoiceDateWhere.gte = fromDate;
+
+  const receiptDateWhere: { gte?: Date; lte: Date } = { lte: toDate };
+  if (fromDate) receiptDateWhere.gte = fromDate;
+
+  const [invoices, receipts] = await Promise.all([
+    prisma.invoice.findMany({
+      where: {
+        status: { not: "DRAFT" },
+        date: invoiceDateWhere,
+      },
+      orderBy: [{ date: "asc" }, { invoiceNo: "asc" }],
+      select: {
+        id: true,
+        invoiceNo: true,
+        projectId: true,
+        date: true,
+        dueDate: true,
+        amount: true,
+      },
+    }),
+    prisma.income.findMany({
+      where: {
+        status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+        date: receiptDateWhere,
+      },
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        date: true,
+        source: true,
+        invoiceId: true,
+        project: true,
+        amount: true,
+      },
+    }),
+  ]);
+
+  const invoiceIdsReferencedByReceipts = Array.from(
+    new Set(receipts.map((receipt) => receipt.invoiceId).filter((value): value is string => Boolean(value))),
+  );
+  const knownInvoiceIds = new Set(invoices.map((invoice) => invoice.id));
+  const missingInvoiceIds = invoiceIdsReferencedByReceipts.filter((id) => !knownInvoiceIds.has(id));
+  const extraInvoices =
+    missingInvoiceIds.length === 0
+      ? []
+      : await prisma.invoice.findMany({
+          where: { id: { in: missingInvoiceIds } },
+          select: { id: true, projectId: true, amount: true },
+        });
+  const allInvoiceMap = new Map<
+    string,
+    {
+      id: string;
+      projectId: string;
+      amount: unknown;
+      invoiceNo: string;
+      date: Date;
+      dueDate: Date;
+    }
+  >();
+  for (const invoice of invoices) {
+    allInvoiceMap.set(invoice.id, invoice);
+  }
+  for (const invoice of extraInvoices) {
+    allInvoiceMap.set(invoice.id, {
+      ...invoice,
+      invoiceNo: invoice.id,
+      date: new Date(0),
+      dueDate: new Date(0),
+    });
+  }
+
+  const receiptTotalsByInvoice = new Map<string, { amount: number; count: number }>();
+  const exceptions: O2cReceiptExceptionRow[] = [];
+
+  for (const receipt of receipts) {
+    const amount = Number(receipt.amount || 0);
+    if (!receipt.invoiceId) {
+      exceptions.push({
+        incomeId: receipt.id,
+        date: receipt.date.toISOString().slice(0, 10),
+        source: receipt.source,
+        invoiceId: null,
+        project: receipt.project || null,
+        amount: Number(amount.toFixed(2)),
+        type: "UNALLOCATED_RECEIPT",
+        message: "Approved receipt is not linked to any invoice.",
+      });
+      continue;
+    }
+
+    const linkedInvoice = allInvoiceMap.get(receipt.invoiceId);
+    if (!linkedInvoice) {
+      exceptions.push({
+        incomeId: receipt.id,
+        date: receipt.date.toISOString().slice(0, 10),
+        source: receipt.source,
+        invoiceId: receipt.invoiceId,
+        project: receipt.project || null,
+        amount: Number(amount.toFixed(2)),
+        type: "ORPHAN_ALLOCATION",
+        message: "Receipt references an invoice that does not exist.",
+      });
+      continue;
+    }
+
+    if (receipt.project && linkedInvoice.projectId && receipt.project !== linkedInvoice.projectId) {
+      exceptions.push({
+        incomeId: receipt.id,
+        date: receipt.date.toISOString().slice(0, 10),
+        source: receipt.source,
+        invoiceId: receipt.invoiceId,
+        project: receipt.project || null,
+        amount: Number(amount.toFixed(2)),
+        type: "PROJECT_MISMATCH",
+        message: `Receipt project (${receipt.project}) does not match invoice project (${linkedInvoice.projectId}).`,
+      });
+    }
+
+    const existing = receiptTotalsByInvoice.get(receipt.invoiceId) || { amount: 0, count: 0 };
+    existing.amount += amount;
+    existing.count += 1;
+    receiptTotalsByInvoice.set(receipt.invoiceId, existing);
+  }
+
+  const rows: O2cInvoiceRow[] = invoices.map((invoice) => {
+    const receiptTotal = receiptTotalsByInvoice.get(invoice.id) || { amount: 0, count: 0 };
+    const totalAmount = Number(invoice.amount || 0);
+    const receivedAmount = Number(receiptTotal.amount.toFixed(2));
+    const outstandingAmount = Number(Math.max(0, totalAmount - receivedAmount).toFixed(2));
+    const overAllocatedAmount = Number(Math.max(0, receivedAmount - totalAmount).toFixed(2));
+    const dueDate = invoice.dueDate || invoice.date;
+    const overdueDays =
+      outstandingAmount <= 0 ? 0 : Math.max(0, Math.floor((asOfDate.getTime() - dueDate.getTime()) / 86400000));
+    const status: O2cInvoiceStatus =
+      overAllocatedAmount > 0 ? "OVERALLOCATED" : outstandingAmount <= 0 ? "PAID" : overdueDays > 0 ? "OVERDUE" : "OPEN";
+
+    return {
+      invoiceId: invoice.id,
+      invoiceNo: invoice.invoiceNo,
+      projectId: invoice.projectId,
+      invoiceDate: invoice.date.toISOString().slice(0, 10),
+      dueDate: dueDate.toISOString().slice(0, 10),
+      totalAmount: Number(totalAmount.toFixed(2)),
+      receivedAmount,
+      outstandingAmount,
+      overAllocatedAmount,
+      receiptCount: receiptTotal.count,
+      overdueDays,
+      status,
+    };
+  });
+
+  const totals = rows.reduce(
+    (acc, row) => {
+      acc.invoiced += row.totalAmount;
+      acc.received += row.receivedAmount;
+      acc.outstanding += row.outstandingAmount;
+      acc.overAllocated += row.overAllocatedAmount;
+      if (row.status === "OVERDUE") acc.overdueCount += 1;
+      if (row.status === "OPEN") acc.openCount += 1;
+      if (row.status === "PAID") acc.paidCount += 1;
+      if (row.status === "OVERALLOCATED") acc.overAllocatedCount += 1;
+      return acc;
+    },
+    {
+      invoiced: 0,
+      received: 0,
+      outstanding: 0,
+      overAllocated: 0,
+      openCount: 0,
+      overdueCount: 0,
+      paidCount: 0,
+      overAllocatedCount: 0,
+    },
+  );
+
+  return {
+    range: {
+      from: fromDate ? fromDate.toISOString() : null,
+      to: toDate.toISOString(),
+      asOf: asOfDate.toISOString(),
+    },
+    rows,
+    receiptExceptions: exceptions,
+    totals: {
+      invoiced: Number(totals.invoiced.toFixed(2)),
+      received: Number(totals.received.toFixed(2)),
+      outstanding: Number(totals.outstanding.toFixed(2)),
+      overAllocated: Number(totals.overAllocated.toFixed(2)),
+      openCount: totals.openCount,
+      overdueCount: totals.overdueCount,
+      paidCount: totals.paidCount,
+      overAllocatedCount: totals.overAllocatedCount,
+      unallocatedReceiptCount: exceptions.filter((row) => row.type === "UNALLOCATED_RECEIPT").length,
+      orphanAllocationCount: exceptions.filter((row) => row.type === "ORPHAN_ALLOCATION").length,
+      projectMismatchCount: exceptions.filter((row) => row.type === "PROJECT_MISMATCH").length,
+      exceptionCount:
+        totals.overAllocatedCount +
+        exceptions.filter((row) => row.type === "UNALLOCATED_RECEIPT").length +
+        exceptions.filter((row) => row.type === "ORPHAN_ALLOCATION").length +
+        exceptions.filter((row) => row.type === "PROJECT_MISMATCH").length,
+    },
+  };
+}
+
+export async function getPeriodCloseChecklist(periodId: string) {
+  const period = await prisma.fiscalPeriod.findUnique({
+    where: { id: periodId },
+    select: {
+      id: true,
+      code: true,
+      status: true,
+      startDate: true,
+      endDate: true,
+      closedAt: true,
+      closeReason: true,
+    },
+  });
+  if (!period) {
+    throw new Error("Fiscal period not found.");
+  }
+
+  const from = period.startDate.toISOString().slice(0, 10);
+  const to = period.endDate.toISOString().slice(0, 10);
+  const [tbRows, bs, unpostedJournalCount, bankExceptionCount, o2c] = await Promise.all([
+    getTrialBalanceRows({ from, to }),
+    getBalanceSheet({ to }),
+    prisma.journalEntry.count({
+      where: {
+        fiscalPeriodId: period.id,
+        status: { not: "POSTED" },
+      },
+    }),
+    prisma.bankStatementLine.count({
+      where: {
+        statementDate: { gte: period.startDate, lte: period.endDate },
+        status: "UNMATCHED",
+      },
+    }),
+    getO2cReconciliation({ from, to, asOf: period.endDate.toISOString() }),
+  ]);
+
+  const tbTotals = tbRows.reduce(
+    (acc, row) => {
+      acc.debit += row.debit;
+      acc.credit += row.credit;
+      return acc;
+    },
+    { debit: 0, credit: 0 },
+  );
+  const tbDiff = Number((tbTotals.debit - tbTotals.credit).toFixed(2));
+  const trialBalanceBalanced = Math.abs(tbDiff) <= 0.01;
+  const balanceSheetBalanced = Math.abs(bs.totals.difference) <= 0.01;
+
+  const blockingIssues: string[] = [];
+  if (!trialBalanceBalanced) {
+    blockingIssues.push(`Trial balance is not balanced (difference ${tbDiff.toFixed(2)}).`);
+  }
+  if (!balanceSheetBalanced) {
+    blockingIssues.push(`Balance sheet is not balanced (difference ${bs.totals.difference.toFixed(2)}).`);
+  }
+  if (unpostedJournalCount > 0) {
+    blockingIssues.push(`${unpostedJournalCount} journal entries are still draft/reversed in this period.`);
+  }
+  if (bankExceptionCount > 0) {
+    blockingIssues.push(`${bankExceptionCount} unmatched bank statement lines exist in this period.`);
+  }
+  if (o2c.totals.exceptionCount > 0) {
+    blockingIssues.push(`${o2c.totals.exceptionCount} O2C allocation/reconciliation exceptions are unresolved.`);
+  }
+
+  return {
+    period: {
+      ...period,
+      startDate: period.startDate.toISOString(),
+      endDate: period.endDate.toISOString(),
+      closedAt: period.closedAt ? period.closedAt.toISOString() : null,
+    },
+    checks: {
+      trialBalance: {
+        debit: Number(tbTotals.debit.toFixed(2)),
+        credit: Number(tbTotals.credit.toFixed(2)),
+        difference: tbDiff,
+        balanced: trialBalanceBalanced,
+      },
+      balanceSheet: {
+        totalAssets: bs.totals.totalAssets,
+        liabilitiesPlusEquity: bs.totals.liabilitiesPlusEquity,
+        difference: bs.totals.difference,
+        balanced: balanceSheetBalanced,
+      },
+      journals: {
+        unpostedCount: unpostedJournalCount,
+      },
+      bankReconciliation: {
+        unmatchedCount: bankExceptionCount,
+      },
+      o2cReconciliation: {
+        exceptionCount: o2c.totals.exceptionCount,
+        unallocatedReceipts: o2c.totals.unallocatedReceiptCount,
+        orphanAllocations: o2c.totals.orphanAllocationCount,
+        projectMismatches: o2c.totals.projectMismatchCount,
+        overAllocatedInvoices: o2c.totals.overAllocatedCount,
+      },
+    },
+    canClose: blockingIssues.length === 0,
+    blockingIssues,
+  };
+}

@@ -125,3 +125,26 @@
   - `src/app/me/page.tsx`
 - Updated locked module status:
   - `SUPER_MASTER_PLAN.md` marks modules `11`, `12`, and `13` as completed `[x]` for locked baseline.
+
+## Finance core completion pass (Module 14)
+- Added open-period posting guards on source flows so invoice/income entries cannot post with a date in closed fiscal periods:
+  - `src/lib/accounting.ts`
+  - `src/app/api/invoices/route.ts`
+  - `src/app/api/invoices/[id]/route.ts`
+  - `src/app/api/income/route.ts`
+  - `src/app/api/income/[id]/route.ts`
+- Added O2C reconciliation report with exception surfaces for release-grade close readiness:
+  - API: `src/app/api/reports/accounting/o2c-reconciliation/route.ts`
+  - Page: `src/app/reports/accounting/o2c-reconciliation/page.tsx`
+  - Data engine: `src/lib/accounting-reports.ts` (`getO2cReconciliation`)
+- Added fiscal period close checklist and close guardrails:
+  - Checklist API: `src/app/api/accounting/period-close/checklist/route.ts`
+  - Close API: `src/app/api/accounting/period-close/close/route.ts`
+  - Enforced in existing close action: `src/app/api/accounting/fiscal-periods/[id]/route.ts`
+  - UI close feedback now includes checklist blocking reasons:
+    - `src/components/FiscalPeriodsManager.tsx`
+- Updated reporting/navigation entry points:
+  - `src/app/reports/page.tsx`
+  - `src/lib/navigation.ts`
+- Updated module lock status:
+  - `SUPER_MASTER_PLAN.md` marks module `14` (Finance and Accounting Core) as completed `[x]` for locked baseline.

@@ -125,6 +125,10 @@ export default async function ReportsPage() {
           <div className="text-sm text-muted-foreground">Receivables</div>
           <div className="mt-2 text-lg font-semibold">AR Aging</div>
         </a>
+        <a href="/reports/accounting/o2c-reconciliation" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+          <div className="text-sm text-muted-foreground">Receivables Control</div>
+          <div className="mt-2 text-lg font-semibold">O2C Reconciliation</div>
+        </a>
         <a href="/reports/accounting/profit-loss" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
           <div className="text-sm text-muted-foreground">Accounting</div>
           <div className="mt-2 text-lg font-semibold">Profit &amp; Loss</div>

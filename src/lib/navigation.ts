@@ -83,6 +83,7 @@ export const navGroups: NavGroup[] = [
       { name: "Cash Forecast", href: "/reports/accounting/cash-forecast", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Bank Reconciliation", href: "/reports/accounting/bank-reconciliation", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own", "company_accounts.view"] },
       { name: "AR Aging", href: "/reports/accounting/ar-aging", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+      { name: "O2C Reconciliation", href: "/reports/accounting/o2c-reconciliation", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Profit & Loss", href: "/reports/accounting/profit-loss", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Balance Sheet", href: "/reports/accounting/balance-sheet", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Procurement Report", href: "/reports/procurement", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },

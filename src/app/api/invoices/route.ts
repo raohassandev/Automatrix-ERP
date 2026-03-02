@@ -7,7 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
-import { postInvoiceJournal } from "@/lib/accounting";
+import { assertDateInOpenFiscalPeriod, postInvoiceJournal } from "@/lib/accounting";
 
 export async function GET() {
   const session = await auth();
@@ -54,6 +54,8 @@ export async function POST(req: Request) {
   };
 
   const created = await prisma.$transaction(async (tx) => {
+    await assertDateInOpenFiscalPeriod(tx, new Date(sanitizedData.date), "Invoice date");
+
     const createdInvoice = await tx.invoice.create({
       data: {
         invoiceNo: sanitizedData.invoiceNo,

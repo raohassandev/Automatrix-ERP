@@ -7,7 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { getIncomeApprovalLevel, isPendingIncomeStatus } from "@/lib/approvals";
 import { recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
-import { postIncomeApprovalJournal } from "@/lib/accounting";
+import { assertDateInOpenFiscalPeriod, postIncomeApprovalJournal } from "@/lib/accounting";
 import { assertInvoiceReceiptWithinOutstanding } from "@/lib/invoice-allocation";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
@@ -118,6 +118,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       (data.amount as Prisma.Decimal | undefined) !== undefined
         ? Number(data.amount as Prisma.Decimal)
         : Number(income.amount);
+    const nextDate =
+      (data.date as Date | undefined) !== undefined ? (data.date as Date) : new Date(income.date);
+
+    await assertDateInOpenFiscalPeriod(tx, nextDate, "Income date");
 
     if (nextInvoiceId) {
       const { invoice } = await assertInvoiceReceiptWithinOutstanding(tx, {

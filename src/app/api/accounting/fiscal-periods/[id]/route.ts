@@ -3,11 +3,13 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
+import { getPeriodCloseChecklist } from "@/lib/accounting-reports";
 import { z } from "zod";
 
 const patchSchema = z.object({
   action: z.enum(["CLOSE", "REOPEN"]),
   reason: z.string().trim().optional(),
+  forceClose: z.boolean().optional(),
 });
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
@@ -30,6 +32,21 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (existing.status === "CLOSED") {
       return NextResponse.json({ success: false, error: "Period is already closed." }, { status: 400 });
     }
+    const checklist = await getPeriodCloseChecklist(id).catch(() => null);
+    if (!checklist) {
+      return NextResponse.json({ success: false, error: "Failed to build period-close checklist." }, { status: 400 });
+    }
+    if (!checklist.canClose && !parsed.data.forceClose) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Cannot close fiscal period until checklist is clean.",
+          data: checklist,
+        },
+        { status: 400 },
+      );
+    }
+
     const updated = await prisma.fiscalPeriod.update({
       where: { id },
       data: {

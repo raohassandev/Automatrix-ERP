@@ -81,6 +81,18 @@ export async function ensureOpenFiscalPeriod(tx: Tx, postingDate: Date) {
   });
 }
 
+export async function assertDateInOpenFiscalPeriod(
+  tx: Tx,
+  postingDate: Date,
+  label: string = "Posting date",
+) {
+  const fiscalPeriod = await ensureOpenFiscalPeriod(tx, postingDate);
+  if (fiscalPeriod.status !== "OPEN") {
+    throw new Error(`${label} falls in closed fiscal period ${fiscalPeriod.code}.`);
+  }
+  return fiscalPeriod;
+}
+
 type LineInput = {
   glCode: string;
   debit?: number;
@@ -163,10 +175,7 @@ export async function createPostedJournal(tx: Tx, input: CreatePostedJournalInpu
       },
     }));
 
-  const fiscalPeriod = await ensureOpenFiscalPeriod(tx, input.postingDate);
-  if (fiscalPeriod.status !== "OPEN") {
-    throw new Error(`Fiscal period ${fiscalPeriod.code} is closed.`);
-  }
+  const fiscalPeriod = await assertDateInOpenFiscalPeriod(tx, input.postingDate);
 
   const uniqueCodes = Array.from(new Set(input.lines.map((l) => l.glCode)));
   const accountMap = await resolveAccountIds(tx, uniqueCodes);

@@ -10,7 +10,7 @@ import { recalculateProjectFinancials } from "@/lib/projects";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { resolveProjectDbId, resolveProjectId } from "@/lib/projects";
-import { postIncomeApprovalJournal } from "@/lib/accounting";
+import { assertDateInOpenFiscalPeriod, postIncomeApprovalJournal } from "@/lib/accounting";
 import { assertInvoiceReceiptWithinOutstanding } from "@/lib/invoice-allocation";
 
 export async function GET(req: Request) {
@@ -139,6 +139,8 @@ export async function POST(req: Request) {
     }
 
     const created = await prisma.$transaction(async (tx) => {
+      await assertDateInOpenFiscalPeriod(tx, new Date(sanitizedData.date), "Income date");
+
       let invoiceProjectRef: string | null = null;
       if (sanitizedData.invoiceId) {
         const { invoice } = await assertInvoiceReceiptWithinOutstanding(tx, {
