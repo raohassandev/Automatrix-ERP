@@ -51,9 +51,11 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   }
 
   const { id } = await context.params;
+  const requestUrl = new URL(_req.url);
+  const onConflict = requestUrl.searchParams.get("onConflict");
   const project = await prisma.project.findUnique({
     where: { id },
-    select: { id: true, projectId: true, name: true },
+    select: { id: true, projectId: true, name: true, status: true, endDate: true },
   });
   if (!project) {
     return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
@@ -77,6 +79,36 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
 
   const linkedRecords = dependency.reduce((sum, n) => sum + n, 0);
   if (linkedRecords > 0) {
+    if (onConflict === "close" || onConflict === "archive") {
+      if (project.status !== "CLOSED") {
+        await prisma.project.update({
+          where: { id },
+          data: {
+            status: "CLOSED",
+            endDate: project.endDate ?? new Date(),
+          },
+        });
+      }
+
+      await logAudit({
+        action: "CLOSE_PROJECT_ON_DELETE_CONFLICT",
+        entity: "Project",
+        entityId: id,
+        reason: `Closed on delete conflict: project has ${linkedRecords} linked operational/financial records`,
+        userId: session.user.id,
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          id,
+          status: "CLOSED",
+          action: "CLOSED_INSTEAD_OF_DELETE",
+          linkedRecords,
+        },
+      });
+    }
+
     await logAudit({
       action: "DELETE_PROJECT_BLOCKED",
       entity: "Project",
