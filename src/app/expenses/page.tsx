@@ -71,6 +71,7 @@ function ExpensesPageContent() {
   const [columns, setColumns] = useState(COLUMNS);
   const canCreate = hasPermission(roleName, "expenses.submit");
   const canEditAny = hasPermission(roleName, "expenses.edit");
+  const canMarkPaid = hasPermission(roleName, "expenses.mark_paid");
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "APPROVED":
@@ -79,6 +80,9 @@ function ExpensesPageContent() {
         return "destructive";
       case "PAID":
         return "secondary";
+      case "PENDING_L1":
+      case "PENDING_L2":
+      case "PENDING_L3":
       case "PENDING":
       default:
         return "outline";
@@ -94,6 +98,18 @@ function ExpensesPageContent() {
     };
     fetchExpenses();
   }, [searchParams]);
+
+  const summary = expenses.reduce(
+    (acc, row) => {
+      const amount = Number(row.amount || 0);
+      acc.total += amount;
+      if (row.status.startsWith("PENDING")) acc.pending += amount;
+      if (row.status === "APPROVED") acc.approved += amount;
+      if (row.status === "PAID") acc.paid += amount;
+      return acc;
+    },
+    { total: 0, pending: 0, approved: 0, paid: 0 },
+  );
 
 
   return (
@@ -113,7 +129,9 @@ function ExpensesPageContent() {
               param="status"
               placeholder="All statuses"
               options={[
-                { label: "Pending", value: "PENDING" },
+                { label: "Pending L1", value: "PENDING_L1" },
+                { label: "Pending L2", value: "PENDING_L2" },
+                { label: "Pending L3", value: "PENDING_L3" },
                 { label: "Approved", value: "APPROVED" },
                 { label: "Rejected", value: "REJECTED" },
                 { label: "Paid", value: "PAID" },
@@ -146,6 +164,24 @@ function ExpensesPageContent() {
             {canCreate ? (
               <PageCreateButton label="Submit Expense" formType="expense" />
             ) : null}
+          </div>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+            <div className="text-sm text-sky-700">Total (Page)</div>
+            <div className="text-xl font-semibold text-sky-800">{formatMoney(summary.total)}</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+            <div className="text-sm text-amber-700">Pending (Page)</div>
+            <div className="text-xl font-semibold text-amber-800">{formatMoney(summary.pending)}</div>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+            <div className="text-sm text-emerald-700">Approved (Page)</div>
+            <div className="text-xl font-semibold text-emerald-800">{formatMoney(summary.approved)}</div>
+          </div>
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
+            <div className="text-sm text-indigo-700">Paid (Page)</div>
+            <div className="text-xl font-semibold text-indigo-800">{formatMoney(summary.paid)}</div>
           </div>
         </div>
       </div>
@@ -208,6 +244,7 @@ function ExpensesPageContent() {
                       expense={expense}
                       canEditAny={canEditAny}
                       currentUserId={currentUserId}
+                      canMarkPaid={canMarkPaid}
                     />
                   </td>
                 </tr>
@@ -247,6 +284,7 @@ function ExpensesPageContent() {
                   expense={expense}
                   canEditAny={canEditAny}
                   currentUserId={currentUserId}
+                  canMarkPaid={canMarkPaid}
                 />
               }
             />
