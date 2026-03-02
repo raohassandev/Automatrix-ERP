@@ -44,6 +44,56 @@ export async function ensurePermissionCatalog() {
   });
 }
 
+function getStaticRolePermissionKeys(roleName: string) {
+  if (!(roleName in PERMISSIONS)) {
+    return [];
+  }
+  const keys = (PERMISSIONS[roleName as RoleName] ?? []) as readonly string[];
+  return keys.filter((key) => key !== "*");
+}
+
+export async function ensureBuiltInRoleTemplateDefaults() {
+  await ensurePermissionCatalog();
+
+  const roles = await prisma.role.findMany({
+    select: {
+      id: true,
+      name: true,
+      permissions: {
+        select: { permissionId: true },
+      },
+    },
+  });
+
+  const emptyBuiltInRoles = roles.filter((role) => {
+    if (role.permissions.length > 0) return false;
+    return getStaticRolePermissionKeys(role.name).length > 0;
+  });
+
+  if (emptyBuiltInRoles.length === 0) {
+    return;
+  }
+
+  for (const role of emptyBuiltInRoles) {
+    const permissionKeys = getStaticRolePermissionKeys(role.name);
+    if (permissionKeys.length === 0) continue;
+
+    const dbPermissions = await prisma.permission.findMany({
+      where: { key: { in: permissionKeys } },
+      select: { id: true },
+    });
+    if (dbPermissions.length === 0) continue;
+
+    await prisma.rolePermission.createMany({
+      data: dbPermissions.map((permission) => ({
+        roleId: role.id,
+        permissionId: permission.id,
+      })),
+      skipDuplicates: true,
+    });
+  }
+}
+
 export async function getEffectivePermissionsForUser(userId: string): Promise<EffectivePermissionsResult> {
   const cached = permissionCache.get(userId);
   const now = Date.now();

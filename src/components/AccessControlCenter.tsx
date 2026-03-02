@@ -71,6 +71,29 @@ function moduleLabel(module: string) {
   return module.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function permissionActionLabel(permissionKey: string) {
+  const action = permissionKey.split(".")[1] || "access";
+  const map: Record<string, string> = {
+    view_all: "View all records",
+    view_team: "View team records",
+    view_own: "View own records",
+    edit: "Edit records",
+    create: "Create records",
+    delete: "Delete records",
+    add: "Add entries",
+    manage: "Manage settings",
+    approve: "Approve transactions",
+    approve_low: "Approve low-value items",
+    approve_medium: "Approve medium-value items",
+    approve_high: "Approve high-value items",
+    export: "Export data",
+    submit: "Submit entries",
+    reject: "Reject entries",
+    mark_paid: "Mark as paid",
+  };
+  return map[action] || action.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 function toPermissionRows(group: PermissionCatalogGroup): PermissionRow[] {
   const keySet = new Set(group.permissions.map((p) => p.key));
   const rows: PermissionRow[] = [];
@@ -458,7 +481,7 @@ export default function AccessControlCenter() {
               </div>
 
               <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
-                <div className="grid grid-cols-[1fr,auto] border-b bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <div className="sticky top-0 z-10 grid grid-cols-[1fr,auto] border-b bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <div>Permission</div>
                   <div>Access</div>
                 </div>
@@ -471,7 +494,7 @@ export default function AccessControlCenter() {
                     return (
                       <div key={row.key} className="grid grid-cols-[1fr,auto] gap-3 border-b px-4 py-3">
                         <div>
-                          <div className="font-medium text-slate-800">{row.label}</div>
+                          <div className="font-medium text-slate-800">{permissionActionLabel(row.key)}</div>
                           <div className="text-xs text-slate-500">{row.key}</div>
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-2">

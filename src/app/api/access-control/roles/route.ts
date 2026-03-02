@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PERMISSION_KEYS } from "@/lib/permissions";
 import { requirePermission } from "@/lib/rbac";
-import { groupPermissionKeys, permissionKeyToLabel, replaceRolePermissions } from "@/lib/access-control";
+import { ensureBuiltInRoleTemplateDefaults, groupPermissionKeys, permissionKeyToLabel, replaceRolePermissions } from "@/lib/access-control";
 import { logAudit } from "@/lib/audit";
 
 async function canManageAccess(userId: string) {
@@ -23,6 +23,9 @@ export async function GET() {
   if (!(await canManageAccess(session.user.id))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  // Keep built-in roles usable if they were created without DB permissions.
+  await ensureBuiltInRoleTemplateDefaults();
 
   const roles = await prisma.role.findMany({
     include: {
