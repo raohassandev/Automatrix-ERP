@@ -247,3 +247,178 @@ export async function getCashPosition(input: DateRangeInput = {}) {
     },
   };
 }
+
+export type AraRow = {
+  invoiceId: string;
+  invoiceNo: string;
+  projectId: string;
+  invoiceDate: string;
+  dueDate: string;
+  totalAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  overdueDays: number;
+  bucket: "CURRENT" | "1-30" | "31-60" | "61-90" | "90+";
+};
+
+function getArBucket(overdueDays: number): AraRow["bucket"] {
+  if (overdueDays <= 0) return "CURRENT";
+  if (overdueDays <= 30) return "1-30";
+  if (overdueDays <= 60) return "31-60";
+  if (overdueDays <= 90) return "61-90";
+  return "90+";
+}
+
+export async function getArAging(input: { asOf?: string | null } = {}) {
+  const asOf = input.asOf ? new Date(input.asOf) : new Date();
+  asOf.setHours(23, 59, 59, 999);
+
+  const [invoices, receiptSums] = await Promise.all([
+    prisma.invoice.findMany({
+      where: { status: { not: "DRAFT" } },
+      orderBy: { date: "asc" },
+      select: {
+        id: true,
+        invoiceNo: true,
+        projectId: true,
+        date: true,
+        dueDate: true,
+        amount: true,
+      },
+    }),
+    prisma.income.groupBy({
+      by: ["invoiceId"],
+      where: {
+        invoiceId: { not: null },
+        status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+        date: { lte: asOf },
+      },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const paidByInvoice = new Map(
+    receiptSums
+      .filter((row) => row.invoiceId)
+      .map((row) => [row.invoiceId!, Number(row._sum.amount || 0)]),
+  );
+
+  const rows: AraRow[] = invoices
+    .map((invoice) => {
+      const totalAmount = Number(invoice.amount || 0);
+      const paidAmount = Number(paidByInvoice.get(invoice.id) || 0);
+      const outstandingAmount = Number(Math.max(0, totalAmount - paidAmount).toFixed(2));
+      const dueDate = invoice.dueDate || invoice.date;
+      const overdueDays =
+        outstandingAmount <= 0 ? 0 : Math.max(0, Math.floor((asOf.getTime() - dueDate.getTime()) / 86400000));
+      return {
+        invoiceId: invoice.id,
+        invoiceNo: invoice.invoiceNo,
+        projectId: invoice.projectId,
+        invoiceDate: invoice.date.toISOString().slice(0, 10),
+        dueDate: dueDate.toISOString().slice(0, 10),
+        totalAmount: Number(totalAmount.toFixed(2)),
+        paidAmount: Number(paidAmount.toFixed(2)),
+        outstandingAmount,
+        overdueDays,
+        bucket: getArBucket(overdueDays),
+      } satisfies AraRow;
+    })
+    .filter((row) => row.outstandingAmount > 0);
+
+  const totals = rows.reduce(
+    (acc, row) => {
+      acc.total += row.totalAmount;
+      acc.paid += row.paidAmount;
+      acc.outstanding += row.outstandingAmount;
+      acc[row.bucket] += row.outstandingAmount;
+      return acc;
+    },
+    {
+      total: 0,
+      paid: 0,
+      outstanding: 0,
+      CURRENT: 0,
+      "1-30": 0,
+      "31-60": 0,
+      "61-90": 0,
+      "90+": 0,
+    },
+  );
+
+  return {
+    asOf: asOf.toISOString(),
+    rows,
+    totals: {
+      total: Number(totals.total.toFixed(2)),
+      paid: Number(totals.paid.toFixed(2)),
+      outstanding: Number(totals.outstanding.toFixed(2)),
+      current: Number(totals.CURRENT.toFixed(2)),
+      bucket1to30: Number(totals["1-30"].toFixed(2)),
+      bucket31to60: Number(totals["31-60"].toFixed(2)),
+      bucket61to90: Number(totals["61-90"].toFixed(2)),
+      bucket90Plus: Number(totals["90+"].toFixed(2)),
+    },
+  };
+}
+
+export async function getCashForecast(input: { asOf?: string | null } = {}) {
+  const asOf = input.asOf ? new Date(input.asOf) : new Date();
+  asOf.setHours(23, 59, 59, 999);
+
+  const day14 = new Date(asOf);
+  day14.setDate(day14.getDate() + 14);
+  const day30 = new Date(asOf);
+  day30.setDate(day30.getDate() + 30);
+
+  const [ar, bills, allocations] = await Promise.all([
+    getArAging({ asOf: asOf.toISOString() }),
+    prisma.vendorBill.findMany({
+      where: { status: "POSTED" },
+      select: { id: true, dueDate: true, billDate: true, totalAmount: true },
+    }),
+    prisma.vendorPaymentAllocation.groupBy({
+      by: ["vendorBillId"],
+      where: { vendorPayment: { status: "POSTED" } },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const paidByBill = new Map(allocations.map((row) => [row.vendorBillId, Number(row._sum.amount || 0)]));
+
+  let receipts14 = 0;
+  let receipts30 = 0;
+  for (const row of ar.rows) {
+    const due = new Date(row.dueDate);
+    if (due <= day14) receipts14 += row.outstandingAmount;
+    if (due <= day30) receipts30 += row.outstandingAmount;
+  }
+
+  let disbursements14 = 0;
+  let disbursements30 = 0;
+  for (const bill of bills) {
+    const due = bill.dueDate || bill.billDate;
+    const outstanding = Math.max(0, Number(bill.totalAmount || 0) - Number(paidByBill.get(bill.id) || 0));
+    if (outstanding <= 0) continue;
+    if (due <= day14) disbursements14 += outstanding;
+    if (due <= day30) disbursements30 += outstanding;
+  }
+
+  return {
+    asOf: asOf.toISOString(),
+    windows: [
+      {
+        days: 14,
+        expectedReceipts: Number(receipts14.toFixed(2)),
+        plannedDisbursements: Number(disbursements14.toFixed(2)),
+        netForecast: Number((receipts14 - disbursements14).toFixed(2)),
+      },
+      {
+        days: 30,
+        expectedReceipts: Number(receipts30.toFixed(2)),
+        plannedDisbursements: Number(disbursements30.toFixed(2)),
+        netForecast: Number((receipts30 - disbursements30).toFixed(2)),
+      },
+    ],
+  };
+}

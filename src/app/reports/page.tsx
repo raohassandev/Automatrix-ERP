@@ -113,6 +113,14 @@ export default async function ReportsPage() {
           <div className="text-sm text-muted-foreground">Treasury</div>
           <div className="mt-2 text-lg font-semibold">Cash Position by Account</div>
         </a>
+        <a href="/reports/accounting/cash-forecast" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+          <div className="text-sm text-muted-foreground">Treasury</div>
+          <div className="mt-2 text-lg font-semibold">14/30 Day Cash Forecast</div>
+        </a>
+        <a href="/reports/accounting/ar-aging" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+          <div className="text-sm text-muted-foreground">Receivables</div>
+          <div className="mt-2 text-lg font-semibold">AR Aging</div>
+        </a>
         <a href="/reports/accounting/profit-loss" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
           <div className="text-sm text-muted-foreground">Accounting</div>
           <div className="mt-2 text-lg font-semibold">Profit &amp; Loss</div>

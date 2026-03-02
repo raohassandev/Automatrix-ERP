@@ -125,6 +125,31 @@
 
 ---
 
+## Update — AR aging + cash forecast + income backfill completion
+
+### What changed
+
+1. Backfill safety/coverage upgrade:
+   - `src/lib/accounting-backfill.ts`
+   - `src/app/api/accounting/backfill/route.ts`
+   - Added:
+     - safe posting user resolution (falls back to `null` if invalid)
+     - optional `autoAssignIncomeCompanyAccount` to patch legacy approved incomes missing `companyAccountId` before posting journals
+
+2. Added AR aging reporting surfaces:
+   - API: `GET /api/reports/accounting/ar-aging`
+   - Export: `GET /api/reports/accounting/ar-aging/export`
+   - UI: `/reports/accounting/ar-aging`
+
+3. Added cash forecast reporting surfaces:
+   - API: `GET /api/reports/accounting/cash-forecast`
+   - UI: `/reports/accounting/cash-forecast`
+   - Shows 14-day and 30-day expected receipts vs planned disbursements.
+
+4. Navigation/report home updated for new accounting/treasury reports.
+
+---
+
 ## Update — AR posting + accounting statement exports
 
 ### What changed

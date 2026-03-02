@@ -8,6 +8,7 @@ import { runAccountingBackfill } from "@/lib/accounting-backfill";
 const requestSchema = z.object({
   dryRun: z.boolean().optional(),
   limitPerModule: z.number().int().min(1).max(5000).optional(),
+  autoAssignIncomeCompanyAccount: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
     dryRun: parsed.data.dryRun,
     limitPerModule: parsed.data.limitPerModule,
     userId: session.user.id,
+    autoAssignIncomeCompanyAccount: parsed.data.autoAssignIncomeCompanyAccount,
   });
 
   await logAudit({

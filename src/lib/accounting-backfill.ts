@@ -4,7 +4,8 @@ import { createPostedJournal, GL_CODES, postExpenseApprovalJournal, postIncomeAp
 type BackfillInput = {
   dryRun?: boolean;
   limitPerModule?: number;
-  userId: string;
+  userId?: string | null;
+  autoAssignIncomeCompanyAccount?: boolean;
 };
 
 type BackfillModuleResult = {
@@ -47,9 +48,45 @@ async function getMissingSourceIds(sourceType: string, sourceIds: string[]) {
   return new Set(sourceIds.filter((id) => !posted.has(id)));
 }
 
+async function resolveSafePostingUserId(userId?: string | null) {
+  const raw = (userId || "").trim();
+  if (!raw) return null;
+  const user = await prisma.user.findUnique({
+    where: { id: raw },
+    select: { id: true },
+  });
+  return user?.id || null;
+}
+
+async function resolveDefaultIncomeCompanyAccountId() {
+  const bank = await prisma.companyAccount.findFirst({
+    where: { isActive: true, type: { equals: "BANK", mode: "insensitive" } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (bank?.id) return bank.id;
+  const cash = await prisma.companyAccount.findFirst({
+    where: { isActive: true, type: { equals: "CASH", mode: "insensitive" } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (cash?.id) return cash.id;
+  const any = await prisma.companyAccount.findFirst({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  return any?.id || null;
+}
+
 export async function runAccountingBackfill(input: BackfillInput): Promise<AccountingBackfillResult> {
   const dryRun = input.dryRun !== false;
   const limit = Math.max(1, Math.min(input.limitPerModule ?? 500, 5000));
+  const postingUserId = await resolveSafePostingUserId(input.userId);
+  const autoAssignIncomeCompanyAccount = input.autoAssignIncomeCompanyAccount === true;
+  const defaultIncomeCompanyAccountId = autoAssignIncomeCompanyAccount
+    ? await resolveDefaultIncomeCompanyAccountId()
+    : null;
   const startedAt = new Date();
 
   const modules = {
@@ -78,22 +115,29 @@ export async function runAccountingBackfill(input: BackfillInput): Promise<Accou
   for (const income of incomes) {
     if (!missingIncomes.has(income.id)) continue;
     const amount = Number(income.amount || 0);
-    if (amount <= 0 || !income.companyAccountId) {
+    const companyAccountId = income.companyAccountId || defaultIncomeCompanyAccountId;
+    if (amount <= 0 || !companyAccountId) {
       modules.incomes.skipped += 1;
-      if (!income.companyAccountId) modules.incomes.errors.push(`Income ${income.id}: missing company account`);
+      if (!companyAccountId) modules.incomes.errors.push(`Income ${income.id}: missing company account`);
       continue;
     }
     if (dryRun) continue;
     try {
       await prisma.$transaction(async (tx) => {
+        if (!income.companyAccountId && defaultIncomeCompanyAccountId) {
+          await tx.income.update({
+            where: { id: income.id },
+            data: { companyAccountId: defaultIncomeCompanyAccountId },
+          });
+        }
         await postIncomeApprovalJournal(tx, {
           incomeId: income.id,
           amount,
           incomeDate: income.date,
-          companyAccountId: income.companyAccountId!,
+          companyAccountId,
           invoiceId: income.invoiceId || null,
           projectRef: income.project || null,
-          userId: input.userId,
+          userId: postingUserId,
           memo: "Backfill: income posting",
         });
       });
@@ -127,7 +171,7 @@ export async function runAccountingBackfill(input: BackfillInput): Promise<Accou
           amount,
           invoiceDate: invoice.date,
           projectRef: invoice.projectId,
-          userId: input.userId,
+          userId: postingUserId,
           memo: "Backfill: invoice posting",
         });
       });
@@ -171,7 +215,7 @@ export async function runAccountingBackfill(input: BackfillInput): Promise<Accou
           paymentSource: expense.paymentSource,
           companyAccountId: expense.companyAccountId,
           projectRef: expense.project,
-          userId: input.userId,
+          userId: postingUserId,
           memo: "Backfill: expense posting",
         });
       });
@@ -223,8 +267,8 @@ export async function runAccountingBackfill(input: BackfillInput): Promise<Accou
           sourceId: bill.id,
           documentDate: bill.billDate,
           postingDate: bill.billDate,
-          createdById: input.userId,
-          postedById: input.userId,
+          createdById: postingUserId,
+          postedById: postingUserId,
           voucherPrefix: "VB",
           memo: "Backfill: vendor bill posting",
           lines: [...lines, { glCode: GL_CODES.AP_CONTROL, credit: Number(bill.totalAmount || 0), projectId }],
@@ -276,8 +320,8 @@ export async function runAccountingBackfill(input: BackfillInput): Promise<Accou
           sourceId: payment.id,
           documentDate: payment.paymentDate,
           postingDate: payment.paymentDate,
-          createdById: input.userId,
-          postedById: input.userId,
+          createdById: postingUserId,
+          postedById: postingUserId,
           voucherPrefix: "VP",
           memo: "Backfill: vendor payment posting",
           lines: [
