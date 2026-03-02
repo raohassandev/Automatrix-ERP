@@ -392,7 +392,7 @@ export default function AccessControlCenter() {
 
       <CardContent>
         {tab === "roles" && (
-          <div className="grid gap-4 xl:grid-cols-[280px,1fr,260px]">
+          <div className="grid gap-4 xl:grid-cols-[300px,1fr]">
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b px-3 py-3">
                 <div className="mb-2 text-sm font-semibold text-slate-800">Roles</div>
@@ -448,6 +448,9 @@ export default function AccessControlCenter() {
                     />
                   </div>
                 </div>
+                <div className="mt-2 text-xs text-slate-500">
+                  Enabled permissions: {roleDraft.size}
+                </div>
               </div>
 
               <div className="max-h-[680px] overflow-y-auto">
@@ -496,25 +499,9 @@ export default function AccessControlCenter() {
                   })
                 )}
               </div>
-            </div>
-
-            <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4">
-              <div className="text-sm font-semibold text-slate-800">Summary</div>
-              <div className="rounded-md border bg-slate-50 p-3 text-sm">
-                <div className="text-slate-600">Selected role</div>
-                <div className="font-semibold text-slate-900">{selectedRole?.name || "None"}</div>
-              </div>
-              <div className="rounded-md border bg-slate-50 p-3 text-sm">
-                <div className="text-slate-600">Enabled permissions</div>
-                <div className="font-semibold text-slate-900">{roleDraft.size}</div>
-              </div>
-              <div className="rounded-md border bg-slate-50 p-3 text-sm">
-                <div className="text-slate-600">Editing module</div>
-                <div className="font-semibold text-slate-900">{activeRoleGroup ? moduleLabel(activeRoleGroup.module) : "None"}</div>
-              </div>
-              <div className="border-t pt-3">
+              <div className="border-t p-4">
                 <Button
-                  className="w-full"
+                  className="w-full sm:w-auto"
                   variant="outline"
                   onClick={() => {
                     if (!selectedRole) return;
@@ -524,7 +511,7 @@ export default function AccessControlCenter() {
                   Reset Changes
                 </Button>
                 <Button
-                  className="mt-2 w-full bg-sky-600 hover:bg-sky-700"
+                  className="mt-2 w-full bg-sky-600 hover:bg-sky-700 sm:ml-2 sm:mt-0 sm:w-auto"
                   onClick={saveRoleTemplate}
                   disabled={savingRole || !selectedRoleId}
                 >
