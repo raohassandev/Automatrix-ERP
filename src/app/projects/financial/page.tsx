@@ -27,6 +27,10 @@ type FinancialProjectRow = {
   status: string;
   expenseCount: number;
   lastExpenseDate: string | null;
+  overdueRecoveryAmount: number;
+  overdueInvoiceCount: number;
+  negativeMargin: boolean;
+  highVendorExposure: boolean;
 };
 
 export default async function ProjectFinancialPage({
@@ -90,6 +94,15 @@ export default async function ProjectFinancialPage({
         where: { project: { in: aliases } },
         _count: true,
       });
+      const overdueInvoices = await prisma.invoice.aggregate({
+        where: {
+          projectId: { in: aliases },
+          dueDate: { lt: new Date() },
+          status: { notIn: ["PAID", "CANCELLED", "DRAFT"] },
+        },
+        _sum: { amount: true },
+        _count: true,
+      });
 
       const latestExpense = await prisma.expense.findFirst({
         where: { project: { in: aliases } },
@@ -112,6 +125,12 @@ export default async function ProjectFinancialPage({
         status: project.status,
         expenseCount: expenseData._count,
         lastExpenseDate: latestExpense?.date ? latestExpense.date.toISOString() : null,
+        overdueRecoveryAmount: Number(overdueInvoices._sum.amount || 0),
+        overdueInvoiceCount: overdueInvoices._count || 0,
+        negativeMargin: Number(project.grossMargin) < 0 || Number(project.marginPercent) < 0,
+        highVendorExposure:
+          Number(project.pendingRecovery) > 0 &&
+          Number(project.costToDate) > Number(project.receivedAmount) * 1.5,
       };
 
       return row;
@@ -140,6 +159,10 @@ export default async function ProjectFinancialPage({
   const totalReceived = filtered.reduce((sum, p) => sum + Number(p.receivedAmount), 0);
   const totalPendingRecovery = filtered.reduce((sum, p) => sum + Number(p.pendingRecovery), 0);
   const totalGrossMargin = filtered.reduce((sum, p) => sum + Number(p.grossMargin), 0);
+  const totalOverdueRecovery = filtered.reduce((sum, p) => sum + Number(p.overdueRecoveryAmount), 0);
+  const highRiskCount = filtered.filter(
+    (p) => p.negativeMargin || p.overdueRecoveryAmount > 0 || p.highVendorExposure,
+  ).length;
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / take));
   const safePage = Math.min(page, totalPages);
@@ -166,7 +189,7 @@ export default async function ProjectFinancialPage({
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-7">
         <Card>
           <CardHeader>
             <CardTitle>Total Contract Value</CardTitle>
@@ -215,6 +238,26 @@ export default async function ProjectFinancialPage({
             </p>
             <p className="text-sm text-muted-foreground">
               {totalContractValue > 0 ? `${((totalGrossMargin / totalContractValue) * 100).toFixed(1)}% margin` : "No contract values set"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Overdue Recovery</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={`text-2xl font-bold ${totalOverdueRecovery > 0 ? "text-red-600" : "text-foreground"}`}>
+              {formatMoney(totalOverdueRecovery)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Cash Risk Projects</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={`text-2xl font-bold ${highRiskCount > 0 ? "text-red-600" : "text-foreground"}`}>
+              {highRiskCount}
             </p>
           </CardContent>
         </Card>
@@ -267,7 +310,7 @@ export default async function ProjectFinancialPage({
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-4 text-sm">
+                  <div className="grid gap-4 md:grid-cols-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Contract Value</p>
                     <p className="font-semibold text-green-600">{formatMoney(project.contractValue)}</p>
@@ -288,9 +331,32 @@ export default async function ProjectFinancialPage({
                     </p>
                     <p className="text-xs text-muted-foreground">{project.marginPercent.toFixed(1)}%</p>
                   </div>
-                </div>
+                  </div>
 
-                <div className="space-y-2">
+                  {(project.negativeMargin || project.overdueRecoveryAmount > 0 || project.highVendorExposure) ? (
+                    <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3">
+                      <div className="text-xs font-semibold text-amber-900">Cash Risk Signals</div>
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        {project.negativeMargin ? (
+                          <span className="rounded-full bg-red-100 px-2 py-1 font-medium text-red-700">
+                            Negative margin
+                          </span>
+                        ) : null}
+                        {project.overdueRecoveryAmount > 0 ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-1 font-medium text-amber-800">
+                            Overdue recovery {formatMoney(project.overdueRecoveryAmount)} ({project.overdueInvoiceCount} invoice)
+                          </span>
+                        ) : null}
+                        {project.highVendorExposure ? (
+                          <span className="rounded-full bg-orange-100 px-2 py-1 font-medium text-orange-800">
+                            Vendor exposure high
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Recovery Progress</span>
                     <span>
@@ -314,6 +380,16 @@ export default async function ProjectFinancialPage({
                   <Link href={`/expenses/by-project?project=${encodeURIComponent(project.projectId)}`}>
                     <Button variant="outline" size="sm">
                       View Expenses
+                    </Button>
+                  </Link>
+                  <Link href={`/income?search=${encodeURIComponent(project.projectId)}`}>
+                    <Button variant="outline" size="sm">
+                      View Income
+                    </Button>
+                  </Link>
+                  <Link href={`/procurement/vendor-bills?search=${encodeURIComponent(project.projectId)}`}>
+                    <Button variant="outline" size="sm">
+                      Vendor Bills
                     </Button>
                   </Link>
                   <Link href={`/projects/${project.id}`}>

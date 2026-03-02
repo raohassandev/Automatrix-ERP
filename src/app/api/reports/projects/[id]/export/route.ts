@@ -55,6 +55,16 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     ["Client", detailResult.data.header.client.name],
     ["Status", detailResult.data.header.status],
     [],
+    ["Contract Value", formatMoney(detailResult.data.costs.contractValue)],
+    ["Invoiced Amount", formatMoney(detailResult.data.costs.invoicedAmount)],
+    ["Received Amount", formatMoney(detailResult.data.costs.receivedAmount)],
+    ["Cost To Date", formatMoney(detailResult.data.costs.costToDate)],
+    ["Gross Margin", formatMoney(detailResult.data.costs.grossMargin)],
+    ["Margin %", `${detailResult.data.costs.marginPercent.toFixed(2)}%`],
+    ["Pending Recovery", formatMoney(detailResult.data.costs.pendingRecovery)],
+    ["Overdue Recovery", formatMoney(detailResult.data.costs.risk.overdueRecoveryAmount)],
+    ["Overdue Invoice Count", detailResult.data.costs.risk.overdueInvoiceCount],
+    [],
     ["AP Billed (posted)", formatMoney(detailResult.data.costs.apBilledTotal)],
     ["AP Paid (posted allocations)", formatMoney(detailResult.data.costs.apPaidTotal)],
     ["AP Outstanding", formatMoney(detailResult.data.costs.apOutstanding)],
@@ -94,4 +104,3 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     },
   });
 }
-

@@ -56,6 +56,13 @@ export type ProjectDetailData = {
   activity: ProjectActivityRow[];
   notesHistory: ProjectNotesHistoryRow[];
   costs?: {
+    contractValue: number;
+    invoicedAmount: number;
+    receivedAmount: number;
+    costToDate: number;
+    pendingRecovery: number;
+    grossMargin: number;
+    marginPercent: number;
     apBilledTotal: number;
     apPaidTotal: number;
     apOutstanding: number;
@@ -67,6 +74,13 @@ export type ProjectDetailData = {
     pendingExpenseSubmitted: number;
     totalProjectCosts: number;
     projectProfit: number;
+    risk: {
+      overdueRecoveryAmount: number;
+      overdueInvoiceCount: number;
+      negativeMargin: boolean;
+      highUnpaidVendorExposure: boolean;
+      alerts: string[];
+    };
   };
   inventory?: {
     entries: Array<{
@@ -481,6 +495,25 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     );
     const paidTotal = Number(paidAgg._sum.amount || 0);
     const apOutstanding = Math.max(0, billedTotal - paidTotal);
+    const contractValue = Number(project.contractValue || 0);
+    const invoicedAmount = Number(project.invoicedAmount || 0);
+    const receivedAmount = Number(project.receivedAmount || 0);
+    const costToDate = Number(project.costToDate || 0);
+    const pendingRecovery = Number(project.pendingRecovery || 0);
+    const grossMargin = Number(project.grossMargin || 0);
+    const marginPercent = Number(project.marginPercent || 0);
+
+    const overdueAgg = await prisma.invoice.aggregate({
+      where: {
+        projectId: { in: projectAliases },
+        dueDate: { lt: new Date() },
+        status: { notIn: ["PAID", "CANCELLED", "DRAFT"] },
+      },
+      _sum: { amount: true },
+      _count: true,
+    });
+    const overdueRecoveryAmount = Number(overdueAgg._sum.amount || 0);
+    const overdueInvoiceCount = overdueAgg._count || 0;
 
     const nonStockExpensesApproved = expensesApproved.reduce((sum, e) => {
       const v = e as { amount?: unknown; approvedAmount?: unknown };
@@ -516,8 +549,25 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     }, 0);
     const totalProjectCosts = billedTotal + nonStockExpensesApproved;
     const projectProfit = approvedIncomeReceived - totalProjectCosts;
+    const highUnpaidVendorExposure = apOutstanding > Math.max(100000, approvedIncomeReceived * 0.6);
+    const negativeMargin = projectProfit < 0 || grossMargin < 0;
+    const alerts: string[] = [];
+    if (negativeMargin) alerts.push("Negative project margin detected.");
+    if (overdueRecoveryAmount > 0)
+      alerts.push(
+        `${overdueInvoiceCount} overdue invoice(s): ${overdueRecoveryAmount.toLocaleString()} still unrecovered.`,
+      );
+    if (highUnpaidVendorExposure)
+      alerts.push("High unpaid vendor exposure versus current recovered income.");
 
     costs = {
+      contractValue,
+      invoicedAmount,
+      receivedAmount,
+      costToDate,
+      pendingRecovery,
+      grossMargin,
+      marginPercent,
       apBilledTotal: billedTotal,
       apPaidTotal: paidTotal,
       apOutstanding,
@@ -529,6 +579,13 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       pendingExpenseSubmitted,
       totalProjectCosts,
       projectProfit,
+      risk: {
+        overdueRecoveryAmount,
+        overdueInvoiceCount,
+        negativeMargin,
+        highUnpaidVendorExposure,
+        alerts,
+      },
     };
   }
 

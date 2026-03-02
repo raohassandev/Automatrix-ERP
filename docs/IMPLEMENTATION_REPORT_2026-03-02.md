@@ -272,3 +272,28 @@
   - `src/components/VendorPaymentActions.tsx`
   - `src/app/procurement/vendor-payments/page.tsx`
   - `src/app/api/inventory/ledger/route.ts`
+
+## Project management commercial-control completion increment
+- Extended project detail financial contract with owner-level commercial fields:
+  - contract/invoiced/received/cost-to-date/pending-recovery/gross-margin/margin%.
+- Added explicit project cash-risk signals in project detail policy:
+  - overdue recovery amount + overdue invoice count
+  - negative margin flag
+  - high unpaid vendor exposure flag
+  - plain-language alert list for non-accounting operators.
+- Upgraded Project Detail `Costs` tab UX:
+  - added commercial summary cards and risk panel.
+  - added direct drilldown links to project-matched Vendor Bills, Vendor Payments, Expenses, Income.
+  - retained source-linked financial transaction table.
+- Upgraded Project Financial dashboard (`/projects/financial`):
+  - added overdue recovery and cash-risk project counts to top cards.
+  - added per-project risk chips (negative margin / overdue recovery / vendor exposure high).
+  - added quick action links for expenses, income, vendor bills, and full project detail.
+- Upgraded Project finance CSV export:
+  - includes commercial-control fields + overdue recovery metrics before transactional section.
+- Files:
+  - `src/lib/project-detail-policy.ts`
+  - `src/app/projects/[id]/ProjectDetailClient.tsx`
+  - `src/app/projects/financial/page.tsx`
+  - `src/app/reports/projects/page.tsx`
+  - `src/app/api/reports/projects/[id]/export/route.ts`

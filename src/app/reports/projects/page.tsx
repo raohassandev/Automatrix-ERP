@@ -164,6 +164,7 @@ export default async function ProjectExpensesReportPage({
                 <th className="py-2">Posted AP Bills</th>
                 <th className="py-2">Project Profit</th>
                 <th className="py-2">Pending Recovery</th>
+                <th className="py-2">Cash Risk</th>
                 <th className="py-2">Cost %</th>
                 <th className="py-2">Actions</th>
               </tr>
@@ -174,6 +175,10 @@ export default async function ProjectExpensesReportPage({
                 const costToDate = Number(project.costToDate);
                 const percentUsed = contractValue > 0 ? (costToDate / contractValue) * 100 : 0;
                 const isOverBudget = percentUsed > 100;
+                const profit = Number(project.grossMargin);
+                const pendingRecovery = Number(project.pendingRecovery);
+                const cashRisk =
+                  profit < 0 ? "Negative Margin" : pendingRecovery > 0 ? "Recovery Pending" : "Stable";
 
                 return (
                   <tr key={project.id} className="border-b">
@@ -185,6 +190,17 @@ export default async function ProjectExpensesReportPage({
                     <td className="py-2">{formatMoney(postedBillTotal)}</td>
                     <td className="py-2">{formatMoney(Number(project.grossMargin))}</td>
                     <td className="py-2">{formatMoney(Number(project.pendingRecovery))}</td>
+                    <td className="py-2">
+                      <span
+                        className={
+                          cashRisk === "Stable"
+                            ? "rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800"
+                            : "rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800"
+                        }
+                      >
+                        {cashRisk}
+                      </span>
+                    </td>
                     <td className={`py-2 ${isOverBudget ? "text-destructive font-semibold" : ""}`}>
                       {percentUsed.toFixed(1)}%
                     </td>

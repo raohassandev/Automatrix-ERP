@@ -521,14 +521,82 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             <div className="mt-4 text-sm text-muted-foreground">No access.</div>
           ) : (
             <>
+              <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+                  <div className="text-xs text-sky-700">Contract Value</div>
+                  <div className="mt-2 text-lg font-semibold text-sky-900">
+                    {formatMoney(detail.costs.contractValue)}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
+                  <div className="text-xs text-indigo-700">Invoiced / Received</div>
+                  <div className="mt-2 text-lg font-semibold text-indigo-900">
+                    {formatMoney(detail.costs.invoicedAmount)} / {formatMoney(detail.costs.receivedAmount)}
+                  </div>
+                  <div className="mt-1 text-xs text-indigo-700">
+                    Pending recovery: {formatMoney(detail.costs.pendingRecovery)}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
+                  <div className="text-xs text-rose-700">Cost to Date</div>
+                  <div className="mt-2 text-lg font-semibold text-rose-900">
+                    {formatMoney(detail.costs.costToDate)}
+                  </div>
+                </div>
+                <div
+                  className={`rounded-lg border p-4 ${
+                    detail.costs.grossMargin >= 0
+                      ? "border-emerald-200 bg-emerald-50/60"
+                      : "border-red-200 bg-red-50/70"
+                  }`}
+                >
+                  <div className="text-xs text-muted-foreground">Gross Margin</div>
+                  <div className="mt-2 text-lg font-semibold">
+                    {formatMoney(detail.costs.grossMargin)}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {detail.costs.marginPercent.toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+                <h3 className="text-sm font-semibold text-amber-900">Cash Risk Signals</h3>
+                {detail.costs.risk.alerts.length === 0 ? (
+                  <p className="mt-2 text-sm text-emerald-700">No critical cash risk alerts right now.</p>
+                ) : (
+                  <ul className="mt-2 space-y-1 text-sm text-amber-900">
+                    {detail.costs.risk.alerts.map((alert, idx) => (
+                      <li key={`${alert}-${idx}`}>• {alert}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
               <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <div className="rounded-lg border p-4">
                   <div className="text-xs text-muted-foreground">AP billed (posted)</div>
                   <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apBilledTotal)}</div>
+                  <div className="mt-1 text-xs">
+                    <Link
+                      className="text-blue-700 underline underline-offset-2"
+                      href={`/procurement/vendor-bills?search=${encodeURIComponent(detail.header.projectId)}`}
+                    >
+                      Open vendor bills
+                    </Link>
+                  </div>
                 </div>
                 <div className="rounded-lg border p-4">
                   <div className="text-xs text-muted-foreground">AP paid (posted allocations)</div>
                   <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.apPaidTotal)}</div>
+                  <div className="mt-1 text-xs">
+                    <Link
+                      className="text-blue-700 underline underline-offset-2"
+                      href={`/procurement/vendor-payments?search=${encodeURIComponent(detail.header.projectId)}`}
+                    >
+                      Open vendor payments
+                    </Link>
+                  </div>
                 </div>
                 <div className="rounded-lg border p-4">
                   <div className="text-xs text-muted-foreground">AP outstanding</div>
@@ -549,10 +617,26 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 <div className="rounded-lg border p-4">
                   <div className="text-xs text-muted-foreground">Pending expenses (submitted)</div>
                   <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.pendingExpenseSubmitted)}</div>
+                  <div className="mt-1 text-xs">
+                    <Link
+                      className="text-blue-700 underline underline-offset-2"
+                      href={`/expenses/by-project?project=${encodeURIComponent(detail.header.projectId)}`}
+                    >
+                      Open expenses
+                    </Link>
+                  </div>
                 </div>
                 <div className="rounded-lg border p-4">
                   <div className="text-xs text-muted-foreground">Project income (approved)</div>
                   <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
+                  <div className="mt-1 text-xs">
+                    <Link
+                      className="text-blue-700 underline underline-offset-2"
+                      href={`/income?search=${encodeURIComponent(detail.header.projectId)}`}
+                    >
+                      Open income entries
+                    </Link>
+                  </div>
                 </div>
                 <div className="rounded-lg border p-4">
                   <div className="text-xs text-muted-foreground">Pending income (submitted)</div>
