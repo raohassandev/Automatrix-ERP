@@ -51,11 +51,13 @@ export async function GET() {
   });
 
   const csvRows: Array<Array<string | number | null | undefined>> = [
-    ["Date", "Project", "Amount", "Status", "Reason"],
+    ["Date", "Project", "Amount", "Payout Mode", "Settlement", "Status", "Reason"],
     ...rows.map((row) => [
       row.createdAt.toISOString().slice(0, 10),
       row.projectRef || "",
       formatMoney(Number(row.amount)),
+      row.payoutMode || "",
+      row.settlementStatus || "",
       row.status,
       row.reason || "",
     ]),

@@ -6,59 +6,252 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
-import { resolveProjectId } from "@/lib/projects";
+import { computeProjectFinancialSnapshot, recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
+import { createPostedJournal, GL_CODES } from "@/lib/accounting";
+
+type ResolvedCommissionAmount = {
+  amount: number;
+  basisAmount: number | null;
+  percent: number | null;
+  basisType: string | null;
+};
+
+async function resolveCommissionAmount(args: {
+  project: {
+    id: string;
+    projectId: string;
+    name: string;
+    contractValue: Prisma.Decimal;
+    status: string;
+  };
+  amount?: number;
+  basisType?: string;
+  basisAmount?: number;
+  percent?: number;
+}): Promise<ResolvedCommissionAmount> {
+  const basisType = args.basisType ? sanitizeString(args.basisType).toUpperCase() : null;
+  const amount = typeof args.amount === "number" && Number.isFinite(args.amount) ? args.amount : null;
+  const percent = typeof args.percent === "number" && Number.isFinite(args.percent) ? args.percent : null;
+  const basisAmount =
+    typeof args.basisAmount === "number" && Number.isFinite(args.basisAmount) ? args.basisAmount : null;
+
+  if (amount !== null && amount > 0) {
+    return {
+      amount,
+      basisAmount: basisAmount ?? null,
+      percent: percent ?? null,
+      basisType,
+    };
+  }
+
+  if (percent !== null && percent > 0) {
+    let resolvedBasis = basisAmount;
+    if (basisType === "PROFIT") {
+      const snapshot = await computeProjectFinancialSnapshot(args.project);
+      resolvedBasis = Number(snapshot.projectProfit || 0);
+    }
+
+    if (resolvedBasis === null || resolvedBasis < 0) {
+      throw new Error("Basis amount is required for percentage commission.");
+    }
+
+    const computed = Number(((resolvedBasis * percent) / 100).toFixed(2));
+    if (!Number.isFinite(computed) || computed <= 0) {
+      throw new Error("Computed commission amount must be positive.");
+    }
+
+    return {
+      amount: computed,
+      basisAmount: resolvedBasis,
+      percent,
+      basisType: basisType || "PERCENT",
+    };
+  }
+
+  throw new Error("Amount is required or provide percent + basis amount.");
+}
+
+async function nextMiddlemanBillNumber(tx: Prisma.TransactionClient) {
+  const prefix = `MB-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+  const existingCount = await tx.vendorBill.count({
+    where: { billNumber: { startsWith: `${prefix}-` } },
+  });
+  return `${prefix}-${String(existingCount + 1).padStart(4, "0")}`;
+}
 
 async function applyCommissionApproval(
   tx: Prisma.TransactionClient,
   commission: {
     id: string;
-    employeeId: string;
+    employeeId?: string | null;
+    vendorId?: string | null;
+    payeeType: string;
     amount: Prisma.Decimal;
     projectRef?: string | null;
+    payoutMode: string;
+    reason?: string | null;
+    expenseId?: string | null;
+    walletLedgerId?: string | null;
+    payableBillId?: string | null;
   },
-  approvedById: string
+  approvedById: string,
 ) {
-  const employee = await tx.employee.findUnique({ where: { id: commission.employeeId } });
-  if (!employee) {
-    throw new Error("Employee not found");
+  if (commission.payeeType === "MIDDLEMAN") {
+    if (!commission.vendorId) {
+      throw new Error("Vendor is required for middleman commission.");
+    }
+
+    if (commission.payableBillId) {
+      return {
+        expenseId: commission.expenseId || null,
+        walletLedgerId: commission.walletLedgerId || null,
+        payableBillId: commission.payableBillId,
+        settlementStatus: "UNSETTLED",
+        settledAt: null,
+      };
+    }
+
+    const projectRef = commission.projectRef || null;
+    if (!projectRef) {
+      throw new Error("Project reference is required for middleman commission.");
+    }
+
+    const billNumber = await nextMiddlemanBillNumber(tx);
+    const billDate = new Date();
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 30);
+
+    const bill = await tx.vendorBill.create({
+      data: {
+        billNumber,
+        vendorId: commission.vendorId,
+        projectRef,
+        billDate,
+        dueDate,
+        status: "POSTED",
+        currency: "PKR",
+        totalAmount: new Prisma.Decimal(commission.amount),
+        notes: commission.reason || "Middleman commission payable",
+        lines: {
+          create: [
+            {
+              description: `Middleman commission (${projectRef})`,
+              total: new Prisma.Decimal(commission.amount),
+              project: projectRef,
+            },
+          ],
+        },
+      },
+      include: { lines: true },
+    });
+
+    const projectDb = await tx.project.findFirst({
+      where: {
+        OR: [{ id: projectRef }, { projectId: projectRef }, { name: projectRef }],
+      },
+      select: { id: true },
+    });
+
+    await createPostedJournal(tx, {
+      sourceType: "MIDDLEMAN_COMMISSION",
+      sourceId: bill.id,
+      documentDate: billDate,
+      postingDate: billDate,
+      createdById: approvedById,
+      postedById: approvedById,
+      voucherPrefix: "MC",
+      memo: `Middleman commission ${bill.billNumber}`,
+      lines: [
+        {
+          glCode: GL_CODES.OPERATING_EXPENSE,
+          debit: Number(commission.amount),
+          projectId: projectDb?.id || null,
+          partyId: commission.vendorId,
+        },
+        {
+          glCode: GL_CODES.AP_CONTROL,
+          credit: Number(commission.amount),
+          projectId: projectDb?.id || null,
+          partyId: commission.vendorId,
+        },
+      ],
+    });
+
+    return {
+      expenseId: null,
+      walletLedgerId: null,
+      payableBillId: bill.id,
+      settlementStatus: "UNSETTLED",
+      settledAt: null,
+    };
   }
 
-  const projectRef = commission.projectRef || null;
-  const expense = await tx.expense.create({
-    data: {
-      date: new Date(),
-      description: `Commission for ${projectRef || "sales"}`,
-      category: "Commission",
-      amount: new Prisma.Decimal(commission.amount),
-      paymentMode: "Wallet Credit",
-      paymentSource: "COMPANY_ACCOUNT",
-      expenseType: "COMPANY",
-      project: projectRef || undefined,
-      status: "APPROVED",
-      approvalLevel: "COMMISSION",
-      submittedById: approvedById,
-      approvedById,
-      approvedAmount: new Prisma.Decimal(commission.amount),
-    },
-  });
+  if (!commission.employeeId) {
+    throw new Error("Employee is required for employee commission.");
+  }
 
-  const newBalance = Number(employee.walletBalance) + Number(commission.amount);
-  const ledger = await tx.walletLedger.create({
-    data: {
-      date: new Date(),
-      employeeId: employee.id,
-      type: "CREDIT",
-      amount: new Prisma.Decimal(commission.amount),
-      reference: `COMMISSION:${commission.id}`,
-      balance: new Prisma.Decimal(newBalance),
-    },
-  });
-  await tx.employee.update({
-    where: { id: employee.id },
-    data: { walletBalance: new Prisma.Decimal(newBalance) },
-  });
+  let expenseId = commission.expenseId || null;
+  let walletLedgerId = commission.walletLedgerId || null;
 
-  return { expenseId: expense.id, walletLedgerId: ledger.id };
+  if (!expenseId) {
+    const projectRef = commission.projectRef || null;
+    const expense = await tx.expense.create({
+      data: {
+        date: new Date(),
+        description: `Commission for ${projectRef || "sales"}`,
+        category: "Commission",
+        amount: new Prisma.Decimal(commission.amount),
+        paymentMode: commission.payoutMode === "WALLET" ? "Wallet Credit" : "Payroll Settlement",
+        paymentSource: "COMPANY_ACCOUNT",
+        expenseType: "COMPANY",
+        project: projectRef || undefined,
+        status: "APPROVED",
+        approvalLevel: "COMMISSION",
+        submittedById: approvedById,
+        approvedById,
+        approvedAmount: new Prisma.Decimal(commission.amount),
+        remarks: commission.reason || undefined,
+      },
+    });
+    expenseId = expense.id;
+  }
+
+  if (commission.payoutMode === "WALLET" && !walletLedgerId) {
+    const employee = await tx.employee.findUnique({ where: { id: commission.employeeId } });
+    if (!employee) {
+      throw new Error("Employee not found");
+    }
+
+    const newBalance = Number(employee.walletBalance) + Number(commission.amount);
+    const ledger = await tx.walletLedger.create({
+      data: {
+        date: new Date(),
+        employeeId: employee.id,
+        type: "CREDIT",
+        amount: new Prisma.Decimal(commission.amount),
+        reference: `COMMISSION:${commission.id}`,
+        balance: new Prisma.Decimal(newBalance),
+        sourceType: "COMMISSION",
+        sourceId: commission.id,
+        postedById: approvedById,
+        postedAt: new Date(),
+      },
+    });
+    await tx.employee.update({
+      where: { id: employee.id },
+      data: { walletBalance: new Prisma.Decimal(newBalance) },
+    });
+    walletLedgerId = ledger.id;
+  }
+
+  const settled = commission.payoutMode === "WALLET" || Boolean(walletLedgerId);
+  return {
+    expenseId,
+    walletLedgerId,
+    payableBillId: null,
+    settlementStatus: settled ? "SETTLED" : "UNSETTLED",
+    settledAt: settled ? new Date() : null,
+  };
 }
 
 export async function GET() {
@@ -91,7 +284,7 @@ export async function GET() {
   const data = await prisma.commissionEntry.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: { employee: true },
+    include: { employee: true, vendor: true },
   });
 
   return NextResponse.json({ success: true, data });
@@ -113,7 +306,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { success: false, error: "Validation failed", details: parsed.error.flatten() },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -125,19 +318,48 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Invalid project reference" }, { status: 400 });
   }
 
-  const basisAmount = parsed.data.basisAmount ?? undefined;
-  const percent = parsed.data.percent ?? undefined;
-  const computedAmount =
-    parsed.data.amount !== undefined
-      ? parsed.data.amount
-      : basisAmount !== undefined && percent !== undefined
-      ? (basisAmount * percent) / 100
-      : null;
+  const project = await prisma.project.findFirst({
+    where: { projectId: resolvedProject },
+    select: { id: true, projectId: true, name: true, status: true, contractValue: true },
+  });
+  if (!project) {
+    return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
+  }
 
-  if (computedAmount === null) {
+  const payeeType = parsed.data.payeeType ? sanitizeString(parsed.data.payeeType) : "EMPLOYEE";
+  const payoutMode =
+    parsed.data.payoutMode
+      ? sanitizeString(parsed.data.payoutMode)
+      : payeeType === "MIDDLEMAN"
+      ? "AP"
+      : "PAYROLL";
+
+  if (payeeType === "EMPLOYEE" && !parsed.data.employeeId) {
+    return NextResponse.json({ success: false, error: "Employee is required for employee commission" }, { status: 400 });
+  }
+  if (payeeType === "MIDDLEMAN") {
+    if (!parsed.data.vendorId) {
+      return NextResponse.json({ success: false, error: "Middleman vendor is required" }, { status: 400 });
+    }
+    const vendor = await prisma.vendor.findUnique({ where: { id: parsed.data.vendorId }, select: { id: true } });
+    if (!vendor) {
+      return NextResponse.json({ success: false, error: "Middleman vendor not found" }, { status: 400 });
+    }
+  }
+
+  let amountResolved: ResolvedCommissionAmount;
+  try {
+    amountResolved = await resolveCommissionAmount({
+      project,
+      amount: parsed.data.amount,
+      basisType: parsed.data.basisType,
+      basisAmount: parsed.data.basisAmount,
+      percent: parsed.data.percent,
+    });
+  } catch (error) {
     return NextResponse.json(
-      { success: false, error: "Amount is required or provide percent + basis amount" },
-      { status: 400 }
+      { success: false, error: error instanceof Error ? error.message : "Failed to resolve commission amount" },
+      { status: 400 },
     );
   }
 
@@ -146,16 +368,22 @@ export async function POST(req: Request) {
   const created = await prisma.$transaction(async (tx) => {
     const entry = await tx.commissionEntry.create({
       data: {
-        employeeId: sanitizeString(parsed.data.employeeId),
+        employeeId: payeeType === "EMPLOYEE" ? sanitizeString(parsed.data.employeeId || "") : null,
+        vendorId: payeeType === "MIDDLEMAN" ? sanitizeString(parsed.data.vendorId || "") : null,
+        payeeType,
         projectRef: resolvedProject,
-        basisType: parsed.data.basisType ? sanitizeString(parsed.data.basisType) : null,
-        basisAmount: basisAmount !== undefined ? new Prisma.Decimal(basisAmount) : null,
-        percent: percent !== undefined ? new Prisma.Decimal(percent) : null,
-        amount: new Prisma.Decimal(computedAmount),
+        basisType: amountResolved.basisType,
+        basisAmount:
+          amountResolved.basisAmount !== null ? new Prisma.Decimal(amountResolved.basisAmount) : null,
+        percent: amountResolved.percent !== null ? new Prisma.Decimal(amountResolved.percent) : null,
+        payoutMode,
+        amount: new Prisma.Decimal(amountResolved.amount),
+        settlementStatus: "UNSETTLED",
         status: status === "APPROVED" && canApprove ? "APPROVED" : "PENDING",
         reason: parsed.data.reason ? sanitizeString(parsed.data.reason) : null,
         approvedById: status === "APPROVED" && canApprove ? session.user.id : null,
       },
+      include: { employee: true, vendor: true },
     });
 
     if (entry.status === "APPROVED") {
@@ -165,12 +393,20 @@ export async function POST(req: Request) {
         data: {
           expenseId: approval.expenseId,
           walletLedgerId: approval.walletLedgerId,
+          payableBillId: approval.payableBillId,
+          settlementStatus: approval.settlementStatus,
+          settledAt: approval.settledAt,
         },
+        include: { employee: true, vendor: true },
       });
     }
 
     return entry;
   });
+
+  if (created.projectRef && created.status === "APPROVED") {
+    await recalculateProjectFinancials(created.projectRef);
+  }
 
   await logAudit({
     action: "CREATE_COMMISSION",

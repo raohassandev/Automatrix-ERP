@@ -423,6 +423,14 @@ model IncentiveEntry {
   employeeId   String
   projectRef   String?
   amount       Decimal
+  formulaType  String?  // FIXED | PERCENT_PROFIT | PERCENT_AMOUNT
+  basisAmount  Decimal?
+  percent      Decimal?
+  payoutMode   String   @default("PAYROLL") // PAYROLL | WALLET
+  settlementStatus String @default("UNSETTLED") // UNSETTLED | SETTLED
+  settledInPayrollRunId String?
+  settledInPayrollEntryId String?
+  settledAt    DateTime?
   status       String   @default("PENDING")
   reason       String?
   approvedById String?
@@ -466,6 +474,25 @@ model PayrollEntry {
   payrollRun    PayrollRun @relation(fields: [payrollRunId], references: [id])
   employee      Employee   @relation(fields: [employeeId], references: [id])
   approvedBy    User?      @relation("PayrollApprovedBy", fields: [approvedById], references: [id])
+  components    PayrollComponentLine[]
+}
+
+model PayrollComponentLine {
+  id            String   @id @default(cuid())
+  payrollEntryId String
+  componentType String   // BASE | INCENTIVE | COMMISSION | DEDUCTION | ADJUSTMENT
+  sourceType    String?
+  sourceId      String?
+  projectRef    String?
+  description   String
+  amount        Decimal
+  metadataJson  String?
+  createdAt     DateTime @default(now())
+
+  payrollEntry  PayrollEntry @relation(fields: [payrollEntryId], references: [id], onDelete: Cascade)
+
+  @@index([payrollEntryId])
+  @@index([sourceType, sourceId])
 }
 
 model SalaryAdvance {
@@ -671,6 +698,7 @@ model Vendor {
   purchaseOrders PurchaseOrder[]
   bills          VendorBill[]
   payments       VendorPayment[]
+  commissions    CommissionEntry[]
 }
 
 // Phase 1: single warehouse, but keep the model now to avoid refactors later.
@@ -889,12 +917,20 @@ model VendorPaymentAllocation {
 
 model CommissionEntry {
   id            String   @id @default(cuid())
-  employeeId    String
+  employeeId    String?
+  vendorId      String?
+  payeeType     String   @default("EMPLOYEE") // EMPLOYEE | MIDDLEMAN
   projectRef    String?
   basisType     String?
   basisAmount   Decimal?
   percent       Decimal?
   amount        Decimal
+  payoutMode    String   @default("PAYROLL") // PAYROLL | WALLET | AP
+  settlementStatus String @default("UNSETTLED") // UNSETTLED | SETTLED
+  settledInPayrollRunId String?
+  settledInPayrollEntryId String?
+  payableBillId String?
+  settledAt     DateTime?
   status        String   @default("PENDING")
   reason        String?
   approvedById  String?
@@ -903,7 +939,8 @@ model CommissionEntry {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  employee      Employee @relation(fields: [employeeId], references: [id])
+  employee      Employee? @relation(fields: [employeeId], references: [id])
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
   approvedBy    User?    @relation("CommissionApprovedBy", fields: [approvedById], references: [id])
 }
 

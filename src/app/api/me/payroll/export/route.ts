@@ -48,11 +48,11 @@ export async function GET() {
   const rows = await prisma.payrollEntry.findMany({
     where: { employeeId: employee.id },
     orderBy: { createdAt: "desc" },
-    include: { payrollRun: true },
+    include: { payrollRun: true, components: true },
   });
 
   const csvRows: Array<Array<string | number | null | undefined>> = [
-    ["Period Start", "Period End", "Base Salary", "Incentives", "Deductions", "Net Pay", "Status"],
+    ["Period Start", "Period End", "Base Salary", "Incentives", "Deductions", "Net Pay", "Status", "Components"],
     ...rows.map((row) => [
       row.payrollRun?.periodStart.toISOString().slice(0, 10) || "",
       row.payrollRun?.periodEnd.toISOString().slice(0, 10) || "",
@@ -61,6 +61,12 @@ export async function GET() {
       formatMoney(Number(row.deductions)),
       formatMoney(Number(row.netPay)),
       row.status,
+      row.components
+        .map(
+          (line) =>
+            `${line.componentType}:${line.description}${line.projectRef ? ` [${line.projectRef}]` : ""} ${formatMoney(Number(line.amount))}`,
+        )
+        .join(" | "),
     ]),
   ];
 

@@ -49,7 +49,7 @@ export default async function MyDashboardPage() {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests] = await Promise.all([
+  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg] = await Promise.all([
     prisma.projectAssignment.findMany({
       where: { userId: session.user.id },
       select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
@@ -85,7 +85,7 @@ export default async function MyDashboardPage() {
       where: { employeeId: employee.id },
       orderBy: { createdAt: "desc" },
       take: 10,
-      include: { payrollRun: true },
+      include: { payrollRun: true, components: true },
     }),
     prisma.incentiveEntry.findMany({
       where: { employeeId: employee.id },
@@ -107,11 +107,33 @@ export default async function MyDashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 8,
     }),
+    prisma.incentiveEntry.aggregate({
+      where: {
+        employeeId: employee.id,
+        status: "APPROVED",
+        payoutMode: "PAYROLL",
+        settlementStatus: "UNSETTLED",
+      },
+      _sum: { amount: true },
+    }),
+    prisma.walletLedger.aggregate({
+      where: { employeeId: employee.id, type: "CREDIT", sourceType: "COMPANY_ADVANCE_ISSUE" },
+      _sum: { amount: true },
+    }),
+    prisma.walletLedger.aggregate({
+      where: { employeeId: employee.id, type: "DEBIT", sourceType: { in: ["COMPANY_ADVANCE_ADJUSTMENT", "EXPENSE_SETTLEMENT"] } },
+      _sum: { amount: true },
+    }),
   ]);
 
   const walletBalance = Number(employee.walletBalance || 0);
   const walletHold = Number(employee.walletHold || 0);
   const walletAvailable = walletBalance - walletHold;
+  const pendingPayrollIncentive = Number(pendingPayrollIncentiveAgg._sum.amount || 0);
+  const advanceIssued = Number(advanceIssueAgg._sum.amount || 0);
+  const advanceSettled = Number(advanceSettlementAgg._sum.amount || 0);
+  const advanceOutstanding = Math.max(0, advanceIssued - advanceSettled);
+  const latestSalary = Number(payrollEntries[0]?.netPay || 0);
   const expenseStatusMap = new Map(expenseCounts.map((row) => [row.status, row._count._all]));
   const assignedProjects = assignments.map((a) => a.project);
   const attendanceMap = new Map(attendanceCounts.map((row) => [row.status, row._count._all]));
@@ -125,7 +147,7 @@ export default async function MyDashboardPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Wallet Balance</div>
           <div className="mt-2 text-xl font-semibold">{formatMoney(walletBalance)}</div>
@@ -137,6 +159,25 @@ export default async function MyDashboardPage() {
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Available</div>
           <div className="mt-2 text-xl font-semibold">{formatMoney(walletAvailable)}</div>
+        </div>
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm text-muted-foreground">Latest Salary</div>
+          <div className="mt-2 text-xl font-semibold">{formatMoney(latestSalary)}</div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-6 shadow-sm">
+          <div className="text-sm text-indigo-700">Pending Incentive (Payroll)</div>
+          <div className="mt-2 text-xl font-semibold text-indigo-900">{formatMoney(pendingPayrollIncentive)}</div>
+        </div>
+        <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-6 shadow-sm">
+          <div className="text-sm text-sky-700">Company Advance Issued</div>
+          <div className="mt-2 text-xl font-semibold text-sky-900">{formatMoney(advanceIssued)}</div>
+        </div>
+        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-6 shadow-sm">
+          <div className="text-sm text-amber-700">Advance Outstanding</div>
+          <div className="mt-2 text-xl font-semibold text-amber-900">{formatMoney(advanceOutstanding)}</div>
         </div>
       </div>
 
@@ -301,6 +342,7 @@ export default async function MyDashboardPage() {
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="py-2">Period</th>
                   <th className="py-2">Net Pay</th>
+                  <th className="py-2">Breakdown</th>
                   <th className="py-2">Status</th>
                 </tr>
               </thead>
@@ -315,6 +357,25 @@ export default async function MyDashboardPage() {
                         : "-"}
                     </td>
                     <td className="py-2">{formatMoney(Number(entry.netPay))}</td>
+                    <td className="py-2">
+                      {entry.components.length > 0 ? (
+                        <div className="space-y-1">
+                          {entry.components.slice(0, 3).map((line) => (
+                            <div key={line.id} className="text-xs text-muted-foreground">
+                              {line.componentType}: {formatMoney(Number(line.amount))}
+                              {line.projectRef ? ` (${line.projectRef})` : ""}
+                            </div>
+                          ))}
+                          {entry.components.length > 3 ? (
+                            <div className="text-xs text-muted-foreground">
+                              +{entry.components.length - 3} more
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
                     <td className="py-2">{entry.status}</td>
                   </tr>
                 ))}

@@ -443,3 +443,81 @@
 - `pnpm typecheck` passed
 - `pnpm lint` passed
 - `pnpm test` passed
+
+## Owner-critical program pass: incentives, commissions, payroll settlement (Phase A/B)
+
+### Data and schema
+- Added payout/settlement tracking on incentives:
+  - `formulaType`, `basisAmount`, `percent`, `payoutMode`
+  - `settlementStatus`, `settledInPayrollRunId`, `settledInPayrollEntryId`, `settledAt`
+- Added commission support for employee or middleman:
+  - `payeeType`, optional `employeeId`, optional `vendorId`
+  - `payoutMode` (`PAYROLL`/`WALLET`/`AP`) and settlement linkage fields
+- Added payroll component breakdown model:
+  - `PayrollComponentLine` linked to `PayrollEntry` for salary slip line-item visibility.
+- Files:
+  - `prisma/schema.prisma`
+  - `prisma/migrations/20260302191000_owner_critical_variable_pay_and_payroll_components/migration.sql`
+
+### Posting and API behavior
+- Incentives:
+  - supports fixed amount and formula paths (`PERCENT_PROFIT`, `PERCENT_AMOUNT`)
+  - approval creates project expense and either payroll settlement (default) or wallet credit
+  - settled entries are protected from deletion.
+- Commissions:
+  - supports employee commission and middleman commission in one flow
+  - middleman approval creates posted vendor bill + posted journal (`MIDDLEMAN_COMMISSION`)
+  - employee commission supports payroll settlement or wallet payout
+  - settled entries are protected from deletion.
+- Payroll:
+  - approval now settles approved payroll-mode incentives and employee commissions into the payroll entry
+  - stores salary slip line items in `PayrollComponentLine`
+  - prevents approval if payroll incentive total is below approved variable pay linkage.
+- Files:
+  - `src/app/api/incentives/route.ts`
+  - `src/app/api/incentives/[id]/route.ts`
+  - `src/app/api/commissions/route.ts`
+  - `src/app/api/commissions/[id]/route.ts`
+  - `src/app/api/payroll/runs/route.ts`
+  - `src/app/api/payroll/runs/[id]/route.ts`
+  - `src/lib/payroll-policy.ts`
+
+### UX and self-service updates
+- Guided incentive and commission forms for non-accounting users:
+  - formula selection, payout mode, employee vs middleman payee flow.
+- Commissions/incentives list pages now expose payout and settlement context.
+- My Dashboard expanded for employee self-service:
+  - pending payroll incentives
+  - company advance issued/outstanding
+  - salary and component visibility.
+- Payroll export now includes component line breakdown.
+- Wallet issue flow now captures purpose and maps to explicit source types for history traceability.
+- Files:
+  - `src/components/IncentiveFormDialog.tsx`
+  - `src/components/CommissionFormDialog.tsx`
+  - `src/app/incentives/page.tsx`
+  - `src/app/commissions/page.tsx`
+  - `src/app/me/page.tsx`
+  - `src/app/api/me/payroll/export/route.ts`
+  - `src/app/api/me/incentives/export/route.ts`
+  - `src/components/EmployeeWalletDialog.tsx`
+  - `src/app/api/employees/wallet/route.ts`
+  - `src/app/wallets/page.tsx`
+  - `src/lib/approval-engine.ts`
+  - `src/app/api/salary-advances/[id]/route.ts`
+
+### Plan status update
+- Updated `SUPER_MASTER_PLAN.md` section `17`:
+  - Phase A marked `[x] Completed`
+  - Phase B marked `[x] Completed`
+  - Phase C marked `[~] In Progress`
+  - Progress tracker and evidence references updated.
+
+### Validation run in this pass
+- `pnpm prisma generate` passed
+- `pnpm typecheck` passed
+- `pnpm lint` passed
+- `pnpm test` passed (33 tests)
+- Targeted staging e2e passed:
+  - `pnpm playwright test --config=playwright.config.staging.ts playwright/tests/item-detail-and-me-portal.spec.ts playwright/tests/project-financial-overview.spec.ts playwright/tests/project-ae-pv-regression.spec.ts`
+  - Result: `8 passed`

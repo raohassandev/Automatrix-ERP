@@ -163,6 +163,10 @@ export async function approveExpense(params: {
           date: new Date(),
           reference: expenseId,
           balance: newBalance,
+          sourceType: 'EXPENSE_SETTLEMENT',
+          sourceId: expenseId,
+          postedById: approverId,
+          postedAt: new Date(),
         },
       });
 

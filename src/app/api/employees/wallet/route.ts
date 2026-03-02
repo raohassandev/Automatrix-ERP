@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { employeeId, type, amount, reference, companyAccountId } = parsed.data;
+  const { employeeId, type, amount, reference, companyAccountId, purpose } = parsed.data;
   if (!reference || !reference.trim()) {
     return NextResponse.json({ success: false, error: "Reference is required" }, { status: 400 });
   }
@@ -79,6 +79,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Insufficient balance" }, { status: 400 });
   }
 
+  const sourceType = (() => {
+    const resolvedPurpose = (purpose || "ADJUSTMENT").toUpperCase();
+    if (type === "CREDIT") {
+      if (resolvedPurpose === "SALARY") return "PAYROLL";
+      if (resolvedPurpose === "INCENTIVE") return "INCENTIVE";
+      if (resolvedPurpose === "COMPANY_ADVANCE") return "COMPANY_ADVANCE_ISSUE";
+      if (resolvedPurpose === "REIMBURSEMENT") return "REIMBURSEMENT";
+      return "WALLET_TOPUP";
+    }
+    if (resolvedPurpose === "COMPANY_ADVANCE") return "COMPANY_ADVANCE_ADJUSTMENT";
+    return "WALLET_ADJUSTMENT";
+  })();
+
   const result = await prisma.$transaction(async (tx) => {
     const updated = await tx.employee.update({
       where: { id: employeeId },
@@ -94,7 +107,7 @@ export async function POST(req: Request) {
         amount: new Prisma.Decimal(amount),
         reference: reference.trim(),
         balance: new Prisma.Decimal(newBalance),
-        sourceType: type === "CREDIT" ? "WALLET_TOPUP" : "WALLET_ADJUSTMENT",
+        sourceType,
         sourceId: employeeId,
         postedById: session.user.id,
         postedAt: new Date(),
@@ -108,7 +121,7 @@ export async function POST(req: Request) {
     action: "WALLET_TRANSACTION",
     entity: "Employee",
     entityId: employeeId,
-    newValue: JSON.stringify({ ...parsed.data, companyAccountId: resolvedCompanyAccountId }),
+    newValue: JSON.stringify({ ...parsed.data, companyAccountId: resolvedCompanyAccountId, sourceType }),
     userId: session.user.id,
   });
 

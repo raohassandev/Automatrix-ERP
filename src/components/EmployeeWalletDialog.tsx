@@ -33,6 +33,7 @@ export function EmployeeWalletDialog({
   const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
   const [form, setForm] = useState({
     type: "CREDIT",
+    purpose: "COMPANY_ADVANCE",
     amount: "",
     reason: "",
     companyAccountId: "",
@@ -77,6 +78,7 @@ export function EmployeeWalletDialog({
           amount: parseFloat(form.amount),
           reference: form.reason,
           companyAccountId: form.companyAccountId || undefined,
+          purpose: form.purpose,
         }),
       });
 
@@ -91,6 +93,7 @@ export function EmployeeWalletDialog({
       // Reset form
       setForm({
         type: "CREDIT",
+        purpose: "COMPANY_ADVANCE",
         amount: "",
         reason: "",
         companyAccountId: "",
@@ -159,6 +162,22 @@ export function EmployeeWalletDialog({
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             required
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="purpose">Purpose</Label>
+          <Select value={form.purpose} onValueChange={(value) => setForm({ ...form, purpose: value })}>
+            <SelectTrigger id="purpose">
+              <SelectValue placeholder="Select purpose" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="COMPANY_ADVANCE">Company Advance (for site/company expenses)</SelectItem>
+              <SelectItem value="REIMBURSEMENT">Reimbursement</SelectItem>
+              <SelectItem value="INCENTIVE">Incentive payout</SelectItem>
+              <SelectItem value="SALARY">Salary payout</SelectItem>
+              <SelectItem value="ADJUSTMENT">Manual adjustment</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">

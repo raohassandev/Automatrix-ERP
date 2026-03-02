@@ -58,16 +58,17 @@ export default async function CommissionsPage({
     ];
   }
 
-  const [rows, total, employees] = await Promise.all([
+  const [rows, total, employees, vendors] = await Promise.all([
     prisma.commissionEntry.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { employee: true },
+      include: { employee: true, vendor: true },
       skip,
       take,
     }),
     prisma.commissionEntry.count({ where }),
     prisma.employee.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, email: true } }),
+    prisma.vendor.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / take));
@@ -84,7 +85,7 @@ export default async function CommissionsPage({
             <div className="min-w-[220px]">
               <SearchInput placeholder="Search employee or project..." />
             </div>
-            {canEdit ? <CommissionCreateButton employees={employees} /> : null}
+            {canEdit ? <CommissionCreateButton employees={employees} vendors={vendors} /> : null}
           </div>
         </div>
       </div>
@@ -95,8 +96,9 @@ export default async function CommissionsPage({
             <thead>
               <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">Date</th>
-                <th className="py-2">Employee</th>
+                <th className="py-2">Payee</th>
                 <th className="py-2">Project</th>
+                <th className="py-2">Payout</th>
                 <th className="py-2">Basis</th>
                 <th className="py-2">Amount</th>
                 <th className="py-2">Status</th>
@@ -107,8 +109,13 @@ export default async function CommissionsPage({
               {rows.map((row) => (
                 <tr key={row.id} className="border-b">
                   <td className="py-2">{new Date(row.createdAt).toLocaleDateString()}</td>
-                  <td className="py-2">{row.employee?.name || row.employee?.email || "-"}</td>
+                  <td className="py-2">
+                    {row.payeeType === "MIDDLEMAN"
+                      ? `Middleman: ${row.vendor?.name || "-"}`
+                      : row.employee?.name || row.employee?.email || "-"}
+                  </td>
                   <td className="py-2">{row.projectRef || "-"}</td>
+                  <td className="py-2">{row.payoutMode || "-"}</td>
                   <td className="py-2">
                     {row.basisType ? `${row.basisType}` : "-"}
                     {row.percent ? ` • ${Number(row.percent)}%` : ""}
@@ -121,6 +128,9 @@ export default async function CommissionsPage({
                         commission={{
                           id: row.id,
                           employeeId: row.employeeId,
+                          vendorId: row.vendorId,
+                          payeeType: row.payeeType,
+                          payoutMode: row.payoutMode,
                           projectRef: row.projectRef,
                           basisType: row.basisType,
                           basisAmount: row.basisAmount ? Number(row.basisAmount) : null,
@@ -130,6 +140,7 @@ export default async function CommissionsPage({
                           status: row.status,
                         }}
                         employees={employees}
+                        vendors={vendors}
                         canApprove={canApprove}
                       />
                     ) : null}

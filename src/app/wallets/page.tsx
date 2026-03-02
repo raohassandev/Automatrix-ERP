@@ -146,6 +146,11 @@ export default async function WalletLedgerPage({
                 { label: "Expense Settlement", value: "EXPENSE_SETTLEMENT" },
                 { label: "Payroll", value: "PAYROLL" },
                 { label: "Advance", value: "SALARY_ADVANCE" },
+                { label: "Company Advance Issue", value: "COMPANY_ADVANCE_ISSUE" },
+                { label: "Company Advance Adjustment", value: "COMPANY_ADVANCE_ADJUSTMENT" },
+                { label: "Reimbursement", value: "REIMBURSEMENT" },
+                { label: "Incentive", value: "INCENTIVE" },
+                { label: "Commission", value: "COMMISSION" },
               ]}
             />
             <Link

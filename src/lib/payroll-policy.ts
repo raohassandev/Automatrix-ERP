@@ -29,7 +29,7 @@ export async function buildPayrollEntriesByPolicy(
   );
   const policy = DEFAULT_POLICY;
 
-  const [employees, compensations, incentives, advances, attendance] = await Promise.all([
+  const [employees, compensations, incentives, commissions, advances, attendance] = await Promise.all([
     prisma.employee.findMany({
       where: { status: "ACTIVE" },
       orderBy: { name: "asc" },
@@ -41,9 +41,21 @@ export async function buildPayrollEntriesByPolicy(
     prisma.incentiveEntry.findMany({
       where: {
         status: "APPROVED",
-        createdAt: { gte: periodStart, lte: periodEnd },
+        payoutMode: "PAYROLL",
+        settlementStatus: "UNSETTLED",
+        createdAt: { lte: periodEnd },
       },
-      select: { employeeId: true, amount: true },
+      select: { employeeId: true, amount: true, projectRef: true },
+    }),
+    prisma.commissionEntry.findMany({
+      where: {
+        payeeType: "EMPLOYEE",
+        status: "APPROVED",
+        payoutMode: "PAYROLL",
+        settlementStatus: "UNSETTLED",
+        createdAt: { lte: periodEnd },
+      },
+      select: { employeeId: true, amount: true, projectRef: true },
     }),
     prisma.salaryAdvance.findMany({
       where: {
@@ -66,6 +78,26 @@ export async function buildPayrollEntriesByPolicy(
   const incentiveByEmployee = incentives.reduce((map, row) => {
     const current = map.get(row.employeeId) || 0;
     map.set(row.employeeId, current + Number(row.amount || 0));
+    return map;
+  }, new Map<string, number>());
+  const commissionByEmployee = commissions.reduce((map, row) => {
+    const employeeId = row.employeeId || "";
+    if (!employeeId) return map;
+    const current = map.get(employeeId) || 0;
+    map.set(employeeId, current + Number(row.amount || 0));
+    return map;
+  }, new Map<string, number>());
+
+  const incentiveCountByEmployee = incentives.reduce((map, row) => {
+    const current = map.get(row.employeeId) || 0;
+    map.set(row.employeeId, current + 1);
+    return map;
+  }, new Map<string, number>());
+  const commissionCountByEmployee = commissions.reduce((map, row) => {
+    const employeeId = row.employeeId || "";
+    if (!employeeId) return map;
+    const current = map.get(employeeId) || 0;
+    map.set(employeeId, current + 1);
     return map;
   }, new Map<string, number>());
   const advanceByEmployee = advances.reduce((map, row) => {
@@ -97,13 +129,19 @@ export async function buildPayrollEntriesByPolicy(
     const deductions = Number(
       (absenceDeduction + halfDayDeduction + lateDeduction + advanceDeduction).toFixed(2),
     );
-    const incentiveTotal = Number((incentiveByEmployee.get(employee.id) || 0).toFixed(2));
+    const incentiveTotal = Number(
+      ((incentiveByEmployee.get(employee.id) || 0) + (commissionByEmployee.get(employee.id) || 0)).toFixed(2),
+    );
 
     const reasons: string[] = [];
     if (attendanceRow.absent > 0) reasons.push(`Absent: ${attendanceRow.absent} day(s)`);
     if (attendanceRow.halfDay > 0) reasons.push(`Half-day: ${attendanceRow.halfDay}`);
     if (attendanceRow.late > 0) reasons.push(`Late: ${attendanceRow.late}`);
     if (advanceDeduction > 0) reasons.push(`Salary advance recovery`);
+    const incentiveCount = incentiveCountByEmployee.get(employee.id) || 0;
+    if (incentiveCount > 0) reasons.push(`Project incentives: ${incentiveCount}`);
+    const commissionCount = commissionCountByEmployee.get(employee.id) || 0;
+    if (commissionCount > 0) reasons.push(`Employee commissions: ${commissionCount}`);
 
     return {
       employeeId: employee.id,

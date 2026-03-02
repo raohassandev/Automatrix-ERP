@@ -659,3 +659,81 @@ Rules:
 - Inventory/project/employee finance modules post correctly to accounting spine
 - CI green (lint, typecheck, unit, integration/e2e critical suites)
 - Staging acceptance completed with documented reconciliation evidence
+
+---
+
+## 17) OWNER-CRITICAL PROGRAM — Employee Earnings, Advances, Middleman Payouts (NEW, LOCKED 2026-03-02)
+
+### 17.1 Accounting design decision (owner-friendly, locked)
+
+- Use **one professional accounting structure**:
+  - keep a small set of control accounts in GL
+  - track each employee/middleman in subledger rows (not one GL account per person)
+- Why:
+  - cleaner reports
+  - easier audit/reconciliation
+  - scales to many people without chart-of-accounts clutter
+- Control account intent:
+  - `Payroll Payable` (liability)
+  - `Employee Advance - Business Spend` (asset)
+  - `Employee Reimbursement Payable` (liability)
+  - `Incentive/Commission Expense` (expense)
+  - `Agent/Middleman Payable` (liability)
+- Person tracking rule:
+  - employees tracked by `employeeId`
+  - middlemen tracked as `Party` (vendor/agent role) with party-level history
+- Payment policy:
+  - employee incentive defaults to **next payroll inclusion** (not immediate wallet credit)
+  - middleman payout goes through AP flow (bill/payment allocation), not employee wallet
+
+### 17.2 Three-phase implementation plan (staging-first)
+
+#### Phase A — Data + Posting Backbone `[x]`
+- Add additive schema for:
+  - variable pay entries (employee incentive, employee commission, middleman commission)
+  - advance issue and settlement links (business-use vs reimbursement vs personal-use conversion)
+  - payroll component lines for salary-slip breakdown
+- Refactor posting behavior:
+  - approved incentive/commission creates payable component for payroll (employee)
+  - middleman approved payout creates vendor/agent payable path
+  - no destructive migration, no real-data reset
+- Add API rules:
+  - fixed amount and percent-based formulas (including percent of project profit)
+  - strict project linkage and approval/audit traceability
+
+#### Phase B — UX + Mobile Self-Service `[x]`
+- Guided forms for non-accountants:
+  - incentive creation (fixed or % formula)
+  - middleman payout request
+  - employee advance issue and claim settlement
+  - personal-use conversion to salary recoverable advance
+- Salary slip improvement:
+  - show line-by-line incentive/commission components with project reference and reason
+- Employee personalized portal (mobile first):
+  - earnings summary
+  - company advance outstanding
+  - reimbursement/claim status
+  - recent payroll + wallet/ledger activity
+
+#### Phase C — QA + Controlled Release `[~]`
+- End-to-end test matrix on staging:
+  - incentive -> payroll -> salary slip visibility
+  - advance issue -> expense claim -> settlement
+  - personal-use conversion -> payroll deduction recovery
+  - middleman commission -> AP posting -> payment closure
+- Reconciliation checks:
+  - project cost impact
+  - payroll totals vs posted expenses/journals
+  - employee/party history consistency
+- Release gates:
+  - staging acceptance evidence documented
+  - production deploy only after pass
+
+### 17.3 Progress tracker (must keep updated)
+
+- Phase A status: `Completed (2026-03-02)`
+- Phase B status: `Completed (2026-03-02)`
+- Phase C status: `In Progress (targeted staging e2e passed; full owner-critical matrix and reconciliation signoff pending)`
+- Evidence files:
+  - `docs/IMPLEMENTATION_REPORT_2026-03-02.md`
+  - `docs/STAGING_DEEP_AUDIT_2026-03-02.md`

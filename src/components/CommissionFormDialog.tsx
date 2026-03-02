@@ -9,10 +9,14 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 type EmployeeOption = { id: string; name: string; email: string };
+type VendorOption = { id: string; name: string };
 
 type Commission = {
   id: string;
-  employeeId: string;
+  employeeId?: string | null;
+  vendorId?: string | null;
+  payeeType?: string | null;
+  payoutMode?: string | null;
   projectRef?: string | null;
   basisType?: string | null;
   basisAmount?: number | string | null;
@@ -26,19 +30,41 @@ type CommissionFormDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employees: EmployeeOption[];
+  vendors: VendorOption[];
   commission?: Commission | null;
 };
 
-const buildInitialForm = (commission: Commission | null | undefined, employees: EmployeeOption[]) => ({
-  employeeId: commission?.employeeId || employees[0]?.id || "",
-  projectRef: commission?.projectRef || "",
-  basisType: commission?.basisType || "SALES",
-  basisAmount:
-    commission?.basisAmount !== null && commission?.basisAmount !== undefined ? String(commission.basisAmount) : "",
-  percent: commission?.percent !== null && commission?.percent !== undefined ? String(commission.percent) : "",
-  amount: commission?.amount !== null && commission?.amount !== undefined ? String(commission.amount) : "",
-  reason: commission?.reason || "",
-});
+const buildInitialForm = (
+  commission: Commission | null | undefined,
+  employees: EmployeeOption[],
+  vendors: VendorOption[],
+) => {
+  const payeeType = commission?.payeeType || "EMPLOYEE";
+  const payoutMode =
+    commission?.payoutMode || (payeeType === "MIDDLEMAN" ? "AP" : "PAYROLL");
+
+  return {
+    payeeType,
+    employeeId: commission?.employeeId || employees[0]?.id || "",
+    vendorId: commission?.vendorId || vendors[0]?.id || "",
+    payoutMode,
+    projectRef: commission?.projectRef || "",
+    basisType: commission?.basisType || "SALES",
+    basisAmount:
+      commission?.basisAmount !== null && commission?.basisAmount !== undefined
+        ? String(commission.basisAmount)
+        : "",
+    percent:
+      commission?.percent !== null && commission?.percent !== undefined
+        ? String(commission.percent)
+        : "",
+    amount:
+      commission?.amount !== null && commission?.amount !== undefined
+        ? String(commission.amount)
+        : "",
+    reason: commission?.reason || "",
+  };
+};
 
 export function CommissionFormDialog(props: CommissionFormDialogProps) {
   const key = `${props.open ? "open" : "closed"}-${props.commission?.id || "new"}`;
@@ -49,41 +75,51 @@ function CommissionFormDialogInner({
   open,
   onOpenChange,
   employees,
+  vendors,
   commission,
 }: CommissionFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState(() => buildInitialForm(commission, employees));
+  const [form, setForm] = useState(() => buildInitialForm(commission, employees, vendors));
 
   async function submit() {
-    if (!form.employeeId || !form.projectRef) {
-      toast.error("Employee and project are required");
+    if (!form.projectRef) {
+      toast.error("Project is required");
+      return;
+    }
+
+    if (form.payeeType === "EMPLOYEE" && !form.employeeId) {
+      toast.error("Employee is required");
+      return;
+    }
+
+    if (form.payeeType === "MIDDLEMAN" && !form.vendorId) {
+      toast.error("Middleman is required");
       return;
     }
 
     const basisAmount = form.basisAmount ? Number(form.basisAmount) : undefined;
     const percent = form.percent ? Number(form.percent) : undefined;
-    const amount =
-      form.amount
-        ? Number(form.amount)
-        : basisAmount !== undefined && percent !== undefined
-          ? (basisAmount * percent) / 100
-          : undefined;
+    const amount = form.amount ? Number(form.amount) : undefined;
 
-    if (amount === undefined || Number.isNaN(amount) || amount <= 0) {
+    if ((amount === undefined || Number.isNaN(amount) || amount <= 0) && !(basisAmount !== undefined && percent !== undefined)) {
       toast.error("Enter amount or provide percent + basis amount");
       return;
     }
 
     const payload = {
-      employeeId: form.employeeId,
+      payeeType: form.payeeType,
+      employeeId: form.payeeType === "EMPLOYEE" ? form.employeeId : undefined,
+      vendorId: form.payeeType === "MIDDLEMAN" ? form.vendorId : undefined,
+      payoutMode: form.payeeType === "MIDDLEMAN" ? "AP" : form.payoutMode,
       projectRef: form.projectRef || undefined,
       basisType: form.basisType || undefined,
-      basisAmount: basisAmount,
-      percent: percent,
+      basisAmount,
+      percent,
       amount,
       reason: form.reason || undefined,
     };
+
     const url = commission ? `/api/commissions/${commission.id}` : "/api/commissions";
     const method = commission ? "PATCH" : "POST";
 
@@ -97,6 +133,7 @@ function CommissionFormDialogInner({
       toast.error(data.error || "Failed to save commission");
       return;
     }
+
     toast.success(commission ? "Commission updated" : "Commission created");
     onOpenChange(false);
     router.refresh();
@@ -107,7 +144,7 @@ function CommissionFormDialogInner({
       open={open}
       onOpenChange={onOpenChange}
       title={commission ? "Edit Commission" : "Add Commission"}
-      description="Record sales commissions and deductions."
+      description="Record employee or middleman commissions with fixed or percentage formula."
     >
       <form
         onSubmit={(e) => {
@@ -116,30 +153,93 @@ function CommissionFormDialogInner({
         }}
         className="space-y-4"
       >
-        <div className="space-y-2">
-          <Label htmlFor="employee">Employee</Label>
-          <select
-            id="employee"
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-            value={form.employeeId}
-            onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
-          >
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.name} ({employee.email})
-              </option>
-            ))}
-          </select>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="payeeType">Payee Type</Label>
+            <select
+              id="payeeType"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+              value={form.payeeType}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  payeeType: e.target.value,
+                  payoutMode: e.target.value === "MIDDLEMAN" ? "AP" : prev.payoutMode,
+                }))
+              }
+            >
+              <option value="EMPLOYEE">Employee</option>
+              <option value="MIDDLEMAN">Middleman</option>
+            </select>
+          </div>
+
+          {form.payeeType === "EMPLOYEE" ? (
+            <div className="space-y-2">
+              <Label htmlFor="employee">Employee</Label>
+              <select
+                id="employee"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                value={form.employeeId}
+                onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
+              >
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.name} ({employee.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="vendor">Middleman</Label>
+              <select
+                id="vendor"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                value={form.vendorId}
+                onChange={(e) => setForm({ ...form, vendorId: e.target.value })}
+              >
+                {vendors.map((vendor) => (
+                  <option key={vendor.id} value={vendor.id}>
+                    {vendor.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {form.payeeType === "EMPLOYEE" ? (
+            <div className="space-y-2">
+              <Label htmlFor="payoutMode">Payout Mode</Label>
+              <select
+                id="payoutMode"
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+                value={form.payoutMode}
+                onChange={(e) => setForm({ ...form, payoutMode: e.target.value })}
+              >
+                <option value="PAYROLL">Upcoming Payroll</option>
+                <option value="WALLET">Direct Wallet</option>
+              </select>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label>Payout Mode</Label>
+              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                AP (Vendor Bill / Vendor Payment)
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="projectRef">Project</Label>
+            <Input
+              id="projectRef"
+              value={form.projectRef}
+              onChange={(e) => setForm({ ...form, projectRef: e.target.value })}
+              placeholder="Project ID or name"
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="projectRef">Project</Label>
-          <Input
-            id="projectRef"
-            value={form.projectRef}
-            onChange={(e) => setForm({ ...form, projectRef: e.target.value })}
-            placeholder="Project ID or name"
-          />
-        </div>
+
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="basisType">Basis Type</Label>
@@ -161,6 +261,7 @@ function CommissionFormDialogInner({
               value={form.basisAmount}
               onChange={(e) => setForm({ ...form, basisAmount: e.target.value })}
               min={0}
+              placeholder={form.basisType === "PROFIT" ? "Optional (auto from project)" : "Required for % formula"}
             />
           </div>
           <div className="space-y-2">
@@ -175,6 +276,7 @@ function CommissionFormDialogInner({
             />
           </div>
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="amount">Amount (PKR)</Label>
           <Input
@@ -183,18 +285,24 @@ function CommissionFormDialogInner({
             value={form.amount}
             onChange={(e) => setForm({ ...form, amount: e.target.value })}
             min={0}
-            placeholder="Auto-calculated if basis is provided"
+            placeholder="Optional if formula is used"
           />
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="reason">Reason (optional)</Label>
           <Input
             id="reason"
             value={form.reason}
             onChange={(e) => setForm({ ...form, reason: e.target.value })}
-            placeholder="Commission adjustment notes"
+            placeholder="Milestone commission notes"
           />
         </div>
+
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          Employee commissions can be settled in payroll for salary slip visibility. Middleman commissions are routed through AP.
+        </div>
+
         <div className="flex justify-end gap-3 pt-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancel

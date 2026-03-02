@@ -12,6 +12,10 @@ type Incentive = {
   id: string;
   employeeId: string;
   projectRef?: string | null;
+  formulaType?: string | null;
+  basisAmount?: number | string | null;
+  percent?: number | string | null;
+  payoutMode?: string | null;
   amount: number | string;
   reason?: string | null;
   status?: string | null;

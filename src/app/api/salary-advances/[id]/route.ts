@@ -70,6 +70,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           amount: new Prisma.Decimal(updated.amount),
           reference: `ADVANCE_SALARY:${updated.id}`,
           balance: new Prisma.Decimal(newBalance),
+          sourceType: "SALARY_ADVANCE",
+          sourceId: updated.id,
+          postedById: session.user.id,
+          postedAt: new Date(),
         },
       });
       await tx.employee.update({

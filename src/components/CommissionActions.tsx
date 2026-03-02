@@ -7,10 +7,14 @@ import { CommissionFormDialog } from "@/components/CommissionFormDialog";
 import { toast } from "sonner";
 
 type EmployeeOption = { id: string; name: string; email: string };
+type VendorOption = { id: string; name: string };
 
 type Commission = {
   id: string;
-  employeeId: string;
+  employeeId?: string | null;
+  vendorId?: string | null;
+  payeeType?: string | null;
+  payoutMode?: string | null;
   projectRef?: string | null;
   basisType?: string | null;
   basisAmount?: number | string | null;
@@ -23,10 +27,12 @@ type Commission = {
 export function CommissionActions({
   commission,
   employees,
+  vendors,
   canApprove,
 }: {
   commission: Commission;
   employees: EmployeeOption[];
+  vendors: VendorOption[];
   canApprove: boolean;
 }) {
   const [editOpen, setEditOpen] = useState(false);
@@ -66,6 +72,7 @@ export function CommissionActions({
           open={editOpen}
           onOpenChange={setEditOpen}
           employees={employees}
+          vendors={vendors}
           commission={commission}
         />
       ) : null}

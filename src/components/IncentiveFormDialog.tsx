@@ -14,6 +14,10 @@ type Incentive = {
   id: string;
   employeeId: string;
   projectRef?: string | null;
+  formulaType?: string | null;
+  basisAmount?: number | string | null;
+  percent?: number | string | null;
+  payoutMode?: string | null;
   amount: number | string;
   reason?: string | null;
   status?: string | null;
@@ -29,6 +33,16 @@ type IncentiveFormDialogProps = {
 const buildInitialForm = (incentive: Incentive | null | undefined, employees: EmployeeOption[]) => ({
   employeeId: incentive?.employeeId || employees[0]?.id || "",
   projectRef: incentive?.projectRef || "",
+  formulaType: incentive?.formulaType || "FIXED",
+  basisAmount:
+    incentive?.basisAmount !== null && incentive?.basisAmount !== undefined
+      ? String(incentive.basisAmount)
+      : "",
+  percent:
+    incentive?.percent !== null && incentive?.percent !== undefined
+      ? String(incentive.percent)
+      : "",
+  payoutMode: incentive?.payoutMode || "PAYROLL",
   amount: incentive?.amount !== null && incentive?.amount !== undefined ? String(incentive.amount) : "",
   reason: incentive?.reason || "",
 });
@@ -49,14 +63,28 @@ function IncentiveFormDialogInner({
   const [form, setForm] = useState(() => buildInitialForm(incentive, employees));
 
   async function submit() {
-    if (!form.employeeId || !form.amount || !form.projectRef) {
-      toast.error("Employee, project, and amount are required");
+    if (!form.employeeId || !form.projectRef) {
+      toast.error("Employee and project are required");
       return;
     }
+
+    const amount = form.amount ? Number(form.amount) : undefined;
+    const basisAmount = form.basisAmount ? Number(form.basisAmount) : undefined;
+    const percent = form.percent ? Number(form.percent) : undefined;
+
+    if ((amount === undefined || Number.isNaN(amount) || amount <= 0) && !(percent && percent > 0)) {
+      toast.error("Enter amount or percentage formula");
+      return;
+    }
+
     const payload = {
       employeeId: form.employeeId,
       projectRef: form.projectRef || undefined,
-      amount: Number(form.amount),
+      formulaType: form.formulaType,
+      basisAmount,
+      percent,
+      payoutMode: form.payoutMode,
+      amount,
       reason: form.reason || undefined,
     };
     const url = incentive ? `/api/incentives/${incentive.id}` : "/api/incentives";
@@ -82,7 +110,7 @@ function IncentiveFormDialogInner({
       open={open}
       onOpenChange={onOpenChange}
       title={incentive ? "Edit Incentive" : "Add Incentive"}
-      description="Record project incentives and adjustments."
+      description="Record employee incentives with fixed or percentage formula; payroll payout is default."
     >
       <form
         onSubmit={(e) => {
@@ -91,50 +119,110 @@ function IncentiveFormDialogInner({
         }}
         className="space-y-4"
       >
-        <div className="space-y-2">
-          <Label htmlFor="employee">Employee</Label>
-          <select
-            id="employee"
-            className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
-            value={form.employeeId}
-            onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
-          >
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.name} ({employee.email})
-              </option>
-            ))}
-          </select>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="employee">Employee</Label>
+            <select
+              id="employee"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+              value={form.employeeId}
+              onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
+            >
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name} ({employee.email})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="projectRef">Project</Label>
+            <Input
+              id="projectRef"
+              value={form.projectRef}
+              onChange={(e) => setForm({ ...form, projectRef: e.target.value })}
+              placeholder="Project ID or name"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="formulaType">Formula</Label>
+            <select
+              id="formulaType"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+              value={form.formulaType}
+              onChange={(e) => setForm({ ...form, formulaType: e.target.value })}
+            >
+              <option value="FIXED">Fixed Amount</option>
+              <option value="PERCENT_PROFIT">% of Project Profit</option>
+              <option value="PERCENT_AMOUNT">% of Amount</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payoutMode">Payout Mode</Label>
+            <select
+              id="payoutMode"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+              value={form.payoutMode}
+              onChange={(e) => setForm({ ...form, payoutMode: e.target.value })}
+            >
+              <option value="PAYROLL">Upcoming Payroll</option>
+              <option value="WALLET">Direct Wallet</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="basisAmount">Basis Amount</Label>
+            <Input
+              id="basisAmount"
+              type="number"
+              value={form.basisAmount}
+              onChange={(e) => setForm({ ...form, basisAmount: e.target.value })}
+              min={0}
+              placeholder={form.formulaType === "PERCENT_PROFIT" ? "Optional (auto from project)" : "Amount basis"}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="percent">Percent %</Label>
+            <Input
+              id="percent"
+              type="number"
+              value={form.percent}
+              onChange={(e) => setForm({ ...form, percent: e.target.value })}
+              min={0}
+              step="0.01"
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="amount">Amount (PKR)</Label>
+            <Input
+              id="amount"
+              type="number"
+              value={form.amount}
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              min={0}
+              placeholder="Optional if formula is used"
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="projectRef">Project</Label>
-          <Input
-            id="projectRef"
-            value={form.projectRef}
-            onChange={(e) => setForm({ ...form, projectRef: e.target.value })}
-            placeholder="Project ID or name"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="amount">Amount</Label>
-          <Input
-            id="amount"
-            type="number"
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            min={0}
-            required
-          />
-        </div>
+
         <div className="space-y-2">
           <Label htmlFor="reason">Reason (optional)</Label>
           <Input
             id="reason"
             value={form.reason}
             onChange={(e) => setForm({ ...form, reason: e.target.value })}
-            placeholder="Quality deduction, milestone bonus, etc."
+            placeholder="Milestone completion, quality bonus, etc."
           />
         </div>
+
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          Payroll payout keeps incentive visible in salary slip with clear project trace. Use wallet payout only for exceptional immediate settlement.
+        </div>
+
         <div className="flex justify-end gap-3 pt-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancel

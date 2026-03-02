@@ -87,7 +87,8 @@ export async function POST(req: Request) {
       data: {
         periodStart,
         periodEnd,
-        status: parsed.data.status ? sanitizeString(parsed.data.status) : "DRAFT",
+        // Creation is always draft; approval flow settles linked variable pay and posts wallet credits.
+        status: "DRAFT",
         notes: parsed.data.notes ? sanitizeString(parsed.data.notes) : undefined,
         entries: {
           create: parsed.data.entries.map((entry) => {

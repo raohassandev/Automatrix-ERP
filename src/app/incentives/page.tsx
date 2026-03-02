@@ -97,7 +97,9 @@ export default async function IncentivesPage({
                 <th className="py-2">Date</th>
                 <th className="py-2">Employee</th>
                 <th className="py-2">Project</th>
+                <th className="py-2">Payout</th>
                 <th className="py-2">Amount</th>
+                <th className="py-2">Settlement</th>
                 <th className="py-2">Status</th>
                 <th className="py-2">Actions</th>
               </tr>
@@ -108,7 +110,9 @@ export default async function IncentivesPage({
                   <td className="py-2">{new Date(row.createdAt).toLocaleDateString()}</td>
                   <td className="py-2">{row.employee?.name || row.employee?.email || "-"}</td>
                   <td className="py-2">{row.projectRef || "-"}</td>
+                  <td className="py-2">{row.payoutMode || "-"}</td>
                   <td className="py-2">{formatMoney(Number(row.amount))}</td>
+                  <td className="py-2">{row.settlementStatus || "-"}</td>
                   <td className="py-2">{row.status}</td>
                   <td className="py-2">
                     {canEdit ? (
@@ -117,6 +121,10 @@ export default async function IncentivesPage({
                           id: row.id,
                           employeeId: row.employeeId,
                           projectRef: row.projectRef,
+                          formulaType: row.formulaType,
+                          basisAmount: row.basisAmount ? Number(row.basisAmount) : null,
+                          percent: row.percent ? Number(row.percent) : null,
+                          payoutMode: row.payoutMode,
                           amount: Number(row.amount),
                           reason: row.reason,
                           status: row.status,

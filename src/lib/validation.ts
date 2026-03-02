@@ -130,6 +130,9 @@ export const walletSchema = z.object({
   amount: z.number().positive(),
   reference: z.string().optional(),
   companyAccountId: z.string().optional(),
+  purpose: z
+    .enum(["SALARY", "INCENTIVE", "COMPANY_ADVANCE", "REIMBURSEMENT", "ADJUSTMENT"])
+    .optional(),
 });
 
 export const invoiceSchema = z.object({
@@ -142,15 +145,31 @@ export const invoiceSchema = z.object({
   notes: z.string().optional(),
 });
 
-export const incentiveSchema = z.object({
+const incentiveBaseSchema = z.object({
   employeeId: z.string().min(1),
   projectRef: z.string().min(1),
-  amount: z.number().positive(),
+  formulaType: z.enum(["FIXED", "PERCENT_PROFIT", "PERCENT_AMOUNT"]).optional(),
+  basisAmount: z.number().nonnegative().optional(),
+  percent: z.number().positive().optional(),
+  amount: z.number().positive().optional(),
+  payoutMode: z.enum(["PAYROLL", "WALLET"]).optional(),
   reason: z.string().optional(),
   status: z.string().optional(),
 });
 
-export const incentiveUpdateSchema = incentiveSchema.partial();
+export const incentiveSchema = incentiveBaseSchema
+  .refine(
+    (data) =>
+      typeof data.amount === "number" ||
+      (typeof data.percent === "number" &&
+        (data.formulaType === "PERCENT_PROFIT" || typeof data.basisAmount === "number")),
+    {
+      message: "Provide amount, or percent with profit/amount basis.",
+      path: ["amount"],
+    },
+  );
+
+export const incentiveUpdateSchema = incentiveBaseSchema.partial();
 
 export const payrollRunSchema = z.object({
   periodStart: z.string().min(1),
@@ -217,18 +236,52 @@ export const vendorSchema = z.object({
 
 export const vendorUpdateSchema = vendorSchema.partial();
 
-export const commissionSchema = z.object({
-  employeeId: z.string().min(1),
+const commissionBaseSchema = z.object({
+  employeeId: z.string().min(1).optional(),
+  vendorId: z.string().min(1).optional(),
+  payeeType: z.enum(["EMPLOYEE", "MIDDLEMAN"]).optional(),
   projectRef: z.string().min(1),
   basisType: z.string().optional(),
   basisAmount: z.number().nonnegative().optional(),
   percent: z.number().nonnegative().optional(),
+  payoutMode: z.enum(["PAYROLL", "WALLET", "AP"]).optional(),
   amount: z.number().positive().optional(),
   reason: z.string().optional(),
   status: z.string().optional(),
 });
 
-export const commissionUpdateSchema = commissionSchema.partial();
+export const commissionSchema = commissionBaseSchema.superRefine((data, ctx) => {
+  const payeeType = data.payeeType || "EMPLOYEE";
+  if (payeeType === "EMPLOYEE" && !data.employeeId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["employeeId"],
+      message: "Employee is required for employee commission.",
+    });
+  }
+  if (payeeType === "MIDDLEMAN" && !data.vendorId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["vendorId"],
+      message: "Middleman (vendor) is required for middleman commission.",
+    });
+  }
+  const hasAmount = typeof data.amount === "number" && data.amount > 0;
+  const hasPercentFormula =
+    typeof data.percent === "number" &&
+    data.percent > 0 &&
+    typeof data.basisAmount === "number" &&
+    data.basisAmount >= 0;
+  if (!hasAmount && !hasPercentFormula) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["amount"],
+      message: "Amount is required or provide percent + basis amount.",
+    });
+  }
+});
+
+export const commissionUpdateSchema = commissionBaseSchema.partial();
 
 export const goodsReceiptSchema = z.object({
   grnNumber: z.string().min(1),
