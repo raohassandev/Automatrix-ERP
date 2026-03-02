@@ -83,6 +83,29 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
 
   async function submit() {
     try {
+      if (!isEdit && !form.name.trim()) {
+        toast.error("Item name is required.");
+        return;
+      }
+      if (!form.unit.trim()) {
+        toast.error("Unit is required.");
+        return;
+      }
+      const numericFields = [
+        ["Avg Cost", form.unitCost],
+        ["Selling Price", form.sellingPrice],
+        ["Initial Quantity", form.initialQuantity],
+        ["Minimum Stock", form.minStock],
+        ["Reorder Qty", form.reorderQty],
+      ] as const;
+      for (const [label, value] of numericFields) {
+        if (value === "") continue;
+        if (!Number.isFinite(Number(value)) || Number(value) < 0) {
+          toast.error(`${label} must be a valid non-negative number.`);
+          return;
+        }
+      }
+
       const res = await fetch(isEdit ? `/api/inventory/${initialData?.id}` : "/api/inventory", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
@@ -138,7 +161,7 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit Inventory Item" : "Add Inventory Item"}
-      description={isEdit ? "Update inventory item details" : "Add a new item to the inventory system"}
+      description={isEdit ? "Update item details used in stock and valuation reports." : "Simple setup: item name, unit, and opening values."}
     >
       <form
         onSubmit={(e) => {
@@ -147,6 +170,9 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
         }}
         className="space-y-4"
       >
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Use clear item names and units (e.g., pcs, meter, kg). Accurate opening values improve stock and cost reports.
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">Item Name</Label>

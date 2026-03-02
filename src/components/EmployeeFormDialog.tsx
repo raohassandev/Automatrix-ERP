@@ -133,13 +133,25 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
 
   async function submit() {
     try {
+      if (!form.name.trim()) {
+        toast.error("Employee name is required.");
+        return;
+      }
+      if (!isEdit && !form.email.trim()) {
+        toast.error("Email is required.");
+        return;
+      }
+      if (form.initialWalletBalance && (!Number.isFinite(Number(form.initialWalletBalance)) || Number(form.initialWalletBalance) < 0)) {
+        toast.error("Initial wallet balance must be a valid non-negative number.");
+        return;
+      }
       const res = await fetch(isEdit ? `/api/employees/${initialData?.id}` : "/api/employees", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(isEdit
             ? {
-                name: form.name,
+                name: form.name.trim(),
                 phone: form.phone || null,
                 role: form.role,
                 status: form.status,
@@ -153,8 +165,8 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
                 joinDate: form.joinDate,
               }
             : {
-                name: form.name,
-                email: form.email,
+                name: form.name.trim(),
+                email: form.email.trim(),
                 phone: form.phone || null,
                 cnic: form.cnic || undefined,
                 address: form.address || undefined,
@@ -199,7 +211,7 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
       open={open}
       onOpenChange={onOpenChange}
       title={isEdit ? "Edit Employee" : "Add Employee"}
-      description={isEdit ? "Update employee record" : "Create a new employee record in the system"}
+      description={isEdit ? "Update employee record and role settings." : "Simple setup: identity, role, reporting, and optional wallet opening balance."}
     >
       <form
         onSubmit={(e) => {
@@ -208,6 +220,9 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
         }}
         className="space-y-4"
       >
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Keep role and reporting officer accurate. These directly control approvals and access.
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>

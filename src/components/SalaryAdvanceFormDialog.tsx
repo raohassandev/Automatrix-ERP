@@ -48,13 +48,17 @@ function SalaryAdvanceFormDialogInner({
 
   async function submit() {
     if (!form.employeeId || !form.amount || !form.reason) {
-      toast.error("Employee, amount, and reason are required");
+      toast.error("Employee, amount, and reason are required.");
+      return;
+    }
+    if (!Number.isFinite(Number(form.amount)) || Number(form.amount) <= 0) {
+      toast.error("Amount must be greater than 0.");
       return;
     }
     const payload = {
       employeeId: form.employeeId,
       amount: Number(form.amount),
-      reason: form.reason,
+      reason: form.reason.trim(),
     };
     const url = advance ? `/api/salary-advances/${advance.id}` : "/api/salary-advances";
     const method = advance ? "PATCH" : "POST";
@@ -79,7 +83,7 @@ function SalaryAdvanceFormDialogInner({
       open={open}
       onOpenChange={onOpenChange}
       title={advance ? "Edit Salary Advance" : "Request Salary Advance"}
-      description="Record salary advances with justification."
+      description="Use this for advance salary requests with clear business reason."
     >
       <form
         onSubmit={(e) => {
@@ -88,6 +92,9 @@ function SalaryAdvanceFormDialogInner({
         }}
         className="space-y-4"
       >
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Approved advances affect payroll and cash planning. Write a clear reason.
+        </div>
         <div className="space-y-2">
           <Label htmlFor="employee">Employee</Label>
           <select

@@ -258,9 +258,18 @@ export function VendorBillFormDialog({
 
   async function submit() {
     if (!form.billNumber || !form.vendorId || !form.projectRef || !form.billDate) {
-      toast.error("Bill number, vendor, project, and bill date are required");
+      toast.error("Bill number, vendor, project, and bill date are required.");
       return;
     }
+    const billDate = new Date(form.billDate);
+    if (Number.isNaN(billDate.getTime())) {
+      toast.error("Bill date is invalid.");
+      return;
+    }
+    const dueDateValue = form.dueDate
+      ? form.dueDate
+      : new Date(billDate.getTime() + 30 * 86400000).toISOString().slice(0, 10);
+
     const cleanedLines = lines
       .map((l, idx) => {
         const qty = Number(l.quantity);
@@ -283,18 +292,22 @@ export function VendorBillFormDialog({
       .filter((l) => l.description && Number.isFinite(l.total) && l.total >= 0);
 
     if (cleanedLines.length === 0) {
-      toast.error("Add at least one bill line");
+      toast.error("Add at least one valid bill line.");
+      return;
+    }
+    if (cleanedLines.some((line) => Number(line.total) <= 0)) {
+      toast.error("Every bill line total must be greater than zero.");
       return;
     }
 
     const payload = {
-      billNumber: form.billNumber,
+      billNumber: form.billNumber.trim(),
       vendorId: form.vendorId,
       projectRef: form.projectRef,
       billDate: form.billDate,
-      dueDate: form.dueDate || undefined,
+      dueDate: dueDateValue,
       currency: form.currency || "PKR",
-      notes: form.notes || undefined,
+      notes: form.notes?.trim() || undefined,
       lines: cleanedLines,
     };
 
@@ -322,7 +335,7 @@ export function VendorBillFormDialog({
       open={open}
       onOpenChange={handleOpenChange}
       title={billId ? "Edit Vendor Bill" : "Create Vendor Bill"}
-      description="Record vendor bills (multi-line). Posting/allocations handled separately."
+      description="Simple flow: select vendor + project, add lines, save draft, then submit/approve/post from actions."
     >
       <form
         onSubmit={(e) => {
@@ -331,6 +344,9 @@ export function VendorBillFormDialog({
         }}
         className="space-y-4"
       >
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Tip: If you leave Due Date empty, system uses Net 30 (bill date + 30 days).
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="importGrn">Import from GRN (optional)</Label>

@@ -150,6 +150,43 @@
 
 ---
 
+## Update — Usability-first form logic and UI pass (owner request)
+
+### What changed
+
+1. Finance form UX/logic hardening:
+   - `src/components/ExpenseForm.tsx`
+   - Added plain-language guidance, replaced alert popups with toasts, stricter validations.
+   - Added company account selector when payment source is `COMPANY_ACCOUNT` (previously missing in create form path).
+
+2. Procurement accounting form UX:
+   - `src/components/VendorBillFormDialog.tsx`
+   - `src/components/VendorPaymentFormDialog.tsx`
+   - Added clearer guidance copy, stronger required-field checks, cleaner payload trimming, and allocation clarity (`Unallocated` amount indicator).
+   - Vendor bill now defaults due date to Net 30 if left empty.
+
+3. Inventory/project/employee/payroll form clarity:
+   - `src/components/InventoryFormDialog.tsx`
+   - `src/components/ProjectFormDialog.tsx`
+   - `src/components/EmployeeFormDialog.tsx`
+   - `src/components/SalaryAdvanceFormDialog.tsx`
+   - `src/components/PayrollRunFormDialog.tsx`
+   - Added plain-language helper sections + validation hardening (non-negative numeric checks, date sanity, deduction-reason requirement when deductions > 0).
+
+### Validation
+
+- `pnpm typecheck` ✅
+- `pnpm lint` ✅
+- `pnpm test` ✅
+- `playwright/tests/rb4-procurement-chain.spec.ts` ✅
+
+### Staging
+
+- Deployed to ERP staging and verified:
+  - `https://erp-staging.automatrix.pk/api/health` returns `200 OK`.
+
+---
+
 ## Update — AR posting + accounting statement exports
 
 ### What changed

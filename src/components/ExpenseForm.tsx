@@ -6,6 +6,7 @@ import Modal from "@/components/Modal";
 import CategoryAutoComplete from "./CategoryAutoComplete";
 import PaymentModeAutoComplete from "./PaymentModeAutoComplete";
 import ProjectAutoComplete from "./ProjectAutoComplete";
+import { toast } from "sonner";
 
 type DuplicateExpense = {
   id: string;
@@ -25,12 +26,13 @@ export default function ExpenseForm() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
-    date: "",
+    date: new Date().toISOString().slice(0, 10),
     description: "",
     category: "",
     amount: "",
     paymentMode: "",
     paymentSource: "COMPANY_DIRECT" as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
+    companyAccountId: "",
     expenseType: "COMPANY" as "COMPANY" | "OWNER_PERSONAL",
     project: "",
     receiptUrl: "",
@@ -42,6 +44,7 @@ export default function ExpenseForm() {
   const [duplicateItems, setDuplicateItems] = useState<DuplicateExpense[]>([]);
   const [categories, setCategories] = useState<CategoryMeta[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [companyAccounts, setCompanyAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -70,6 +73,19 @@ export default function ExpenseForm() {
     fetchCategories();
   }, []);
 
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const res = await fetch("/api/company-accounts");
+        const data = await res.json();
+        if (res.ok && data?.success && Array.isArray(data.data)) {
+          setCompanyAccounts(data.data);
+        }
+      } catch {}
+    };
+    fetchAccounts();
+  }, []);
+
   // Phase 1: expenses are non-stock only (no Expense -> Inventory postings).
 
   const selectedCategory = useMemo(
@@ -79,8 +95,32 @@ export default function ExpenseForm() {
   const parsedAmount = Number(form.amount);
 
   async function submit(ignoreDuplicate = false) {
+    if (!form.date) {
+      toast.error("Expense date is required.");
+      return;
+    }
+    if (!form.description.trim()) {
+      toast.error("Description is required.");
+      return;
+    }
+    if (!form.category.trim()) {
+      toast.error("Category is required.");
+      return;
+    }
+    if (!form.paymentMode.trim()) {
+      toast.error("Payment mode is required.");
+      return;
+    }
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast.error("Amount must be greater than 0.");
+      return;
+    }
     if (form.expenseType !== "OWNER_PERSONAL" && !form.project) {
-      alert("Project is required for company expenses");
+      toast.error("Project is required for company expenses.");
+      return;
+    }
+    if (form.paymentSource === "COMPANY_ACCOUNT" && !form.companyAccountId) {
+      toast.error("Select a company account when payment source is Company Paid (Account).");
       return;
     }
     if (
@@ -89,7 +129,7 @@ export default function ExpenseForm() {
       Number.isFinite(parsedAmount) &&
       parsedAmount > selectedCategory.maxAmount
     ) {
-      alert(`Amount exceeds the allowed limit of PKR ${selectedCategory.maxAmount} for this category.`);
+      toast.error(`Amount exceeds the allowed limit of PKR ${selectedCategory.maxAmount} for this category.`);
       return;
     }
     const res = await fetch("/api/expenses", {
@@ -102,6 +142,7 @@ export default function ExpenseForm() {
         amount: parseFloat(form.amount),
         paymentMode: form.paymentMode,
         paymentSource: form.paymentSource,
+        companyAccountId: form.paymentSource === "COMPANY_ACCOUNT" ? form.companyAccountId : undefined,
         expenseType: form.expenseType,
         project: form.project,
         receiptUrl: form.receiptUrl || undefined,
@@ -121,18 +162,19 @@ export default function ExpenseForm() {
         setDuplicateModalOpen(true);
         return;
       }
-      alert(data.details || data.error || "Failed to submit expense");
+      toast.error(data.details || data.error || "Failed to submit expense");
       return;
     }
 
-    alert("Expense submitted successfully!");
+    toast.success("Expense submitted successfully.");
     setForm({
-      date: "",
+      date: new Date().toISOString().slice(0, 10),
       description: "",
       category: "",
       amount: "",
       paymentMode: "",
       paymentSource: "COMPANY_DIRECT",
+      companyAccountId: "",
       expenseType: "COMPANY",
       project: "",
       receiptUrl: "",
@@ -165,6 +207,9 @@ export default function ExpenseForm() {
   return (
     <div className="rounded-xl border bg-white p-6 shadow-sm">
       <h2 className="text-lg font-semibold">Submit Expense</h2>
+      <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+        Fill in 4 basics: date, category, amount, and project. Use Procurement for stock/material purchases.
+      </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <input
           className="rounded-md border px-3 py-2"
@@ -201,6 +246,24 @@ export default function ExpenseForm() {
           <option value="COMPANY_ACCOUNT">Company Paid (Account)</option>
           <option value="EMPLOYEE_WALLET">Employee Wallet</option>
         </select>
+        {form.paymentSource === "COMPANY_ACCOUNT" ? (
+          <select
+            className="rounded-md border px-3 py-2"
+            value={form.companyAccountId}
+            onChange={(e) => setForm({ ...form, companyAccountId: e.target.value })}
+          >
+            <option value="">Select company account</option>
+            {companyAccounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name} ({account.type})
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="rounded-md border px-3 py-2 text-xs text-muted-foreground">
+            Company account is not required for this payment source.
+          </div>
+        )}
         <select
           className="rounded-md border px-3 py-2"
           value={form.expenseType}

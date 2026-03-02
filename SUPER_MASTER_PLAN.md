@@ -424,6 +424,55 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
+### 11.1 Status Snapshot (As of 2026-03-02)
+
+Legend:
+- `[x]` Completed (target end-state achieved)
+- `[~]` In Progress (partially implemented)
+- `[ ]` Not Started / not enough implemented for target end-state
+
+1. `[~]` Identity, RBAC, and Security
+2. `[~]` Organization and Settings
+3. `[~]` Master Data Management
+4. `[ ]` CRM and Pre-Sales
+5. `[ ]` Sales (O2C)
+6. `[~]` Procurement (P2P)
+7. `[~]` Inventory and Store
+8. `[~]` Project Management (commercial + execution)
+9. `[ ]` Engineering and Site Operations
+10. `[~]` Expense Management
+11. `[~]` Employee Wallet and Advances
+12. `[~]` HRMS
+13. `[~]` Payroll and Compensation
+14. `[~]` Finance and Accounting Core
+15. `[~]` Treasury and Banking
+16. `[~]` Approvals Engine
+17. `[~]` Audit, Compliance, and Governance
+18. `[~]` Reporting and BI
+19. `[ ]` Document Management
+20. `[ ]` Integrations and Data Ops
+
+### 11.2 Owner-Critical Module Status (Requested)
+
+- Finance & Accounting Core (`14`): `[~]` In Progress
+  - Implemented: COA, journals, fiscal periods, posting adapters (income/expense/vendor bill/vendor payment/invoice), TB/P&L/Balance Sheet/Cash Position/AR Aging/Cash Forecast.
+  - Remaining for end-state: full O2C receipt allocation workflow, bank reconciliation, final close controls + release-grade reconciliation and UAT signoff.
+
+- Inventory & Store (`7`): `[~]` In Progress
+  - Implemented: item master, inventory ledger postings via GRN, stock-in controls, reporting baseline.
+  - Remaining for end-state: full store operations depth, stricter warehouse controls everywhere, advanced valuation/control scenarios.
+
+- Project Management (`8`): `[~]` In Progress
+  - Implemented: project master, assignments, finance-linked project cost/recovery rollups in current flows.
+  - Remaining for end-state: full execution workflows, deeper commercial controls, phase-4 engineering/site integrations.
+
+- Employee Modules (`11`,`12`,`13`): `[~]` In Progress
+  - Implemented: employee records baseline, wallet/advances, payroll baseline with posting integration path.
+  - Remaining for end-state: mature HRMS lifecycle (attendance/leave/self-service), complete payroll operations and policy-depth.
+
+**Completed target end-state modules right now:** none (`[x]` = 0).  
+Reason: several core modules are strong but still partial against the locked end-state definition.
+
 ---
 
 ## 12) PHASED ROADMAP (Execution Order, DoD, Dependencies)
@@ -605,4 +654,3 @@ Rules:
 - Inventory/project/employee finance modules post correctly to accounting spine
 - CI green (lint, typecheck, unit, integration/e2e critical suites)
 - Staging acceptance completed with documented reconciliation evidence
-

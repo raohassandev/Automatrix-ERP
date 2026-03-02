@@ -83,6 +83,14 @@ function PayrollRunFormDialogInner({
   const removeEntry = (index: number) => setEntries((prev) => prev.filter((_, idx) => idx !== index));
 
   async function submit() {
+    if (!form.periodStart || !form.periodEnd) {
+      toast.error("Payroll period start and end are required.");
+      return;
+    }
+    if (new Date(form.periodEnd) < new Date(form.periodStart)) {
+      toast.error("Period end cannot be earlier than period start.");
+      return;
+    }
     const cleaned = entries
       .map((entry) => ({
         employeeId: entry.employeeId,
@@ -93,8 +101,28 @@ function PayrollRunFormDialogInner({
       }))
       .filter((entry) => entry.employeeId && entry.baseSalary >= 0);
 
-    if (!form.periodStart || !form.periodEnd || cleaned.length === 0) {
-      toast.error("Period and at least one entry are required");
+    if (cleaned.length === 0) {
+      toast.error("Add at least one valid payroll entry.");
+      return;
+    }
+    const invalidNumbers = cleaned.some(
+      (entry) =>
+        !Number.isFinite(entry.baseSalary) ||
+        !Number.isFinite(entry.incentiveTotal) ||
+        !Number.isFinite(entry.deductions) ||
+        entry.baseSalary < 0 ||
+        entry.incentiveTotal < 0 ||
+        entry.deductions < 0,
+    );
+    if (invalidNumbers) {
+      toast.error("Salary, incentive, and deduction values must be valid non-negative numbers.");
+      return;
+    }
+    const missingDeductionReason = cleaned.some(
+      (entry) => entry.deductions > 0 && !(entry.deductionReason || "").trim(),
+    );
+    if (missingDeductionReason) {
+      toast.error("Deduction reason is required when deduction amount is greater than zero.");
       return;
     }
 
@@ -129,7 +157,7 @@ function PayrollRunFormDialogInner({
       open={open}
       onOpenChange={onOpenChange}
       title={run ? "Edit Payroll Run" : "Create Payroll Run"}
-      description="Build a pay period and approve to credit wallets."
+      description="Create pay period entries, review totals, then approve to post payroll."
     >
       <form
         onSubmit={(e) => {
@@ -138,6 +166,9 @@ function PayrollRunFormDialogInner({
         }}
         className="space-y-4"
       >
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Keep one employee per row. If deductions are entered, write the reason for audit clarity.
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="periodStart">Period Start</Label>

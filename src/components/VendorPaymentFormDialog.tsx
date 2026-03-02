@@ -225,11 +225,11 @@ export function VendorPaymentFormDialog({
 
   async function submit() {
     if (!form.paymentNumber || !form.vendorId || !form.projectRef || !form.paymentDate || !form.companyAccountId) {
-      toast.error("Payment number, vendor, project, date, and account are required");
+      toast.error("Payment number, vendor, project, date, and account are required.");
       return;
     }
-    if (Number(form.amount) < 0) {
-      toast.error("Amount must be >= 0");
+    if (Number(form.amount) <= 0) {
+      toast.error("Amount must be greater than 0.");
       return;
     }
 
@@ -238,14 +238,14 @@ export function VendorPaymentFormDialog({
       .filter((a) => a.vendorBillId && a.amount > 0);
 
     const payload = {
-      paymentNumber: form.paymentNumber,
+      paymentNumber: form.paymentNumber.trim(),
       vendorId: form.vendorId,
       projectRef: form.projectRef,
       paymentDate: form.paymentDate,
       companyAccountId: form.companyAccountId,
-      method: form.method || undefined,
+      method: form.method?.trim() || undefined,
       amount: Number(form.amount),
-      notes: form.notes || undefined,
+      notes: form.notes?.trim() || undefined,
       allocations: cleanedAllocations.length > 0 ? cleanedAllocations : undefined,
     };
 
@@ -273,7 +273,7 @@ export function VendorPaymentFormDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={paymentId ? "Edit Vendor Payment" : "Create Vendor Payment"}
-      description="Record vendor payments and allocate them against posted vendor bills."
+      description="Simple flow: choose vendor + project + account, enter amount, then allocate to open bills."
     >
       {loading ? <div className="p-2 text-sm text-muted-foreground">Loading...</div> : null}
 
@@ -284,6 +284,9 @@ export function VendorPaymentFormDialog({
         }}
         className="space-y-4"
       >
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Allocate only what you are paying today. You can leave allocations empty to save draft first.
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="paymentNumber">Payment Number</Label>
@@ -437,6 +440,12 @@ export function VendorPaymentFormDialog({
           <div className="text-right text-sm">
             <span className="text-muted-foreground">Allocated: </span>
             <span className="font-semibold">PKR {allocationSum.toLocaleString()}</span>
+          </div>
+          <div className="text-right text-sm">
+            <span className="text-muted-foreground">Unallocated: </span>
+            <span className="font-semibold">
+              PKR {Math.max(0, Number(form.amount) - allocationSum).toLocaleString()}
+            </span>
           </div>
           {allocationSum > Number(form.amount) ? (
             <div className="text-sm text-red-600">Allocation total cannot exceed payment amount.</div>

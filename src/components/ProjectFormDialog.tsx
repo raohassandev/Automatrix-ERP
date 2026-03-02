@@ -113,17 +113,37 @@ export function ProjectFormDialog({
 
   async function submit() {
     try {
+      if (!form.name.trim() || !form.clientId) {
+        toast.error("Project name and client are required.");
+        return;
+      }
+      if (!isEdit && !form.projectId.trim()) {
+        toast.error("Project ID is required.");
+        return;
+      }
+      if (!isEdit && !form.startDate) {
+        toast.error("Start date is required.");
+        return;
+      }
+      if (form.contractValue !== "" && (!Number.isFinite(Number(form.contractValue)) || Number(form.contractValue) < 0)) {
+        toast.error("Total budget must be a valid non-negative number.");
+        return;
+      }
+      if (form.startDate && form.endDate && new Date(form.endDate) < new Date(form.startDate)) {
+        toast.error("End date cannot be earlier than start date.");
+        return;
+      }
       const payload = isEdit
         ? {
-            name: form.name,
+            name: form.name.trim(),
             clientId: form.clientId,
             endDate: form.endDate || undefined,
             contractValue: form.contractValue ? parseFloat(form.contractValue) : 0,
             status: form.status,
           }
         : {
-            projectId: form.projectId,
-            name: form.name,
+            projectId: form.projectId.trim(),
+            name: form.name.trim(),
             clientId: form.clientId,
             startDate: form.startDate,
             endDate: form.endDate || undefined,
@@ -188,7 +208,7 @@ export function ProjectFormDialog({
       open={open}
       onOpenChange={onOpenChange}
         title={isEdit ? "Edit Project" : "Create Project"}
-        description={isEdit ? "Update project details" : "Add a new project linked to a client"}
+        description={isEdit ? "Update commercial and planning details." : "Simple setup: project ID, name, client, dates, budget, and team."}
     >
       <form
         onSubmit={(e) => {
@@ -197,6 +217,9 @@ export function ProjectFormDialog({
         }}
         className="space-y-4"
       >
+        <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          Project ID should match your quotation or commercial reference for easy tracking.
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="projectId">Project ID</Label>
@@ -277,12 +300,12 @@ export function ProjectFormDialog({
               onChange={(e) => setForm({ ...form, status: e.target.value })}
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
             >
-              <option value="NOT_STARTED">NOT_STARTED</option>
-              <option value="UPCOMING">UPCOMING</option>
-              <option value="ACTIVE">ACTIVE</option>
-              <option value="ON_HOLD">ON_HOLD</option>
-              <option value="COMPLETED">COMPLETED</option>
-              <option value="CLOSED">CLOSED</option>
+              <option value="NOT_STARTED">Not Started</option>
+              <option value="UPCOMING">Upcoming</option>
+              <option value="ACTIVE">Active</option>
+              <option value="ON_HOLD">On Hold</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="CLOSED">Closed</option>
             </select>
           </div>
 
