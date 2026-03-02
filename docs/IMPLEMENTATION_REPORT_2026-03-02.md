@@ -148,3 +148,70 @@
   - `src/lib/navigation.ts`
 - Updated module lock status:
   - `SUPER_MASTER_PLAN.md` marks module `14` (Finance and Accounting Core) as completed `[x]` for locked baseline.
+
+## Incomplete-modules execution pass (owner-directed)
+
+### Employee wallet history completion
+- Added full drilldown-friendly wallet history improvements:
+  - Wallet ledger now supports `employeeId` + `sourceType` filtering for targeted traceability.
+  - Wallet list/export now include posting trace fields (`sourceType`, `companyAccount`, `postedBy`).
+  - Added direct “Full History” links from employee profile and My Dashboard wallet widgets.
+- Files:
+  - `src/app/wallets/page.tsx`
+  - `src/app/api/wallets/export/route.ts`
+  - `src/app/employees/[id]/page.tsx`
+  - `src/app/me/page.tsx`
+
+### Approvals engine completion increment
+- Expanded recent approval history to include both `Expense` and `Income` decisions in a unified timeline.
+- Added approval-history type badges for faster review context.
+- Files:
+  - `src/app/approvals/page.tsx`
+  - `src/components/ApprovalQueue.tsx`
+
+### Procurement (P2P) completion increment
+- Added document-level attachments support for core procurement docs:
+  - Purchase Orders
+  - Goods Receipts (GRN)
+  - Vendor Bills
+- Added reusable procurement attachment dialog with inline listing + URL add flow and audit-backed APIs.
+- Surfaced notes in PO/GRN/Vendor Bill list tables for operational readability.
+- Files:
+  - `src/app/api/procurement/purchase-orders/[id]/attachments/route.ts`
+  - `src/app/api/procurement/grn/[id]/attachments/route.ts`
+  - `src/app/api/procurement/vendor-bills/[id]/attachments/route.ts`
+  - `src/components/ProcurementAttachmentsDialog.tsx`
+  - `src/components/PurchaseOrderActions.tsx`
+  - `src/components/GoodsReceiptActions.tsx`
+  - `src/components/VendorBillActions.tsx`
+  - `src/app/procurement/purchase-orders/page.tsx`
+  - `src/app/procurement/grn/page.tsx`
+  - `src/app/procurement/vendor-bills/page.tsx`
+
+### Expense management completion increment
+- Improved expense operational controls for finance users:
+  - Added direct `Mark Paid` action from expense list (permission-aware, uses existing API posting flow).
+  - Updated status filters to real workflow states (`PENDING_L1`, `PENDING_L2`, `PENDING_L3`, `APPROVED`, `REJECTED`, `PAID`).
+  - Added at-a-glance amount cards (total/pending/approved/paid) on expense page.
+- Files:
+  - `src/components/ExpenseActions.tsx`
+  - `src/app/expenses/page.tsx`
+
+### Inventory and store completion increment
+- Added warehouse-level traceability in inventory ledger:
+  - warehouse filter in ledger page
+  - warehouse column in table/mobile
+  - warehouse included in CSV export
+- Reinforced procurement-first stock-in UX in manual movement dialog by removing purchase stock-in option from manual UI.
+- Files:
+  - `src/app/inventory/ledger/page.tsx`
+  - `src/app/inventory/ledger/LedgerClient.tsx`
+  - `src/app/api/inventory/ledger/export/route.ts`
+  - `src/components/InventoryLedgerActions.tsx`
+  - `src/components/InventoryLedgerDialog.tsx`
+
+### Validation
+- Completed after each change-set:
+  - `pnpm typecheck`
+  - `pnpm lint`
+  - `pnpm test`
