@@ -7,6 +7,8 @@ import PaginationControls from "@/components/PaginationControls";
 import SearchInput from "@/components/SearchInput";
 import { SalaryAdvanceCreateButton } from "@/components/SalaryAdvanceCreateButton";
 import { SalaryAdvanceActions } from "@/components/SalaryAdvanceActions";
+import { StatusBadge } from "@/components/StatusBadge";
+import { MobileCard } from "@/components/MobileCard";
 
 export default async function SalaryAdvancesPage({
   searchParams,
@@ -75,13 +77,13 @@ export default async function SalaryAdvancesPage({
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Salary Advances</h1>
             <p className="mt-2 text-muted-foreground">Advance salary requests and approvals.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="min-w-[220px]">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <div className="w-full sm:min-w-[220px]">
               <SearchInput placeholder="Search employee or reason..." />
             </div>
             {canEdit ? <SalaryAdvanceCreateButton employees={employees} /> : null}
@@ -90,7 +92,7 @@ export default async function SalaryAdvancesPage({
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
@@ -109,7 +111,9 @@ export default async function SalaryAdvancesPage({
                   <td className="py-2">{row.employee?.name || row.employee?.email || "-"}</td>
                   <td className="py-2">{formatMoney(Number(row.amount))}</td>
                   <td className="py-2">{row.reason}</td>
-                  <td className="py-2">{row.status}</td>
+                  <td className="py-2">
+                    <StatusBadge status={row.status} />
+                  </td>
                   <td className="py-2">
                     {canEdit ? (
                       <SalaryAdvanceActions
@@ -129,6 +133,35 @@ export default async function SalaryAdvancesPage({
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="space-y-3 md:hidden">
+          {rows.map((row) => (
+            <MobileCard
+              key={row.id}
+              title={row.employee?.name || row.employee?.email || "-"}
+              subtitle={row.reason}
+              fields={[
+                { label: "Date", value: new Date(row.createdAt).toLocaleDateString() },
+                { label: "Amount", value: formatMoney(Number(row.amount)) },
+                { label: "Status", value: <StatusBadge status={row.status} /> },
+              ]}
+              actions={
+                canEdit ? (
+                  <SalaryAdvanceActions
+                    advance={{
+                      id: row.id,
+                      employeeId: row.employeeId,
+                      amount: Number(row.amount),
+                      reason: row.reason,
+                      status: row.status,
+                    }}
+                    employees={employees}
+                    canApprove={canApprove}
+                  />
+                ) : null
+              }
+            />
+          ))}
         </div>
 
         {rows.length === 0 && (

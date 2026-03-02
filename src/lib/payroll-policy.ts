@@ -59,7 +59,7 @@ export async function buildPayrollEntriesByPolicy(
     }),
     prisma.salaryAdvance.findMany({
       where: {
-        status: "APPROVED",
+        status: "PAID",
         createdAt: { lte: periodEnd },
       },
       select: { employeeId: true, amount: true },

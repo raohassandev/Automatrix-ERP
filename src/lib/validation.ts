@@ -193,7 +193,7 @@ export const salaryAdvanceSchema = z.object({
   employeeId: z.string().min(1),
   amount: z.number().positive(),
   reason: z.string().min(1),
-  status: z.enum(["PENDING", "APPROVED", "PAID", "REJECTED"]).optional(),
+  status: z.enum(["PENDING", "APPROVED", "PAID", "REJECTED", "RECOVERED"]).optional(),
 });
 
 export const salaryAdvanceUpdateSchema = salaryAdvanceSchema.partial();

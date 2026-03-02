@@ -24,6 +24,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (!existing) {
     return NextResponse.json({ success: false, error: "Advance not found" }, { status: 404 });
   }
+  if (["PAID", "RECOVERED"].includes(String(existing.status || "").toUpperCase())) {
+    return NextResponse.json(
+      { success: false, error: "Paid or recovered advances are locked and cannot be edited." },
+      { status: 400 },
+    );
+  }
 
   const body = await req.json();
   const parsed = salaryAdvanceUpdateSchema.safeParse(body);
@@ -42,6 +48,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
   if (parsed.data.status) {
     const nextStatus = sanitizeString(parsed.data.status);
+    if (nextStatus === "RECOVERED") {
+      return NextResponse.json(
+        { success: false, error: "RECOVERED status is managed by payroll settlement only." },
+        { status: 400 },
+      );
+    }
     if (nextStatus === "APPROVED" && !canApprove) {
       return NextResponse.json({ success: false, error: "Approval permission required" }, { status: 403 });
     }
@@ -115,6 +127,12 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   const existing = await prisma.salaryAdvance.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ success: false, error: "Advance not found" }, { status: 404 });
+  }
+  if (["PAID", "RECOVERED"].includes(String(existing.status || "").toUpperCase())) {
+    return NextResponse.json(
+      { success: false, error: "Paid or recovered advances cannot be deleted." },
+      { status: 400 },
+    );
   }
 
   await prisma.salaryAdvance.delete({ where: { id } });

@@ -359,22 +359,26 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             await tx.payrollComponentLine.createMany({ data: componentRows });
           }
 
-          if (Number(entry.deductions) > 0) {
-            let remaining = Number(entry.deductions);
+          if (Number(entry.deductions) > 0 && /advance/i.test(String(entry.deductionReason || ""))) {
             const advances = await tx.salaryAdvance.findMany({
               where: {
                 employeeId: entry.employeeId,
-                status: "APPROVED",
+                status: "PAID",
                 createdAt: { lte: run.periodEnd },
               },
               orderBy: { createdAt: "asc" },
             });
+            const recoverable = Math.min(
+              Number(entry.deductions),
+              advances.reduce((sum, adv) => sum + Number(adv.amount || 0), 0),
+            );
+            let remaining = recoverable;
             for (const adv of advances) {
               if (remaining <= 0) break;
               remaining -= Number(adv.amount || 0);
               await tx.salaryAdvance.update({
                 where: { id: adv.id },
-                data: { status: "PAID" },
+                data: { status: "RECOVERED" },
               });
             }
           }

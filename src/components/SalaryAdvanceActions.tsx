@@ -50,7 +50,7 @@ export function SalaryAdvanceActions({
         <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
           Edit
         </Button>
-        {canApprove && advance.status !== "PAID" ? (
+        {canApprove && String(advance.status || "").toUpperCase() === "PENDING" ? (
           <Button size="sm" onClick={approve} disabled={approving}>
             {approving ? "Approving..." : "Approve"}
           </Button>

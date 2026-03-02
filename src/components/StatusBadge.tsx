@@ -9,7 +9,7 @@ function normalizeStatus(status: string) {
 export function StatusBadge({ status }: { status: string }) {
   const key = normalizeStatus(status);
   const style = (() => {
-    if (["APPROVED", "POSTED", "PAID", "ACTIVE", "COMPLETED"].includes(key)) {
+    if (["APPROVED", "POSTED", "PAID", "ACTIVE", "COMPLETED", "RECOVERED"].includes(key)) {
       return "border-emerald-300 bg-emerald-50 text-emerald-700";
     }
     if (["PENDING", "PENDING_L1", "PENDING_L2", "PENDING_L3", "SUBMITTED", "SENT"].includes(key)) {
