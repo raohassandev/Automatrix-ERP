@@ -83,7 +83,7 @@ jobs:
           
           # Restart PM2 process
           echo "🔄 Restarting PM2 process..."
-          pm2 restart automatrix-erp-staging || pm2 start ecosystem.staging.js
+          pm2 restart automatrix-erp-staging --update-env || PORT=3031 HOST=127.0.0.1 pm2 start npm --name automatrix-erp-staging -- start -- -p 3031 -H 127.0.0.1
           
           # Check if process is running
           pm2 status automatrix-erp-staging
