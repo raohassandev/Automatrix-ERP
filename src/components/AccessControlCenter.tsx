@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Search, Shield } from "lucide-react";
 
 type PermissionCatalogGroup = {
   module: string;
@@ -149,6 +149,8 @@ export default function AccessControlCenter() {
   const [savingRole, setSavingRole] = useState(false);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+  const [roleSearch, setRoleSearch] = useState("");
+  const [activeModule, setActiveModule] = useState("");
 
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [userCatalog, setUserCatalog] = useState<PermissionCatalogGroup[]>([]);
@@ -250,6 +252,8 @@ export default function AccessControlCenter() {
   const openRoleDialog = (role: RoleTemplate) => {
     setSelectedRoleId(role.id);
     setRoleDraft(new Set(role.permissionKeys));
+    setRoleSearch("");
+    setActiveModule("");
     setRoleDialogOpen(true);
   };
 
@@ -397,88 +401,140 @@ export default function AccessControlCenter() {
             </div>
 
             <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-              <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-5xl">
+              <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-6xl">
                 <DialogHeader>
-                  <DialogTitle>View Role: {selectedRole?.name}</DialogTitle>
+                  <div className="border-b bg-slate-900 px-6 py-4 text-white">
+                    <DialogTitle className="text-xl font-semibold">Role Permissions: {selectedRole?.name}</DialogTitle>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-200">
+                      <span className="rounded bg-slate-800 px-2 py-1">{roleDraft.size} enabled</span>
+                      <span className="rounded bg-slate-800 px-2 py-1">Business-friendly controls</span>
+                    </div>
+                  </div>
                 </DialogHeader>
 
-                <div className="space-y-5">
-                  <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                    `Self` is enabled where `view_all / view_own` pair exists. `Custom` currently maps to self-scope until custom rule builder is added.
+                <div className="grid gap-0 md:grid-cols-[240px,1fr]">
+                  <div className="border-r bg-slate-50 p-4">
+                    <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Modules</div>
+                    <div className="space-y-1">
+                      {roleCatalog.map((group) => {
+                        const rows = toPermissionRows(group);
+                        const selected = activeModule ? activeModule === group.module : false;
+                        return (
+                          <button
+                            key={group.module}
+                            type="button"
+                            onClick={() => setActiveModule(group.module)}
+                            className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm ${
+                              selected ? "bg-sky-100 text-sky-900" : "text-slate-700 hover:bg-slate-200"
+                            }`}
+                          >
+                            <span>{moduleLabel(group.module)}</span>
+                            <Badge variant="outline" className="bg-white">{rows.length}</Badge>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {roleCatalog.map((group) => {
-                    const rows = toPermissionRows(group);
-                    const isCollapsed = collapsedModules[group.module] === true;
-
-                    return (
-                      <div key={group.module} className="rounded-lg border border-slate-200 bg-white">
-                        <button
-                          type="button"
-                          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
-                          onClick={() =>
-                            setCollapsedModules((prev) => ({
-                              ...prev,
-                              [group.module]: !prev[group.module],
-                            }))
-                          }
-                        >
-                          <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
-                            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                            {moduleLabel(group.module)}
-                          </div>
-                          <Badge variant="outline">{rows.length} actions</Badge>
-                        </button>
-
-                        {!isCollapsed && (
-                          <div className="border-t">
-                            <div className="grid grid-cols-[1.4fr,120px,120px,120px,120px] gap-2 border-b bg-slate-50 px-4 py-2 text-sm font-medium text-slate-700">
-                              <div>Permission</div>
-                              <div>Yes</div>
-                              <div>No</div>
-                              <div>Self</div>
-                              <div>Custom</div>
-                            </div>
-
-                            {rows.map((row) => {
-                              const mode = getRoleMode(row, roleDraft);
-                              const selfEnabled = row.supportsSelf;
-                              return (
-                                <div key={row.key} className="grid grid-cols-[1.4fr,120px,120px,120px,120px] gap-2 border-b px-4 py-2 text-sm last:border-b-0">
-                                  <div className="text-slate-800">{row.label}</div>
-                                  {(["YES", "NO", "SELF", "CUSTOM"] as const).map((option) => (
-                                    <label
-                                      key={option}
-                                      className={`flex items-center gap-2 ${
-                                        !selfEnabled && (option === "SELF" || option === "CUSTOM")
-                                          ? "cursor-not-allowed text-slate-300"
-                                          : "cursor-pointer text-slate-700"
-                                      }`}
-                                    >
-                                      <input
-                                        type="radio"
-                                        name={`${group.module}-${row.key}`}
-                                        disabled={!selfEnabled && (option === "SELF" || option === "CUSTOM")}
-                                        checked={mode === option}
-                                        onChange={() => setRoleDraft((prev) => applyRoleMode(row, option, prev))}
-                                      />
-                                      {option.charAt(0) + option.slice(1).toLowerCase()}
-                                    </label>
-                                  ))}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                  <div className="space-y-4 p-4 md:p-6">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                        <Input
+                          className="pl-9"
+                          placeholder="Search permission..."
+                          value={roleSearch}
+                          onChange={(e) => setRoleSearch(e.target.value)}
+                        />
                       </div>
-                    );
-                  })}
+                      <p className="mt-2 text-xs text-slate-500">
+                        `Self` is available where own-scope exists. `Custom` currently maps to self-scope.
+                      </p>
+                    </div>
 
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>Close</Button>
-                    <Button onClick={saveRoleTemplate} disabled={savingRole}>
-                      {savingRole ? "Saving..." : "Save Permissions"}
-                    </Button>
+                    {roleCatalog
+                      .filter((group) => !activeModule || group.module === activeModule)
+                      .map((group) => {
+                        const rows = toPermissionRows(group).filter((row) =>
+                          roleSearch.trim()
+                            ? `${row.label} ${row.key}`.toLowerCase().includes(roleSearch.trim().toLowerCase())
+                            : true
+                        );
+                        const isCollapsed = collapsedModules[group.module] === true;
+                        return (
+                          <div key={group.module} className="rounded-lg border border-slate-200 bg-white shadow-sm">
+                            <button
+                              type="button"
+                              className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                              onClick={() =>
+                                setCollapsedModules((prev) => ({
+                                  ...prev,
+                                  [group.module]: !prev[group.module],
+                                }))
+                              }
+                            >
+                              <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                                {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                <Shield className="h-4 w-4 text-slate-500" />
+                                {moduleLabel(group.module)}
+                              </div>
+                              <Badge variant="outline">{rows.length} actions</Badge>
+                            </button>
+
+                            {!isCollapsed && (
+                              <div className="border-t">
+                                {rows.length === 0 ? (
+                                  <div className="px-4 py-6 text-sm text-slate-500">No permissions match search.</div>
+                                ) : (
+                                  rows.map((row) => {
+                                    const mode = getRoleMode(row, roleDraft);
+                                    const selfEnabled = row.supportsSelf;
+                                    return (
+                                      <div key={row.key} className="flex flex-col gap-2 border-b px-4 py-3 last:border-b-0 md:flex-row md:items-center md:justify-between">
+                                        <div>
+                                          <div className="font-medium text-slate-800">{row.label}</div>
+                                          <div className="text-xs text-slate-500">{row.key}</div>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {(["YES", "NO", "SELF", "CUSTOM"] as const).map((option) => {
+                                            const disabled = !selfEnabled && (option === "SELF" || option === "CUSTOM");
+                                            const checked = mode === option;
+                                            return (
+                                              <button
+                                                key={option}
+                                                type="button"
+                                                disabled={disabled}
+                                                onClick={() => setRoleDraft((prev) => applyRoleMode(row, option, prev))}
+                                                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                                                  checked
+                                                    ? "border-sky-600 bg-sky-600 text-white"
+                                                    : disabled
+                                                      ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                                      : "border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+                                                }`}
+                                              >
+                                                {checked ? <Check className="h-3 w-3" /> : null}
+                                                {option}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                    <div className="flex justify-end gap-2 border-t pt-2">
+                      <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>Cancel</Button>
+                      <Button onClick={saveRoleTemplate} disabled={savingRole} className="bg-sky-600 hover:bg-sky-700">
+                        {savingRole ? "Saving..." : "Save Permissions"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </DialogContent>
