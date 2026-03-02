@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   CreditCard,
   Users,
+  Wallet,
   FolderKanban,
   Building2,
   Package,
@@ -63,6 +64,7 @@ export const navGroups: NavGroup[] = [
     title: "People",
     items: [
       { name: "Employees", href: "/employees", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
+      { name: "Payroll", href: "/payroll", icon: Wallet, permissions: ["payroll.view_all", "payroll.edit", "payroll.approve"] },
       { name: "Attendance", href: "/hrms/attendance", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
       { name: "Leave", href: "/hrms/leave", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
     ],
