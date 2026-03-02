@@ -328,6 +328,23 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   try {
     if (nextLines) {
       const grnItemIds = nextLines.map((l) => l.grnItemId).filter(Boolean) as string[];
+      const incomingQtyByGrnItem = new Map<string, number>();
+      for (const line of nextLines) {
+        if (!line.grnItemId) continue;
+        if (!(typeof line.quantity === "number" && line.quantity > 0)) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "GRN-linked bill lines require quantity for quantity-cap control.",
+            },
+            { status: 400 }
+          );
+        }
+        incomingQtyByGrnItem.set(
+          line.grnItemId,
+          (incomingQtyByGrnItem.get(line.grnItemId) || 0) + line.quantity
+        );
+      }
       if (grnItemIds.length > 0) {
         const grnItems = await prisma.goodsReceiptItem.findMany({
           where: { id: { in: grnItemIds } },
@@ -351,6 +368,39 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
           const poVendorId = item.goodsReceipt.purchaseOrder?.vendorId;
           if (poVendorId && poVendorId !== effectiveVendorId) {
             return NextResponse.json({ success: false, error: "GRN vendor does not match Vendor Bill vendor." }, { status: 400 });
+          }
+        }
+
+        const existingLines = await prisma.vendorBillLine.findMany({
+          where: {
+            grnItemId: { in: Array.from(incomingQtyByGrnItem.keys()) },
+            vendorBillId: { not: id },
+            vendorBill: { status: { not: "VOID" } },
+          },
+          select: { grnItemId: true, quantity: true },
+        });
+        const existingQtyByGrnItem = new Map<string, number>();
+        existingLines.forEach((line) => {
+          if (!line.grnItemId) return;
+          existingQtyByGrnItem.set(
+            line.grnItemId,
+            (existingQtyByGrnItem.get(line.grnItemId) || 0) + Number(line.quantity || 0)
+          );
+        });
+
+        for (const [grnItemId, incomingQty] of incomingQtyByGrnItem.entries()) {
+          const grnItem = byId.get(grnItemId);
+          if (!grnItem) continue;
+          const alreadyBilledQty = existingQtyByGrnItem.get(grnItemId) || 0;
+          const maxQty = Number(grnItem.quantity || 0);
+          if (alreadyBilledQty + incomingQty > maxQty + 0.00001) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: `Billing quantity exceeds received quantity for GRN item ${grnItem.itemName}.`,
+              },
+              { status: 400 }
+            );
           }
         }
       }

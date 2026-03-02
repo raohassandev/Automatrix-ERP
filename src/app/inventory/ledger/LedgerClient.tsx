@@ -56,7 +56,7 @@ export function LedgerClient({
             <h1 className="text-2xl font-semibold">Inventory Ledger</h1>
             <p className="mt-2 text-muted-foreground">Stock movement history.</p>
           </div>
-          <InventoryLedgerActions items={items} canViewCost={canViewCost} />
+          <InventoryLedgerActions items={items} warehouses={warehouses} canViewCost={canViewCost} />
         </div>
       </div>
 

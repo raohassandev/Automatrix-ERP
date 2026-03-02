@@ -27,6 +27,8 @@ function tabLabel(tab: ProjectDetailTab) {
       return "Inventory";
     case "people":
       return "People";
+    case "execution":
+      return "Execution";
     case "documents":
       return "Documents";
   }
@@ -54,6 +56,15 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   const [savingAssignments, setSavingAssignments] = React.useState(false);
   const [savingNote, setSavingNote] = React.useState(false);
   const [savingAttachment, setSavingAttachment] = React.useState(false);
+  const [taskForm, setTaskForm] = React.useState({
+    title: "",
+    description: "",
+    priority: "MEDIUM",
+    dueDate: "",
+    assignedToId: "",
+  });
+  const [savingTask, setSavingTask] = React.useState(false);
+  const [updatingTaskId, setUpdatingTaskId] = React.useState<string | null>(null);
   const financeTransactions = React.useMemo(
     () =>
       detail.activity.filter((row) =>
@@ -115,6 +126,23 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
     };
   }, [assignOpen, detail.header.id]);
 
+  React.useEffect(() => {
+    if (active !== "execution" || users.length > 0) return;
+    let cancelled = false;
+    fetch("/api/users/list")
+      .then((res) => res.json())
+      .then((json) => {
+        if (cancelled) return;
+        if (Array.isArray(json?.data)) {
+          setUsers(json.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [active, users.length]);
+
   async function saveAssignments() {
     const res = await fetch(`/api/projects/${detail.header.id}/assignments`, {
       method: "POST",
@@ -151,6 +179,35 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error || "Failed to add attachment");
+  }
+
+  async function createTask() {
+    if (!taskForm.title.trim()) {
+      throw new Error("Task title is required.");
+    }
+    const res = await fetch(`/api/projects/${detail.header.id}/tasks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: taskForm.title.trim(),
+        description: taskForm.description.trim() || undefined,
+        priority: taskForm.priority,
+        dueDate: taskForm.dueDate || undefined,
+        assignedToId: taskForm.assignedToId || undefined,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || "Failed to create task");
+  }
+
+  async function updateTask(taskId: string, payload: Record<string, unknown>) {
+    const res = await fetch(`/api/projects/${detail.header.id}/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || "Failed to update task");
   }
 
   const anyActions = Object.values(workhub.actions).some(Boolean);
@@ -813,6 +870,228 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 </tbody>
               </table>
             </div>
+          )}
+        </div>
+      ) : null}
+
+      {active === "execution" ? (
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Execution</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Track project tasks, ownership, due dates, and completion progress.
+              </p>
+            </div>
+          </div>
+          {!detail.execution ? (
+            <div className="mt-4 text-sm text-muted-foreground">No access.</div>
+          ) : (
+            <>
+              <div className="mt-4 grid gap-4 md:grid-cols-6">
+                <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3">
+                  <div className="text-xs text-sky-700">Total</div>
+                  <div className="mt-1 text-lg font-semibold text-sky-900">{detail.execution.summary.total}</div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+                  <div className="text-xs text-slate-700">To Do</div>
+                  <div className="mt-1 text-lg font-semibold text-slate-900">{detail.execution.summary.todo}</div>
+                </div>
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
+                  <div className="text-xs text-indigo-700">In Progress</div>
+                  <div className="mt-1 text-lg font-semibold text-indigo-900">{detail.execution.summary.inProgress}</div>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+                  <div className="text-xs text-amber-700">Blocked</div>
+                  <div className="mt-1 text-lg font-semibold text-amber-900">{detail.execution.summary.blocked}</div>
+                </div>
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
+                  <div className="text-xs text-emerald-700">Done</div>
+                  <div className="mt-1 text-lg font-semibold text-emerald-900">{detail.execution.summary.done}</div>
+                </div>
+                <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3">
+                  <div className="text-xs text-rose-700">Overdue Open</div>
+                  <div className="mt-1 text-lg font-semibold text-rose-900">{detail.execution.summary.overdueOpen}</div>
+                </div>
+              </div>
+
+              <form
+                className="mt-4 rounded-lg border p-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  (async () => {
+                    try {
+                      setSavingTask(true);
+                      await withLoadingToast(createTask, { loading: "Creating task...", success: "Task created" });
+                      setTaskForm({ title: "", description: "", priority: "MEDIUM", dueDate: "", assignedToId: "" });
+                      router.refresh();
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Failed to create task");
+                    } finally {
+                      setSavingTask(false);
+                    }
+                  })();
+                }}
+              >
+                <div className="mb-3 text-sm font-semibold">Create Task</div>
+                <div className="grid gap-3 md:grid-cols-6">
+                  <input
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
+                    placeholder="Task title"
+                    value={taskForm.title}
+                    onChange={(e) => setTaskForm((prev) => ({ ...prev, title: e.target.value }))}
+                    required
+                  />
+                  <input
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
+                    placeholder="Description (optional)"
+                    value={taskForm.description}
+                    onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))}
+                  />
+                  <select
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={taskForm.priority}
+                    onChange={(e) => setTaskForm((prev) => ({ ...prev, priority: e.target.value }))}
+                  >
+                    <option value="LOW">LOW</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                  </select>
+                  <input
+                    type="date"
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    value={taskForm.dueDate}
+                    onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+                  />
+                  <select
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
+                    value={taskForm.assignedToId}
+                    onChange={(e) => setTaskForm((prev) => ({ ...prev, assignedToId: e.target.value }))}
+                  >
+                    <option value="">Unassigned</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {(u.name || u.email) + (u.role ? ` (${u.role})` : "")}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="md:col-span-4" />
+                  <Button type="submit" size="sm" disabled={savingTask} className="md:col-span-2">
+                    {savingTask ? "Creating..." : "Add Task"}
+                  </Button>
+                </div>
+              </form>
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-2">Task</th>
+                      <th className="py-2">Assignee</th>
+                      <th className="py-2">Priority</th>
+                      <th className="py-2">Status</th>
+                      <th className="py-2">Progress</th>
+                      <th className="py-2">Due Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.execution.tasks.length === 0 ? (
+                      <tr>
+                        <td className="py-4 text-muted-foreground" colSpan={6}>
+                          No execution tasks yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      detail.execution.tasks.map((task) => (
+                        <tr key={task.id} className="border-b">
+                          <td className="py-2">
+                            <div className="font-medium">{task.title}</div>
+                            {task.description ? (
+                              <div className="text-xs text-muted-foreground">{task.description}</div>
+                            ) : null}
+                          </td>
+                          <td className="py-2">{task.assignedTo?.name || "-"}</td>
+                          <td className="py-2">{task.priority}</td>
+                          <td className="py-2">
+                            <select
+                              className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+                              value={task.status}
+                              onChange={(e) => {
+                                (async () => {
+                                  try {
+                                    setUpdatingTaskId(task.id);
+                                    await updateTask(task.id, { status: e.target.value });
+                                    router.refresh();
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : "Failed to update task");
+                                  } finally {
+                                    setUpdatingTaskId(null);
+                                  }
+                                })();
+                              }}
+                              disabled={updatingTaskId === task.id}
+                            >
+                              <option value="TODO">TODO</option>
+                              <option value="IN_PROGRESS">IN_PROGRESS</option>
+                              <option value="BLOCKED">BLOCKED</option>
+                              <option value="DONE">DONE</option>
+                              <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                          </td>
+                          <td className="py-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              className="w-20 rounded-md border border-border bg-background px-2 py-1 text-xs"
+                              defaultValue={task.progress}
+                              onBlur={(e) => {
+                                const next = Number(e.target.value || 0);
+                                if (Number.isNaN(next)) return;
+                                (async () => {
+                                  try {
+                                    setUpdatingTaskId(task.id);
+                                    await updateTask(task.id, { progress: Math.max(0, Math.min(100, next)) });
+                                    router.refresh();
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : "Failed to update progress");
+                                  } finally {
+                                    setUpdatingTaskId(null);
+                                  }
+                                })();
+                              }}
+                              disabled={updatingTaskId === task.id}
+                            />
+                          </td>
+                          <td className="py-2">
+                            <input
+                              type="date"
+                              className="rounded-md border border-border bg-background px-2 py-1 text-xs"
+                              defaultValue={task.dueDate || ""}
+                              onBlur={(e) => {
+                                (async () => {
+                                  try {
+                                    setUpdatingTaskId(task.id);
+                                    await updateTask(task.id, { dueDate: e.target.value || "" });
+                                    router.refresh();
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : "Failed to update due date");
+                                  } finally {
+                                    setUpdatingTaskId(null);
+                                  }
+                                })();
+                              }}
+                              disabled={updatingTaskId === task.id}
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       ) : null}

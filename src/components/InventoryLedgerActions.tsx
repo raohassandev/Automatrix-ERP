@@ -2,13 +2,16 @@
 
 import { useState } from "react";
 import { InventoryLedgerDialog } from "@/components/InventoryLedgerDialog";
+import { InventoryTransferDialog } from "@/components/InventoryTransferDialog";
 
 export function InventoryLedgerActions({
   items,
   canViewCost,
+  warehouses,
 }: {
   items: Array<{ id: string; name: string }>;
   canViewCost: boolean;
+  warehouses: Array<{ id: string; name: string; isDefault?: boolean }>;
 }) {
   const [dialog, setDialog] = useState<{
     open: boolean;
@@ -16,6 +19,7 @@ export function InventoryLedgerActions({
     itemName: string;
     defaultType?: string;
   }>({ open: false, itemId: "", itemName: "" });
+  const [transferOpen, setTransferOpen] = useState(false);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -64,6 +68,13 @@ export function InventoryLedgerActions({
       >
         Allocate to Project
       </button>
+      <button
+        className="rounded-md border px-3 py-2 text-sm"
+        onClick={() => setTransferOpen(true)}
+        disabled={!dialog.itemId}
+      >
+        Transfer Warehouse
+      </button>
 
       <InventoryLedgerDialog
         open={dialog.open}
@@ -72,6 +83,14 @@ export function InventoryLedgerActions({
         itemName={dialog.itemName || "Inventory Item"}
         canViewCost={canViewCost}
         defaultType={dialog.defaultType}
+      />
+      <InventoryTransferDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        itemId={dialog.itemId}
+        itemName={dialog.itemName || "Inventory Item"}
+        warehouses={warehouses}
+        canViewCost={canViewCost}
       />
     </div>
   );

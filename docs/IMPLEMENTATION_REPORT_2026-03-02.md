@@ -297,3 +297,44 @@
   - `src/app/projects/financial/page.tsx`
   - `src/app/reports/projects/page.tsx`
   - `src/app/api/reports/projects/[id]/export/route.ts`
+
+## Procurement + Inventory + Project completion pass (locked baseline closure)
+- Procurement (P2P) hardening:
+  - added strict GRN-linked vendor bill quantity cap validation.
+  - billing quantity now cannot exceed received GRN quantity across non-void vendor bills.
+  - validation enforced on both bill create and bill update routes.
+
+- Inventory and Store hardening:
+  - added warehouse-to-warehouse transfer operation with double ledger entries and shared transfer trace ID.
+  - added transfer API endpoint: `POST /api/inventory/transfer`.
+  - added transfer dialog in Inventory Ledger actions for operator-friendly stock movement.
+  - transfer flow is audited via `INVENTORY_TRANSFER`.
+
+- Project Management execution closure:
+  - added `ProjectTask` execution model (status/priority/progress/due date/assignee).
+  - added project task APIs:
+    - `GET/POST /api/projects/[id]/tasks`
+    - `PATCH /api/projects/[id]/tasks/[taskId]`
+  - extended project detail policy and UI with dedicated `Execution` tab:
+    - task summary cards
+    - task creation
+    - inline status/progress/due-date updates
+    - assignee-aware task visibility context.
+
+- Plan synchronization:
+  - updated `SUPER_MASTER_PLAN.md` section `11.1` to mark modules `6`, `7`, and `8` as `[x]` completed for locked baseline.
+
+- Files:
+  - `prisma/schema.prisma`
+  - `prisma/migrations/20260302143000_add_project_execution_tasks/migration.sql`
+  - `src/app/api/projects/[id]/tasks/route.ts`
+  - `src/app/api/projects/[id]/tasks/[taskId]/route.ts`
+  - `src/app/api/procurement/vendor-bills/route.ts`
+  - `src/app/api/procurement/vendor-bills/[id]/route.ts`
+  - `src/app/api/inventory/transfer/route.ts`
+  - `src/components/InventoryTransferDialog.tsx`
+  - `src/components/InventoryLedgerActions.tsx`
+  - `src/app/inventory/ledger/LedgerClient.tsx`
+  - `src/lib/project-detail-policy.ts`
+  - `src/app/projects/[id]/ProjectDetailClient.tsx`
+  - `SUPER_MASTER_PLAN.md`

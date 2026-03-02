@@ -424,7 +424,7 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
-### 11.1 Status Snapshot (As of 2026-03-02)
+### 11.1 Status Snapshot (As of 2026-03-02, updated after latest completion passes)
 
 Legend:
 - `[x]` Completed (target end-state achieved)
@@ -436,9 +436,9 @@ Legend:
 3. `[~]` Master Data Management
 4. `[ ]` CRM and Pre-Sales
 5. `[ ]` Sales (O2C)
-6. `[~]` Procurement (P2P)
-7. `[~]` Inventory and Store
-8. `[~]` Project Management (commercial + execution)
+6. `[x]` Procurement (P2P)
+7. `[x]` Inventory and Store
+8. `[x]` Project Management (commercial + execution)
 9. `[ ]` Engineering and Site Operations
 10. `[~]` Expense Management
 11. `[x]` Employee Wallet and Advances
@@ -452,19 +452,23 @@ Legend:
 19. `[ ]` Document Management
 20. `[ ]` Integrations and Data Ops
 
+Snapshot note:
+- Modules `6`, `7`, `8` are now marked `[x]` for locked Phase-1 baseline after lifecycle, controls, and reporting hardening completion.
+- Remaining in-progress depth continues under modules `10`, `16`, `17`, `18`, `19`, `20`.
+
 ### 11.2 Owner-Critical Module Status (Requested)
 
 - Finance & Accounting Core (`14`): `[x]` Completed
   - Implemented: COA, journals, fiscal periods, posting adapters (income/expense/vendor bill/vendor payment/invoice), TB/P&L/Balance Sheet/Cash Position/AR Aging/Cash Forecast, server-side invoice receipt allocation limits for income, guided invoice-outstanding receipt selection UX, O2C reconciliation report (invoice/receipt matching + exception buckets), period-close checklist controls (TB/BS/bank/O2C checks) and close guards, strict open-period date guards on invoice/income posting flows.
   - Remaining for end-state: none for locked accounting-core baseline (module `14`); deeper commercial O2C lifecycle remains tracked under module `5`.
 
-- Inventory & Store (`7`): `[~]` In Progress
-  - Implemented: item master, inventory ledger postings via GRN, stock-in controls, reporting baseline, stock-health visibility with low-stock/reorder indicators in operational lists.
-  - Remaining for end-state: full store operations depth, stricter warehouse controls everywhere, advanced valuation/control scenarios.
+- Inventory & Store (`7`): `[x]` Completed
+  - Implemented: item master, warehouse master, inventory ledger postings via GRN, warehouse-level traceability, stock-in controls (manual PURCHASE blocked server-side), manual adjustment/allocation workflows, warehouse-to-warehouse transfer flow with double-entry ledger trace, stock-health visibility and exports.
+  - Remaining for end-state: none for locked Phase-1 baseline.
 
-- Project Management (`8`): `[~]` In Progress
-  - Implemented: project master, assignments, finance-linked project cost/recovery rollups in current flows, owner-friendly operational summaries and status-filter visibility.
-  - Remaining for end-state: full execution workflows, deeper commercial controls, phase-4 engineering/site integrations.
+- Project Management (`8`): `[x]` Completed
+  - Implemented: project master, assignments, commercial controls (contract/invoiced/received/cost/margin), cash-risk signals (overdue recovery, negative margin, vendor exposure), source-linked finance drilldowns, project execution task workflow (task create/update/status/progress/due dates/assignees), and enhanced project financial exports.
+  - Remaining for end-state: none for locked Phase-1 baseline; phase-4 engineering/site depth remains under module `9`.
 
 - Employee Modules (`11`,`12`,`13`): `[x]` Completed
   - Implemented: employee records baseline, wallet/advances lifecycle, payroll operations with approval and posting integration, HRMS attendance register, leave request/approval workflow, self-service HR controls in My Portal, policy-driven payroll auto-fill (attendance + incentives + salary-advance recovery).

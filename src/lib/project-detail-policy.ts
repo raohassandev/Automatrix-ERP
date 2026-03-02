@@ -3,7 +3,7 @@ import { getUserRoleName } from "@/lib/rbac";
 import { hasPermission, RoleName } from "@/lib/permissions";
 import { buildProjectAliases } from "@/lib/projects";
 
-export type ProjectDetailTab = "activity" | "costs" | "inventory" | "people" | "documents";
+export type ProjectDetailTab = "activity" | "costs" | "inventory" | "people" | "execution" | "documents";
 
 export type ProjectDetailPolicy = {
   role: RoleName;
@@ -97,6 +97,28 @@ export type ProjectDetailData = {
     totals?: { quantity: number; value: number };
   };
   people?: Array<{ id: string; name: string; email: string; role: string }>;
+  execution?: {
+    tasks: Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      status: string;
+      priority: string;
+      dueDate: string | null;
+      progress: number;
+      assignedTo: { id: string; name: string; email: string } | null;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+    summary: {
+      total: number;
+      todo: number;
+      inProgress: number;
+      blocked: number;
+      done: number;
+      overdueOpen: number;
+    };
+  };
   documents?: ProjectDocumentsRow[];
 };
 
@@ -128,6 +150,7 @@ function buildPolicy(role: RoleName): ProjectDetailPolicy {
     inventory: canAccessPage && !isSalesOrMarketing && !isStore && !isTechnician && hasPermission(role, "inventory.view"),
     // Store/Technician: no financial tabs; inventory movements allowed
     people: canAccessPage && (isEngineer || hasPermission(role, "employees.view_all") || hasPermission(role, "projects.assign")),
+    execution: canAccessPage && (hasPermission(role, "projects.view_all") || hasPermission(role, "projects.view_assigned")),
     documents: canAccessPage,
   };
 
@@ -143,6 +166,7 @@ function buildPolicy(role: RoleName): ProjectDetailPolicy {
     tabs.people = false;
     tabs.inventory = false;
     tabs.costs = false;
+    tabs.execution = false;
   }
 
   return {
@@ -288,8 +312,20 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     status: string;
     amount?: unknown;
   };
+  type ProjectTaskRow = {
+    id: string;
+    title: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    dueDate: Date | null;
+    progress: number;
+    createdAt: Date;
+    updatedAt: Date;
+    assignedTo: { id: string; name: string | null; email: string } | null;
+  };
 
-  const [pos, grns, bills, payments, ledger, expensesAll, incomesAll] = (await Promise.all([
+  const [pos, grns, bills, payments, ledger, expensesAll, incomesAll, tasks] = (await Promise.all([
     prisma.purchaseOrder.findMany({
       where: { projectRef: { in: projectAliases } },
       select: { id: true, poNumber: true, orderDate: true, status: true },
@@ -353,7 +389,29 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
           take: 100,
         })
       : Promise.resolve([]),
-  ])) as unknown as [PoRow[], GrnRow[], BillRow[], PaymentRow[], LedgerRow[], ExpenseRow[], IncomeRow[]];
+    policy.tabs.execution
+      ? (prisma as unknown as {
+          projectTask: { findMany: (args: unknown) => Promise<unknown> };
+        }).projectTask.findMany({
+          where: { projectId: project.id },
+          include: {
+            assignedTo: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: [{ status: "asc" }, { priority: "desc" }, { dueDate: "asc" }],
+          take: 300,
+        })
+      : Promise.resolve([]),
+  ])) as unknown as [
+    PoRow[],
+    GrnRow[],
+    BillRow[],
+    PaymentRow[],
+    LedgerRow[],
+    ExpenseRow[],
+    IncomeRow[],
+    ProjectTaskRow[],
+  ];
+  const taskRows = tasks as unknown as ProjectTaskRow[];
 
   const expensesApproved = expensesAll.filter((e) =>
     ["APPROVED", "PARTIALLY_APPROVED", "PAID"].includes((e.status || "").toUpperCase()),
@@ -628,6 +686,49 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  let execution: ProjectDetailData["execution"] | undefined = undefined;
+  if (policy.tabs.execution) {
+    const now = new Date();
+    const openStatuses = new Set(["TODO", "IN_PROGRESS", "BLOCKED"]);
+    const summary = taskRows.reduce(
+      (acc, task) => {
+        acc.total += 1;
+        const status = String(task.status || "").toUpperCase();
+        if (status === "TODO") acc.todo += 1;
+        if (status === "IN_PROGRESS") acc.inProgress += 1;
+        if (status === "BLOCKED") acc.blocked += 1;
+        if (status === "DONE") acc.done += 1;
+        if (task.dueDate && openStatuses.has(status) && task.dueDate < now) {
+          acc.overdueOpen += 1;
+        }
+        return acc;
+      },
+      { total: 0, todo: 0, inProgress: 0, blocked: 0, done: 0, overdueOpen: 0 },
+    );
+
+    execution = {
+      tasks: taskRows.map((task) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        dueDate: task.dueDate ? fmtDate(task.dueDate) : null,
+        progress: Number(task.progress || 0),
+        assignedTo: task.assignedTo
+          ? {
+              id: task.assignedTo.id,
+              name: task.assignedTo.name || task.assignedTo.email,
+              email: task.assignedTo.email,
+            }
+          : null,
+        createdAt: formatIso(task.createdAt),
+        updatedAt: formatIso(task.updatedAt),
+      })),
+      summary,
+    };
+  }
+
   const auditRows = await prisma.auditLog.findMany({
     where: {
       entity: "Project",
@@ -674,6 +775,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     costs,
     inventory,
     people,
+    execution,
     documents: policy.tabs.documents ? documents : undefined,
   };
 
