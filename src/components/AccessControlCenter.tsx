@@ -392,8 +392,8 @@ export default function AccessControlCenter() {
 
       <CardContent>
         {tab === "roles" && (
-          <div className="grid gap-4 xl:grid-cols-[300px,1fr]">
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <div className="grid items-start gap-4 md:grid-cols-[300px,minmax(0,1fr)]">
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white md:sticky md:top-4">
               <div className="border-b px-3 py-3">
                 <div className="mb-2 text-sm font-semibold text-slate-800">Roles</div>
                 <Input
@@ -422,7 +422,7 @@ export default function AccessControlCenter() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <div className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b px-4 py-3">
                 <div className="text-lg font-semibold text-slate-900">{selectedRole?.name || "Select a role"}</div>
                 <div className="mt-3 grid gap-2 md:grid-cols-[220px,1fr]">
