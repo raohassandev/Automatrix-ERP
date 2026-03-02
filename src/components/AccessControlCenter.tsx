@@ -393,7 +393,10 @@ export default function AccessControlCenter() {
       <CardContent>
         {tab === "roles" && (
           <div className="overflow-x-auto">
-            <div className="grid min-w-[980px] items-start gap-4 grid-cols-[300px,minmax(0,1fr)]">
+            <div
+              className="grid min-w-[980px] items-start gap-4"
+              style={{ gridTemplateColumns: "300px minmax(0, 1fr)" }}
+            >
             <div className="sticky top-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b px-3 py-3">
                 <div className="mb-2 text-sm font-semibold text-slate-800">Roles</div>
