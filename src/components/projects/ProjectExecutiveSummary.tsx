@@ -161,7 +161,9 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
         <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-3">
           <div className="text-xs text-indigo-800">Pending recovery</div>
           <div className="mt-1 text-lg font-semibold text-indigo-900">{formatMoney(costs.pendingRecovery)}</div>
-          <div className="text-xs text-indigo-700">{costs.risk.overdueInvoiceCount} overdue invoice(s)</div>
+          <div className="text-xs text-indigo-700">
+            Invoice-only pending: {formatMoney(costs.invoicedPendingRecovery)}
+          </div>
         </div>
         <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3">
           <div className="text-xs text-rose-800">Vendor outstanding</div>

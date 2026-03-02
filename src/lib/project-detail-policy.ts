@@ -59,6 +59,7 @@ export type ProjectDetailData = {
     contractValue: number;
     invoicedAmount: number;
     receivedAmount: number;
+    invoicedPendingRecovery: number;
     costToDate: number;
     pendingRecovery: number;
     grossMargin: number;
@@ -83,6 +84,8 @@ export type ProjectDetailData = {
     };
   };
   inventory?: {
+    source: "LEDGER" | "MIXED" | "EXPENSE_FALLBACK";
+    note?: string;
     entries: Array<{
       id: string;
       date: string;
@@ -279,6 +282,10 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     expenseSelect.amount = true;
     expenseSelect.approvedAmount = true;
   }
+  if (policy.tabs.inventory) {
+    expenseSelect.amount = true;
+    expenseSelect.inventoryLedgerId = true;
+  }
 
   type PoRow = { id: string; poNumber: string; orderDate: Date; status: string };
   type GrnRow = { id: string; grnNumber: string; receivedDate: Date; status: string };
@@ -303,6 +310,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     status: string;
     amount?: unknown;
     approvedAmount?: unknown;
+    inventoryLedgerId?: string | null;
   };
   type IncomeRow = {
     id: string;
@@ -544,6 +552,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       contractValue: snapshot.contractValue,
       invoicedAmount: snapshot.invoicedAmount,
       receivedAmount: snapshot.receivedAmount,
+      invoicedPendingRecovery: snapshot.invoicedPendingRecovery,
       costToDate: snapshot.costToDate,
       pendingRecovery: snapshot.pendingRecovery,
       grossMargin: snapshot.grossMargin,
@@ -572,7 +581,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   // Inventory movements
   let inventory: ProjectDetailData["inventory"] | undefined = undefined;
   if (policy.tabs.inventory) {
-    const entries = ledger.map((l) => ({
+    const ledgerEntries = ledger.map((l) => ({
       id: l.id,
       date: fmtDate(l.date),
       itemName: l.item?.name || "Item",
@@ -586,13 +595,51 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
           ? `/procurement/grn?search=${encodeURIComponent(l.reference)}`
           : null,
     }));
+    const materialExpenseFallback = expensesAll
+      .filter((e) => {
+        const status = String(e.status || "").toUpperCase();
+        if (!["APPROVED", "PARTIALLY_APPROVED", "PAID"].includes(status)) return false;
+        if (e.inventoryLedgerId) return false;
+        const category = String(e.category || "").toLowerCase();
+        return category.includes("material") || category.includes("stock") || category.includes("inventory");
+      })
+      .map((e) => {
+        const useAmount =
+          e.status === "PARTIALLY_APPROVED" && e.approvedAmount != null
+            ? Number(e.approvedAmount)
+            : Number(e.amount ?? e.approvedAmount ?? 0);
+        return {
+          id: `expense-${e.id}`,
+          date: fmtDate(e.date),
+          itemName: e.description || e.category || "Material expense",
+          unit: "entry",
+          quantity: -1,
+          unitCost: policy.canViewUnitCosts ? (Number.isFinite(useAmount) ? useAmount : 0) : null,
+          total: policy.canViewUnitCosts ? (Number.isFinite(useAmount) ? useAmount : 0) : null,
+          reference: "Expense fallback",
+          href: `/expenses?search=${encodeURIComponent((e.description || e.category || "").slice(0, 24))}`,
+        };
+      });
+    const entries = [...ledgerEntries, ...materialExpenseFallback];
+    const source: "LEDGER" | "MIXED" | "EXPENSE_FALLBACK" =
+      ledgerEntries.length > 0 && materialExpenseFallback.length > 0
+        ? "MIXED"
+        : ledgerEntries.length > 0
+          ? "LEDGER"
+          : "EXPENSE_FALLBACK";
     const totals = policy.canViewUnitCosts
       ? {
           quantity: entries.reduce((sum, e) => sum + Number(e.quantity), 0),
           value: entries.reduce((sum, e) => sum + Number(e.total || 0), 0),
         }
       : undefined;
-    inventory = { entries, totals };
+    const note =
+      source === "EXPENSE_FALLBACK"
+        ? "No stock ledger movement found. Showing approved material expenses as fallback usage entries."
+        : source === "MIXED"
+          ? "Some material usage is from stock ledger, and some appears as approved material expenses without stock issuance."
+          : undefined;
+    inventory = { source, note, entries, totals };
   }
 
   // People (project assignments)

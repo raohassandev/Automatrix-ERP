@@ -701,6 +701,12 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                       <span className="text-sky-800">Pending recovery</span>
                       <span className="font-semibold text-sky-900">{formatMoney(detail.costs.pendingRecovery)}</span>
                     </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sky-800">Invoice pending</span>
+                      <span className="font-semibold text-sky-900">
+                        {formatMoney(detail.costs.invoicedPendingRecovery)}
+                      </span>
+                    </div>
                   </div>
                   <div className="mt-3 text-xs">
                     <Link
@@ -843,12 +849,17 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Inventory</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Movements are sourced from InventoryLedger (Phase 1 stock truth).
+            Stock movements and material usage allocated to this project.
           </p>
           {!detail.inventory ? (
             <div className="mt-4 text-sm text-muted-foreground">No access.</div>
           ) : (
             <>
+              {detail.inventory.note ? (
+                <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  {detail.inventory.note}
+                </div>
+              ) : null}
               <div className="mt-4 grid gap-4 md:grid-cols-3">
                 <div className="rounded-lg border p-4">
                   <div className="text-xs text-muted-foreground">Issued to project</div>

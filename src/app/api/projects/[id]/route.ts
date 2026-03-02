@@ -5,6 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { buildProjectAliases } from "@/lib/projects";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -50,7 +51,72 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   }
 
   const { id } = await context.params;
-  await prisma.project.delete({ where: { id } });
+  const project = await prisma.project.findUnique({
+    where: { id },
+    select: { id: true, projectId: true, name: true },
+  });
+  if (!project) {
+    return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
+  }
+  const aliases = buildProjectAliases(project);
+
+  const dependency = await Promise.all([
+    prisma.expense.count({ where: { project: { in: aliases } } }),
+    prisma.income.count({ where: { project: { in: aliases } } }),
+    prisma.invoice.count({ where: { projectId: { in: aliases } } }),
+    prisma.purchaseOrder.count({ where: { projectRef: { in: aliases } } }),
+    prisma.goodsReceipt.count({
+      where: {
+        OR: [{ projectRef: { in: aliases } }, { purchaseOrder: { projectRef: { in: aliases } } }],
+      },
+    }),
+    prisma.vendorBill.count({ where: { projectRef: { in: aliases } } }),
+    prisma.vendorPayment.count({ where: { projectRef: { in: aliases } } }),
+    prisma.inventoryLedger.count({ where: { project: { in: aliases } } }),
+  ]);
+
+  const linkedRecords = dependency.reduce((sum, n) => sum + n, 0);
+  if (linkedRecords > 0) {
+    await logAudit({
+      action: "DELETE_PROJECT_BLOCKED",
+      entity: "Project",
+      entityId: id,
+      reason: `Delete blocked: project has ${linkedRecords} linked operational/financial records`,
+      userId: session.user.id,
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Project cannot be deleted because it has linked records (expenses, income, invoices, procurement, or inventory). Archive or close it instead.",
+      },
+      { status: 409 },
+    );
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.projectAssignment.deleteMany({ where: { projectId: id } });
+      const projectTask = (tx as unknown as { projectTask?: { deleteMany: (args: unknown) => Promise<unknown> } })
+        .projectTask;
+      if (projectTask) {
+        await projectTask.deleteMany({ where: { projectId: id } });
+      }
+      await tx.project.delete({ where: { id } });
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Project has linked records and cannot be deleted. Remove references first or archive this project.",
+        },
+        { status: 409 },
+      );
+    }
+    throw error;
+  }
 
   await logAudit({
     action: "DELETE_PROJECT",

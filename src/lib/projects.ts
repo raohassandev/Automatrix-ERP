@@ -52,6 +52,9 @@ export type ProjectFinancialSnapshot = {
   contractValue: number;
   invoicedAmount: number;
   receivedAmount: number;
+  // Pending against invoices only (strict AR view).
+  invoicedPendingRecovery: number;
+  // Pending using commercial baseline (max(invoice, contract) - received).
   pendingRecovery: number;
   costToDate: number;
   grossMargin: number;
@@ -117,6 +120,7 @@ export async function computeProjectFinancialSnapshot(
       contractValue: toAmount(project.contractValue),
       invoicedAmount: 0,
       receivedAmount: 0,
+      invoicedPendingRecovery: 0,
       pendingRecovery: 0,
       costToDate: 0,
       grossMargin: 0,
@@ -232,11 +236,15 @@ export async function computeProjectFinancialSnapshot(
     .reduce((sum, expense) => sum + effectiveApprovedExpenseAmount(expense), 0);
 
   const otherNonStockExpensesApproved = Math.max(0, nonStockExpensesApproved - incentivesApproved);
+  const contractValue = toAmount(project.contractValue);
   const approvedIncomeReceived = toAmount(approvedIncomeAgg._sum.amount);
   const pendingIncomeSubmitted = toAmount(pendingIncomeAgg._sum.amount);
   const pendingExpenseSubmitted = toAmount(pendingExpenseAgg._sum.amount);
   const invoicedAmount = toAmount(invoicedAgg._sum.amount);
-  const pendingRecovery = Math.max(0, invoicedAmount - approvedIncomeReceived);
+  const invoicedPendingRecovery = Math.max(0, invoicedAmount - approvedIncomeReceived);
+  // Owners often track pending against contract when invoice posting lags behind collection tracking.
+  const commercialBaseline = Math.max(invoicedAmount, contractValue);
+  const pendingRecovery = Math.max(0, commercialBaseline - approvedIncomeReceived);
   const totalProjectCosts = apBilledTotal + nonStockExpensesApproved;
   const projectProfit = approvedIncomeReceived - totalProjectCosts;
   const grossMargin = projectProfit;
@@ -247,9 +255,10 @@ export async function computeProjectFinancialSnapshot(
   const negativeMargin = grossMargin < 0;
 
   return {
-    contractValue: toAmount(project.contractValue),
+    contractValue,
     invoicedAmount,
     receivedAmount: approvedIncomeReceived,
+    invoicedPendingRecovery,
     pendingRecovery,
     costToDate: totalProjectCosts,
     grossMargin,
