@@ -71,7 +71,7 @@ test.describe("RB4 - Procurement chain", () => {
     const invJson = await invRes.json();
     const itemId: string = invJson.data.id;
 
-    // 3) Purchase Order (DRAFT)
+    // 3) Purchase Order (created as DRAFT by API lifecycle rules)
     const poRes = await api.post("/api/procurement/purchase-orders", {
       data: {
         poNumber: `PO-E2E-${ts}`,
@@ -79,7 +79,7 @@ test.describe("RB4 - Procurement chain", () => {
         vendorName: `E2E Vendor ${ts}`,
         projectRef,
         orderDate: today,
-        status: "DRAFT",
+        status: "ORDERED",
         currency: "PKR",
         items: [
           {
@@ -95,6 +95,12 @@ test.describe("RB4 - Procurement chain", () => {
     const poJson = await poRes.json();
     const poId: string = poJson.data.id;
     const poItemId: string = poJson.data.items[0].id;
+
+    // Move PO to receivable state required by GRN guard.
+    for (const action of ["SUBMIT", "APPROVE"] as const) {
+      const r = await api.patch(`/api/procurement/purchase-orders/${poId}`, { data: { action } });
+      expect(r.ok()).toBeTruthy();
+    }
 
     // 4) GRN (creates stock-in ledger rows)
     const grnRes = await api.post("/api/procurement/grn", {

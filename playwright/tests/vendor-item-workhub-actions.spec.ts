@@ -192,7 +192,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       await page.goto("/projects/financial");
       await expect(page.getByRole("heading", { name: "Project Financial Dashboard" })).toBeVisible();
       await expect(page.getByText("Total Contract Value").first()).toBeVisible();
-      await expect(page.getByText("Gross Margin").first()).toBeVisible();
+      await expect(page.getByText(/Gross Margin|Current Profit/).first()).toBeVisible();
       await ctx.close();
     }
 

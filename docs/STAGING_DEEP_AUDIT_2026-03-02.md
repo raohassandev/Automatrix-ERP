@@ -219,3 +219,39 @@
 ### Overall audit closure status
 - Open findings from this report: **0**
 - Reported defects fixed and revalidated on staging: **Yes**
+
+## Full-regression rerun update (2026-03-02, latest)
+
+### Scope
+- Full staging suite run against `https://erp-staging.automatrix.pk/`
+- Command:
+  - `pnpm exec playwright test --config=playwright.config.staging.ts`
+
+### Result
+- **44 passed, 0 failed**
+- Runtime: ~`8.0m`
+
+### What was verified in this rerun
+- Role-based access and API negatives across projects, vendors, inventory, procurement, and finance views
+- Mobile layout and action usability on owner-critical pages (iPhone profile)
+- Project overview/detail finance summaries, pending recovery behavior, and no-overflow checks
+- Procurement/Inventory controls:
+  - GRN blocked for non-receivable PO states
+  - Duplicate vendor bill guard
+  - Warehouse-level over-transfer guard
+- Cross-module accounting effect chains:
+  - Expense -> Approval -> Paid -> Journal
+  - PO -> GRN -> Vendor Bill -> Vendor Payment posting
+
+### Test-maintenance updates made during this rerun
+- `playwright/tests/rb4-procurement-chain.spec.ts`
+  - Aligned happy-path with enforced PO lifecycle (`DRAFT -> SUBMIT -> APPROVE`) before GRN creation.
+- `playwright/tests/vendor-item-workhub-actions.spec.ts`
+  - Project finance dashboard KPI assertion updated to match current UI label (`Current Profit`).
+
+### Remaining gaps (coverage, not active defects)
+- Payroll deep edges are still not fully automated:
+  - month-end reconciliation permutations
+  - exceptional deduction matrix permutations
+  - payslip legal/format compliance checklist
+- Visual quality is layout/runtime-smoke tested, but not pixel-baseline tested against a formal design system checklist.
