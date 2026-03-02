@@ -215,3 +215,31 @@
   - `pnpm typecheck`
   - `pnpm lint`
   - `pnpm test`
+
+## Broad incomplete-module hardening pass
+
+### Inventory + Master Data controls
+- Added warehouse master APIs and management UI:
+  - `GET/POST /api/warehouses`
+  - `PATCH /api/warehouses/[id]`
+  - UI: `src/app/inventory/warehouses/page.tsx` + `src/components/WarehousesManager.tsx`
+- Added warehouse-aware manual inventory movements:
+  - `warehouseId` accepted in inventory ledger payload and validated as active
+  - manual movement dialog now lets user choose warehouse
+  - files:
+    - `src/lib/validation.ts`
+    - `src/app/api/inventory/ledger/route.ts`
+    - `src/components/InventoryLedgerDialog.tsx`
+
+### Audit, Compliance, Reporting depth
+- Upgraded audit page permissions/filters:
+  - now enforced by `audit.view`
+  - supports filtering by action/entity/date range with CSV export
+  - file: `src/app/audit/page.tsx`
+- Added audit CSV export endpoint:
+  - `src/app/api/audit/export/route.ts`
+- Added dedicated exceptions report for blocked-policy events (`BLOCK_*` audit actions):
+  - page: `src/app/reports/exceptions/page.tsx`
+  - linked into report surfaces:
+    - `src/app/reports/page.tsx`
+    - `src/lib/navigation.ts`
