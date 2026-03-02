@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { itemId, type, quantity, unitCost, reference, project } = parsed.data;
+  const { itemId, type, warehouseId, quantity, unitCost, reference, project } = parsed.data;
   if (unitCost !== undefined && !canViewCost) {
     return NextResponse.json({ success: false, error: "Purchase price permission required" }, { status: 403 });
   }
@@ -68,12 +68,24 @@ export async function POST(req: Request) {
   const total = Math.abs(qtyChange) * effectiveCost;
 
   const result = await prisma.$transaction(async (tx) => {
-    const defaultWarehouseId = await ensureDefaultWarehouseId(tx);
+    let selectedWarehouseId = warehouseId || null;
+    if (selectedWarehouseId) {
+      const selectedWarehouse = await tx.warehouse.findUnique({
+        where: { id: selectedWarehouseId },
+        select: { id: true, isActive: true },
+      });
+      if (!selectedWarehouse || !selectedWarehouse.isActive) {
+        throw new Error("Selected warehouse is invalid or inactive.");
+      }
+    } else {
+      selectedWarehouseId = await ensureDefaultWarehouseId(tx);
+    }
+
     const ledger = await tx.inventoryLedger.create({
       data: {
         date: new Date(),
         itemId,
-        warehouseId: defaultWarehouseId,
+        warehouseId: selectedWarehouseId,
         type,
         quantity: new Prisma.Decimal(qtyChange),
         unitCost: new Prisma.Decimal(effectiveCost),

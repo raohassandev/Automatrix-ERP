@@ -83,6 +83,7 @@ export const inventorySchema = z.object({
 export const inventoryLedgerSchema = z.object({
   itemId: z.string().min(1),
   type: z.enum(["PURCHASE", "SALE", "ADJUSTMENT", "TRANSFER", "RETURN", "PROJECT_ALLOCATION"]),
+  warehouseId: z.string().min(1).optional(),
   quantity: z.number().positive(),
   unitCost: z.number().nonnegative().optional(),
   reference: z.string().optional(),

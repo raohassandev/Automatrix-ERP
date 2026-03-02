@@ -149,6 +149,10 @@ export default async function ReportsPage() {
           <div className="text-sm text-muted-foreground">Procurement (Stock-in)</div>
           <div className="mt-2 text-lg font-semibold">GRN postings into stock ledger</div>
         </a>
+        <a href="/reports/exceptions" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+          <div className="text-sm text-muted-foreground">Controls</div>
+          <div className="mt-2 text-lg font-semibold">Exceptions Log (blocked actions)</div>
+        </a>
         <a href="/audit" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
           <div className="text-sm text-muted-foreground">Audit Log</div>
           <div className="mt-2 text-lg font-semibold">Traceability + exceptions</div>

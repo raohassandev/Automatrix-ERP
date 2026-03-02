@@ -43,6 +43,7 @@ export const navGroups: NavGroup[] = [
       { name: "Projects", href: "/projects", icon: FolderKanban, permissions: ["projects.view_all", "projects.view_assigned"] },
       { name: "Procurement", href: "/procurement/purchase-orders", icon: FileText, permissions: ["procurement.view_all", "procurement.edit"] },
       { name: "Inventory", href: "/inventory", icon: Package, permissions: ["inventory.view"] },
+      { name: "Warehouses", href: "/inventory/warehouses", icon: Package, permissions: ["inventory.view"] },
     ],
   },
   {
@@ -89,6 +90,7 @@ export const navGroups: NavGroup[] = [
       { name: "Procurement Report", href: "/reports/procurement", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Inventory Report", href: "/reports/inventory", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
       { name: "Project Reports", href: "/reports/projects", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
+      { name: "Exceptions Report", href: "/reports/exceptions", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
     ],
   },
   {

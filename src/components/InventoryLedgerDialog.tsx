@@ -31,11 +31,13 @@ export function InventoryLedgerDialog({
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState({
     type: defaultType || "ADJUSTMENT",
+    warehouseId: "",
     quantity: "",
     unitCost: "",
     reference: "",
     project: "",
   });
+  const [warehouses, setWarehouses] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
 
   useEffect(() => {
     if (open) {
@@ -45,6 +47,28 @@ export function InventoryLedgerDialog({
       }));
     }
   }, [open, defaultType]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch("/api/warehouses")
+      .then((res) => res.json())
+      .then((json) => {
+        if (cancelled) return;
+        const list = Array.isArray(json?.data) ? json.data : [];
+        setWarehouses(list);
+        const defaultWarehouse = list.find((w: { isDefault?: boolean }) => w.isDefault);
+        if (defaultWarehouse?.id) {
+          setForm((prev) => ({ ...prev, warehouseId: prev.warehouseId || defaultWarehouse.id }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setWarehouses([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   async function submit() {
     if (!form.quantity || Number(form.quantity) <= 0) {
@@ -63,6 +87,7 @@ export function InventoryLedgerDialog({
         body: JSON.stringify({
           itemId,
           type: form.type,
+          warehouseId: form.warehouseId || undefined,
           quantity: Number(form.quantity),
           unitCost: form.unitCost ? Number(form.unitCost) : undefined,
           reference: form.reference || undefined,
@@ -77,6 +102,7 @@ export function InventoryLedgerDialog({
       toast.success("Inventory updated");
       setForm({
         type: "ADJUSTMENT",
+        warehouseId: "",
         quantity: "",
         unitCost: "",
         reference: "",
@@ -115,6 +141,26 @@ export function InventoryLedgerDialog({
               <SelectItem value="ADJUSTMENT">Adjustment</SelectItem>
               <SelectItem value="RETURN">Return</SelectItem>
               <SelectItem value="TRANSFER">Transfer</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="warehouseId">Warehouse</Label>
+          <Select
+            value={form.warehouseId}
+            onValueChange={(value) => setForm((prev) => ({ ...prev, warehouseId: value }))}
+          >
+            <SelectTrigger id="warehouseId">
+              <SelectValue placeholder="Select warehouse" />
+            </SelectTrigger>
+            <SelectContent>
+              {warehouses.map((warehouse) => (
+                <SelectItem key={warehouse.id} value={warehouse.id}>
+                  {warehouse.name}
+                  {warehouse.isDefault ? " (Default)" : ""}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
