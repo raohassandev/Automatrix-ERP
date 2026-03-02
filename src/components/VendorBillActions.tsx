@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { VendorBillFormDialog } from "@/components/VendorBillFormDialog";
+import { ProcurementAttachmentsDialog } from "@/components/ProcurementAttachmentsDialog";
 import { toast } from "sonner";
 
 type VendorBill = {
@@ -13,6 +14,7 @@ type VendorBill = {
 export function VendorBillActions({ billId }: { billId: string }) {
   const [bill, setBill] = useState<VendorBill | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -53,7 +55,17 @@ export function VendorBillActions({ billId }: { billId: string }) {
       <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} disabled={bill.status !== "DRAFT"}>
         Edit
       </Button>
+      <Button variant="outline" size="sm" onClick={() => setAttachmentsOpen(true)}>
+        Attachments
+      </Button>
       <VendorBillFormDialog open={editOpen} onOpenChange={setEditOpen} billId={billId} />
+      <ProcurementAttachmentsDialog
+        open={attachmentsOpen}
+        onOpenChange={setAttachmentsOpen}
+        title={`Vendor Bill Attachments — ${bill.id}`}
+        endpoint={`/api/procurement/vendor-bills/${billId}/attachments`}
+        canEdit={bill.status === "DRAFT" || bill.status === "SUBMITTED" || bill.status === "APPROVED"}
+      />
 
       <Button
         variant="outline"
@@ -90,4 +102,3 @@ export function VendorBillActions({ billId }: { billId: string }) {
     </div>
   );
 }
-

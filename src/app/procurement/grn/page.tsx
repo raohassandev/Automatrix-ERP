@@ -69,6 +69,7 @@ export default async function GoodsReceiptPage({
       unitCost: Number(item.unitCost),
       total: Number(item.total),
     })),
+    notes: receipt.notes || "",
   }));
 
   const totalPages = Math.max(1, Math.ceil(total / take));
@@ -100,6 +101,7 @@ export default async function GoodsReceiptPage({
                 <th className="py-2">Project</th>
                 <th className="py-2">Received</th>
                 <th className="py-2">Status</th>
+                <th className="py-2">Notes</th>
                 <th className="py-2">Total</th>
                 <th className="py-2">Actions</th>
               </tr>
@@ -116,6 +118,9 @@ export default async function GoodsReceiptPage({
                       {new Date(receipt.receivedDate).toLocaleDateString()}
                     </td>
                     <td className="py-2">{receipt.status}</td>
+                    <td className="py-2 max-w-[220px] truncate" title={receipt.notes || undefined}>
+                      {receipt.notes || "-"}
+                    </td>
                     <td className="py-2">{formatMoney(totalValue)}</td>
                     <td className="py-2">
                       {canEdit ? <GoodsReceiptActions receipt={receipt} /> : null}

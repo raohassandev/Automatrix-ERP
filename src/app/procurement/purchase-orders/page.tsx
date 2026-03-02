@@ -81,6 +81,7 @@ export default async function PurchaseOrdersPage({
       receivedTotal,
       quantityTotal,
       projectRef: inferredProject,
+      notes: order.notes || "",
     };
   });
 
@@ -114,6 +115,7 @@ export default async function PurchaseOrdersPage({
                 <th className="py-2">Order Date</th>
                 <th className="py-2">Received</th>
                 <th className="py-2">Status</th>
+                <th className="py-2">Notes</th>
                 <th className="py-2">Total</th>
                 <th className="py-2">Actions</th>
               </tr>
@@ -129,6 +131,9 @@ export default async function PurchaseOrdersPage({
                     {order.receivedTotal} / {order.quantityTotal}
                   </td>
                   <td className="py-2">{order.status}</td>
+                  <td className="py-2 max-w-[220px] truncate" title={order.notes || undefined}>
+                    {order.notes || "-"}
+                  </td>
                   <td className="py-2">{formatMoney(order.totalAmount)}</td>
                   <td className="py-2">
                     {canEdit ? <PurchaseOrderActions purchaseOrder={order} /> : null}

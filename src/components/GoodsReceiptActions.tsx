@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/TableActions";
 import { GoodsReceiptFormDialog } from "@/components/GoodsReceiptFormDialog";
+import { ProcurementAttachmentsDialog } from "@/components/ProcurementAttachmentsDialog";
 import { toast } from "sonner";
 
 type GoodsReceipt = {
@@ -25,6 +26,7 @@ type GoodsReceipt = {
 export function GoodsReceiptActions({ receipt }: { receipt: GoodsReceipt }) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const status = (receipt.status || "RECEIVED").toUpperCase();
   const canEdit = status === "DRAFT";
@@ -50,6 +52,9 @@ export function GoodsReceiptActions({ receipt }: { receipt: GoodsReceipt }) {
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => setEditOpen(true)} disabled={!canEdit}>
           Edit
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setAttachmentsOpen(true)}>
+          Attachments
         </Button>
         {canDelete ? <DeleteButton url={`/api/procurement/grn/${receipt.id}`} /> : null}
 
@@ -89,6 +94,13 @@ export function GoodsReceiptActions({ receipt }: { receipt: GoodsReceipt }) {
       {editOpen ? (
         <GoodsReceiptFormDialog open={editOpen} onOpenChange={setEditOpen} receipt={receipt} />
       ) : null}
+      <ProcurementAttachmentsDialog
+        open={attachmentsOpen}
+        onOpenChange={setAttachmentsOpen}
+        title={`GRN Attachments — ${receipt.grnNumber}`}
+        endpoint={`/api/procurement/grn/${receipt.id}/attachments`}
+        canEdit={canEdit}
+      />
     </>
   );
 }

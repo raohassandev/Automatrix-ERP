@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/TableActions";
 import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
+import { ProcurementAttachmentsDialog } from "@/components/ProcurementAttachmentsDialog";
 import { toast } from "sonner";
 
 type PurchaseOrder = {
@@ -30,6 +31,7 @@ type PurchaseOrder = {
 export function PurchaseOrderActions({ purchaseOrder }: { purchaseOrder: PurchaseOrder }) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const status = (purchaseOrder.status || "DRAFT").toUpperCase();
   const canEdit = status === "DRAFT";
@@ -55,6 +57,9 @@ export function PurchaseOrderActions({ purchaseOrder }: { purchaseOrder: Purchas
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="outline" onClick={() => setEditOpen(true)} disabled={!canEdit}>
           Edit
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setAttachmentsOpen(true)}>
+          Attachments
         </Button>
         {canDelete ? <DeleteButton url={`/api/procurement/purchase-orders/${purchaseOrder.id}`} /> : null}
 
@@ -90,6 +95,13 @@ export function PurchaseOrderActions({ purchaseOrder }: { purchaseOrder: Purchas
           purchaseOrder={purchaseOrder}
         />
       ) : null}
+      <ProcurementAttachmentsDialog
+        open={attachmentsOpen}
+        onOpenChange={setAttachmentsOpen}
+        title={`PO Attachments — ${purchaseOrder.poNumber}`}
+        endpoint={`/api/procurement/purchase-orders/${purchaseOrder.id}/attachments`}
+        canEdit={canEdit}
+      />
     </>
   );
 }

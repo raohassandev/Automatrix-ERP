@@ -69,6 +69,7 @@ export default async function VendorBillsPage({
       totalAmount: Number(bill.totalAmount),
       paidAmount: paid,
       lineCount: bill.lines.length,
+      notes: bill.notes || "",
     };
   });
 
@@ -131,6 +132,7 @@ export default async function VendorBillsPage({
                 <th className="py-2">Due</th>
                 <th className="py-2">Lines</th>
                 <th className="py-2">Status</th>
+                <th className="py-2">Notes</th>
                 <th className="py-2">Total</th>
                 <th className="py-2">Paid</th>
                 <th className="py-2">Actions</th>
@@ -147,6 +149,9 @@ export default async function VendorBillsPage({
                   <td className="py-2">{bill.lineCount}</td>
                   <td className="py-2">
                     <StatusBadge status={bill.status} />
+                  </td>
+                  <td className="py-2 max-w-[220px] truncate" title={bill.notes || undefined}>
+                    {bill.notes || "-"}
                   </td>
                   <td className="py-2">{formatMoney(bill.totalAmount)}</td>
                   <td className="py-2">{formatMoney(bill.paidAmount)}</td>
