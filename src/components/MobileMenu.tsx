@@ -15,6 +15,13 @@ export default function MobileMenu() {
   const { data: session } = useSession();
   const roleName = ((session?.user as { role?: string })?.role || 'Guest') as RoleName;
   const { canAccess } = useEffectivePermissions(roleName);
+  const visibleGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => canAccess(item.permissions)),
+    }))
+    .filter((group) => group.items.length > 0);
+  const showFallbackQuickLinks = Boolean(session?.user) && visibleGroups.length === 0;
 
   return (
     <>
@@ -37,16 +44,14 @@ export default function MobileMenu() {
               
               {/* Navigation Links */}
               <div className="flex-1 grid gap-4">
-                {navGroups.map((group) => {
-                  const visibleItems = group.items.filter((item) => canAccess(item.permissions));
-                  if (visibleItems.length === 0) return null;
+                {visibleGroups.map((group) => {
                   return (
                     <div key={group.title} className="space-y-2">
                       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {group.title}
                       </div>
                       <div className="grid gap-2">
-                        {visibleItems.map((item) => (
+                        {group.items.map((item) => (
                           <Link
                             key={item.href}
                             href={item.href}
@@ -60,6 +65,29 @@ export default function MobileMenu() {
                     </div>
                   );
                 })}
+                {showFallbackQuickLinks ? (
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Quick Access
+                    </div>
+                    <div className="grid gap-2">
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setOpen(false)}
+                        className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        href="/me"
+                        onClick={() => setOpen(false)}
+                        className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                      >
+                        My Portal
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               {/* Logout Button */}
