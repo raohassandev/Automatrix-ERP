@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { getBalanceSheet } from "@/lib/accounting-reports";
+import { canAccessAccountingReports } from "@/lib/accounting-report-access";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -21,10 +22,8 @@ export async function GET(req: Request) {
   if (!session?.user?.id) return new Response("Unauthorized", { status: 401 });
 
   const canExport = await requirePermission(session.user.id, "reports.export");
-  const canViewAll = await requirePermission(session.user.id, "reports.view_all");
-  const canViewTeam = await requirePermission(session.user.id, "reports.view_team");
-  const canViewOwn = await requirePermission(session.user.id, "reports.view_own");
-  if (!canExport || (!canViewAll && !canViewTeam && !canViewOwn)) {
+  const canView = await canAccessAccountingReports(session.user.id);
+  if (!canExport || !canView) {
     return new Response("Forbidden", { status: 403 });
   }
 

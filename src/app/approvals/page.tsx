@@ -65,7 +65,7 @@ export default async function ApprovalsPage() {
   const hasAssignments = await userHasApprovalAssignment(session.user.id);
 
   if (!canApprove && !canView && !hasAssignments) {
-    redirect("/dashboard?error=forbidden");
+    redirect("/forbidden?from=/approvals");
   }
 
   let approvalsWithWalletInfo: Approval[] = [];

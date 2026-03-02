@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { hasPermission, type RoleName } from "@/lib/permissions";
+import { userHasEffectivePermission } from "@/lib/access-control";
 import { logAudit } from "@/lib/audit";
 
 const ROUTE_RULES: Array<{ pattern: RegExp; any: string[] }> = [
+  { pattern: /^\/reports\/accounting/, any: ["accounting.view", "accounting.manage", "company_accounts.manage"] },
   { pattern: /^\/dashboard/, any: ["dashboard.view"] },
   { pattern: /^\/expenses/, any: ["expenses.view_all", "expenses.view_own"] },
   { pattern: /^\/income/, any: ["income.view_all", "income.view_own"] },
@@ -64,12 +65,15 @@ export async function proxy(request: NextRequest) {
     await logApiRequest(request, session.user.id as string);
   }
 
-  const roleName = ((session.user as { role?: string }).role || "Guest") as RoleName;
   const rule = ROUTE_RULES.find((entry) => entry.pattern.test(pathname));
-  if (rule && !rule.any.some((perm) => hasPermission(roleName, perm))) {
-    const fallbackUrl = new URL("/dashboard", request.url);
-    fallbackUrl.searchParams.set("error", "forbidden");
-    return NextResponse.redirect(fallbackUrl);
+  if (rule) {
+    const checks = await Promise.all(rule.any.map((perm) => userHasEffectivePermission(session.user.id as string, perm)));
+    const allowed = checks.some(Boolean);
+    if (!allowed) {
+      const fallbackUrl = new URL("/forbidden", request.url);
+      fallbackUrl.searchParams.set("from", pathname);
+      return NextResponse.redirect(fallbackUrl);
+    }
   }
 
   // Authenticated routes - add security headers

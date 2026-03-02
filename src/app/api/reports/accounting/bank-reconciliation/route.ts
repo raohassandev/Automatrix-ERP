@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { getBookBalance } from "@/lib/bank-reconciliation";
 import { logAudit } from "@/lib/audit";
+import { canAccessAccountingReports } from "@/lib/accounting-report-access";
 
 function parseAsOf(value?: string | null) {
   const asOf = value ? new Date(value) : new Date();
@@ -17,11 +18,7 @@ export async function GET(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
-  const canView =
-    (await requirePermission(session.user.id, "reports.view_all")) ||
-    (await requirePermission(session.user.id, "reports.view_team")) ||
-    (await requirePermission(session.user.id, "reports.view_own")) ||
-    (await requirePermission(session.user.id, "company_accounts.view"));
+  const canView = await canAccessAccountingReports(session.user.id);
   if (!canView) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }

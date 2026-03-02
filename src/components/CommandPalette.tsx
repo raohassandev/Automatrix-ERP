@@ -103,7 +103,7 @@ export function CommandPalette() {
             { href: "/audit", label: "Audit Log", icon: FileText, permissions: ["reports.view_all"] },
             { href: "/settings", label: "Settings", icon: Settings, permissions: ["employees.view_all", "accounting.manage", "company_accounts.manage"] },
             { href: "/reports", label: "Reports", icon: FileText, permissions: ["reports.view_all", "reports.view_team", "reports.view_own"] },
-            { href: "/reports/accounting/bank-reconciliation", label: "Bank Reconciliation", icon: FileBarChart, permissions: ["reports.view_all", "reports.view_team", "reports.view_own", "company_accounts.view"] },
+            { href: "/reports/accounting/bank-reconciliation", label: "Bank Reconciliation", icon: FileBarChart, permissions: ["accounting.view", "accounting.manage", "company_accounts.manage"] },
             { href: "/categories", label: "Categories", icon: Tags, permissions: ["categories.manage"] },
           ]
             .filter((item) => canAccess(item.permissions))

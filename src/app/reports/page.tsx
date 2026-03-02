@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
 import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/rbac";
+import { canAccessAccountingReports } from "@/lib/accounting-report-access";
 
 export default async function ReportsPage() {
   const session = await auth();
@@ -13,6 +14,7 @@ export default async function ReportsPage() {
   const canViewAll = await requirePermission(session.user.id, "reports.view_all");
   const canViewTeam = await requirePermission(session.user.id, "reports.view_team");
   const canViewOwn = await requirePermission(session.user.id, "reports.view_own");
+  const canViewAccountingReports = await canAccessAccountingReports(session.user.id);
   if (!canViewAll && !canViewTeam && !canViewOwn) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -105,38 +107,42 @@ export default async function ReportsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <a href="/reports/accounting/trial-balance" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
-          <div className="text-sm text-muted-foreground">Accounting</div>
-          <div className="mt-2 text-lg font-semibold">Trial Balance (double-entry)</div>
-        </a>
-        <a href="/reports/accounting/cash-position" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
-          <div className="text-sm text-muted-foreground">Treasury</div>
-          <div className="mt-2 text-lg font-semibold">Cash Position by Account</div>
-        </a>
-        <a href="/reports/accounting/cash-forecast" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
-          <div className="text-sm text-muted-foreground">Treasury</div>
-          <div className="mt-2 text-lg font-semibold">14/30 Day Cash Forecast</div>
-        </a>
-        <a href="/reports/accounting/bank-reconciliation" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
-          <div className="text-sm text-muted-foreground">Treasury Control</div>
-          <div className="mt-2 text-lg font-semibold">Bank Reconciliation</div>
-        </a>
-        <a href="/reports/accounting/ar-aging" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
-          <div className="text-sm text-muted-foreground">Receivables</div>
-          <div className="mt-2 text-lg font-semibold">AR Aging</div>
-        </a>
-        <a href="/reports/accounting/o2c-reconciliation" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
-          <div className="text-sm text-muted-foreground">Receivables Control</div>
-          <div className="mt-2 text-lg font-semibold">O2C Reconciliation</div>
-        </a>
-        <a href="/reports/accounting/profit-loss" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
-          <div className="text-sm text-muted-foreground">Accounting</div>
-          <div className="mt-2 text-lg font-semibold">Profit &amp; Loss</div>
-        </a>
-        <a href="/reports/accounting/balance-sheet" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
-          <div className="text-sm text-muted-foreground">Accounting</div>
-          <div className="mt-2 text-lg font-semibold">Balance Sheet</div>
-        </a>
+        {canViewAccountingReports ? (
+          <>
+            <a href="/reports/accounting/trial-balance" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+              <div className="text-sm text-muted-foreground">Accounting</div>
+              <div className="mt-2 text-lg font-semibold">Trial Balance (double-entry)</div>
+            </a>
+            <a href="/reports/accounting/cash-position" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+              <div className="text-sm text-muted-foreground">Treasury</div>
+              <div className="mt-2 text-lg font-semibold">Cash Position by Account</div>
+            </a>
+            <a href="/reports/accounting/cash-forecast" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+              <div className="text-sm text-muted-foreground">Treasury</div>
+              <div className="mt-2 text-lg font-semibold">14/30 Day Cash Forecast</div>
+            </a>
+            <a href="/reports/accounting/bank-reconciliation" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+              <div className="text-sm text-muted-foreground">Treasury Control</div>
+              <div className="mt-2 text-lg font-semibold">Bank Reconciliation</div>
+            </a>
+            <a href="/reports/accounting/ar-aging" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+              <div className="text-sm text-muted-foreground">Receivables</div>
+              <div className="mt-2 text-lg font-semibold">AR Aging</div>
+            </a>
+            <a href="/reports/accounting/o2c-reconciliation" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+              <div className="text-sm text-muted-foreground">Receivables Control</div>
+              <div className="mt-2 text-lg font-semibold">O2C Reconciliation</div>
+            </a>
+            <a href="/reports/accounting/profit-loss" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+              <div className="text-sm text-muted-foreground">Accounting</div>
+              <div className="mt-2 text-lg font-semibold">Profit &amp; Loss</div>
+            </a>
+            <a href="/reports/accounting/balance-sheet" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+              <div className="text-sm text-muted-foreground">Accounting</div>
+              <div className="mt-2 text-lg font-semibold">Balance Sheet</div>
+            </a>
+          </>
+        ) : null}
         <a href="/reports/ap" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
           <div className="text-sm text-muted-foreground">AP Aging</div>
           <div className="mt-2 text-lg font-semibold">Outstanding vendor bills (allocations-only)</div>

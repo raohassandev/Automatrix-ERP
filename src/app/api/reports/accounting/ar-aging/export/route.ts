@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { getArAging } from "@/lib/accounting-reports";
+import { canAccessAccountingReports } from "@/lib/accounting-report-access";
 
 function esc(value: string | number) {
   const s = String(value ?? "");
@@ -16,11 +17,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canViewAll = await requirePermission(session.user.id, "reports.view_all");
-  const canViewTeam = await requirePermission(session.user.id, "reports.view_team");
-  const canViewOwn = await requirePermission(session.user.id, "reports.view_own");
   const canExport = await requirePermission(session.user.id, "reports.export");
-  if ((!canViewAll && !canViewTeam && !canViewOwn) || !canExport) {
+  const canView = await canAccessAccountingReports(session.user.id);
+  if (!canView || !canExport) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 

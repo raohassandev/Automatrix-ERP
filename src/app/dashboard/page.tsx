@@ -21,6 +21,7 @@ export default async function DashboardPage() {
   const canViewReportsTeam = await requirePermission(session.user.id, "reports.view_team");
   const canViewReportsAll = await requirePermission(session.user.id, "reports.view_all");
   const canViewAccounting = await requirePermission(session.user.id, "accounting.view");
+  const canManageAccounting = await requirePermission(session.user.id, "accounting.manage");
   const canViewOwnEmployees = await requirePermission(session.user.id, "employees.view_own");
   const canViewAllEmployees = await requirePermission(session.user.id, "employees.view_all");
   const canSubmitExpense = await requirePermission(session.user.id, "expenses.submit");
@@ -107,7 +108,7 @@ export default async function DashboardPage() {
           <div className="rounded-xl border bg-card p-6 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Reports</div>
             <div className="mt-3 grid gap-2 text-sm">
-              {canViewAccounting || canViewReportsAll ? (
+              {canViewAccounting || canManageAccounting || canManageCompanyAccounts ? (
                 <Link className="underline" href="/reports/ap">
                   AP Aging
                 </Link>
