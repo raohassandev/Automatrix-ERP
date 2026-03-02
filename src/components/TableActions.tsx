@@ -8,6 +8,10 @@ function isProjectDeleteUrl(url: string) {
   return /^\/api\/projects\/[^/?#]+(?:\?.*)?$/i.test(url);
 }
 
+function withQuery(url: string, query: string) {
+  return `${url}${url.includes("?") ? "&" : "?"}${query}`;
+}
+
 export function DeleteButton({ url }: { url: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -20,12 +24,12 @@ export function DeleteButton({ url }: { url: string }) {
         const payload = await res.json().catch(() => ({}));
 
         if (res.status === 409 && isProjectDeleteUrl(url)) {
-          const shouldCloseInstead = confirm(
-            `${payload?.error || "Project cannot be deleted because it has linked records."}\n\nClick OK to close this project instead and keep all linked records.`,
+          const actionInput = prompt(
+            `${payload?.error || "Project cannot be deleted because it has linked records."}\n\nType CLOSE to close the project and keep linked records.\nType HARD DELETE to permanently remove this project and linked records (CEO/Owner only).`,
           );
-          if (shouldCloseInstead) {
-            const separator = url.includes("?") ? "&" : "?";
-            const closeRes = await fetch(`${url}${separator}onConflict=close`, { method: "DELETE" });
+          const action = String(actionInput || "").trim().toUpperCase().replace(/\s+/g, " ");
+          if (action === "CLOSE") {
+            const closeRes = await fetch(withQuery(url, "onConflict=close"), { method: "DELETE" });
             if (!closeRes.ok) {
               const closePayload = await closeRes.json().catch(() => ({}));
               toast.error(closePayload?.error || "Unable to close linked project.");
@@ -33,6 +37,31 @@ export function DeleteButton({ url }: { url: string }) {
             }
             toast.success("Project closed successfully. Linked records were preserved.");
             router.refresh();
+            return;
+          }
+
+          if (action === "HARD DELETE") {
+            const finalConfirm = prompt(
+              "Final confirmation required.\nType DELETE FOREVER to permanently remove this project and all linked records.",
+            );
+            const confirmed = String(finalConfirm || "").trim().toUpperCase();
+            if (confirmed !== "DELETE FOREVER") {
+              toast.error("Hard delete cancelled.");
+              return;
+            }
+            const hardRes = await fetch(withQuery(url, "onConflict=hard&confirm=DELETE_FOREVER"), { method: "DELETE" });
+            if (!hardRes.ok) {
+              const hardPayload = await hardRes.json().catch(() => ({}));
+              toast.error(hardPayload?.error || "Unable to hard delete linked project.");
+              return;
+            }
+            toast.success("Project and linked records permanently deleted.");
+            router.refresh();
+            return;
+          }
+
+          if (action) {
+            toast.error("Invalid action. Use CLOSE or HARD DELETE.");
             return;
           }
         }

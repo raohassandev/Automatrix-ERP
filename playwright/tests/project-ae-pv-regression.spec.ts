@@ -82,6 +82,11 @@ test.describe("Project regression: AE-PV-IS-463", () => {
     // Known audit project id from staging should return a meaningful status, never 500.
     expect([200, 404, 409]).toContain(deleteKnownAuditRes.status());
 
+    const hardDeleteTargetRes = await api.delete(`/api/projects/${target.id}?onConflict=hard&confirm=DELETE_FOREVER`);
+    // Finance role should not be able to hard-delete linked projects.
+    // 409 can appear on older staging builds before hard-delete rollout.
+    expect([403, 409]).toContain(hardDeleteTargetRes.status());
+
     await api.dispose();
   });
 });
