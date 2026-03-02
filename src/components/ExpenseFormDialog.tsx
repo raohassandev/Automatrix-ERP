@@ -58,6 +58,8 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
   const [accounts, setAccounts] = useState<Array<{ id: string; name: string; type: string }>>([]);
 
   useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
     const fetchCategories = async () => {
       setCategoriesLoading(true);
       try {
@@ -67,6 +69,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           throw new Error(data.error || "Failed to load categories");
         }
         const list = Array.isArray(data.categories) ? data.categories : [];
+        if (cancelled) return;
         setCategories(
           list.map((item: { name: string; maxAmount?: number | null; enforceStrict?: boolean }) => ({
             name: item.name,
@@ -75,14 +78,19 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           }))
         );
       } catch (error) {
+        if (cancelled) return;
         console.error("Error loading categories:", error);
       } finally {
+        if (cancelled) return;
         setCategoriesLoading(false);
       }
     };
 
     fetchCategories();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
