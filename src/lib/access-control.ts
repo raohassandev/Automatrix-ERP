@@ -74,12 +74,14 @@ export async function getEffectivePermissionsForUser(userId: string): Promise<Ef
     user?.role?.permissions.map((entry) => entry.permission.key) ?? []
   );
 
-  // Fallback to static map for legacy roles that were not synced into RolePermission yet.
-  if (rolePermissionSet.size === 0) {
-    for (const permissionKey of PERMISSION_KEYS) {
-      if (hasStaticPermission(roleName, permissionKey)) {
-        rolePermissionSet.add(permissionKey);
-      }
+  // Always include static baseline permissions for known built-in roles.
+  // DB matrix can extend this; user overrides can still ALLOW/DENY at user level.
+  if (hasStaticPermission(roleName, "*")) {
+    rolePermissionSet.add("*");
+  }
+  for (const permissionKey of PERMISSION_KEYS) {
+    if (hasStaticPermission(roleName, permissionKey)) {
+      rolePermissionSet.add(permissionKey);
     }
   }
 
