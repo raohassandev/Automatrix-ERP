@@ -243,3 +243,15 @@
   - linked into report surfaces:
     - `src/app/reports/page.tsx`
     - `src/lib/navigation.ts`
+
+## Approvals engine completion increment (procurement coverage)
+- Extended central approvals screen to include pending procurement approvals:
+  - added unified queue for `SUBMITTED` Vendor Bills and Vendor Payments with amount, level, vendor, project/account context.
+  - approvers can now approve/reject these documents directly from Approvals page.
+- Added policy-based eligibility filtering for procurement approvals:
+  - uses existing approval policy engine (`module: procurement`) and amount thresholds.
+- Integrated procurement queue into approvals KPIs:
+  - total pending, total amount, and L1/L2/L3 counters now include procurement documents.
+- Files:
+  - `src/components/ProcurementApprovalQueue.tsx`
+  - `src/app/approvals/page.tsx`

@@ -2,12 +2,15 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/rbac";
 import { formatMoney } from "@/lib/format";
-import { getPendingApprovalsForUser } from "@/lib/approval-engine";
+import { canUserApprove, getPendingApprovalsForUser } from "@/lib/approval-engine";
 import { prisma } from "@/lib/prisma";
 import ApprovalQueue from "@/components/ApprovalQueue";
 import { Expense, Income } from "@prisma/client";
 import { getExpenseApprovalLevel, getIncomeApprovalLevel } from "@/lib/approvals";
 import { userHasApprovalAssignment } from "@/lib/approval-policies";
+import ProcurementApprovalQueue, {
+  type ProcurementApprovalItem,
+} from "@/components/ProcurementApprovalQueue";
 
 // Types matching ApprovalQueue component expectations
 interface Approval {
@@ -65,6 +68,7 @@ export default async function ApprovalsPage() {
   }
 
   let approvalsWithWalletInfo: Approval[] = [];
+  let procurementApprovals: ProcurementApprovalItem[] = [];
   let recentHistory: HistoryItem[] = [];
 
   try {
@@ -168,6 +172,60 @@ export default async function ApprovalsPage() {
       ...incomeApprovals,
     ];
 
+    // Pending procurement approvals (SUBMITTED Vendor Bills + Vendor Payments)
+    const [submittedBills, submittedPayments] = await Promise.all([
+      prisma.vendorBill.findMany({
+        where: { status: "SUBMITTED" },
+        include: { vendor: { select: { name: true } } },
+        orderBy: { billDate: "desc" },
+        take: 100,
+      }),
+      prisma.vendorPayment.findMany({
+        where: { status: "SUBMITTED" },
+        include: {
+          vendor: { select: { name: true } },
+          companyAccount: { select: { name: true } },
+        },
+        orderBy: { paymentDate: "desc" },
+        take: 100,
+      }),
+    ]);
+
+    const procurementCandidates: ProcurementApprovalItem[] = [
+      ...submittedBills.map((bill) => ({
+        id: bill.id,
+        type: "VENDOR_BILL" as const,
+        number: bill.billNumber,
+        date: bill.billDate,
+        amount: Number(bill.totalAmount || 0),
+        requiredApprovalLevel: getExpenseApprovalLevel(Number(bill.totalAmount || 0)),
+        vendorName: bill.vendor?.name || "Unknown vendor",
+        projectRef: bill.projectRef || null,
+      })),
+      ...submittedPayments.map((payment) => ({
+        id: payment.id,
+        type: "VENDOR_PAYMENT" as const,
+        number: payment.paymentNumber,
+        date: payment.paymentDate,
+        amount: Number(payment.amount || 0),
+        requiredApprovalLevel: getExpenseApprovalLevel(Number(payment.amount || 0)),
+        vendorName: payment.vendor?.name || "Unknown vendor",
+        projectRef: payment.projectRef || null,
+        companyAccountName: payment.companyAccount?.name || null,
+      })),
+    ];
+
+    const eligibility = await Promise.all(
+      procurementCandidates.map(async (row) => {
+        const access = await canUserApprove(session.user.id, {
+          module: "procurement",
+          amount: Number(row.amount || 0),
+        });
+        return access.canApprove;
+      })
+    );
+    procurementApprovals = procurementCandidates.filter((_, idx) => eligibility[idx]);
+
     // Fetch recent approval history (expenses + income, last 10)
     const [recentExpenseHistoryRaw, recentIncomeHistoryRaw] = await Promise.all([
       prisma.expense.findMany({
@@ -259,7 +317,7 @@ export default async function ApprovalsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Pending Approvals</h1>
           <p className="mt-2 text-muted-foreground">
-            Review and approve expenses that require your authorization
+            Review and approve finance and procurement documents that require your authorization
           </p>
         </div>
 
@@ -268,7 +326,7 @@ export default async function ApprovalsPage() {
           <div className="rounded-lg bg-card p-4 shadow">
             <div className="text-sm font-medium text-muted-foreground">Total Pending</div>
             <div className="mt-2 text-3xl font-bold text-foreground">
-              {approvalsWithWalletInfo.length}
+              {approvalsWithWalletInfo.length + procurementApprovals.length}
             </div>
           </div>
           <div className="rounded-lg bg-card p-4 shadow">
@@ -278,7 +336,11 @@ export default async function ApprovalsPage() {
                 approvalsWithWalletInfo.reduce(
                   (sum: number, exp: Approval) => sum + Number(exp.amount),
                   0
-                )
+                ) +
+                  procurementApprovals.reduce(
+                    (sum: number, row: ProcurementApprovalItem) => sum + Number(row.amount || 0),
+                    0
+                  )
               )}
             </div>
           </div>
@@ -288,7 +350,8 @@ export default async function ApprovalsPage() {
               {
                 approvalsWithWalletInfo.filter(
                   (exp: Approval) => exp.requiredApprovalLevel === "L1"
-                ).length
+                ).length +
+                  procurementApprovals.filter((row: ProcurementApprovalItem) => row.requiredApprovalLevel === "L1").length
               }
             </div>
           </div>
@@ -298,7 +361,8 @@ export default async function ApprovalsPage() {
               {
                 approvalsWithWalletInfo.filter(
                   (exp: Approval) => exp.requiredApprovalLevel === "L2"
-                ).length
+                ).length +
+                  procurementApprovals.filter((row: ProcurementApprovalItem) => row.requiredApprovalLevel === "L2").length
               }
             </div>
           </div>
@@ -308,11 +372,14 @@ export default async function ApprovalsPage() {
               {
                 approvalsWithWalletInfo.filter(
                   (exp: Approval) => exp.requiredApprovalLevel === "L3"
-                ).length
+                ).length +
+                  procurementApprovals.filter((row: ProcurementApprovalItem) => row.requiredApprovalLevel === "L3").length
               }
             </div>
           </div>
         </div>
+
+        <ProcurementApprovalQueue approvals={procurementApprovals} />
 
         {/* Approval Queue with Bulk Operations */}
         <ApprovalQueue 
