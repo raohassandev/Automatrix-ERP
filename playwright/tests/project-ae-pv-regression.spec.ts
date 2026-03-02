@@ -3,6 +3,7 @@ import { loginAs } from "./helpers/auth";
 
 const FINANCE_EMAIL = process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk";
 const TARGET_PROJECT_ID = "AE-PV-IS-463";
+const KNOWN_AUDIT_PROJECT_DB_ID = "cmm95afav001dkpg5ik6y194j";
 
 test.describe("Project regression: AE-PV-IS-463", () => {
   test("pending amount and inventory fallback are visible for project detail", async ({ page }) => {
@@ -25,7 +26,7 @@ test.describe("Project regression: AE-PV-IS-463", () => {
 
     await expect(page.locator("main")).toContainText(/pending recovery/i);
     await expect(page.locator("main")).toContainText(/105[, ]?000/);
-    await expect(page.locator("main")).toContainText(/invoice pending/i);
+    await expect(page.locator("main")).toContainText(/invoice[- ]only pending/i);
 
     await page.getByRole("button", { name: "Inventory" }).click();
     await expect(page.locator("main")).toContainText(/no stock ledger movement found/i);
@@ -76,6 +77,10 @@ test.describe("Project regression: AE-PV-IS-463", () => {
     const deleteTargetRes = await api.delete(`/api/projects/${target.id}`);
     // Real project with linked records must not return 500.
     expect([200, 409]).toContain(deleteTargetRes.status());
+
+    const deleteKnownAuditRes = await api.delete(`/api/projects/${KNOWN_AUDIT_PROJECT_DB_ID}`);
+    // Known audit project id from staging should return a meaningful status, never 500.
+    expect([200, 404, 409]).toContain(deleteKnownAuditRes.status());
 
     await api.dispose();
   });
