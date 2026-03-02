@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import Link from "next/link";
+import { MobileCard } from "@/components/MobileCard";
 
 export default async function MyDashboardPage() {
   const session = await auth();
@@ -15,7 +16,7 @@ export default async function MyDashboardPage() {
   const canViewAll = await requirePermission(session.user.id, "employees.view_all");
   if (!canViewOwn && !canViewAll) {
     return (
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-6 shadow-sm md:p-8">
         <h1 className="text-2xl font-semibold">My Dashboard</h1>
         <p className="mt-2 text-muted-foreground">You do not have access to this page.</p>
       </div>
@@ -260,7 +261,7 @@ export default async function MyDashboardPage() {
               Full History
             </a>
           </div>
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
@@ -282,6 +283,21 @@ export default async function MyDashboardPage() {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 space-y-3 md:hidden">
+            {walletEntries.map((entry) => (
+              <MobileCard
+                key={entry.id}
+                title={new Date(entry.date).toLocaleDateString()}
+                subtitle={entry.reference || "Wallet entry"}
+                fields={[
+                  { label: "Type", value: entry.type },
+                  { label: "Amount", value: formatMoney(Number(entry.amount)) },
+                  { label: "Balance", value: formatMoney(Number(entry.balance)) },
+                  { label: "Source", value: entry.sourceType || "-" },
+                ]}
+              />
+            ))}
+          </div>
           {walletEntries.length === 0 && (
             <div className="py-6 text-center text-muted-foreground">No wallet activity yet.</div>
           )}
@@ -297,7 +313,7 @@ export default async function MyDashboardPage() {
 
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Recent Expenses</h2>
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
@@ -327,6 +343,27 @@ export default async function MyDashboardPage() {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 space-y-3 md:hidden">
+            {expenses.map((exp) => {
+              const usedAmount =
+                exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount
+                  ? Number(exp.approvedAmount)
+                  : Number(exp.amount);
+              return (
+                <MobileCard
+                  key={exp.id}
+                  title={exp.description}
+                  subtitle={new Date(exp.date).toLocaleDateString()}
+                  fields={[
+                    { label: "Project", value: exp.project || "-" },
+                    { label: "Category", value: exp.category },
+                    { label: "Amount", value: formatMoney(usedAmount) },
+                    { label: "Status", value: exp.status },
+                  ]}
+                />
+              );
+            })}
+          </div>
           {expenses.length === 0 && (
             <div className="py-6 text-center text-muted-foreground">No expenses submitted yet.</div>
           )}
@@ -336,7 +373,7 @@ export default async function MyDashboardPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Salary History</h2>
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
@@ -382,6 +419,33 @@ export default async function MyDashboardPage() {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 space-y-3 md:hidden">
+            {payrollEntries.map((entry) => (
+              <MobileCard
+                key={entry.id}
+                title={
+                  entry.payrollRun
+                    ? `${new Date(entry.payrollRun.periodStart).toLocaleDateString()} - ${new Date(entry.payrollRun.periodEnd).toLocaleDateString()}`
+                    : "Salary Record"
+                }
+                subtitle={entry.status}
+                fields={[
+                  { label: "Net Pay", value: formatMoney(Number(entry.netPay)) },
+                  { label: "Deductions", value: formatMoney(Number(entry.deductions)) },
+                  {
+                    label: "Components",
+                    value: entry.components.length > 0 ? `${entry.components.length} lines` : "-",
+                  },
+                  {
+                    label: "Top Line",
+                    value: entry.components[0]
+                      ? `${entry.components[0].componentType}: ${formatMoney(Number(entry.components[0].amount))}`
+                      : "-",
+                  },
+                ]}
+              />
+            ))}
+          </div>
           {payrollEntries.length === 0 && (
             <div className="py-6 text-center text-muted-foreground">No salary records yet.</div>
           )}
@@ -397,7 +461,7 @@ export default async function MyDashboardPage() {
 
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">Incentive History</h2>
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
@@ -419,6 +483,21 @@ export default async function MyDashboardPage() {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 space-y-3 md:hidden">
+            {incentiveEntries.map((entry) => (
+              <MobileCard
+                key={entry.id}
+                title={entry.projectRef || "Incentive"}
+                subtitle={new Date(entry.createdAt).toLocaleDateString()}
+                fields={[
+                  { label: "Amount", value: formatMoney(Number(entry.amount)) },
+                  { label: "Status", value: entry.status },
+                  { label: "Payout", value: entry.payoutMode || "-" },
+                  { label: "Settlement", value: entry.settlementStatus || "-" },
+                ]}
+              />
+            ))}
+          </div>
           {incentiveEntries.length === 0 && (
             <div className="py-6 text-center text-muted-foreground">No incentives recorded yet.</div>
           )}
@@ -435,7 +514,7 @@ export default async function MyDashboardPage() {
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <h2 className="text-lg font-semibold">Salary Advances</h2>
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
@@ -457,6 +536,19 @@ export default async function MyDashboardPage() {
             </tbody>
           </table>
         </div>
+        <div className="mt-4 space-y-3 md:hidden">
+          {salaryAdvances.map((entry) => (
+            <MobileCard
+              key={entry.id}
+              title={new Date(entry.createdAt).toLocaleDateString()}
+              subtitle={entry.reason}
+              fields={[
+                { label: "Amount", value: formatMoney(Number(entry.amount)) },
+                { label: "Status", value: entry.status },
+              ]}
+            />
+          ))}
+        </div>
         {salaryAdvances.length === 0 && (
           <div className="py-6 text-center text-muted-foreground">No salary advances.</div>
         )}
@@ -464,7 +556,7 @@ export default async function MyDashboardPage() {
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <h2 className="text-lg font-semibold">Recent Leave Requests</h2>
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
@@ -487,6 +579,19 @@ export default async function MyDashboardPage() {
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="mt-4 space-y-3 md:hidden">
+          {leaveRequests.map((row) => (
+            <MobileCard
+              key={row.id}
+              title={row.leaveType}
+              subtitle={`${new Date(row.startDate).toLocaleDateString()} - ${new Date(row.endDate).toLocaleDateString()}`}
+              fields={[
+                { label: "Days", value: Number(row.totalDays).toString() },
+                { label: "Status", value: row.status },
+              ]}
+            />
+          ))}
         </div>
         {leaveRequests.length === 0 ? (
           <div className="py-6 text-center text-muted-foreground">No leave requests yet.</div>

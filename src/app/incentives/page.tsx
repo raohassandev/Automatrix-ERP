@@ -7,6 +7,7 @@ import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import { IncentiveCreateButton } from "@/components/IncentiveCreateButton";
 import { IncentiveActions } from "@/components/IncentiveActions";
+import { MobileCard } from "@/components/MobileCard";
 
 export default async function IncentivesPage({
   searchParams,
@@ -24,7 +25,7 @@ export default async function IncentivesPage({
   const canApprove = await requirePermission(session.user.id, "incentives.approve");
   if (!canViewAll && !canViewOwn && !canEdit) {
     return (
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-6 shadow-sm md:p-8">
         <h1 className="text-2xl font-semibold">Incentives</h1>
         <p className="mt-2 text-muted-foreground">You do not have access to incentives.</p>
       </div>
@@ -90,7 +91,7 @@ export default async function IncentivesPage({
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
@@ -138,6 +139,42 @@ export default async function IncentivesPage({
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="space-y-3 md:hidden">
+          {rows.map((row) => (
+            <MobileCard
+              key={row.id}
+              title={row.employee?.name || row.employee?.email || "-"}
+              subtitle={new Date(row.createdAt).toLocaleDateString()}
+              fields={[
+                { label: "Project", value: row.projectRef || "-" },
+                { label: "Payout", value: row.payoutMode || "-" },
+                { label: "Amount", value: formatMoney(Number(row.amount)) },
+                { label: "Settlement", value: row.settlementStatus || "-" },
+                { label: "Status", value: row.status },
+              ]}
+              actions={
+                canEdit ? (
+                  <IncentiveActions
+                    incentive={{
+                      id: row.id,
+                      employeeId: row.employeeId,
+                      projectRef: row.projectRef,
+                      formulaType: row.formulaType,
+                      basisAmount: row.basisAmount ? Number(row.basisAmount) : null,
+                      percent: row.percent ? Number(row.percent) : null,
+                      payoutMode: row.payoutMode,
+                      amount: Number(row.amount),
+                      reason: row.reason,
+                      status: row.status,
+                    }}
+                    employees={employees}
+                    canApprove={canApprove}
+                  />
+                ) : null
+              }
+            />
+          ))}
         </div>
 
         {rows.length === 0 && (

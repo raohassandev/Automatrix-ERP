@@ -17,6 +17,7 @@ import { GoodsReceiptFormDialog } from "@/components/GoodsReceiptFormDialog";
 import { VendorBillFormDialog } from "@/components/VendorBillFormDialog";
 import { withLoadingToast } from "@/lib/withLoadingToast";
 import { ProjectExecutiveSummary } from "@/components/projects/ProjectExecutiveSummary";
+import { MobileCard } from "@/components/MobileCard";
 
 function tabLabel(tab: ProjectDetailTab) {
   switch (tab) {
@@ -225,7 +226,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
 
   return (
     <div className="grid gap-6">
-      <div className="relative overflow-hidden rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-6 shadow-sm">
+      <div className="relative overflow-hidden rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-5 shadow-sm md:p-6">
         <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-sky-200/40" />
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 relative z-10">
@@ -410,7 +411,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
               </div>
             )}
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
             <Button type="button" variant="outline" onClick={() => setAssignOpen(false)}>
               Cancel
             </Button>
@@ -452,7 +453,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
               required
             />
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
             <Button type="button" variant="outline" onClick={() => setNoteOpen(false)}>
               Cancel
             </Button>
@@ -501,7 +502,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
               <Input id="attSize" value={attachment.sizeBytes} onChange={(e) => setAttachment((p) => ({ ...p, sizeBytes: e.target.value }))} placeholder="12345" />
             </div>
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
             <Button type="button" variant="outline" onClick={() => setAttachmentOpen(false)}>
               Cancel
             </Button>
@@ -799,7 +800,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 <p className="mt-1 text-sm text-muted-foreground">
                   Income, expense, bill, and payment trail for this project.
                 </p>
-                <div className="mt-3 overflow-x-auto">
+                <div className="mt-3 hidden overflow-x-auto md:block">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-left text-muted-foreground">
@@ -838,6 +839,28 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                       )}
                     </tbody>
                   </table>
+                </div>
+                <div className="mt-3 space-y-3 md:hidden">
+                  {financeTransactions.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No financial transactions found.</div>
+                  ) : (
+                    financeTransactions.map((row, idx) => (
+                      <MobileCard
+                        key={`${row.at}-${row.type}-${idx}`}
+                        title={row.label}
+                        subtitle={new Date(row.at).toLocaleString()}
+                        fields={[
+                          { label: "Type", value: row.type },
+                          { label: "Status", value: row.status || "-" },
+                          {
+                            label: "Amount",
+                            value: typeof row.amount === "number" ? formatMoney(row.amount) : "-",
+                          },
+                          { label: "Reference", value: row.href ? <Link href={row.href}>Open</Link> : "-" },
+                        ]}
+                      />
+                    ))
+                  )}
                 </div>
               </div>
             </>
@@ -892,7 +915,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 </div>
               ) : null}
 
-              <div className="mt-4 overflow-x-auto">
+              <div className="mt-4 hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
@@ -928,6 +951,27 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   </tbody>
                 </table>
               </div>
+              <div className="mt-4 space-y-3 md:hidden">
+                {detail.inventory.entries.map((e) => (
+                  <MobileCard
+                    key={e.id}
+                    title={e.itemName}
+                    subtitle={`${e.date} • ${e.reference || "No ref"}`}
+                    fields={[
+                      { label: "Quantity", value: e.quantity.toLocaleString() },
+                      { label: "Unit", value: e.unit },
+                      {
+                        label: "Reference",
+                        value: e.href ? <Link href={e.href}>Open</Link> : e.reference || "-",
+                      },
+                      {
+                        label: "Value",
+                        value: detail.policy.canViewUnitCosts ? formatMoney(Number(e.total || 0)) : "Masked",
+                      },
+                    ]}
+                  />
+                ))}
+              </div>
             </>
           )}
         </div>
@@ -940,26 +984,38 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           {!detail.people ? (
             <div className="mt-4 text-sm text-muted-foreground">No access.</div>
           ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="py-2">Name</th>
-                    <th className="py-2">Email</th>
-                    <th className="py-2">Role</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.people.map((p) => (
-                    <tr key={p.id} className="border-b">
-                      <td className="py-2">{p.name}</td>
-                      <td className="py-2">{p.email}</td>
-                      <td className="py-2">{p.role}</td>
+            <>
+              <div className="mt-4 hidden overflow-x-auto md:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-2">Name</th>
+                      <th className="py-2">Email</th>
+                      <th className="py-2">Role</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {detail.people.map((p) => (
+                      <tr key={p.id} className="border-b">
+                        <td className="py-2">{p.name}</td>
+                        <td className="py-2">{p.email}</td>
+                        <td className="py-2">{p.role}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 space-y-3 md:hidden">
+                {detail.people.map((p) => (
+                  <MobileCard
+                    key={p.id}
+                    title={p.name}
+                    subtitle={p.email}
+                    fields={[{ label: "Role", value: p.role }]}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       ) : null}
@@ -1073,7 +1129,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 </div>
               </form>
 
-              <div className="mt-4 overflow-x-auto">
+              <div className="mt-4 hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
@@ -1181,6 +1237,97 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   </tbody>
                 </table>
               </div>
+              <div className="mt-4 space-y-3 md:hidden">
+                {detail.execution.tasks.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">No execution tasks yet.</div>
+                ) : (
+                  detail.execution.tasks.map((task) => (
+                    <MobileCard
+                      key={task.id}
+                      title={task.title}
+                      subtitle={task.assignedTo?.name || "Unassigned"}
+                      fields={[
+                        { label: "Priority", value: task.priority },
+                        { label: "Status", value: task.status },
+                        { label: "Progress", value: `${task.progress}%` },
+                        { label: "Due", value: task.dueDate || "-" },
+                      ]}
+                      actions={
+                        <div className="grid w-full grid-cols-1 gap-2">
+                          <select
+                            className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs"
+                            value={task.status}
+                            onChange={(e) => {
+                              (async () => {
+                                try {
+                                  setUpdatingTaskId(task.id);
+                                  await updateTask(task.id, { status: e.target.value });
+                                  router.refresh();
+                                } catch (err) {
+                                  toast.error(err instanceof Error ? err.message : "Failed to update task");
+                                } finally {
+                                  setUpdatingTaskId(null);
+                                }
+                              })();
+                            }}
+                            disabled={updatingTaskId === task.id}
+                          >
+                            <option value="TODO">TODO</option>
+                            <option value="IN_PROGRESS">IN_PROGRESS</option>
+                            <option value="BLOCKED">BLOCKED</option>
+                            <option value="DONE">DONE</option>
+                            <option value="CANCELLED">CANCELLED</option>
+                          </select>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs"
+                              defaultValue={task.progress}
+                              onBlur={(e) => {
+                                const next = Number(e.target.value || 0);
+                                if (Number.isNaN(next)) return;
+                                (async () => {
+                                  try {
+                                    setUpdatingTaskId(task.id);
+                                    await updateTask(task.id, { progress: Math.max(0, Math.min(100, next)) });
+                                    router.refresh();
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : "Failed to update progress");
+                                  } finally {
+                                    setUpdatingTaskId(null);
+                                  }
+                                })();
+                              }}
+                              disabled={updatingTaskId === task.id}
+                            />
+                            <input
+                              type="date"
+                              className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs"
+                              defaultValue={task.dueDate || ""}
+                              onBlur={(e) => {
+                                (async () => {
+                                  try {
+                                    setUpdatingTaskId(task.id);
+                                    await updateTask(task.id, { dueDate: e.target.value || "" });
+                                    router.refresh();
+                                  } catch (err) {
+                                    toast.error(err instanceof Error ? err.message : "Failed to update due date");
+                                  } finally {
+                                    setUpdatingTaskId(null);
+                                  }
+                                })();
+                              }}
+                              disabled={updatingTaskId === task.id}
+                            />
+                          </div>
+                        </div>
+                      }
+                    />
+                  ))
+                )}
+              </div>
             </>
           )}
         </div>
@@ -1193,35 +1340,54 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           {!detail.documents ? (
             <div className="mt-4 text-sm text-muted-foreground">No access.</div>
           ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="py-2">Type</th>
-                    <th className="py-2">Number</th>
-                    <th className="py-2">Status</th>
-                    <th className="py-2">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.documents.map((d) => (
-                    <tr key={`${d.type}-${d.number}`} className="border-b">
-                      <td className="py-2">{d.type}</td>
-                      <td className="py-2">
-                        <Link className="underline underline-offset-2" href={d.href}>
-                          {d.number}
-                        </Link>
-                      </td>
-                      <td className="py-2">{d.status}</td>
-                      <td className="py-2">{d.date}</td>
+            <>
+              <div className="mt-4 hidden overflow-x-auto md:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-2">Type</th>
+                      <th className="py-2">Number</th>
+                      <th className="py-2">Status</th>
+                      <th className="py-2">Date</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              {detail.documents.length === 0 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">No documents found.</div>
-              ) : null}
-            </div>
+                  </thead>
+                  <tbody>
+                    {detail.documents.map((d) => (
+                      <tr key={`${d.type}-${d.number}`} className="border-b">
+                        <td className="py-2">{d.type}</td>
+                        <td className="py-2">
+                          <Link className="underline underline-offset-2" href={d.href}>
+                            {d.number}
+                          </Link>
+                        </td>
+                        <td className="py-2">{d.status}</td>
+                        <td className="py-2">{d.date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {detail.documents.length === 0 ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">No documents found.</div>
+                ) : null}
+              </div>
+              <div className="mt-4 space-y-3 md:hidden">
+                {detail.documents.map((d) => (
+                  <MobileCard
+                    key={`${d.type}-${d.number}`}
+                    title={d.number}
+                    subtitle={d.type}
+                    href={d.href}
+                    fields={[
+                      { label: "Status", value: d.status },
+                      { label: "Date", value: d.date },
+                    ]}
+                  />
+                ))}
+                {detail.documents.length === 0 ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">No documents found.</div>
+                ) : null}
+              </div>
+            </>
           )}
         </div>
       ) : null}

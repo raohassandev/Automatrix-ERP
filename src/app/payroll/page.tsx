@@ -7,6 +7,7 @@ import PaginationControls from "@/components/PaginationControls";
 import { PayrollRunCreateButton } from "@/components/PayrollRunCreateButton";
 import { PayrollRunActions } from "@/components/PayrollRunActions";
 import { StatusBadge } from "@/components/StatusBadge";
+import { MobileCard } from "@/components/MobileCard";
 
 export default async function PayrollPage({
   searchParams,
@@ -23,7 +24,7 @@ export default async function PayrollPage({
   const canApprove = await requirePermission(session.user.id, "payroll.approve");
   if (!canView && !canEdit && !canApprove) {
     return (
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-6 shadow-sm md:p-8">
         <h1 className="text-2xl font-semibold">Payroll</h1>
         <p className="mt-2 text-muted-foreground">You do not have access to payroll.</p>
       </div>
@@ -91,7 +92,7 @@ export default async function PayrollPage({
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
@@ -143,6 +144,45 @@ export default async function PayrollPage({
               })}
             </tbody>
           </table>
+        </div>
+        <div className="space-y-3 md:hidden">
+          {runs.map((run) => {
+            const totalNet = run.entries.reduce((sum, entry) => sum + Number(entry.netPay), 0);
+            return (
+              <MobileCard
+                key={run.id}
+                title={`${new Date(run.periodStart).toLocaleDateString()} - ${new Date(run.periodEnd).toLocaleDateString()}`}
+                subtitle={run.notes || "Payroll run"}
+                fields={[
+                  { label: "Entries", value: run.entries.length.toString() },
+                  { label: "Total Net", value: formatMoney(totalNet) },
+                  { label: "Status", value: <StatusBadge status={run.status} /> },
+                ]}
+                actions={
+                  canEdit ? (
+                    <PayrollRunActions
+                      run={{
+                        id: run.id,
+                        periodStart: run.periodStart.toISOString(),
+                        periodEnd: run.periodEnd.toISOString(),
+                        status: run.status,
+                        notes: run.notes,
+                        entries: run.entries.map((entry) => ({
+                          employeeId: entry.employeeId,
+                          baseSalary: Number(entry.baseSalary),
+                          incentiveTotal: Number(entry.incentiveTotal),
+                          deductions: Number(entry.deductions),
+                          deductionReason: entry.deductionReason || "",
+                        })),
+                      }}
+                      employees={employees}
+                      canApprove={canApprove}
+                    />
+                  ) : null
+                }
+              />
+            );
+          })}
         </div>
 
         {runs.length === 0 && (

@@ -7,6 +7,7 @@ import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import { CommissionCreateButton } from "@/components/CommissionCreateButton";
 import { CommissionActions } from "@/components/CommissionActions";
+import { MobileCard } from "@/components/MobileCard";
 
 export default async function CommissionsPage({
   searchParams,
@@ -24,7 +25,7 @@ export default async function CommissionsPage({
   const canApprove = await requirePermission(session.user.id, "commissions.approve");
   if (!canViewAll && !canViewOwn && !canEdit) {
     return (
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-xl border bg-card p-6 shadow-sm md:p-8">
         <h1 className="text-2xl font-semibold">Commissions</h1>
         <p className="mt-2 text-muted-foreground">You do not have access to commissions.</p>
       </div>
@@ -91,7 +92,7 @@ export default async function CommissionsPage({
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
@@ -149,6 +150,52 @@ export default async function CommissionsPage({
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="space-y-3 md:hidden">
+          {rows.map((row) => (
+            <MobileCard
+              key={row.id}
+              title={
+                row.payeeType === "MIDDLEMAN"
+                  ? `Middleman: ${row.vendor?.name || "-"}`
+                  : row.employee?.name || row.employee?.email || "-"
+              }
+              subtitle={new Date(row.createdAt).toLocaleDateString()}
+              fields={[
+                { label: "Project", value: row.projectRef || "-" },
+                { label: "Payout", value: row.payoutMode || "-" },
+                {
+                  label: "Basis",
+                  value: `${row.basisType || "-"}${row.percent ? ` • ${Number(row.percent)}%` : ""}`,
+                },
+                { label: "Amount", value: formatMoney(Number(row.amount)) },
+                { label: "Status", value: row.status },
+              ]}
+              actions={
+                canEdit ? (
+                  <CommissionActions
+                    commission={{
+                      id: row.id,
+                      employeeId: row.employeeId,
+                      vendorId: row.vendorId,
+                      payeeType: row.payeeType,
+                      payoutMode: row.payoutMode,
+                      projectRef: row.projectRef,
+                      basisType: row.basisType,
+                      basisAmount: row.basisAmount ? Number(row.basisAmount) : null,
+                      percent: row.percent ? Number(row.percent) : null,
+                      amount: Number(row.amount),
+                      reason: row.reason,
+                      status: row.status,
+                    }}
+                    employees={employees}
+                    vendors={vendors}
+                    canApprove={canApprove}
+                  />
+                ) : null
+              }
+            />
+          ))}
         </div>
 
         {rows.length === 0 && (

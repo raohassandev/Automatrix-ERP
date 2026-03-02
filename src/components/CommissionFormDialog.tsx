@@ -303,7 +303,7 @@ function CommissionFormDialogInner({
           Employee commissions can be settled in payroll for salary slip visibility. Middleman commissions are routed through AP.
         </div>
 
-        <div className="flex justify-end gap-3 pt-4">
+        <div className="flex flex-col-reverse justify-end gap-3 pt-4 sm:flex-row">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancel
           </Button>

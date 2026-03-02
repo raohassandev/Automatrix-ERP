@@ -521,3 +521,37 @@
 - Targeted staging e2e passed:
   - `pnpm playwright test --config=playwright.config.staging.ts playwright/tests/item-detail-and-me-portal.spec.ts playwright/tests/project-financial-overview.spec.ts playwright/tests/project-ae-pv-regression.spec.ts`
   - Result: `8 passed`
+
+## Mobile responsiveness hardening pass (owner-critical modules)
+
+### Scope
+- Improved mobile UX/layout for owner-critical pages:
+  - `My Dashboard` (`/me`)
+  - `Project Detail` tabs (`activity/costs/inventory/people/execution/documents`)
+  - `Incentives`, `Commissions`, `Payroll` listing pages
+- Added mobile-friendly action layout in incentive/commission dialogs.
+
+### Implementation highlights
+- Added card-based mobile rendering (`md:hidden`) alongside desktop tables (`hidden md:block`) to avoid horizontal scroll dependency.
+- Converted dense financial/operational tables to readable mobile cards with key fields and actions.
+- Ensured form action buttons stack correctly on small screens.
+
+### Files
+- `src/app/me/page.tsx`
+- `src/app/projects/[id]/ProjectDetailClient.tsx`
+- `src/app/incentives/page.tsx`
+- `src/app/commissions/page.tsx`
+- `src/app/payroll/page.tsx`
+- `src/components/IncentiveFormDialog.tsx`
+- `src/components/CommissionFormDialog.tsx`
+- `playwright/tests/mobile-owner-critical-layout.spec.ts`
+
+### Validation
+- Local:
+  - `pnpm typecheck` passed
+  - `pnpm lint` passed
+  - `pnpm test` passed
+  - `pnpm build` passed
+- Staging Playwright:
+  - `pnpm playwright test --config=playwright.config.staging.ts playwright/tests/mobile-owner-critical-layout.spec.ts playwright/tests/item-detail-and-me-portal.spec.ts playwright/tests/project-detail-rbac.spec.ts playwright/tests/project-financial-overview.spec.ts`
+  - Result: `15 passed`
