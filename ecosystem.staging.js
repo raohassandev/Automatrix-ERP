@@ -6,7 +6,7 @@ module.exports = {
     cwd: '/var/www/automatrix-erp-staging',
     env: {
       NODE_ENV: 'production',
-      PORT: 3001
+      PORT: 3031
     },
     instances: 1,
     exec_mode: 'fork',
