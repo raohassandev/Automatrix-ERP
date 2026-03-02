@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PERMISSION_KEYS, hasPermission, type RoleName } from "@/lib/permissions";
+import { useSession } from "next-auth/react";
 
 type EffectivePermissionsResponse = {
   permissions: string[];
@@ -16,8 +17,13 @@ function hasPermissionFromSet(permissionSet: Set<string>, permission: string) {
 
 export function useEffectivePermissions(roleName: RoleName) {
   const [permissions, setPermissions] = useState<string[] | null>(null);
+  const { status } = useSession();
 
   useEffect(() => {
+    if (status !== "authenticated") {
+      setPermissions(null);
+      return;
+    }
     let isMounted = true;
     fetch("/api/me/effective-permissions", { cache: "no-store" })
       .then(async (response) => {
@@ -38,7 +44,7 @@ export function useEffectivePermissions(roleName: RoleName) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [status]);
 
   const permissionSet = useMemo(() => {
     if (permissions) {
