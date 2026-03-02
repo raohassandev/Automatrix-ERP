@@ -392,8 +392,9 @@ export default function AccessControlCenter() {
 
       <CardContent>
         {tab === "roles" && (
-          <div className="grid items-start gap-4 md:grid-cols-[300px,minmax(0,1fr)]">
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white md:sticky md:top-4">
+          <div className="overflow-x-auto">
+            <div className="grid min-w-[980px] items-start gap-4 grid-cols-[300px,minmax(0,1fr)]">
+            <div className="sticky top-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b px-3 py-3">
                 <div className="mb-2 text-sm font-semibold text-slate-800">Roles</div>
                 <Input
@@ -402,7 +403,7 @@ export default function AccessControlCenter() {
                   onChange={(event) => setRoleListSearch(event.target.value)}
                 />
               </div>
-              <div className="max-h-[680px] space-y-2 overflow-y-auto p-3">
+              <div className="max-h-[calc(100vh-260px)] space-y-2 overflow-y-auto p-3">
                 {filteredRoles.map((role) => {
                   const selected = role.id === selectedRoleId;
                   return (
@@ -453,7 +454,7 @@ export default function AccessControlCenter() {
                 </div>
               </div>
 
-              <div className="max-h-[680px] overflow-y-auto">
+              <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
                 <div className="grid grid-cols-[1fr,auto] border-b bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <div>Permission</div>
                   <div>Access</div>
@@ -518,6 +519,7 @@ export default function AccessControlCenter() {
                   {savingRole ? "Saving..." : "Save Permissions"}
                 </Button>
               </div>
+            </div>
             </div>
           </div>
         )}
