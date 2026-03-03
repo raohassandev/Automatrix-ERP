@@ -8,6 +8,18 @@ type EffectivePermissionsResult = {
   denied: Set<string>;
 };
 
+const ROLE_LOCKED_DENY: Partial<Record<RoleName, string[]>> = {
+  Engineering: ["reports.view_all", "reports.view_team", "reports.view_own"],
+  "Store Keeper": ["reports.view_all", "reports.view_team", "reports.view_own"],
+  Staff: [
+    "inventory.view",
+    "inventory.request",
+    "reports.view_all",
+    "reports.view_team",
+    "reports.view_own",
+  ],
+};
+
 type PermissionCacheEntry = {
   expiresAt: number;
   data: EffectivePermissionsResult;
@@ -133,6 +145,12 @@ export async function getEffectivePermissionsForUser(userId: string): Promise<Ef
     if (hasStaticPermission(roleName, permissionKey)) {
       rolePermissionSet.add(permissionKey);
     }
+  }
+
+  // Enforce locked baseline denies so stale DB role templates cannot silently over-grant.
+  // User-level ALLOW overrides are still applied later for intentional temporary exceptions.
+  for (const deniedKey of ROLE_LOCKED_DENY[roleName] ?? []) {
+    rolePermissionSet.delete(deniedKey);
   }
 
   // Business policy: Finance Manager should not get CEO-only dashboards by default.
