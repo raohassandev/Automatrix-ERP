@@ -7,6 +7,7 @@
 import XLSX from 'xlsx';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { mkdir, writeFile } from 'node:fs/promises';
 
 const prisma = new PrismaClient();
 
@@ -20,6 +21,18 @@ function excelDateToJSDate(excelDate) {
 // Helper to normalize email
 function normalizeEmail(email) {
   return email?.toLowerCase().trim() || '';
+}
+
+function normalizeInventoryName(input) {
+  return String(input || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function normalizeSku(input) {
+  const v = String(input || '').trim().toUpperCase();
+  return v.length > 0 ? v : null;
 }
 
 // Helper to get or create user
@@ -84,6 +97,8 @@ async function importData() {
     expenses: 0,
     income: 0,
     inventory: 0,
+    inventoryUpdated: 0,
+    inventoryConflicts: 0,
     inventoryLedger: 0,
     walletLedger: 0,
     errors: []
@@ -191,48 +206,130 @@ async function importData() {
     // 3. Import Inventory Items
     console.log('\n📦 Importing Inventory Items...');
     const inventoryData = XLSX.utils.sheet_to_json(workbook.Sheets['Inventory_Items']);
-    
-    for (const row of inventoryData) {
+    const inventoryConflicts = [];
+    const existingItems = await prisma.inventoryItem.findMany({
+      select: { id: true, name: true, canonicalName: true, sku: true },
+    });
+    const byCanonical = new Map(existingItems.map((item) => [item.canonicalName, item]));
+    const bySku = new Map(
+      existingItems
+        .filter((item) => item.sku)
+        .map((item) => [String(item.sku).toUpperCase(), item]),
+    );
+    const seenCanonicals = new Set();
+    const seenSkus = new Set();
+
+    for (const [index, row] of inventoryData.entries()) {
       try {
         const unitCost = parseFloat(row['Purchase_Price']) || 0;
         const quantity = parseFloat(row['Current_Stock']) || 0;
         
-        const itemName = row['Item_Name'];
-        const itemSku = row['Item_ID'] ? String(row['Item_ID']).trim() : null;
-        const item = await prisma.inventoryItem.upsert({
-          where: { name: itemName },
-          update: {
-            sku: itemSku,
-            category: row['Category'] || 'General',
-            unit: row['Unit'] || 'Piece',
-            unitCost: unitCost,
-            quantity: quantity,
-            totalValue: quantity * unitCost,
-            availableQty: quantity,
-            lastUpdated: new Date(),
-          },
-          create: {
-            name: itemName,
-            sku: itemSku,
-            category: row['Category'] || 'General',
-            unit: row['Unit'] || 'Piece',
-            quantity: quantity,
-            unitCost: unitCost,
-            totalValue: quantity * unitCost,
-            minStock: 0,
-            reorderQty: 0,
-            reservedQty: 0,
-            availableQty: quantity,
-            lastUpdated: new Date(),
+        const itemName = String(row['Item_Name'] || '').trim();
+        const canonicalName = normalizeInventoryName(itemName);
+        const itemSku = normalizeSku(row['Item_ID']);
+        const rowNo = index + 2;
+
+        if (!itemName || !canonicalName) {
+          const reason = `row ${rowNo}: empty/invalid item name`;
+          console.log(`  ⏭️  Skipping inventory row (${reason})`);
+          inventoryConflicts.push({ row: rowNo, itemName, sku: itemSku, reason });
+          stats.inventoryConflicts++;
+          continue;
+        }
+
+        if (seenCanonicals.has(canonicalName)) {
+          const reason = `row ${rowNo}: duplicate item name within import file`;
+          console.log(`  ⏭️  Skipping inventory row (${reason})`);
+          inventoryConflicts.push({ row: rowNo, itemName, sku: itemSku, reason });
+          stats.inventoryConflicts++;
+          continue;
+        }
+        seenCanonicals.add(canonicalName);
+        if (itemSku) {
+          if (seenSkus.has(itemSku)) {
+            const reason = `row ${rowNo}: duplicate SKU within import file`;
+            console.log(`  ⏭️  Skipping inventory row (${reason})`);
+            inventoryConflicts.push({ row: rowNo, itemName, sku: itemSku, reason });
+            stats.inventoryConflicts++;
+            continue;
           }
-        });
+          seenSkus.add(itemSku);
+        }
+
+        const existingByCanonical = byCanonical.get(canonicalName) || null;
+        const existingBySku = itemSku ? bySku.get(itemSku) || null : null;
+        const skuConflictsCanonical =
+          existingBySku && existingByCanonical && existingBySku.id !== existingByCanonical.id;
+        const skuConflictsNew = existingBySku && !existingByCanonical;
+
+        if (skuConflictsCanonical || skuConflictsNew) {
+          const reason = `row ${rowNo}: SKU already used by another item (${existingBySku?.name || "unknown"})`;
+          console.log(`  ⏭️  Skipping inventory row (${reason})`);
+          inventoryConflicts.push({ row: rowNo, itemName, sku: itemSku, reason });
+          stats.inventoryConflicts++;
+          continue;
+        }
+
+        const payload = {
+          name: itemName,
+          canonicalName,
+          sku: itemSku,
+          category: row['Category'] || 'General',
+          unit: row['Unit'] || 'Piece',
+          unitCost: unitCost,
+          quantity: quantity,
+          totalValue: quantity * unitCost,
+          availableQty: quantity,
+          lastUpdated: new Date(),
+        };
+
+        let item;
+        if (existingByCanonical) {
+          item = await prisma.inventoryItem.update({
+            where: { id: existingByCanonical.id },
+            data: payload,
+          });
+          stats.inventoryUpdated++;
+          console.log(`  ↺ Updated inventory item: ${item.name}`);
+        } else {
+          item = await prisma.inventoryItem.create({
+            data: {
+              ...payload,
+              minStock: 0,
+              reorderQty: 0,
+              reservedQty: 0,
+            },
+          });
+          stats.inventory++;
+          console.log(`  ✅ Created inventory item: ${item.name}`);
+        }
+
+        byCanonical.set(item.canonicalName, item);
+        if (item.sku) bySku.set(String(item.sku).toUpperCase(), item);
         
-        console.log(`  ✅ Created inventory item: ${item.name}`);
-        stats.inventory++;
       } catch (error) {
         console.error(`  ❌ Error importing inventory: ${error.message}`);
         stats.errors.push(`Inventory: ${row['Item_Name']} - ${error.message}`);
       }
+    }
+
+    if (inventoryConflicts.length > 0) {
+      const reportDir = "reports";
+      const reportPath = `${reportDir}/inventory-import-conflicts-${Date.now()}.json`;
+      await mkdir(reportDir, { recursive: true });
+      await writeFile(
+        reportPath,
+        JSON.stringify(
+          {
+            generatedAt: new Date().toISOString(),
+            totalConflicts: inventoryConflicts.length,
+            conflicts: inventoryConflicts,
+          },
+          null,
+          2,
+        ),
+      );
+      console.log(`  📄 Conflict report: ${reportPath}`);
     }
 
     // 4. Import Inventory Ledger
@@ -534,6 +631,8 @@ async function importData() {
     console.log(`   Expenses: ${stats.expenses}`);
     console.log(`   Income: ${stats.income}`);
     console.log(`   Inventory Items: ${stats.inventory}`);
+    console.log(`   Inventory Items Updated: ${stats.inventoryUpdated}`);
+    console.log(`   Inventory Conflicts Skipped: ${stats.inventoryConflicts}`);
     console.log(`   Inventory Ledger: ${stats.inventoryLedger}`);
     console.log(`   Wallet Ledger: ${stats.walletLedger}`);
     console.log(`   Errors: ${stats.errors.length}`);

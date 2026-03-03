@@ -117,11 +117,28 @@ export default async function CeoDashboardPage() {
     select: { id: true, name: true, quantity: true, minStock: true, unit: true },
     orderBy: { name: "asc" },
   });
+  const inventoryQualityRows = await prisma.inventoryItem.findMany({
+    select: { id: true, name: true, sku: true, canonicalName: true, lastUpdated: true },
+    orderBy: { lastUpdated: "desc" },
+  });
   const lowStockAll = inventoryWithThreshold.filter(
     (it) => Number(it.quantity) <= Number(it.minStock)
   );
   const inventoryLowCount = lowStockAll.length;
   const inventoryLow = lowStockAll.slice(0, 10);
+  const inventoryMissingSkuCount = inventoryQualityRows.filter((row) => !row.sku || !row.sku.trim()).length;
+  const nameRiskBuckets = new Map<string, Array<{ id: string; name: string }>>();
+  for (const row of inventoryQualityRows) {
+    const key = row.canonicalName.slice(0, 8);
+    if (!key || key.length < 4) continue;
+    const existing = nameRiskBuckets.get(key) || [];
+    existing.push({ id: row.id, name: row.name });
+    nameRiskBuckets.set(key, existing);
+  }
+  const nameRiskGroups = Array.from(nameRiskBuckets.values())
+    .filter((rows) => rows.length > 1)
+    .map((rows) => rows.slice(0, 3).map((row) => row.name).join(" / "))
+    .slice(0, 3);
 
   const grnActivity = await prisma.inventoryLedger.aggregate({
     where: { sourceType: "GRN", date: { gte: monthStart, lte: monthEnd } },
@@ -144,6 +161,12 @@ export default async function CeoDashboardPage() {
     where: { action: { startsWith: "BLOCK_" } },
     orderBy: { createdAt: "desc" },
     take: 15,
+  });
+  const inventoryDuplicateBlocksMonth = await prisma.auditLog.count({
+    where: {
+      action: { in: ["BLOCK_INVENTORY_DUPLICATE_NAME", "BLOCK_INVENTORY_DUPLICATE_SKU"] },
+      createdAt: { gte: monthStart, lte: monthEnd },
+    },
   });
 
   return (
@@ -235,6 +258,33 @@ export default async function CeoDashboardPage() {
           <div className="mt-3">
             <Link className="text-sm underline" href="/reports/inventory">
               Inventory report
+            </Link>
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm font-medium text-muted-foreground">Inventory data quality</div>
+          <div className="mt-2 space-y-1 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <span>Items missing SKU</span>
+              <span className="font-medium">{inventoryMissingSkuCount}</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span>Duplicate attempts blocked (month)</span>
+              <span className="font-medium">{inventoryDuplicateBlocksMonth}</span>
+            </div>
+            <div className="pt-1 text-xs text-muted-foreground">
+              Similar-name risk clusters: {nameRiskGroups.length || 0}
+            </div>
+            {nameRiskGroups.slice(0, 2).map((group) => (
+              <div key={group} className="truncate text-xs text-muted-foreground">
+                {group}
+              </div>
+            ))}
+          </div>
+          <div className="mt-3">
+            <Link className="text-sm underline" href="/inventory">
+              Review inventory master
             </Link>
           </div>
         </div>

@@ -89,6 +89,19 @@ export async function POST(req: Request) {
   ]);
 
   if (sameName) {
+    await logAudit({
+      action: "BLOCK_INVENTORY_DUPLICATE_NAME",
+      entity: "InventoryItem",
+      entityId: sameName.id,
+      reason: "Create blocked due to canonical-name collision.",
+      newValue: JSON.stringify({
+        attemptedName: sanitizedData.name,
+        attemptedSku: sanitizedData.sku || null,
+        existingName: sameName.name,
+        existingSku: sameName.sku || null,
+      }),
+      userId: session.user.id,
+    });
     return NextResponse.json(
       {
         success: false,
@@ -99,6 +112,19 @@ export async function POST(req: Request) {
     );
   }
   if (sameSku) {
+    await logAudit({
+      action: "BLOCK_INVENTORY_DUPLICATE_SKU",
+      entity: "InventoryItem",
+      entityId: sameSku.id,
+      reason: "Create blocked due to SKU collision.",
+      newValue: JSON.stringify({
+        attemptedName: sanitizedData.name,
+        attemptedSku: sanitizedData.sku,
+        existingName: sameSku.name,
+        existingSku: sameSku.sku || null,
+      }),
+      userId: session.user.id,
+    });
     return NextResponse.json(
       {
         success: false,

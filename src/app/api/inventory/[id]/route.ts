@@ -44,6 +44,20 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       select: { id: true, name: true, sku: true, unit: true, category: true },
     });
     if (conflict) {
+      await logAudit({
+        action: "BLOCK_INVENTORY_DUPLICATE_NAME",
+        entity: "InventoryItem",
+        entityId: conflict.id,
+        reason: "Update blocked due to canonical-name collision.",
+        newValue: JSON.stringify({
+          attemptedName: name,
+          attemptedSku: body.sku ?? existing.sku ?? null,
+          existingName: conflict.name,
+          existingSku: conflict.sku || null,
+          attemptedItemId: id,
+        }),
+        userId: session.user.id,
+      });
       return NextResponse.json(
         {
           success: false,
@@ -64,6 +78,20 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         select: { id: true, name: true, sku: true, unit: true, category: true },
       });
       if (conflict) {
+        await logAudit({
+          action: "BLOCK_INVENTORY_DUPLICATE_SKU",
+          entity: "InventoryItem",
+          entityId: conflict.id,
+          reason: "Update blocked due to SKU collision.",
+          newValue: JSON.stringify({
+            attemptedName: body.name ?? existing.name,
+            attemptedSku: sku,
+            existingName: conflict.name,
+            existingSku: conflict.sku || null,
+            attemptedItemId: id,
+          }),
+          userId: session.user.id,
+        });
         return NextResponse.json(
           { success: false, error: "SKU already exists on another item.", duplicate: conflict },
           { status: 409 },
