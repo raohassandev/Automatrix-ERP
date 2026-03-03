@@ -424,7 +424,7 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
-### 11.1 Status Snapshot (As of 2026-03-02, updated after latest completion passes)
+### 11.1 Status Snapshot (As of 2026-03-03, updated after fast-track closure batch 1)
 
 Legend:
 - `[x]` Completed (target end-state achieved)
@@ -456,7 +456,26 @@ Snapshot note:
 - Modules `6`, `7`, `8` are now marked `[x]` for locked Phase-1 baseline after lifecycle, controls, and reporting hardening completion.
 - Modules `1`, `2`, `3`, `10`, `16`, `17`, `18` are now marked `[x]` after controls hardening (receipt policy enforcement, approvals SLA/queue visibility, audit/search API depth, and controls BI snapshots).
 - Access governance UX is now business-first in Settings: Role Templates, User Feature Access Matrix (ALLOW/DENY overrides), and Approval Routes by amount (Stage 1/2/3 labels replacing raw L1/L2/L3 jargon).
+- Fast-track closure batch 1 completed for implemented modules: finance role baseline tightened (no CEO dashboard by default), vendor-payments page/API permission parity aligned, approvals table action-column visibility hardened, mobile form/navigation polish expanded, and regression specs refreshed for staging drift tolerance.
 - Remaining depth now continues under modules `19` and `20`.
+
+### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-03
+
+Workstreams and current state:
+- `A` RBAC/UI Consistency: `[~]` In Progress  
+  Completed: sidebar/mobile menu parity hardening, key route/API parity checks, finance baseline restriction for CEO metrics.
+- `B` Mobile UX Hardening: `[~]` In Progress  
+  Completed: mobile navigation search/quick links, dialog/sheet usability and responsive table overflow fixes on critical screens.
+- `C` Transaction Integrity Validation: `[~]` In Progress  
+  Completed: targeted role-based Playwright regression on inventory/project/vendor/workhub flows; further end-to-end accounting chain validation remains.
+- `D` Deep Audit Discrepancy Burn-Down: `[~]` In Progress  
+  Completed: discrepancy matrix and evidence docs refreshed; critical findings continue to be closed in batched passes.
+- `E` Go-Live Readiness + Plan Sync: `[~]` In Progress  
+  Completed: production cutover checklist and staging safety controls documented; final Go/No-Go depends on closure of open high findings in current audit cycle.
+
+Latest discrepancy baseline (`docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md`):
+- Open: `CRITICAL 5`, `HIGH 4`, `MEDIUM 0`, `LOW 0`.
+- Next closure target: resolve RBAC route/API overexposure and `/me` access gaps for operational roles, then rerun audit and freeze Go/No-Go.
 
 ### 11.2 Owner-Critical Module Status (Requested)
 

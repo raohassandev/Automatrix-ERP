@@ -26,52 +26,44 @@ type RoleProfile = {
 };
 
 const PASSWORD = process.env.E2E_TEST_PASSWORD || "e2e";
-const REPORT_NAME = "STAGING_ROLE_DEEP_AUDIT_2026-03-02.md";
+const REPORT_NAME = "STAGING_ROLE_DEEP_AUDIT_2026-03-03.md";
 
 const ROLE_PROFILES: RoleProfile[] = [
   {
-    name: "Owner",
-    email: "israrulhaq5@gmail.com",
+    name: "Finance Manager (QA)",
+    email: "finance1@automatrix.pk",
     requiredRoutes: ["/dashboard", "/projects", "/expenses", "/approvals", "/settings", "/reports", "/accounting/journals", "/payroll"],
-    restrictedRoutes: [],
+    restrictedRoutes: ["/ceo/dashboard", "/ceo/blueprint"],
     requiredApis: ["/api/employees", "/api/access-control/roles", "/api/accounting/journals", "/api/reports/accounting/trial-balance"],
     restrictedApis: [],
   },
   {
-    name: "CEO",
-    email: "raoshaziakhalil@gmail.com",
-    requiredRoutes: ["/dashboard", "/projects", "/expenses", "/approvals", "/settings", "/reports", "/accounting/journals", "/payroll"],
-    restrictedRoutes: [],
-    requiredApis: ["/api/employees", "/api/access-control/roles", "/api/accounting/journals", "/api/reports/accounting/trial-balance"],
-    restrictedApis: [],
-  },
-  {
-    name: "Business Development Manager",
-    email: "raoabdulkhaliq786@gmail.com",
-    requiredRoutes: ["/dashboard", "/me", "/projects", "/projects/financial", "/expenses", "/approvals"],
-    restrictedRoutes: ["/settings", "/reports", "/accounting/journals", "/company-accounts", "/payroll", "/employees"],
-    requiredApis: ["/api/projects", "/api/approvals"],
+    name: "Engineering (QA)",
+    email: "engineer1@automatrix.pk",
+    requiredRoutes: ["/dashboard", "/me", "/projects", "/expenses"],
+    restrictedRoutes: ["/approvals", "/reports", "/settings", "/accounting/journals", "/company-accounts", "/payroll", "/employees"],
+    requiredApis: ["/api/projects", "/api/expenses"],
     restrictedApis: ["/api/access-control/roles", "/api/accounting/journals", "/api/reports/accounting/trial-balance", "/api/payroll/runs"],
   },
   {
-    name: "Engineering Technician",
-    email: "raomazeem1122@gmail.com",
+    name: "Sales (QA)",
+    email: "sales1@automatrix.pk",
     requiredRoutes: ["/dashboard", "/me", "/projects", "/expenses"],
-    restrictedRoutes: ["/approvals", "/inventory", "/procurement/purchase-orders", "/reports", "/settings", "/accounting/journals", "/payroll", "/employees"],
+    restrictedRoutes: ["/approvals", "/inventory", "/settings", "/accounting/journals", "/payroll", "/employees"],
     requiredApis: ["/api/projects", "/api/expenses"],
-    restrictedApis: ["/api/access-control/roles", "/api/accounting/journals", "/api/reports/accounting/trial-balance", "/api/inventory", "/api/procurement/purchase-orders"],
+    restrictedApis: ["/api/access-control/roles", "/api/accounting/journals", "/api/reports/accounting/trial-balance", "/api/inventory"],
   },
   {
-    name: "Procurement + Field Ops",
-    email: "raoibrarulhaq1@gmail.com",
+    name: "Store (QA)",
+    email: "store1@automatrix.pk",
     requiredRoutes: ["/dashboard", "/me", "/projects", "/expenses", "/procurement/purchase-orders", "/procurement/grn", "/procurement/vendor-bills", "/inventory"],
     restrictedRoutes: ["/settings", "/reports", "/accounting/journals", "/company-accounts", "/payroll"],
     requiredApis: ["/api/projects", "/api/expenses", "/api/inventory", "/api/procurement/purchase-orders"],
     restrictedApis: ["/api/access-control/roles", "/api/accounting/journals", "/api/reports/accounting/trial-balance", "/api/payroll/runs"],
   },
   {
-    name: "Engineering Manager",
-    email: "raomubasher5555@gmail.com",
+    name: "Technician (QA)",
+    email: "technician1@automatrix.pk",
     requiredRoutes: ["/dashboard", "/me", "/projects", "/expenses"],
     restrictedRoutes: ["/inventory", "/procurement/purchase-orders", "/reports", "/settings", "/accounting/journals", "/company-accounts", "/payroll"],
     requiredApis: ["/api/projects", "/api/expenses"],
@@ -364,7 +356,10 @@ async function runMobileAudit(
   await loginAs(page, profile.email, PASSWORD);
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-  const menuButton = page.locator("header button").first();
+  const labeledMenuButton = page.getByRole("button", { name: /open navigation menu/i }).first();
+  const fallbackMenuButton = page.locator("header button").first();
+  const menuButton =
+    (await labeledMenuButton.count()) > 0 ? labeledMenuButton : fallbackMenuButton;
   const menuVisible = await menuButton.isVisible().catch(() => false);
   if (!menuVisible) {
     findings.push({

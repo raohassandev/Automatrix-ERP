@@ -242,15 +242,13 @@ const rolePermissionMap = {
     "expenses.view_own",
     "expenses.submit",
     "income.view_own",
-    "inventory.view",
-    "inventory.request",
     "projects.view_assigned",
-    "reports.view_own",
     "employees.view_own",
   ],
   Guest: ["dashboard.view"],
   Marketing: [
     "dashboard.view",
+    "employees.view_own",
     "clients.view_all",
     "quotations.view_all",
     "projects.view_all",
@@ -260,6 +258,7 @@ const rolePermissionMap = {
   ],
   Sales: [
     "dashboard.view",
+    "employees.view_own",
     "clients.view_all",
     "quotations.view_all",
     "projects.view_all",
@@ -269,12 +268,10 @@ const rolePermissionMap = {
   ],
   Engineering: [
     "dashboard.view",
+    "employees.view_own",
     "expenses.view_own",
     "expenses.submit",
-    "inventory.view",
-    "inventory.request",
     "projects.view_assigned",
-    "reports.view_own",
   ],
   HR: [
     "dashboard.view",

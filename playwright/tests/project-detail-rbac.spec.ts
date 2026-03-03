@@ -164,7 +164,10 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     await expect(page).toHaveURL(/\/projects\/.+/);
 
     // Mobile uses dropdown select for tabs.
-    const select = page.locator("select");
+    const select = page
+      .locator("select")
+      .filter({ has: page.locator("option", { hasText: /^Documents$/ }) })
+      .first();
     await expect(select).toBeVisible();
     await select.selectOption({ label: "Documents" });
     await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();

@@ -180,6 +180,7 @@ export const PERMISSIONS = {
   ],
   Marketing: [
     "dashboard.view",
+    "employees.view_own",
     "clients.view_all",
     "quotations.view_all",
     "expenses.view_own",
@@ -194,6 +195,7 @@ export const PERMISSIONS = {
   ],
   Sales: [
     "dashboard.view",
+    "employees.view_own",
     "clients.view_all",
     "quotations.view_all",
     "expenses.view_own",
@@ -208,12 +210,10 @@ export const PERMISSIONS = {
   ],
   Engineering: [
     "dashboard.view",
+    "employees.view_own",
     "expenses.view_own",
     "expenses.submit",
-    "inventory.view",
-    "inventory.request",
     "projects.view_assigned",
-    "reports.view_own",
   ],
   HR: [
     "dashboard.view",
@@ -349,10 +349,7 @@ export const PERMISSIONS = {
     "expenses.view_own",
     "expenses.submit",
     "income.view_own",
-    "inventory.view",
-    "inventory.request",
     "projects.view_assigned",
-    "reports.view_own",
     "employees.view_own",
   ],
   Guest: ["dashboard.view"],

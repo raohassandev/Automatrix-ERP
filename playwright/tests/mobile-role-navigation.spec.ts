@@ -2,7 +2,6 @@ import { expect, test, devices } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 
 const ACCOUNTS = {
-  owner: process.env.E2E_OWNER_EMAIL || "israrulhaq5@gmail.com",
   finance: process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk",
   engineer: process.env.E2E_ENGINEER_EMAIL || "engineer1@automatrix.pk",
   store: process.env.E2E_STORE_EMAIL || "store1@automatrix.pk",
@@ -23,15 +22,16 @@ function visibleLink(page: import("@playwright/test").Page, text: RegExp) {
 }
 
 test.describe("Mobile role navigation smoke", () => {
-  test("Owner menu contains CEO routes", async ({ browser, baseURL }) => {
+  test("Finance menu includes accounting links and excludes CEO links", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ ...devices["iPhone 13"], baseURL });
     const page = await ctx.newPage();
-    await loginAs(page, ACCOUNTS.owner);
+    await loginAs(page, ACCOUNTS.finance);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     await openMobileMenu(page);
-    await expect(visibleLink(page, /^CEO Dashboard$/i)).toBeVisible();
-    await expect(visibleLink(page, /^Settings$/i)).toBeVisible();
+    await expect(visibleLink(page, /^Chart of Accounts$/i)).toBeVisible();
+    await expect(visibleLink(page, /^AP Aging$/i)).toBeVisible();
+    await expect(page.locator("a:visible", { hasText: /^CEO Dashboard$/i })).toHaveCount(0);
     await ctx.close();
   });
 
@@ -72,7 +72,7 @@ test.describe("Mobile role navigation smoke", () => {
     await ctx.close();
   });
 
-  test("Finance menu includes finance and accounting links", async ({ browser, baseURL }) => {
+  test("Finance still shows finance report links", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ ...devices["iPhone 13"], baseURL });
     const page = await ctx.newPage();
     await loginAs(page, ACCOUNTS.finance);

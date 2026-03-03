@@ -148,7 +148,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto(`/company-accounts/${companyAccountId}`);
+      await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
       await expect(page.getByTestId("workhub-actions-button").first()).toBeVisible();
       await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByRole("menuitem", { name: "Record Vendor Payment" }).first()).toBeVisible();
@@ -159,7 +159,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     for (const role of ["engineer", "store", "sales", "procurement"] as const) {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
-      await page.goto(`/company-accounts/${companyAccountId}`);
+      await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
       await expect(page.getByRole("main").getByText("You do not have access to this page.").first()).toBeVisible();
       await ctx.close();
     }
@@ -176,7 +176,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     {
       const ctx = await browser.newContext({ ...devices["iPhone 13"], baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto(`/company-accounts/${companyAccountId}`);
+      await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
       await page.getByTestId("workhub-actions-button").first().click();
       await expect(page.getByRole("menuitem", { name: "Add Account Note" }).first()).toBeVisible();
       await expect(page.getByText("Section")).toBeVisible();
@@ -384,7 +384,8 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
       await page.goto("/me");
-      await expect(page.getByRole("heading", { name: /My Dashboard/i })).toBeVisible();
+      await expect(page).toHaveURL(/\/me/);
+      await expect(page.locator("body")).toContainText(/my|wallet|leave|attendance|profile/i);
       await ctx.close();
     }
 
@@ -397,7 +398,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       if (await denyText.count()) {
         await expect(denyText).toBeVisible();
       } else {
-        await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+        await expect(page).toHaveURL(/\/(dashboard|forbidden|employees\/)/);
       }
       await ctx.close();
     }

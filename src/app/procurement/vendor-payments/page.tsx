@@ -17,13 +17,14 @@ export default async function VendorPaymentsPage({
   const session = await auth();
   if (!session?.user?.id) return redirect("/login");
 
-  const canView = await requirePermission(session.user.id, "procurement.view_all");
-  const canEdit = await requirePermission(session.user.id, "procurement.edit");
+  // Vendor payments are finance/AP controls in Phase 1.
+  const canView = await requirePermission(session.user.id, "company_accounts.manage");
+  const canEdit = canView;
   if (!canView) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Vendor Payments</h1>
-        <p className="mt-2 text-muted-foreground">You do not have access to procurement.</p>
+        <p className="mt-2 text-muted-foreground">You do not have access to vendor payments.</p>
       </div>
     );
   }

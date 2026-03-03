@@ -328,7 +328,7 @@ export default function ApprovalQueue({
 
       {/* Approvals Table */}
       <div className="mb-6 overflow-x-auto rounded-lg bg-card shadow">
-        <table className="min-w-[1400px] divide-y divide-border">
+        <table className="min-w-[1460px] divide-y divide-border">
           <thead className="bg-muted">
             <tr>
               <th className="px-6 py-3 text-left">
@@ -366,7 +366,7 @@ export default function ApprovalQueue({
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Level
               </th>
-              <th className="sticky right-0 z-10 bg-muted px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <th className="whitespace-nowrap bg-muted px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Actions
               </th>
             </tr>
@@ -475,7 +475,7 @@ export default function ApprovalQueue({
                           </div>
                         )}
                         {isLow && !isInsufficient && (
-                          <div className="text-xs text-yellow-600">⚠️ Low balance</div>
+                          <div className="text-xs text-yellow-600">Low balance</div>
                         )}
                       </div>
                     )}
@@ -483,7 +483,7 @@ export default function ApprovalQueue({
                   <td className="whitespace-nowrap px-6 py-4">
                     <ApprovalLevelBadge level={expense.requiredApprovalLevel} />
                   </td>
-                  <td className="sticky right-0 z-10 whitespace-nowrap bg-card px-6 py-4 text-sm">
+                  <td className="whitespace-nowrap bg-card px-6 py-4 text-sm">
                     {expense.type === "INCOME" ? (
                       <IncomeApprovalActions
                         incomeId={expense.id}
@@ -715,13 +715,13 @@ function IncomeApprovalActions({
 
 function ApprovalLevelBadge({ level }: { level: string }) {
   const badges: Record<string, { color: string; text: string }> = {
-    L1: { color: "bg-emerald-100 text-emerald-800", text: "L1" },
-    L2: { color: "bg-amber-100 text-amber-800", text: "L2" },
-    L3: { color: "bg-red-100 text-red-800", text: "L3" },
+    L1: { color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300", text: "L1" },
+    L2: { color: "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300", text: "L2" },
+    L3: { color: "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300", text: "L3" },
     AUTO: { color: "bg-muted text-foreground", text: "Auto" },
-    MANAGER: { color: "bg-blue-100 text-blue-800", text: "Manager" },
-    FINANCE_MANAGER: { color: "bg-purple-100 text-purple-800", text: "Finance Mgr" },
-    CEO: { color: "bg-red-100 text-red-800", text: "CEO" },
+    MANAGER: { color: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300", text: "Manager" },
+    FINANCE_MANAGER: { color: "bg-violet-100 text-violet-800 dark:bg-violet-950/40 dark:text-violet-300", text: "Finance Mgr" },
+    CEO: { color: "bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300", text: "CEO" },
   };
 
   const badge = badges[level] || badges.L1;

@@ -570,8 +570,11 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
       {/* Tabs: buttons on desktop, select on mobile */}
       <div className="rounded-xl border bg-card p-4 shadow-sm">
         <div className="md:hidden">
-          <label className="text-sm text-muted-foreground">Section</label>
+          <label htmlFor="project-detail-tab-select" className="text-sm text-muted-foreground">
+            Section
+          </label>
           <select
+            id="project-detail-tab-select"
             className="mt-2 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             value={active}
             onChange={(e) => setActive(e.target.value as ProjectDetailTab)}
