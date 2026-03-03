@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { getUserRoleName } from "@/lib/rbac";
-import { hasPermission, RoleName } from "@/lib/permissions";
+import { getUserRoleName, requirePermission } from "@/lib/rbac";
+import { RoleName } from "@/lib/permissions";
 import { buildProjectAliases } from "@/lib/projects";
 
 export type ItemDetailTab = "activity" | "ledger" | "onhand" | "documents";
@@ -90,9 +90,15 @@ function iso(d: Date) {
   return d.toISOString();
 }
 
-function buildPolicy(role: RoleName): ItemDetailPolicy {
-  const canAccessPage = hasPermission(role, "inventory.view");
-  const canViewUnitCosts = hasPermission(role, "inventory.view_cost");
+function buildPolicy(
+  role: RoleName,
+  perms: {
+    canAccessPage: boolean;
+    canViewUnitCosts: boolean;
+  },
+): ItemDetailPolicy {
+  const canAccessPage = perms.canAccessPage;
+  const canViewUnitCosts = perms.canViewUnitCosts;
 
   const isSalesOrMarketing = role === "Sales" || role === "Marketing";
   const isStoreOrTech = role === "Store Keeper" || role === "Staff";
@@ -146,7 +152,14 @@ export async function getItemDetailForUser(args: {
   ledgerPage: number;
 }) {
   const role = await getUserRoleName(args.userId);
-  const policy = buildPolicy(role);
+  const [canAccessPage, canViewUnitCosts] = await Promise.all([
+    requirePermission(args.userId, "inventory.view"),
+    requirePermission(args.userId, "inventory.view_cost"),
+  ]);
+  const policy = buildPolicy(role, {
+    canAccessPage,
+    canViewUnitCosts,
+  });
   if (!policy.canAccessPage) {
     return { ok: false as const, status: 403 as const, error: "Forbidden" };
   }

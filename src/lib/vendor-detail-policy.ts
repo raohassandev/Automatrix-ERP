@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { getUserRoleName } from "@/lib/rbac";
-import { hasPermission, RoleName } from "@/lib/permissions";
+import { getUserRoleName, requirePermission } from "@/lib/rbac";
+import { RoleName } from "@/lib/permissions";
 import { buildProjectAliases } from "@/lib/projects";
 
 export type VendorDetailTab = "activity" | "bills" | "payments" | "aging" | "documents";
@@ -88,16 +88,25 @@ function iso(d: Date) {
   return d.toISOString();
 }
 
-function buildPolicy(role: RoleName): VendorDetailPolicy {
+function buildPolicy(
+  role: RoleName,
+  perms: {
+    canViewProcurementAll: boolean;
+    canViewVendorsAll: boolean;
+    canViewProjectsAll: boolean;
+    canViewAssignedProjects: boolean;
+    canViewAmounts: boolean;
+  },
+): VendorDetailPolicy {
   // Vendor detail is a procurement-facing view, but we allow limited read access for other roles via scoping.
   const canAccessPage =
-    hasPermission(role, "procurement.view_all") ||
-    hasPermission(role, "vendors.view_all") ||
-    hasPermission(role, "projects.view_all") ||
-    hasPermission(role, "projects.view_assigned");
+    perms.canViewProcurementAll ||
+    perms.canViewVendorsAll ||
+    perms.canViewProjectsAll ||
+    perms.canViewAssignedProjects;
 
   // Amounts are sensitive: only roles with explicit cost permission should see totals/amounts.
-  const canViewAmounts = hasPermission(role, "inventory.view_cost");
+  const canViewAmounts = perms.canViewAmounts;
 
   const isSalesOrMarketing = role === "Sales" || role === "Marketing";
   const isStoreOrTech = role === "Store Keeper" || role === "Staff";
@@ -106,8 +115,8 @@ function buildPolicy(role: RoleName): VendorDetailPolicy {
   const tabs: Record<VendorDetailTab, boolean> = {
     activity: canAccessPage,
     documents: canAccessPage,
-    bills: canAccessPage && !isSalesOrMarketing && !isStoreOrTech && !isEngineer && hasPermission(role, "procurement.view_all"),
-    payments: canAccessPage && !isSalesOrMarketing && !isStoreOrTech && !isEngineer && hasPermission(role, "procurement.view_all"),
+    bills: canAccessPage && !isSalesOrMarketing && !isStoreOrTech && !isEngineer && perms.canViewProcurementAll,
+    payments: canAccessPage && !isSalesOrMarketing && !isStoreOrTech && !isEngineer && perms.canViewProcurementAll,
     aging: canAccessPage && !isSalesOrMarketing && !isStoreOrTech && !isEngineer && canViewAmounts,
   };
 
@@ -170,7 +179,26 @@ async function isVendorVisibleViaAssignedProjects(args: {
 
 export async function getVendorDetailForUser(args: { userId: string; vendorDbId: string }) {
   const role = await getUserRoleName(args.userId);
-  const policy = buildPolicy(role);
+  const [
+    canViewProcurementAll,
+    canViewVendorsAll,
+    canViewProjectsAll,
+    canViewAssignedProjects,
+    canViewAmounts,
+  ] = await Promise.all([
+    requirePermission(args.userId, "procurement.view_all"),
+    requirePermission(args.userId, "vendors.view_all"),
+    requirePermission(args.userId, "projects.view_all"),
+    requirePermission(args.userId, "projects.view_assigned"),
+    requirePermission(args.userId, "inventory.view_cost"),
+  ]);
+  const policy = buildPolicy(role, {
+    canViewProcurementAll,
+    canViewVendorsAll,
+    canViewProjectsAll,
+    canViewAssignedProjects,
+    canViewAmounts,
+  });
   const isSalesOrMarketing = policy.role === "Sales" || policy.role === "Marketing";
   const isStoreOrTech = policy.role === "Store Keeper" || policy.role === "Staff";
   const isEngineer = policy.role === "Engineering";
@@ -179,10 +207,9 @@ export async function getVendorDetailForUser(args: { userId: string; vendorDbId:
     return { ok: false as const, status: 403 as const, error: "Forbidden" };
   }
 
-  const canViewProcurementAll =
-    hasPermission(role, "procurement.view_all") || hasPermission(role, "vendors.view_all");
-  const assignedProjectRefs = canViewProcurementAll ? null : await getAssignedProjectRefs(args.userId);
-  if (!canViewProcurementAll) {
+  const canViewVendorUniverse = canViewProcurementAll || canViewVendorsAll;
+  const assignedProjectRefs = canViewVendorUniverse ? null : await getAssignedProjectRefs(args.userId);
+  if (!canViewVendorUniverse) {
     // Restricted roles can only access vendors if they are visible via assigned projects.
     const visible = await isVendorVisibleViaAssignedProjects({
       vendorId: args.vendorDbId,

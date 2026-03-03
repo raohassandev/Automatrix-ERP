@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import { getUserRoleName } from "@/lib/rbac";
-import { hasPermission, RoleName } from "@/lib/permissions";
+import { getUserRoleName, requirePermission } from "@/lib/rbac";
+import { RoleName } from "@/lib/permissions";
 import { buildProjectAliases, computeProjectFinancialSnapshot } from "@/lib/projects";
 
 export type ProjectDetailTab = "activity" | "costs" | "inventory" | "people" | "execution" | "documents";
@@ -133,13 +133,22 @@ function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function buildPolicy(role: RoleName): ProjectDetailPolicy {
-  const canAccessPage =
-    hasPermission(role, "projects.view_all") || hasPermission(role, "projects.view_assigned");
+function buildPolicy(
+  role: RoleName,
+  perms: {
+    canViewAll: boolean;
+    canViewAssigned: boolean;
+    canViewUnitCosts: boolean;
+    canViewFinancialTotals: boolean;
+    canViewInventory: boolean;
+    canViewEmployeesAll: boolean;
+    canAssignProjects: boolean;
+  },
+): ProjectDetailPolicy {
+  const canAccessPage = perms.canViewAll || perms.canViewAssigned;
 
-  const canViewUnitCosts = hasPermission(role, "inventory.view_cost");
-  const canViewFinancialTotals =
-    hasPermission(role, "projects.view_financials") || hasPermission(role, "dashboard.view_all_metrics");
+  const canViewUnitCosts = perms.canViewUnitCosts;
+  const canViewFinancialTotals = perms.canViewFinancialTotals;
 
   const isSalesOrMarketing = role === "Sales" || role === "Marketing";
   const isStore = role === "Store Keeper";
@@ -150,16 +159,16 @@ function buildPolicy(role: RoleName): ProjectDetailPolicy {
     activity: canAccessPage,
     costs: canAccessPage && canViewFinancialTotals,
     // Sales/Marketing: docs-only view (no inventory tab in Phase 1)
-    inventory: canAccessPage && !isSalesOrMarketing && !isStore && !isTechnician && hasPermission(role, "inventory.view"),
+    inventory: canAccessPage && !isSalesOrMarketing && !isStore && !isTechnician && perms.canViewInventory,
     // Store/Technician: no financial tabs; inventory movements allowed
-    people: canAccessPage && (isEngineer || hasPermission(role, "employees.view_all") || hasPermission(role, "projects.assign")),
-    execution: canAccessPage && (hasPermission(role, "projects.view_all") || hasPermission(role, "projects.view_assigned")),
+    people: canAccessPage && (isEngineer || perms.canViewEmployeesAll || perms.canAssignProjects),
+    execution: canAccessPage && (perms.canViewAll || perms.canViewAssigned),
     documents: canAccessPage,
   };
 
   // Store/Technician can view inventory quantities/movements, but not costs.
   if (isStore || isTechnician) {
-    tabs.inventory = canAccessPage && hasPermission(role, "inventory.view");
+    tabs.inventory = canAccessPage && perms.canViewInventory;
     tabs.costs = false;
   }
 
@@ -183,14 +192,40 @@ function buildPolicy(role: RoleName): ProjectDetailPolicy {
 
 export async function getProjectDetailForUser(args: { userId: string; projectDbId: string }) {
   const role = await getUserRoleName(args.userId);
-  const policy = buildPolicy(role);
+  const [
+    canViewAll,
+    canViewAssigned,
+    canViewUnitCosts,
+    canViewFinancialTotals,
+    canViewAllMetrics,
+    canViewInventory,
+    canViewEmployeesAll,
+    canAssignProjects,
+  ] = await Promise.all([
+    requirePermission(args.userId, "projects.view_all"),
+    requirePermission(args.userId, "projects.view_assigned"),
+    requirePermission(args.userId, "inventory.view_cost"),
+    requirePermission(args.userId, "projects.view_financials"),
+    requirePermission(args.userId, "dashboard.view_all_metrics"),
+    requirePermission(args.userId, "inventory.view"),
+    requirePermission(args.userId, "employees.view_all"),
+    requirePermission(args.userId, "projects.assign"),
+  ]);
+
+  const policy = buildPolicy(role, {
+    canViewAll,
+    canViewAssigned,
+    canViewUnitCosts,
+    canViewFinancialTotals: canViewFinancialTotals || canViewAllMetrics,
+    canViewInventory,
+    canViewEmployeesAll,
+    canAssignProjects,
+  });
 
   if (!policy.canAccessPage) {
     return { ok: false as const, status: 403 as const, error: "Forbidden" };
   }
 
-  const canViewAll = hasPermission(role, "projects.view_all");
-  const canViewAssigned = hasPermission(role, "projects.view_assigned");
   if (!canViewAll && canViewAssigned) {
     const assigned = await prisma.projectAssignment.findFirst({
       where: { projectId: args.projectDbId, userId: args.userId },

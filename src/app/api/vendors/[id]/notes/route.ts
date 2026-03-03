@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { requirePermission, getUserRoleName } from "@/lib/rbac";
-import { hasPermission } from "@/lib/permissions";
+import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { sanitizeString } from "@/lib/sanitize";
 import { z } from "zod";
@@ -13,9 +12,11 @@ const noteSchema = z.object({
 });
 
 async function canAccessVendor(args: { userId: string; vendorId: string }) {
-  const role = await getUserRoleName(args.userId);
-  const canViewAll =
-    hasPermission(role, "procurement.view_all") || hasPermission(role, "vendors.view_all");
+  const [canViewProcurementAll, canViewVendorsAll] = await Promise.all([
+    requirePermission(args.userId, "procurement.view_all"),
+    requirePermission(args.userId, "vendors.view_all"),
+  ]);
+  const canViewAll = canViewProcurementAll || canViewVendorsAll;
   if (canViewAll) return { ok: true as const };
 
   const canViewAssigned = await requirePermission(args.userId, "projects.view_assigned");

@@ -19,6 +19,8 @@ interface PaymentModeAutoCompleteProps {
   onChange: (value: string) => void;
 }
 
+const DEFAULT_PAYMENT_MODES = ['Cash', 'Bank Transfer', 'Cheque', 'Online Transfer', 'Credit Card', 'Other'];
+
 export default function PaymentModeAutoComplete({
   value,
   onChange,
@@ -36,10 +38,12 @@ export default function PaymentModeAutoComplete({
         if (!res.ok) {
           throw new Error(data.error || 'Failed to fetch payment modes');
         }
-        setPaymentModes(data.data);
+        const modes = Array.isArray(data.data) && data.data.length > 0 ? data.data : DEFAULT_PAYMENT_MODES;
+        setPaymentModes(modes);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred';
         toast.error(message);
+        setPaymentModes(DEFAULT_PAYMENT_MODES);
       } finally {
         setLoading(false);
       }
