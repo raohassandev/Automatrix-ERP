@@ -5,8 +5,9 @@ import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { hasPermission, type RoleName } from "@/lib/permissions";
+import { type RoleName } from "@/lib/permissions";
 import { CategoryFormDialog } from "@/components/CategoryFormDialog";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
 type Category = {
   id: string;
@@ -20,7 +21,8 @@ type Category = {
 export default function CategoriesPage() {
   const { data: session } = useSession();
   const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
-  const canManage = hasPermission(roleName, "categories.manage");
+  const { canAccess } = useEffectivePermissions(roleName);
+  const canManage = canAccess(["categories.manage"]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

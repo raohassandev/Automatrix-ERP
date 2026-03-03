@@ -9,7 +9,8 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
 import CategoryAutoComplete from "./CategoryAutoComplete";
-import { hasPermission, type RoleName } from "@/lib/permissions";
+import { type RoleName } from "@/lib/permissions";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
 interface InventoryFormDialogProps {
   open: boolean;
@@ -43,8 +44,9 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
   const router = useRouter();
   const { data: session } = useSession();
   const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
-  const canViewCost = hasPermission(roleName, "inventory.view_cost");
-  const canViewSelling = hasPermission(roleName, "inventory.view_selling");
+  const { canAccess } = useEffectivePermissions(roleName);
+  const canViewCost = canAccess(["inventory.view_cost"]);
+  const canViewSelling = canAccess(["inventory.view_selling"]);
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState(EMPTY_FORM);
   const isEdit = Boolean(initialData?.id);

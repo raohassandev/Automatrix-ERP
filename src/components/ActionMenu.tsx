@@ -14,7 +14,8 @@ import { useState } from "react";
 import { FormDialogManager, type FormType } from "./FormDialogManager";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useSession } from "next-auth/react";
-import { hasPermission, type RoleName } from "@/lib/permissions";
+import { type RoleName } from "@/lib/permissions";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
 interface ActionMenuItem {
   icon: React.ElementType;
@@ -35,8 +36,7 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
   const [openFormDialog, setOpenFormDialog] = useState<FormType>(null);
   const { data: session } = useSession();
   const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
-  const canAccess = (permissions?: string[]) =>
-    !permissions || permissions.some((permission) => hasPermission(roleName, permission));
+  const { canAccess } = useEffectivePermissions(roleName);
 
   const openIfAllowed = (form: FormType, permissions?: string[]) => {
     if (!canAccess(permissions)) return;

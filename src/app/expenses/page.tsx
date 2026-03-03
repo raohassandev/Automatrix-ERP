@@ -17,7 +17,8 @@ import { PageCreateButton } from "@/components/PageCreateButton";
 import { Button } from "@/components/ui/button";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { hasPermission, type RoleName } from "@/lib/permissions";
+import { type RoleName } from "@/lib/permissions";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
 const COLUMNS = [
   { key: 'date', label: 'Date', visible: true },
@@ -68,14 +69,15 @@ function ExpensesPageContent() {
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
   const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
+  const { canAccess } = useEffectivePermissions(roleName);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [totalPages, setTotalPages] = useState(0);
   const [columns, setColumns] = useState(COLUMNS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkPending, setBulkPending] = useState(false);
-  const canCreate = hasPermission(roleName, "expenses.submit");
-  const canEditAny = hasPermission(roleName, "expenses.edit");
-  const canMarkPaid = hasPermission(roleName, "expenses.mark_paid");
+  const canCreate = canAccess(["expenses.submit"]);
+  const canEditAny = canAccess(["expenses.edit"]);
+  const canMarkPaid = canAccess(["expenses.mark_paid"]);
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "APPROVED":

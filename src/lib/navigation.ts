@@ -33,6 +33,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permissions: ["dashboard.view"] },
       { name: "My Portal", href: "/me", icon: LayoutDashboard, permissions: ["employees.view_own", "employees.view_all"] },
+      { name: "My Expenses", href: "/expenses", icon: CreditCard, permissions: ["expenses.view_own", "expenses.view_all"] },
       { name: "ERP Blueprint", href: "/ceo/blueprint", icon: FileBarChart, permissions: ["dashboard.view_all_metrics"] },
       { name: "CEO Dashboard", href: "/ceo/dashboard", icon: LayoutDashboard, permissions: ["dashboard.view_all_metrics"] },
       { name: "Notifications", href: "/notifications", icon: Bell, permissions: ["dashboard.view", "reports.view_all"] },
@@ -64,9 +65,12 @@ export const navGroups: NavGroup[] = [
     title: "People",
     items: [
       { name: "Employees", href: "/employees", icon: Users, permissions: ["employees.view_all", "employees.view_team"] },
+      { name: "Wallet Ledger", href: "/wallets", icon: Wallet, permissions: ["employees.view_own", "employees.view_all", "employees.edit_wallet"] },
       { name: "Payroll", href: "/payroll", icon: Wallet, permissions: ["payroll.view_all", "payroll.edit", "payroll.approve"] },
-      { name: "Attendance", href: "/hrms/attendance", icon: Users, permissions: ["employees.view_all", "employees.view_team"] },
-      { name: "Leave", href: "/hrms/leave", icon: Users, permissions: ["employees.view_all", "employees.view_team"] },
+      { name: "Attendance", href: "/hrms/attendance", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
+      { name: "Leave", href: "/hrms/leave", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
+      { name: "Incentives", href: "/incentives", icon: Wallet, permissions: ["employees.view_own", "incentives.view_all"] },
+      { name: "Salary Advances", href: "/salary-advances", icon: CreditCard, permissions: ["employees.view_own", "salary_advance.view_all"] },
     ],
   },
   {
