@@ -72,6 +72,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   const [incentiveDialogOpen, setIncentiveDialogOpen] = React.useState(false);
   const [incentiveBusyId, setIncentiveBusyId] = React.useState<string | null>(null);
   const [incentives, setIncentives] = React.useState(detail.incentives?.rows || []);
+  const [projectSwitching, setProjectSwitching] = React.useState(false);
   const [taskForm, setTaskForm] = React.useState({
     title: "",
     description: "",
@@ -288,6 +289,31 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           </div>
           <div className="relative z-10 text-xs text-slate-600">
             Role: <span className="font-medium text-foreground">{detail.policy.role}</span>
+            {detail.projectSwitcher.options.length > 1 ? (
+              <div className="mt-3 w-full md:w-80">
+                <Label htmlFor="project-switcher" className="text-[11px] uppercase tracking-wide text-slate-600">
+                  Switch Project
+                </Label>
+                <select
+                  id="project-switcher"
+                  className="mt-1 w-full rounded-md border border-slate-300 bg-white/95 px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  value={detail.projectSwitcher.currentProjectDbId}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    if (!nextId || nextId === detail.projectSwitcher.currentProjectDbId) return;
+                    setProjectSwitching(true);
+                    router.push(`/projects/${nextId}`);
+                  }}
+                  disabled={projectSwitching}
+                >
+                  {detail.projectSwitcher.options.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.projectId} - {row.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
           {anyActions ? (
             <div className="relative z-10 md:ml-4">

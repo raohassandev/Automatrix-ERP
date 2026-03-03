@@ -146,6 +146,15 @@ export type ProjectDetailData = {
     }>;
     employeeOptions: Array<{ id: string; name: string; email: string }>;
   };
+  projectSwitcher: {
+    currentProjectDbId: string;
+    options: Array<{
+      id: string;
+      projectId: string;
+      name: string;
+      status: string;
+    }>;
+  };
   documents?: ProjectDocumentsRow[];
 };
 
@@ -897,8 +906,54 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     people,
     execution,
     incentives,
+    projectSwitcher: {
+      currentProjectDbId: project.id,
+      options: [],
+    },
     documents: policy.tabs.documents ? documents : undefined,
   };
+
+  if (canViewAll) {
+    const allProjects = await prisma.project.findMany({
+      select: { id: true, projectId: true, name: true, status: true },
+      orderBy: [{ createdAt: "desc" }],
+      take: 300,
+    });
+    data.projectSwitcher.options = allProjects.map((row) => ({
+      id: row.id,
+      projectId: row.projectId,
+      name: row.name,
+      status: row.status,
+    }));
+  } else {
+    const assignedProjects = await prisma.projectAssignment.findMany({
+      where: { userId: args.userId },
+      select: {
+        project: { select: { id: true, projectId: true, name: true, status: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 300,
+    });
+    const unique = new Map<string, { id: string; projectId: string; name: string; status: string }>();
+    for (const row of assignedProjects) {
+      if (!row.project) continue;
+      unique.set(row.project.id, {
+        id: row.project.id,
+        projectId: row.project.projectId,
+        name: row.project.name,
+        status: row.project.status,
+      });
+    }
+    if (!unique.has(project.id)) {
+      unique.set(project.id, {
+        id: project.id,
+        projectId: project.projectId,
+        name: project.name,
+        status: project.status,
+      });
+    }
+    data.projectSwitcher.options = Array.from(unique.values());
+  }
 
   return { ok: true as const, status: 200 as const, data };
 }

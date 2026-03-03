@@ -26,9 +26,9 @@ function toPercent(value: number) {
 }
 
 function toneClass(tone: MetricTone) {
-  if (tone === "good") return "border-emerald-200 bg-emerald-50/70 text-emerald-900";
-  if (tone === "warn") return "border-amber-200 bg-amber-50/80 text-amber-900";
-  return "border-red-200 bg-red-50/80 text-red-900";
+  if (tone === "good") return "border-emerald-200 bg-emerald-50/70 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-100";
+  if (tone === "warn") return "border-amber-200 bg-amber-50/80 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100";
+  return "border-red-200 bg-red-50/80 text-red-900 dark:border-red-900 dark:bg-red-950/30 dark:text-red-100";
 }
 
 function metricTone(value: number, warnThreshold: number, riskThreshold: number): MetricTone {
@@ -66,15 +66,15 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
   ];
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-card p-5 shadow-sm">
+    <section className="rounded-xl border border-slate-200 bg-card p-5 shadow-sm dark:border-slate-800">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Executive Summary</h2>
-          <p className="mt-1 text-sm text-slate-600">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Executive Summary</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
             Owner snapshot for cash control, recoveries, and project profitability.
           </p>
         </div>
-        <div className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800">
+        <div className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">
           Live finance metrics
         </div>
       </div>
@@ -111,9 +111,9 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Cash Exposure Mix</h3>
-          <p className="mt-1 text-xs text-slate-600">Recovered cash vs current receivable and vendor pressure</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/45">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Cash Exposure Mix</h3>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Recovered cash vs current receivable and vendor pressure</p>
           <div className="mt-3 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -123,7 +123,7 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
                   nameKey="name"
                   innerRadius={56}
                   outerRadius={88}
-                  stroke="#ffffff"
+                  stroke="var(--background)"
                   strokeWidth={2}
                 >
                   {cashMix.map((_, index) => (
@@ -136,15 +136,15 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
-          <h3 className="text-sm font-semibold text-slate-900">Profit Bridge</h3>
-          <p className="mt-1 text-xs text-slate-600">How income converts into project profit after costs</p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/45">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Profit Bridge</h3>
+          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">How income converts into project profit after costs</p>
           <div className="mt-3 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={profitBridge} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
-                <XAxis dataKey="label" tick={{ fill: "#334155", fontSize: 12 }} />
-                <YAxis tick={{ fill: "#334155", fontSize: 12 }} tickFormatter={(v) => formatMoney(Number(v || 0), "")} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#64748b" opacity={0.35} />
+                <XAxis dataKey="label" tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
+                <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} tickFormatter={(v) => formatMoney(Number(v || 0), "")} />
                 <Tooltip formatter={(value: number | string | undefined) => formatMoney(Number(value || 0))} />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {profitBridge.map((row) => (
@@ -158,45 +158,45 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-3">
-          <div className="text-xs text-indigo-800">Pending recovery</div>
-          <div className="mt-1 text-lg font-semibold text-indigo-900">{formatMoney(costs.pendingRecovery)}</div>
-          <div className="text-xs text-indigo-700">
+        <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-3 dark:border-indigo-900 dark:bg-indigo-950/30">
+          <div className="text-xs text-indigo-800 dark:text-indigo-200">Pending recovery</div>
+          <div className="mt-1 text-lg font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(costs.pendingRecovery)}</div>
+          <div className="text-xs text-indigo-700 dark:text-indigo-300">
             Invoice-only pending: {formatMoney(costs.invoicedPendingRecovery)}
           </div>
         </div>
-        <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3">
-          <div className="text-xs text-rose-800">Vendor outstanding</div>
-          <div className="mt-1 text-lg font-semibold text-rose-900">{formatMoney(costs.apOutstanding)}</div>
-          <div className="text-xs text-rose-700">Posted AP unpaid balance</div>
+        <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3 dark:border-rose-900 dark:bg-rose-950/30">
+          <div className="text-xs text-rose-800 dark:text-rose-200">Vendor outstanding</div>
+          <div className="mt-1 text-lg font-semibold text-rose-900 dark:text-rose-100">{formatMoney(costs.apOutstanding)}</div>
+          <div className="text-xs text-rose-700 dark:text-rose-300">Posted AP unpaid balance</div>
         </div>
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
-          <div className="text-xs text-emerald-800">Profitability</div>
-          <div className="mt-1 text-lg font-semibold text-emerald-900">{formatMoney(costs.projectProfit)}</div>
-          <div className="text-xs text-emerald-700">{toPercent(costs.marginPercent)} margin</div>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+          <div className="text-xs text-emerald-800 dark:text-emerald-200">Profitability</div>
+          <div className="mt-1 text-lg font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(costs.projectProfit)}</div>
+          <div className="text-xs text-emerald-700 dark:text-emerald-300">{toPercent(costs.marginPercent)} margin</div>
         </div>
-        <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
-          <div className="text-xs text-amber-800">Pipeline pressure</div>
-          <div className="mt-1 text-lg font-semibold text-amber-900">{formatMoney(costs.pendingExpenseSubmitted)}</div>
-          <div className="text-xs text-amber-700">Pending submitted expenses</div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+          <div className="text-xs text-amber-800 dark:text-amber-200">Pipeline pressure</div>
+          <div className="mt-1 text-lg font-semibold text-amber-900 dark:text-amber-100">{formatMoney(costs.pendingExpenseSubmitted)}</div>
+          <div className="text-xs text-amber-700 dark:text-amber-300">Pending submitted expenses</div>
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <Link
-          className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 font-medium text-sky-800"
+          className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 font-medium text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200"
           href={`/income?search=${encodeURIComponent(projectId)}`}
         >
           Open income
         </Link>
         <Link
-          className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 font-medium text-rose-800"
+          className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 font-medium text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200"
           href={`/expenses/by-project?project=${encodeURIComponent(projectId)}`}
         >
           Open expenses
         </Link>
         <Link
-          className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 font-medium text-indigo-800"
+          className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 font-medium text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-200"
           href={`/procurement/vendor-bills?search=${encodeURIComponent(projectId)}`}
         >
           Open vendor bills
