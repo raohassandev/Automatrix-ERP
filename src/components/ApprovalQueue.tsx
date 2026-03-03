@@ -327,8 +327,8 @@ export default function ApprovalQueue({
       )}
 
       {/* Approvals Table */}
-      <div className="mb-6 overflow-hidden rounded-lg bg-card shadow">
-        <table className="min-w-full divide-y divide-border">
+      <div className="mb-6 overflow-x-auto rounded-lg bg-card shadow">
+        <table className="min-w-[1400px] divide-y divide-border">
           <thead className="bg-muted">
             <tr>
               <th className="px-6 py-3 text-left">
@@ -366,7 +366,7 @@ export default function ApprovalQueue({
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Level
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <th className="sticky right-0 z-10 bg-muted px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Actions
               </th>
             </tr>
@@ -483,7 +483,7 @@ export default function ApprovalQueue({
                   <td className="whitespace-nowrap px-6 py-4">
                     <ApprovalLevelBadge level={expense.requiredApprovalLevel} />
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm">
+                  <td className="sticky right-0 z-10 whitespace-nowrap bg-card px-6 py-4 text-sm">
                     {expense.type === "INCOME" ? (
                       <IncomeApprovalActions
                         incomeId={expense.id}
