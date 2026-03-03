@@ -116,6 +116,8 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     [categories, form.category]
   );
   const parsedAmount = Number(form.amount);
+  const isOwnerPersonal = form.expenseType === "OWNER_PERSONAL";
+  const needsProject = !isOwnerPersonal;
 
   async function submit(ignoreDuplicate = false) {
     if (!date) {
@@ -124,11 +126,17 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
     }
 
     try {
-      if (!form.project) {
-        if (form.expenseType !== "OWNER_PERSONAL") {
-          toast.error("Project is required for company expenses");
-          return;
-        }
+      if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+        toast.error("Amount must be greater than zero");
+        return;
+      }
+      if (!form.paymentMode) {
+        toast.error("Please select a payment mode");
+        return;
+      }
+      if (!form.project && needsProject) {
+        toast.error("Project is required for company expenses");
+        return;
       }
       if (form.paymentSource === "COMPANY_ACCOUNT" && !form.companyAccountId) {
         toast.error("Please select a company account");
@@ -150,7 +158,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           date: format(date, "yyyy-MM-dd"),
           description: form.description,
           category: form.category,
-          amount: parseFloat(form.amount),
+          amount: parsedAmount,
           paymentMode: form.paymentMode,
           paymentSource: form.paymentSource,
           companyAccountId: form.paymentSource === "COMPANY_ACCOUNT" ? form.companyAccountId : undefined,
@@ -250,9 +258,15 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
             e.preventDefault();
             startTransition(() => submit());
           }}
-          className="space-y-4"
+          className="space-y-5"
         >
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-sm text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-100">
+            Keep this entry specific and complete so approval and cash tracking stay accurate.
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
+            <div className="md:col-span-2 rounded-md border border-border/70 bg-muted/30 px-3 py-2 dark:bg-muted/15">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Basics</div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
               <Input
@@ -301,14 +315,17 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
               </div>
             </div>
 
+            <div className="md:col-span-2 rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/35">
+              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">Payment Routing</div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="paymentMode">Payment Mode</Label>
               <PaymentModeAutoComplete
                 value={form.paymentMode}
                 onChange={(value) => setForm({ ...form, paymentMode: value })}
+                className="w-full"
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="paymentSource">Payment Source</Label>
               <Select
@@ -343,11 +360,17 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
                     <SelectValue placeholder="Select cash/bank account" />
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name} ({account.type})
+                    {accounts.length === 0 ? (
+                      <SelectItem value="__none" disabled>
+                        No active company accounts
                       </SelectItem>
-                    ))}
+                    ) : (
+                      accounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name} ({account.type})
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -404,19 +427,25 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
               <ProjectAutoComplete
                 value={form.project}
                 onChange={(value) => setForm({ ...form, project: value })}
-                placeholder={form.expenseType === "OWNER_PERSONAL" ? "Personal expense (no project)" : "Select project"}
-                disabled={form.expenseType === "OWNER_PERSONAL"}
+                placeholder={isOwnerPersonal ? "Owner personal expense (project not needed)" : "Select project"}
+                disabled={isOwnerPersonal}
               />
+              {isOwnerPersonal ? (
+                <div className="text-xs text-amber-700 dark:text-amber-300">Project is not required for Owner Personal expenses.</div>
+              ) : null}
             </div>
 
-            <div className="space-y-2 md:col-span-2 rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
-              <div className="font-medium text-foreground">Stock purchases</div>
+            <div className="space-y-2 md:col-span-2 rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground dark:bg-muted/15">
+              <div className="font-medium text-foreground dark:text-foreground">Stock purchases</div>
               <div>
                 Phase 1 rule: Expenses are non-stock only. For stock purchases use Procurement -&gt; PO/GRN/Vendor
                 Bill.
               </div>
             </div>
 
+            <div className="md:col-span-2 rounded-md border border-indigo-200 bg-indigo-50/50 px-3 py-2 dark:border-indigo-900 dark:bg-indigo-950/35">
+              <div className="text-xs font-semibold uppercase tracking-wide text-indigo-900 dark:text-indigo-200">Attachments And Notes</div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="receiptUrl">Receipt URL (Optional)</Label>
               <Input

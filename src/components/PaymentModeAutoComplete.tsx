@@ -17,6 +17,8 @@ import { toast } from 'sonner';
 interface PaymentModeAutoCompleteProps {
   value: string;
   onChange: (value: string) => void;
+  className?: string;
+  placeholder?: string;
 }
 
 const DEFAULT_PAYMENT_MODES = ['Cash', 'Bank Transfer', 'Cheque', 'Online Transfer', 'Credit Card', 'Other'];
@@ -24,6 +26,8 @@ const DEFAULT_PAYMENT_MODES = ['Cash', 'Bank Transfer', 'Cheque', 'Online Transf
 export default function PaymentModeAutoComplete({
   value,
   onChange,
+  className,
+  placeholder = 'Select payment mode...',
 }: PaymentModeAutoCompleteProps) {
   const [open, setOpen] = React.useState(false);
   const [paymentModes, setPaymentModes] = React.useState<string[]>([]);
@@ -58,16 +62,16 @@ export default function PaymentModeAutoComplete({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[200px] justify-between"
+          className={cn('justify-between', className || 'w-[200px]')}
           disabled={loading}
         >
           {value
             ? paymentModes.find((mode) => mode === value)
-            : 'Select payment mode...'}
+            : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent className={cn('p-0', className || 'w-[200px]')}>
         <Command>
           <CommandInput placeholder="Search payment mode..." />
           <CommandEmpty>No payment mode found.</CommandEmpty>

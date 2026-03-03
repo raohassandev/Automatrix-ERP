@@ -12,6 +12,11 @@ export type ProjectDetailPolicy = {
   // Field-level masking
   canViewUnitCosts: boolean;
   canViewFinancialTotals: boolean;
+  incentives: {
+    canView: boolean;
+    canEdit: boolean;
+    canApprove: boolean;
+  };
 };
 
 export type ProjectDetailHeader = {
@@ -122,6 +127,25 @@ export type ProjectDetailData = {
       overdueOpen: number;
     };
   };
+  incentives?: {
+    rows: Array<{
+      id: string;
+      employeeId: string;
+      employeeName: string;
+      employeeEmail: string;
+      createdAt: string;
+      amount: number;
+      formulaType: string | null;
+      basisAmount: number | null;
+      percent: number | null;
+      payoutMode: string;
+      settlementStatus: string;
+      status: string;
+      reason: string | null;
+      projectRef: string | null;
+    }>;
+    employeeOptions: Array<{ id: string; name: string; email: string }>;
+  };
   documents?: ProjectDocumentsRow[];
 };
 
@@ -143,6 +167,9 @@ function buildPolicy(
     canViewInventory: boolean;
     canViewEmployeesAll: boolean;
     canAssignProjects: boolean;
+    canIncentivesViewAll: boolean;
+    canIncentivesEdit: boolean;
+    canIncentivesApprove: boolean;
   },
 ): ProjectDetailPolicy {
   const canAccessPage = perms.canViewAll || perms.canViewAssigned;
@@ -187,6 +214,11 @@ function buildPolicy(
     tabs,
     canViewUnitCosts,
     canViewFinancialTotals,
+    incentives: {
+      canView: perms.canIncentivesViewAll || perms.canIncentivesEdit || perms.canIncentivesApprove,
+      canEdit: perms.canIncentivesEdit,
+      canApprove: perms.canIncentivesApprove,
+    },
   };
 }
 
@@ -201,6 +233,9 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     canViewInventory,
     canViewEmployeesAll,
     canAssignProjects,
+    canIncentivesViewAll,
+    canIncentivesEdit,
+    canIncentivesApprove,
   ] = await Promise.all([
     requirePermission(args.userId, "projects.view_all"),
     requirePermission(args.userId, "projects.view_assigned"),
@@ -210,6 +245,9 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     requirePermission(args.userId, "inventory.view"),
     requirePermission(args.userId, "employees.view_all"),
     requirePermission(args.userId, "projects.assign"),
+    requirePermission(args.userId, "incentives.view_all"),
+    requirePermission(args.userId, "incentives.edit"),
+    requirePermission(args.userId, "incentives.approve"),
   ]);
 
   const policy = buildPolicy(role, {
@@ -220,6 +258,9 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     canViewInventory,
     canViewEmployeesAll,
     canAssignProjects,
+    canIncentivesViewAll,
+    canIncentivesEdit,
+    canIncentivesApprove,
   });
 
   if (!policy.canAccessPage) {
@@ -367,8 +408,23 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     updatedAt: Date;
     assignedTo: { id: string; name: string | null; email: string } | null;
   };
+  type IncentiveRow = {
+    id: string;
+    employeeId: string;
+    projectRef: string | null;
+    amount: unknown;
+    formulaType: string | null;
+    basisAmount: unknown | null;
+    percent: unknown | null;
+    payoutMode: string;
+    settlementStatus: string;
+    status: string;
+    reason: string | null;
+    createdAt: Date;
+    employee: { id: string; name: string; email: string };
+  };
 
-  const [pos, grns, bills, payments, ledger, expensesAll, incomesAll, tasks] = (await Promise.all([
+  const [pos, grns, bills, payments, ledger, expensesAll, incomesAll, tasks, incentivesRows] = (await Promise.all([
     prisma.purchaseOrder.findMany({
       where: { projectRef: { in: projectAliases } },
       select: { id: true, poNumber: true, orderDate: true, status: true },
@@ -444,6 +500,14 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
           take: 300,
         })
       : Promise.resolve([]),
+    policy.incentives.canView
+      ? prisma.incentiveEntry.findMany({
+          where: { projectRef: { in: projectAliases } },
+          include: { employee: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        })
+      : Promise.resolve([]),
   ])) as unknown as [
     PoRow[],
     GrnRow[],
@@ -453,6 +517,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     ExpenseRow[],
     IncomeRow[],
     ProjectTaskRow[],
+    IncentiveRow[],
   ];
   const taskRows = tasks as unknown as ProjectTaskRow[];
 
@@ -733,6 +798,57 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     };
   }
 
+  let incentives: ProjectDetailData["incentives"] | undefined = undefined;
+  if (policy.incentives.canView) {
+    const assignmentEmails = Array.from(
+      new Set(project.assignments.map((assignment) => assignment.user.email).filter((email) => Boolean(email))),
+    );
+    const mappedEmployees = assignmentEmails.length
+      ? await prisma.employee.findMany({
+          where: {
+            status: "ACTIVE",
+            email: { in: assignmentEmails },
+          },
+          select: { id: true, name: true, email: true },
+          orderBy: { name: "asc" },
+        })
+      : [];
+    const employeeOptionMap = new Map<string, { id: string; name: string; email: string }>();
+    for (const employee of mappedEmployees) {
+      employeeOptionMap.set(employee.id, {
+        id: employee.id,
+        name: employee.name || employee.email,
+        email: employee.email,
+      });
+    }
+    for (const row of incentivesRows) {
+      employeeOptionMap.set(row.employee.id, {
+        id: row.employee.id,
+        name: row.employee.name || row.employee.email,
+        email: row.employee.email,
+      });
+    }
+    incentives = {
+      rows: incentivesRows.map((row) => ({
+        id: row.id,
+        employeeId: row.employeeId,
+        employeeName: row.employee?.name || row.employee?.email || "Employee",
+        employeeEmail: row.employee?.email || "-",
+        createdAt: formatIso(row.createdAt),
+        amount: Number(row.amount || 0),
+        formulaType: row.formulaType || null,
+        basisAmount: row.basisAmount !== null ? Number(row.basisAmount) : null,
+        percent: row.percent !== null ? Number(row.percent) : null,
+        payoutMode: row.payoutMode,
+        settlementStatus: row.settlementStatus,
+        status: row.status,
+        reason: row.reason || null,
+        projectRef: row.projectRef || null,
+      })),
+      employeeOptions: Array.from(employeeOptionMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+    };
+  }
+
   const auditRows = await prisma.auditLog.findMany({
     where: {
       entity: "Project",
@@ -780,6 +896,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     inventory,
     people,
     execution,
+    incentives,
     documents: policy.tabs.documents ? documents : undefined,
   };
 

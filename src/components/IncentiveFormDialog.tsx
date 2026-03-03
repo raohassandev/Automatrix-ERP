@@ -28,11 +28,17 @@ type IncentiveFormDialogProps = {
   onOpenChange: (open: boolean) => void;
   employees: EmployeeOption[];
   incentive?: Incentive | null;
+  defaultProjectRef?: string;
+  lockProjectRef?: boolean;
 };
 
-const buildInitialForm = (incentive: Incentive | null | undefined, employees: EmployeeOption[]) => ({
+const buildInitialForm = (
+  incentive: Incentive | null | undefined,
+  employees: EmployeeOption[],
+  defaultProjectRef?: string,
+) => ({
   employeeId: incentive?.employeeId || employees[0]?.id || "",
-  projectRef: incentive?.projectRef || "",
+  projectRef: incentive?.projectRef || defaultProjectRef || "",
   formulaType: incentive?.formulaType || "FIXED",
   basisAmount:
     incentive?.basisAmount !== null && incentive?.basisAmount !== undefined
@@ -57,10 +63,12 @@ function IncentiveFormDialogInner({
   onOpenChange,
   employees,
   incentive,
+  defaultProjectRef,
+  lockProjectRef,
 }: IncentiveFormDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState(() => buildInitialForm(incentive, employees));
+  const [form, setForm] = useState(() => buildInitialForm(incentive, employees, defaultProjectRef));
 
   async function submit() {
     if (!form.employeeId || !form.projectRef) {
@@ -142,7 +150,11 @@ function IncentiveFormDialogInner({
               value={form.projectRef}
               onChange={(e) => setForm({ ...form, projectRef: e.target.value })}
               placeholder="Project ID or name"
+              disabled={Boolean(lockProjectRef)}
             />
+            {lockProjectRef ? (
+              <div className="text-xs text-muted-foreground">Project is locked from project detail context.</div>
+            ) : null}
           </div>
 
           <div className="space-y-2">

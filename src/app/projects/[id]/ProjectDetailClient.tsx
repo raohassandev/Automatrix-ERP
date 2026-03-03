@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PurchaseOrderFormDialog } from "@/components/PurchaseOrderFormDialog";
 import { GoodsReceiptFormDialog } from "@/components/GoodsReceiptFormDialog";
 import { VendorBillFormDialog } from "@/components/VendorBillFormDialog";
+import { IncentiveFormDialog } from "@/components/IncentiveFormDialog";
 import { withLoadingToast } from "@/lib/withLoadingToast";
 import { ProjectExecutiveSummary } from "@/components/projects/ProjectExecutiveSummary";
 import { MobileCard } from "@/components/MobileCard";
@@ -68,6 +69,9 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   const [savingAssignments, setSavingAssignments] = React.useState(false);
   const [savingNote, setSavingNote] = React.useState(false);
   const [savingAttachment, setSavingAttachment] = React.useState(false);
+  const [incentiveDialogOpen, setIncentiveDialogOpen] = React.useState(false);
+  const [incentiveBusyId, setIncentiveBusyId] = React.useState<string | null>(null);
+  const [incentives, setIncentives] = React.useState(detail.incentives?.rows || []);
   const [taskForm, setTaskForm] = React.useState({
     title: "",
     description: "",
@@ -100,6 +104,30 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
       { issuedQty: 0, returnedQty: 0, netQty: 0 },
     );
   }, [detail.inventory?.entries]);
+  const incentivePermissions = detail.policy.incentives;
+  const canManageIncentives = incentivePermissions.canEdit || incentivePermissions.canApprove;
+
+  async function updateIncentiveStatus(incentiveId: string, status: "APPROVED" | "REJECTED") {
+    try {
+      setIncentiveBusyId(incentiveId);
+      const res = await fetch(`/api/incentives/${incentiveId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(json?.error || `Failed to ${status.toLowerCase()} incentive`);
+      }
+      toast.success(status === "APPROVED" ? "Incentive approved" : "Incentive rejected");
+      router.refresh();
+      setIncentives((prev) => prev.map((item) => (item.id === incentiveId ? { ...item, status } : item)));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update incentive");
+    } finally {
+      setIncentiveBusyId(null);
+    }
+  }
 
   React.useEffect(() => {
     if (!detail.policy.tabs[active]) {
@@ -640,21 +668,21 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           ) : (
             <>
               <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4">
-                  <div className="text-xs font-medium text-emerald-800">Money In (Approved)</div>
-                  <div className="mt-2 text-lg font-semibold text-emerald-900">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900 dark:bg-emerald-950/35">
+                  <div className="text-xs font-medium text-emerald-800 dark:text-emerald-200">Money In (Approved)</div>
+                  <div className="mt-2 text-lg font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
                 </div>
-                <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
-                  <div className="text-xs font-medium text-rose-800">Money Out (Total Cost)</div>
-                  <div className="mt-2 text-lg font-semibold text-rose-900">{formatMoney(detail.costs.totalProjectCosts)}</div>
+                <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-900 dark:bg-rose-950/30">
+                  <div className="text-xs font-medium text-rose-800 dark:text-rose-200">Money Out (Total Cost)</div>
+                  <div className="mt-2 text-lg font-semibold text-rose-900 dark:text-rose-100">{formatMoney(detail.costs.totalProjectCosts)}</div>
                 </div>
-                <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4">
-                  <div className="text-xs font-medium text-amber-800">Cash to Recover</div>
-                  <div className="mt-2 text-lg font-semibold text-amber-900">{formatMoney(detail.costs.pendingRecovery)}</div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+                  <div className="text-xs font-medium text-amber-800 dark:text-amber-200">Cash to Recover</div>
+                  <div className="mt-2 text-lg font-semibold text-amber-900 dark:text-amber-100">{formatMoney(detail.costs.pendingRecovery)}</div>
                 </div>
-                <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-4">
-                  <div className="text-xs font-medium text-indigo-800">Vendor Outstanding</div>
-                  <div className="mt-2 text-lg font-semibold text-indigo-900">{formatMoney(detail.costs.apOutstanding)}</div>
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
+                  <div className="text-xs font-medium text-indigo-800 dark:text-indigo-200">Vendor Outstanding</div>
+                  <div className="mt-2 text-lg font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(detail.costs.apOutstanding)}</div>
                 </div>
                 <div
                   className={`rounded-lg border p-4 ${
@@ -669,12 +697,12 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
-                <h3 className="text-sm font-semibold text-amber-900">Cash Risk Signals</h3>
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+                <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">Cash Risk Signals</h3>
                 {detail.costs.risk.alerts.length === 0 ? (
-                  <p className="mt-2 text-sm text-emerald-700">No critical cash risk alerts right now.</p>
+                  <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-300">No critical cash risk alerts right now.</p>
                 ) : (
-                  <ul className="mt-2 space-y-1 text-sm text-amber-900">
+                  <ul className="mt-2 space-y-1 text-sm text-amber-900 dark:text-amber-100">
                     {detail.costs.risk.alerts.map((alert, idx) => (
                       <li key={`${alert}-${idx}`}>• {alert}</li>
                     ))}
@@ -683,28 +711,28 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
               </div>
 
               <div className="mt-4 grid gap-4 xl:grid-cols-3">
-                <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
-                  <h3 className="text-sm font-semibold text-sky-900">Revenue & Recovery</h3>
+                <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+                  <h3 className="text-sm font-semibold text-sky-900 dark:text-sky-100">Revenue & Recovery</h3>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sky-800">Contract value</span>
-                      <span className="font-semibold text-sky-900">{formatMoney(detail.costs.contractValue)}</span>
+                      <span className="text-sky-800 dark:text-sky-200">Contract value</span>
+                      <span className="font-semibold text-sky-900 dark:text-sky-100">{formatMoney(detail.costs.contractValue)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sky-800">Invoiced</span>
-                      <span className="font-semibold text-sky-900">{formatMoney(detail.costs.invoicedAmount)}</span>
+                      <span className="text-sky-800 dark:text-sky-200">Invoiced</span>
+                      <span className="font-semibold text-sky-900 dark:text-sky-100">{formatMoney(detail.costs.invoicedAmount)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sky-800">Received (approved)</span>
-                      <span className="font-semibold text-sky-900">{formatMoney(detail.costs.receivedAmount)}</span>
+                      <span className="text-sky-800 dark:text-sky-200">Received (approved)</span>
+                      <span className="font-semibold text-sky-900 dark:text-sky-100">{formatMoney(detail.costs.receivedAmount)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sky-800">Pending recovery</span>
-                      <span className="font-semibold text-sky-900">{formatMoney(detail.costs.pendingRecovery)}</span>
+                      <span className="text-sky-800 dark:text-sky-200">Pending recovery</span>
+                      <span className="font-semibold text-sky-900 dark:text-sky-100">{formatMoney(detail.costs.pendingRecovery)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-sky-800">Invoice pending</span>
-                      <span className="font-semibold text-sky-900">
+                      <span className="text-sky-800 dark:text-sky-200">Invoice pending</span>
+                      <span className="font-semibold text-sky-900 dark:text-sky-100">
                         {formatMoney(detail.costs.invoicedPendingRecovery)}
                       </span>
                     </div>
@@ -719,8 +747,8 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4">
-                  <h3 className="text-sm font-semibold text-indigo-900">Payables & Costs</h3>
+                <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
+                  <h3 className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">Payables & Costs</h3>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-indigo-800">AP billed (posted)</span>
@@ -760,8 +788,8 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
-                  <h3 className="text-sm font-semibold text-emerald-900">Profitability View</h3>
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
+                  <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">Profitability View</h3>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-emerald-800">Total project costs</span>
@@ -794,6 +822,136 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   </div>
                 </div>
               </div>
+
+              {detail.incentives && incentivePermissions.canView ? (
+                <div className="mt-6 rounded-lg border border-border bg-background/60 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold">Project Incentives</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Queue for incentive entries tied to this project. Approval posts cost automatically.
+                      </p>
+                    </div>
+                    {incentivePermissions.canEdit ? (
+                      <Button size="sm" onClick={() => setIncentiveDialogOpen(true)}>
+                        Add Incentive
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 hidden overflow-x-auto md:block">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left text-muted-foreground">
+                          <th className="py-2">Date</th>
+                          <th className="py-2">Employee</th>
+                          <th className="py-2">Formula</th>
+                          <th className="py-2">Payout</th>
+                          <th className="py-2">Amount</th>
+                          <th className="py-2">Status</th>
+                          <th className="py-2">Settlement</th>
+                          {canManageIncentives ? <th className="py-2">Actions</th> : null}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {incentives.length === 0 ? (
+                          <tr>
+                            <td className="py-4 text-muted-foreground" colSpan={canManageIncentives ? 8 : 7}>
+                              No incentives recorded for this project.
+                            </td>
+                          </tr>
+                        ) : (
+                          incentives.map((row) => (
+                            <tr key={row.id} className="border-b">
+                              <td className="py-2">{new Date(row.createdAt).toLocaleDateString()}</td>
+                              <td className="py-2">
+                                <div className="font-medium">{row.employeeName}</div>
+                                <div className="text-xs text-muted-foreground">{row.employeeEmail}</div>
+                              </td>
+                              <td className="py-2">{row.formulaType || "FIXED"}</td>
+                              <td className="py-2">{row.payoutMode}</td>
+                              <td className="py-2">{formatMoney(row.amount)}</td>
+                              <td className="py-2">{row.status}</td>
+                              <td className="py-2">{row.settlementStatus}</td>
+                              {canManageIncentives ? (
+                                <td className="py-2">
+                                  <div className="flex flex-wrap gap-2">
+                                    {incentivePermissions.canApprove && row.status !== "APPROVED" ? (
+                                      <Button
+                                        size="sm"
+                                        onClick={() => updateIncentiveStatus(row.id, "APPROVED")}
+                                        disabled={incentiveBusyId === row.id}
+                                      >
+                                        {incentiveBusyId === row.id ? "Processing..." : "Approve"}
+                                      </Button>
+                                    ) : null}
+                                    {incentivePermissions.canApprove && row.status === "PENDING" ? (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => updateIncentiveStatus(row.id, "REJECTED")}
+                                        disabled={incentiveBusyId === row.id}
+                                      >
+                                        Reject
+                                      </Button>
+                                    ) : null}
+                                  </div>
+                                </td>
+                              ) : null}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-3 space-y-3 md:hidden">
+                    {incentives.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">No incentives recorded for this project.</div>
+                    ) : (
+                      incentives.map((row) => (
+                        <MobileCard
+                          key={row.id}
+                          title={row.employeeName}
+                          subtitle={new Date(row.createdAt).toLocaleDateString()}
+                          fields={[
+                            { label: "Formula", value: row.formulaType || "FIXED" },
+                            { label: "Payout", value: row.payoutMode },
+                            { label: "Amount", value: formatMoney(row.amount) },
+                            { label: "Status", value: row.status },
+                            { label: "Settlement", value: row.settlementStatus },
+                          ]}
+                          actions={
+                            incentivePermissions.canApprove ? (
+                              <div className="flex w-full gap-2">
+                                {row.status !== "APPROVED" ? (
+                                  <Button
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => updateIncentiveStatus(row.id, "APPROVED")}
+                                    disabled={incentiveBusyId === row.id}
+                                  >
+                                    Approve
+                                  </Button>
+                                ) : null}
+                                {row.status === "PENDING" ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => updateIncentiveStatus(row.id, "REJECTED")}
+                                    disabled={incentiveBusyId === row.id}
+                                  >
+                                    Reject
+                                  </Button>
+                                ) : null}
+                              </div>
+                            ) : null
+                          }
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-6">
                 <h3 className="text-sm font-semibold">Financial transactions</h3>
@@ -1390,6 +1548,16 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             </>
           )}
         </div>
+      ) : null}
+
+      {detail.incentives && incentivePermissions.canEdit ? (
+        <IncentiveFormDialog
+          open={incentiveDialogOpen}
+          onOpenChange={setIncentiveDialogOpen}
+          employees={detail.incentives.employeeOptions}
+          defaultProjectRef={detail.header.projectId}
+          lockProjectRef
+        />
       ) : null}
     </div>
   );
