@@ -245,6 +245,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     canIncentivesViewAll,
     canIncentivesEdit,
     canIncentivesApprove,
+    canViewAllExpenses,
   ] = await Promise.all([
     requirePermission(args.userId, "projects.view_all"),
     requirePermission(args.userId, "projects.view_assigned"),
@@ -257,6 +258,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     requirePermission(args.userId, "incentives.view_all"),
     requirePermission(args.userId, "incentives.edit"),
     requirePermission(args.userId, "incentives.approve"),
+    requirePermission(args.userId, "expenses.view_all"),
   ]);
 
   const policy = buildPolicy(role, {
@@ -362,6 +364,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     description: true,
     category: true,
     status: true,
+    submittedById: true,
   };
   if (policy.canViewFinancialTotals || policy.tabs.costs) {
     expenseSelect.amount = true;
@@ -393,6 +396,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     description: string;
     category: string;
     status: string;
+    submittedById?: string;
     amount?: unknown;
     approvedAmount?: unknown;
     inventoryLedgerId?: string | null;
@@ -612,10 +616,11 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     });
   }
   for (const e of expensesAll) {
+    const canViewExpenseNarrative = canViewAllExpenses || e.submittedById === args.userId;
     activity.push({
       at: formatIso(e.date),
       type: "EXPENSE",
-      label: `${e.category}: ${e.description}`,
+      label: canViewExpenseNarrative ? `${e.category}: ${e.description}` : "Team expense entry (masked)",
       status: e.status,
       amount: policy.canViewFinancialTotals
         ? (() => {
@@ -627,7 +632,9 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
             return Number.isFinite(used) ? used : 0;
           })()
         : null,
-      href: `/expenses?search=${encodeURIComponent(e.description.slice(0, 20))}`,
+      href: canViewExpenseNarrative
+        ? `/expenses?search=${encodeURIComponent(e.description.slice(0, 20))}`
+        : null,
     });
   }
   for (const i of incomesAll) {
@@ -713,6 +720,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
         return category.includes("material") || category.includes("stock") || category.includes("inventory");
       })
       .map((e) => {
+        const canViewExpenseNarrative = canViewAllExpenses || e.submittedById === args.userId;
         const useAmount =
           e.status === "PARTIALLY_APPROVED" && e.approvedAmount != null
             ? Number(e.approvedAmount)
@@ -720,13 +728,17 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
         return {
           id: `expense-${e.id}`,
           date: fmtDate(e.date),
-          itemName: e.description || e.category || "Material expense",
+          itemName: canViewExpenseNarrative
+            ? e.description || e.category || "Material expense"
+            : "Team material expense (masked)",
           unit: "entry",
           quantity: -1,
           unitCost: policy.canViewUnitCosts ? (Number.isFinite(useAmount) ? useAmount : 0) : null,
           total: policy.canViewUnitCosts ? (Number.isFinite(useAmount) ? useAmount : 0) : null,
           reference: "Expense fallback",
-          href: `/expenses?search=${encodeURIComponent((e.description || e.category || "").slice(0, 24))}`,
+          href: canViewExpenseNarrative
+            ? `/expenses?search=${encodeURIComponent((e.description || e.category || "").slice(0, 24))}`
+            : null,
         };
       });
     const entries = [...ledgerEntries, ...materialExpenseFallback];
