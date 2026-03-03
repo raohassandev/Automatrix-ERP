@@ -35,6 +35,8 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     store: "playwright/.auth/store.json",
     finance: "playwright/.auth/finance.json",
   } as const;
+  const tabButton = (page: import("@playwright/test").Page, label: RegExp) =>
+    page.getByRole("main").locator("button:visible", { hasText: label });
 
   test.beforeAll(async ({ browser, baseURL }) => {
     // Create storage states (also bootstraps these users/employees in E2E mode).
@@ -91,13 +93,13 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
     await expect(page.getByRole("heading", { name: "Project" })).toBeVisible({ timeout: 15_000 }).catch(() => {});
-    await expect(page.locator("button:visible", { hasText: /^Activity$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^Costs$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^Inventory$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^People$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
+    await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Costs$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Inventory$/).first()).toBeVisible();
+    await expect(tabButton(page, /^People$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
 
-    await page.locator("button:visible", { hasText: /^Inventory$/ }).first().click();
+    await tabButton(page, /^Inventory$/).first().click();
     await expect(page.getByRole("columnheader", { name: "Unit Cost" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "Total" })).toBeVisible();
     await ctx.close();
@@ -107,10 +109,10 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await expect(page.locator("button:visible", { hasText: /^Activity$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^People$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^Costs$/ })).toHaveCount(0);
+    await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
+    await expect(tabButton(page, /^People$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
 
     await page.getByRole("button", { name: "Inventory" }).click();
     await expect(page.getByText("Unit Cost")).toHaveCount(0);
@@ -122,22 +124,23 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.sales });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await expect(page.locator("button:visible", { hasText: /^Activity$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^Documents$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^Costs$/ })).toHaveCount(0);
-    await expect(page.locator("button:visible", { hasText: /^Inventory$/ })).toHaveCount(0);
-    await expect(page.locator("button:visible", { hasText: /^People$/ })).toHaveCount(0);
+    await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
+    await expect(tabButton(page, /^Inventory$/)).toHaveCount(0);
+    await expect(tabButton(page, /^People$/)).toHaveCount(0);
     await ctx.close();
   });
 
-  test("Technician: inventory quantities only (no unit costs)", async ({ browser, baseURL }) => {
+  test("Technician: docs/activity only (no inventory/costs)", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ baseURL, storageState: states.technician });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await expect(page.locator("button:visible", { hasText: /^Inventory$/ }).first()).toBeVisible();
-    await page.getByRole("button", { name: "Inventory" }).click();
-    await expect(page.getByText("Unit Cost")).toHaveCount(0);
-    await expect(page.getByText("Total")).toHaveCount(0);
+    await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Inventory$/)).toHaveCount(0);
+    await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
+    await expect(tabButton(page, /^People$/)).toHaveCount(0);
     await ctx.close();
   });
 
@@ -145,8 +148,8 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.store });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`);
-    await expect(page.locator("button:visible", { hasText: /^Inventory$/ }).first()).toBeVisible();
-    await expect(page.locator("button:visible", { hasText: /^Costs$/ })).toHaveCount(0);
+    await expect(tabButton(page, /^Inventory$/).first()).toBeVisible();
+    await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
     await page.getByRole("button", { name: "Inventory" }).click();
     await expect(page.getByText("Unit Cost")).toHaveCount(0);
     await ctx.close();
@@ -187,7 +190,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     await engineerApi.dispose();
   });
 
-  test("Project finance report page: finance and engineer can load report scope", async ({ browser, baseURL }) => {
+  test("Project finance report page: finance can load; engineer is forbidden", async ({ browser, baseURL }) => {
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
@@ -199,7 +202,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
       await page.goto("/reports/projects");
-      await expect(page.getByRole("heading", { name: "Project Financial Report" })).toBeVisible();
+      await expect(page).toHaveURL(/\/forbidden/);
       await ctx.close();
     }
   });
