@@ -316,6 +316,7 @@ model ProjectTask {
 model InventoryItem {
   id             String   @id @default(cuid())
   name           String   @unique
+  canonicalName  String   @unique
   sku            String?
   category       String
   quantity       Decimal  
@@ -334,6 +335,8 @@ model InventoryItem {
   ledger         InventoryLedger[]
   vendorBillLines VendorBillLine[] @relation("VendorBillLineItem")
   createdAt      DateTime @default(now())
+
+  @@index([name])
 }
 
 model InventoryLedger {

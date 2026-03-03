@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import CategoryAutoComplete from "./CategoryAutoComplete";
 import { type RoleName } from "@/lib/permissions";
 import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
+import Link from "next/link";
+import { normalizeInventoryName, normalizeSku } from "@/lib/inventory-identity";
 
 interface InventoryFormDialogProps {
   open: boolean;
@@ -49,7 +51,29 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
   const canViewSelling = canAccess(["inventory.view_selling"]);
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState(EMPTY_FORM);
+  const [similarItems, setSimilarItems] = useState<
+    Array<{
+      id: string;
+      name: string;
+      canonicalName: string;
+      sku: string | null;
+      category: string;
+      unit: string;
+      quantity: number;
+      unitCost: number | null;
+    }>
+  >([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
   const isEdit = Boolean(initialData?.id);
+  const normalizedName = normalizeInventoryName(form.name);
+  const normalizedSku = normalizeSku(form.sku);
+  const exactDuplicate = !isEdit
+    ? similarItems.find(
+        (item) =>
+          item.canonicalName === normalizedName ||
+          (normalizedSku && item.sku && normalizeSku(item.sku) === normalizedSku),
+      )
+    : null;
 
   useEffect(() => {
     if (!open) return;
@@ -83,6 +107,35 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
     }
   }, [open, initialData]);
 
+  useEffect(() => {
+    if (!open || isEdit) return;
+    const q = form.name.trim();
+    const sku = form.sku.trim();
+    if (!q && !sku) {
+      setSimilarItems([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setLoadingSimilar(true);
+      try {
+        const params = new URLSearchParams();
+        if (q) params.set("q", q);
+        if (sku) params.set("sku", sku);
+        const res = await fetch(`/api/inventory/similar?${params.toString()}`);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(json?.error || "Failed to search similar items");
+        }
+        setSimilarItems(Array.isArray(json?.data) ? json.data : []);
+      } catch {
+        setSimilarItems([]);
+      } finally {
+        setLoadingSimilar(false);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [form.name, form.sku, open, isEdit]);
+
   async function submit() {
     try {
       if (!isEdit && !form.name.trim()) {
@@ -91,6 +144,10 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
       }
       if (!form.unit.trim()) {
         toast.error("Unit is required.");
+        return;
+      }
+      if (exactDuplicate) {
+        toast.error("Similar item already exists. Use existing item to keep one stock history.");
         return;
       }
       const numericFields = [
@@ -139,7 +196,8 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to add inventory item");
+        const duplicateName = data?.duplicate?.name ? ` Existing: ${data.duplicate.name}.` : "";
+        throw new Error((data.error || "Failed to add inventory item") + duplicateName);
       }
 
       toast.success(isEdit ? "Inventory item updated successfully!" : "Inventory item added successfully!");
@@ -197,6 +255,50 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
               onChange={(e) => setForm({ ...form, sku: e.target.value })}
             />
           </div>
+
+          {!isEdit && (loadingSimilar || similarItems.length > 0) ? (
+            <div className="md:col-span-2 rounded-md border border-amber-200 bg-amber-50/70 p-3 text-sm dark:border-amber-900 dark:bg-amber-950/30">
+              <div className="font-medium text-amber-900 dark:text-amber-100">
+                {loadingSimilar ? "Checking similar items..." : "Similar existing items"}
+              </div>
+              {!loadingSimilar ? (
+                <div className="mt-2 space-y-2">
+                  {similarItems.length === 0 ? (
+                    <div className="text-xs text-amber-800 dark:text-amber-200">No similar items found.</div>
+                  ) : (
+                    similarItems.map((item) => {
+                      const duplicateHit =
+                        item.canonicalName === normalizedName ||
+                        (normalizedSku && item.sku && normalizeSku(item.sku) === normalizedSku);
+                      return (
+                        <div
+                          key={item.id}
+                          className={`rounded border p-2 ${
+                            duplicateHit
+                              ? "border-red-300 bg-red-50/70 dark:border-red-900 dark:bg-red-950/30"
+                              : "border-amber-200 bg-background/70 dark:border-amber-800"
+                          }`}
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <div className="font-medium text-foreground">{item.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                SKU: {item.sku || "-"} | {item.category} | {item.unit} | Stock: {item.quantity}
+                                {canViewCost && item.unitCost !== null ? ` | Avg cost: ${item.unitCost}` : ""}
+                              </div>
+                            </div>
+                            <Link href={`/inventory/items/${item.id}`} className="text-xs font-medium text-sky-700 underline underline-offset-2 dark:text-sky-300">
+                              Use Existing Item
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
@@ -294,8 +396,8 @@ export function InventoryFormDialog({ open, onOpenChange, initialData }: Invento
           >
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Saving..." : isEdit ? "Save Changes" : "Add Item"}
+          <Button type="submit" disabled={pending || Boolean(exactDuplicate)}>
+            {pending ? "Saving..." : isEdit ? "Save Changes" : exactDuplicate ? "Duplicate Found" : "Add Item"}
           </Button>
         </div>
       </form>

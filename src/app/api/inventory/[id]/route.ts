@@ -5,6 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { normalizeInventoryName, normalizeSku } from "@/lib/inventory-identity";
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -20,9 +21,57 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   const { id } = await context.params;
   const body = await req.json();
+  const existing = await prisma.inventoryItem.findUnique({
+    where: { id },
+    select: { id: true, name: true, canonicalName: true, sku: true },
+  });
+  if (!existing) {
+    return NextResponse.json({ success: false, error: "Inventory item not found" }, { status: 404 });
+  }
 
   const data: Record<string, unknown> = {};
-  if (body.sku !== undefined) data.sku = body.sku ? sanitizeString(body.sku) : null;
+  if (body.name !== undefined) {
+    const name = sanitizeString(body.name || "");
+    if (!name) {
+      return NextResponse.json({ success: false, error: "Item name cannot be empty" }, { status: 400 });
+    }
+    const canonicalName = normalizeInventoryName(name);
+    if (!canonicalName) {
+      return NextResponse.json({ success: false, error: "Item name is invalid" }, { status: 400 });
+    }
+    const conflict = await prisma.inventoryItem.findFirst({
+      where: { canonicalName, id: { not: id } },
+      select: { id: true, name: true, sku: true, unit: true, category: true },
+    });
+    if (conflict) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Similar item already exists. Use existing item to preserve stock history.",
+          duplicate: conflict,
+        },
+        { status: 409 },
+      );
+    }
+    data.name = name;
+    data.canonicalName = canonicalName;
+  }
+  if (body.sku !== undefined) {
+    const sku = normalizeSku(body.sku ? sanitizeString(body.sku) : null);
+    if (sku) {
+      const conflict = await prisma.inventoryItem.findFirst({
+        where: { sku, id: { not: id } },
+        select: { id: true, name: true, sku: true, unit: true, category: true },
+      });
+      if (conflict) {
+        return NextResponse.json(
+          { success: false, error: "SKU already exists on another item.", duplicate: conflict },
+          { status: 409 },
+        );
+      }
+    }
+    data.sku = sku;
+  }
   if (body.category) data.category = sanitizeString(body.category);
   if (body.unit) data.unit = sanitizeString(body.unit);
   if (body.unitCost !== undefined) {

@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { normalizeInventoryName, normalizeSku } from "@/lib/inventory-identity";
 
 export async function GET() {
   const session = await auth();
@@ -65,10 +66,48 @@ export async function POST(req: Request) {
   const sanitizedData = {
     ...parsed.data,
     name: sanitizeString(parsed.data.name),
-    sku: parsed.data.sku ? sanitizeString(parsed.data.sku) : undefined,
+    sku: normalizeSku(parsed.data.sku ? sanitizeString(parsed.data.sku) : undefined),
     category: sanitizeString(parsed.data.category),
     unit: sanitizeString(parsed.data.unit),
   };
+  const canonicalName = normalizeInventoryName(sanitizedData.name);
+  if (!canonicalName) {
+    return NextResponse.json({ success: false, error: "Item name is invalid" }, { status: 400 });
+  }
+
+  const [sameName, sameSku] = await Promise.all([
+    prisma.inventoryItem.findUnique({
+      where: { canonicalName },
+      select: { id: true, name: true, sku: true, unit: true, category: true },
+    }),
+    sanitizedData.sku
+      ? prisma.inventoryItem.findFirst({
+          where: { sku: sanitizedData.sku },
+          select: { id: true, name: true, sku: true, unit: true, category: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  if (sameName) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Similar item already exists. Use existing item to preserve stock history.",
+        duplicate: sameName,
+      },
+      { status: 409 },
+    );
+  }
+  if (sameSku) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "SKU already exists on another item.",
+        duplicate: sameSku,
+      },
+      { status: 409 },
+    );
+  }
 
   const initialQuantity = sanitizedData.initialQuantity || 0;
   const totalValue = initialQuantity * sanitizedData.unitCost;
@@ -76,7 +115,8 @@ export async function POST(req: Request) {
   const created = await prisma.inventoryItem.create({
     data: {
       name: sanitizedData.name,
-      sku: sanitizedData.sku,
+      canonicalName,
+      sku: sanitizedData.sku || null,
       category: sanitizedData.category,
       unit: sanitizedData.unit,
       unitCost: new Prisma.Decimal(sanitizedData.unitCost),
