@@ -127,7 +127,10 @@ async function auditRoute(page: Page, route: string) {
   return {
     finalUrl: page.url(),
     bodyText,
-    forbidden: isForbiddenText(bodyText) || /error=forbidden/i.test(page.url()),
+    forbidden:
+      isForbiddenText(bodyText) ||
+      /error=forbidden/i.test(page.url()) ||
+      /\/forbidden(?:\?|$)/i.test(page.url()),
     hasFatalText: isFatalPageText(bodyText),
     severeErrors,
     overflowX,

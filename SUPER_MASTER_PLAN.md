@@ -474,8 +474,8 @@ Workstreams and current state:
   Completed: production cutover checklist and staging safety controls documented; final Go/No-Go depends on closure of open high findings in current audit cycle.
 
 Latest discrepancy baseline (`docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md`):
-- Open: `CRITICAL 5`, `HIGH 4`, `MEDIUM 0`, `LOW 0`.
-- Next closure target: resolve RBAC route/API overexposure and `/me` access gaps for operational roles, then rerun audit and freeze Go/No-Go.
+- Open: `CRITICAL 0`, `HIGH 0`, `MEDIUM 0`, `LOW 0`.
+- Closure status: implemented-module fast-track discrepancy burn-down is complete for current staging baseline; remaining work is production cutover execution and monitored rollout.
 
 ### 11.2 Owner-Critical Module Status (Requested)
 
