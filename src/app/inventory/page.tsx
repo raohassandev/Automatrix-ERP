@@ -121,7 +121,7 @@ export default async function InventoryPage({
               <SearchInput placeholder="Search inventory..." />
             </div>
             {canAdjust ? (
-              <PageCreateButton label="Add Inventory" formType="inventory" />
+              <PageCreateButton label="Add Inventory" formType="inventory" queryBackedOpen />
             ) : null}
           </div>
         </div>
