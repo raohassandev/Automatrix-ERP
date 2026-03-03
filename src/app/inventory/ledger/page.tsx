@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { LedgerClient } from "./LedgerClient";
+import { PageState } from "@/components/PageState";
 
 export default async function InventoryLedgerPage({
   searchParams,
@@ -20,10 +21,12 @@ export default async function InventoryLedgerPage({
   const canRequest = await requirePermission(session.user.id, "inventory.request");
   if (!canView) {
     return (
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Inventory Ledger</h1>
-        <p className="mt-2 text-muted-foreground">You do not have access to inventory.</p>
-      </div>
+      <PageState
+        type="forbidden"
+        message="You do not have access to inventory ledger."
+        primaryAction={{ label: "Open My Portal", href: "/me" }}
+        secondaryAction={{ label: "Back to Dashboard", href: "/dashboard" }}
+      />
     );
   }
 

@@ -135,6 +135,12 @@ export async function getEffectivePermissionsForUser(userId: string): Promise<Ef
     }
   }
 
+  // Business policy: Finance Manager should not get CEO-only dashboards by default.
+  // If temporarily needed, it can still be granted via user ALLOW override.
+  if (roleName === "Finance Manager") {
+    rolePermissionSet.delete("dashboard.view_all_metrics");
+  }
+
   const denied = new Set<string>();
   for (const override of user?.permissionOverrides ?? []) {
     if (override.effect === "DENY") {
@@ -276,11 +282,11 @@ export function groupPermissionKeys(permissionKeys: string[]) {
     .slice()
     .sort((a, b) => a.localeCompare(b))
     .reduce<Record<string, string[]>>((acc, key) => {
-      const module = key.split(".")[0] || "general";
-      if (!acc[module]) {
-        acc[module] = [];
+      const moduleKey = key.split(".")[0] || "general";
+      if (!acc[moduleKey]) {
+        acc[moduleKey] = [];
       }
-      acc[module].push(key);
+      acc[moduleKey].push(key);
       return acc;
     }, {});
 }

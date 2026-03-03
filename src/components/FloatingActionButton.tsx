@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { ActionMenu } from "./ActionMenu";
+import { useSession } from "next-auth/react";
+import { type RoleName } from "@/lib/permissions";
+import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
 
 interface FloatingActionButtonProps {
   pendingApprovalsCount?: number;
@@ -13,6 +16,20 @@ export function FloatingActionButton({
   pendingApprovalsCount = 0,
 }: FloatingActionButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { data: session } = useSession();
+  const roleName = ((session?.user as { role?: string })?.role || "Guest") as RoleName;
+  const { canAccess } = useEffectivePermissions(roleName);
+  const hasAnyAction = canAccess(["expenses.submit"]) ||
+    canAccess(["income.add"]) ||
+    canAccess(["employees.view_all"]) ||
+    canAccess(["projects.edit"]) ||
+    canAccess(["clients.edit"]) ||
+    canAccess(["inventory.adjust"]) ||
+    canAccess(["invoices.create"]);
+
+  if (!hasAnyAction) {
+    return null;
+  }
 
   const toggleMenu = () => {
     setIsOpen(!isOpen);

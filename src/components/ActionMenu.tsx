@@ -158,6 +158,7 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
   ];
 
   const visibleActions = actions.filter((action) => action.show && canAccess(action.permissions));
+  const hasVisibleActions = visibleActions.length > 0;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -210,7 +211,7 @@ export function ActionMenu({ isOpen, onClose }: ActionMenuProps) {
       />
       
       <AnimatePresence>
-        {isOpen && (
+        {isOpen && hasVisibleActions && (
         <>
           {/* Desktop: Floating menu */}
           <motion.div

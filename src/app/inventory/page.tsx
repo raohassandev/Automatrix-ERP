@@ -6,6 +6,7 @@ import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import { PageCreateButton } from "@/components/PageCreateButton";
 import { formatMoney } from "@/lib/format";
+import { PageState } from "@/components/PageState";
 
 export default async function InventoryPage({
   searchParams,
@@ -15,10 +16,11 @@ export default async function InventoryPage({
   const session = await auth();
   if (!session?.user?.id) {
     return (
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Inventory</h1>
-        <p className="mt-2 text-muted-foreground">Please sign in.</p>
-      </div>
+      <PageState
+        type="forbidden"
+        message="Please sign in to view inventory data."
+        primaryAction={{ label: "Go to Login", href: "/login" }}
+      />
     );
   }
 
@@ -29,10 +31,12 @@ export default async function InventoryPage({
   const canRequest = await requirePermission(session.user.id, "inventory.request");
   if (!canView) {
     return (
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Inventory</h1>
-        <p className="mt-2 text-muted-foreground">You do not have access to inventory.</p>
-      </div>
+      <PageState
+        type="forbidden"
+        message="You do not have access to inventory."
+        primaryAction={{ label: "Open My Portal", href: "/me" }}
+        secondaryAction={{ label: "Back to Dashboard", href: "/dashboard" }}
+      />
     );
   }
 
@@ -90,10 +94,11 @@ export default async function InventoryPage({
   } catch (error) {
     console.error("Error fetching inventory items:", error);
     return (
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Inventory</h1>
-        <p className="mt-2 text-muted-foreground">Error loading inventory data. Please try again later.</p>
-      </div>
+      <PageState
+        type="error"
+        message="Error loading inventory data. Please refresh and try again."
+        primaryAction={{ label: "Retry Inventory", href: "/inventory" }}
+      />
     );
   }
   const totalPages = Math.max(1, Math.ceil(total / take));
@@ -110,7 +115,7 @@ export default async function InventoryPage({
   );
 
   return (
-    <div className="grid gap-6 overflow-x-hidden">
+    <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -157,14 +162,12 @@ export default async function InventoryPage({
       />
 
       {items.length === 0 && (
-        <div className="rounded-xl border bg-card p-6 text-center text-muted-foreground shadow-sm">
-          <div>No inventory items found.</div>
-          {canAdjust ? (
-            <div className="mt-3">
-              <PageCreateButton label="Add Inventory" formType="inventory" />
-            </div>
-          ) : null}
-        </div>
+        <PageState
+          type="empty"
+          message="No inventory items match your search."
+          primaryAction={{ label: "Clear Filters", href: "/inventory" }}
+          secondaryAction={canAdjust ? { label: "Open Inventory Form", href: "/inventory?create=inventory" } : undefined}
+        />
       )}
 
       {totalPages > 1 && (

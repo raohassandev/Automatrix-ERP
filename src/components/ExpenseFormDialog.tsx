@@ -489,7 +489,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="form-dialog-footer sticky bottom-0 -mx-4 flex justify-end gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:mx-0 md:border-0 md:bg-transparent md:px-0 md:py-0">
             <Button
               type="button"
               variant="outline"

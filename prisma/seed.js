@@ -183,7 +183,6 @@ const rolePermissionMap = {
   ],
   "Finance Manager": [
     "dashboard.view",
-    "dashboard.view_all_metrics",
     "clients.view_all",
     "clients.edit",
     "quotations.view_all",

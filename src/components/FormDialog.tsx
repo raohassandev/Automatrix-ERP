@@ -52,13 +52,15 @@ export function FormDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="bottom" 
-        className={`h-[90vh] overflow-y-auto ${className || ""}`}
+        className={`h-[92dvh] overflow-hidden px-0 pb-0 ${className || ""}`}
       >
-        <SheetHeader>
+        <SheetHeader className="border-b px-4 pb-3 pt-2">
           <SheetTitle>{title}</SheetTitle>
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
-        <div className="mt-4">{children}</div>
+        <div className="h-[calc(92dvh-5.5rem)] overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+          {children}
+        </div>
       </SheetContent>
     </Sheet>
   );

@@ -260,7 +260,6 @@ export const PERMISSIONS = {
   ],
   "Finance Manager": [
     "dashboard.view",
-    "dashboard.view_all_metrics",
     "audit.view",
     "clients.view_all",
     "clients.edit",
