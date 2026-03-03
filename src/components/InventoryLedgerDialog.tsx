@@ -17,6 +17,8 @@ interface InventoryLedgerDialogProps {
   itemName: string;
   canViewCost?: boolean;
   defaultType?: string;
+  canAdjust?: boolean;
+  canRequest?: boolean;
 }
 
 export function InventoryLedgerDialog({
@@ -26,6 +28,8 @@ export function InventoryLedgerDialog({
   itemName,
   canViewCost = true,
   defaultType,
+  canAdjust = true,
+  canRequest = false,
 }: InventoryLedgerDialogProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -38,15 +42,22 @@ export function InventoryLedgerDialog({
     project: "",
   });
   const [warehouses, setWarehouses] = useState<Array<{ id: string; name: string; isDefault?: boolean }>>([]);
+  const typeOptions = [
+    ...(canAdjust ? ["SALE", "ADJUSTMENT", "RETURN"] : []),
+    ...(canAdjust || canRequest ? ["PROJECT_ALLOCATION"] : []),
+  ] as const;
+  const fallbackType = typeOptions[0] || "PROJECT_ALLOCATION";
+  const resolvedDefaultType =
+    defaultType && typeOptions.includes(defaultType as (typeof typeOptions)[number]) ? defaultType : fallbackType;
 
   useEffect(() => {
     if (open) {
       setForm((prev) => ({
         ...prev,
-        type: defaultType || "ADJUSTMENT",
+        type: resolvedDefaultType,
       }));
     }
-  }, [open, defaultType]);
+  }, [open, resolvedDefaultType]);
 
   useEffect(() => {
     if (!open) return;
@@ -101,7 +112,7 @@ export function InventoryLedgerDialog({
 
       toast.success("Inventory updated");
       setForm({
-        type: "ADJUSTMENT",
+        type: fallbackType,
         warehouseId: "",
         quantity: "",
         unitCost: "",
@@ -136,11 +147,10 @@ export function InventoryLedgerDialog({
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="SALE">Sale (Stock Out)</SelectItem>
-              <SelectItem value="PROJECT_ALLOCATION">Project Allocation</SelectItem>
-              <SelectItem value="ADJUSTMENT">Adjustment</SelectItem>
-              <SelectItem value="RETURN">Return</SelectItem>
-              <SelectItem value="TRANSFER">Transfer</SelectItem>
+              {canAdjust ? <SelectItem value="SALE">Sale (Stock Out)</SelectItem> : null}
+              {canAdjust || canRequest ? <SelectItem value="PROJECT_ALLOCATION">Project Allocation</SelectItem> : null}
+              {canAdjust ? <SelectItem value="ADJUSTMENT">Adjustment</SelectItem> : null}
+              {canAdjust ? <SelectItem value="RETURN">Return</SelectItem> : null}
             </SelectContent>
           </Select>
         </div>

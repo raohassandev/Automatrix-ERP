@@ -15,10 +15,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canAdjust = await requirePermission(session.user.id, "inventory.adjust");
-  if (!canAdjust) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-  }
+  const [canAdjust, canRequest] = await Promise.all([
+    requirePermission(session.user.id, "inventory.adjust"),
+    requirePermission(session.user.id, "inventory.request"),
+  ]);
   const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
 
   const body = await req.json();
@@ -31,6 +31,14 @@ export async function POST(req: Request) {
   }
 
   const { itemId, type, warehouseId, quantity, unitCost, reference, project } = parsed.data;
+  const isProjectAllocation = type === "PROJECT_ALLOCATION";
+  if (isProjectAllocation) {
+    if (!canAdjust && !canRequest) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
+  } else if (!canAdjust) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
   if (type === "PURCHASE") {
     await logAudit({
       action: "BLOCK_MANUAL_PURCHASE_STOCK_IN",

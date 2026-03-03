@@ -16,6 +16,8 @@ export default async function InventoryLedgerPage({
 
   const canView = await requirePermission(session.user.id, "inventory.view");
   const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
+  const canAdjust = await requirePermission(session.user.id, "inventory.adjust");
+  const canRequest = await requirePermission(session.user.id, "inventory.request");
   if (!canView) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -104,6 +106,8 @@ export default async function InventoryLedgerPage({
       items={items}
       warehouses={warehouses.map((w) => ({ id: w.id, name: w.name, isDefault: w.isDefault }))}
       canViewCost={canViewCost}
+      canAdjust={canAdjust}
+      canRequest={canRequest}
       searchParams={searchParams}
     />
   );

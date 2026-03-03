@@ -7,10 +7,14 @@ import { InventoryTransferDialog } from "@/components/InventoryTransferDialog";
 export function InventoryLedgerActions({
   items,
   canViewCost,
+  canAdjust,
+  canRequest,
   warehouses,
 }: {
   items: Array<{ id: string; name: string }>;
   canViewCost: boolean;
+  canAdjust: boolean;
+  canRequest: boolean;
   warehouses: Array<{ id: string; name: string; isDefault?: boolean }>;
 }) {
   const [dialog, setDialog] = useState<{
@@ -51,7 +55,7 @@ export function InventoryLedgerActions({
             defaultType: "ADJUSTMENT",
           }))
         }
-        disabled={!dialog.itemId}
+        disabled={!dialog.itemId || !canAdjust}
       >
         Manual Adjustment
       </button>
@@ -64,14 +68,14 @@ export function InventoryLedgerActions({
             defaultType: "PROJECT_ALLOCATION",
           }))
         }
-        disabled={!dialog.itemId}
+        disabled={!dialog.itemId || (!canAdjust && !canRequest)}
       >
         Allocate to Project
       </button>
       <button
         className="rounded-md border px-3 py-2 text-sm"
         onClick={() => setTransferOpen(true)}
-        disabled={!dialog.itemId}
+        disabled={!dialog.itemId || !canAdjust}
       >
         Transfer Warehouse
       </button>
@@ -83,6 +87,8 @@ export function InventoryLedgerActions({
         itemName={dialog.itemName || "Inventory Item"}
         canViewCost={canViewCost}
         defaultType={dialog.defaultType}
+        canAdjust={canAdjust}
+        canRequest={canRequest}
       />
       <InventoryTransferDialog
         open={transferOpen}

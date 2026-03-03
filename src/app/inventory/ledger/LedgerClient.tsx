@@ -30,6 +30,8 @@ interface LedgerClientProps {
   items: { id: string; name: string }[];
   warehouses: { id: string; name: string; isDefault: boolean }[];
   canViewCost: boolean;
+  canAdjust: boolean;
+  canRequest: boolean;
   searchParams: { page?: string; q?: string; type?: string; from?: string; to?: string; warehouseId?: string };
 }
 
@@ -39,6 +41,8 @@ export function LedgerClient({
   items,
   warehouses,
   canViewCost,
+  canAdjust,
+  canRequest,
   searchParams,
 }: LedgerClientProps) {
   const page = Math.max(parseInt(searchParams?.page || "1", 10), 1);
@@ -57,7 +61,13 @@ export function LedgerClient({
             <h1 className="text-2xl font-semibold">Inventory Ledger</h1>
             <p className="mt-2 text-muted-foreground">Stock movement history.</p>
           </div>
-          <InventoryLedgerActions items={items} warehouses={warehouses} canViewCost={canViewCost} />
+          <InventoryLedgerActions
+            items={items}
+            warehouses={warehouses}
+            canViewCost={canViewCost}
+            canAdjust={canAdjust}
+            canRequest={canRequest}
+          />
         </div>
       </div>
 

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import type { ItemDetailData, ItemDetailTab } from "@/lib/item-detail-policy";
-import { buildItemWorkhubPolicy } from "@/lib/item-workhub-policy";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/FormDialog";
@@ -32,7 +31,7 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
   const router = useRouter();
   const tabs = (Object.keys(detail.policy.tabs) as ItemDetailTab[]).filter((t) => detail.policy.tabs[t]);
   const [active, setActive] = React.useState<ItemDetailTab>(tabs[0] || "onhand");
-  const workhub = buildItemWorkhubPolicy(detail.policy.role);
+  const workhubActions = detail.policy.workhubActions;
 
   const [poOpen, setPoOpen] = React.useState(false);
   const [noteOpen, setNoteOpen] = React.useState(false);
@@ -75,7 +74,7 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
     if (!res.ok) throw new Error(json.error || "Failed to add attachment");
   }
 
-  const anyActions = Object.values(workhub.actions).some(Boolean);
+  const anyActions = Object.values(workhubActions).some(Boolean);
 
   const prevLedgerHref =
     detail.ledger.page > 1 ? `/inventory/items/${detail.header.id}?ledgerPage=${detail.ledger.page - 1}` : null;
@@ -110,15 +109,15 @@ export function ItemDetailClient({ detail }: { detail: ItemDetailData }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {workhub.actions.start_po_with_item ? (
+                  {workhubActions.start_po_with_item ? (
                     <DropdownMenuItem onSelect={() => setPoOpen(true)}>
                       Start Purchase Order with this Item
                     </DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.add_note ? (
+                  {workhubActions.add_note ? (
                     <DropdownMenuItem onSelect={() => setNoteOpen(true)}>Add Item Note</DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.add_attachment ? (
+                  {workhubActions.add_attachment ? (
                     <DropdownMenuItem onSelect={() => setAttachmentOpen(true)}>
                       Add Item Attachment (URL)
                     </DropdownMenuItem>

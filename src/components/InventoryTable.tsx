@@ -29,11 +29,13 @@ export function InventoryTable({
   canViewCost,
   canViewSelling,
   canAdjust,
+  canRequest,
 }: {
   items: InventoryItemRow[];
   canViewCost: boolean;
   canViewSelling: boolean;
   canAdjust: boolean;
+  canRequest: boolean;
 }) {
   const [ledgerDialog, setLedgerDialog] = useState<{
     open: boolean;
@@ -42,6 +44,10 @@ export function InventoryTable({
     defaultType?: string;
   }>({ open: false, itemId: "", itemName: "" });
   const [editItem, setEditItem] = useState<InventoryItemRow | null>(null);
+  const canMoveStock = canAdjust;
+  const canAllocateProject = canAdjust || canRequest;
+  const canEditDelete = canAdjust;
+  const showActionsColumn = canMoveStock || canAllocateProject || canEditDelete;
   const getStockTone = (item: InventoryItemRow) => {
     const qty = Number(item.quantity || 0);
     const minStock = Number(item.minStock || 0);
@@ -79,7 +85,7 @@ export function InventoryTable({
               {canViewSelling ? <th className="py-2">Selling Price</th> : null}
               <th className="py-2">Stock Health</th>
               {canViewCost ? <th className="py-2">Total</th> : null}
-              {canAdjust ? <th className="py-2">Actions</th> : null}
+              {showActionsColumn ? <th className="py-2">Actions</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -122,33 +128,42 @@ export function InventoryTable({
                     {item.totalValue === null ? "-" : formatMoney(Number(item.totalValue))}
                   </td>
                 ) : null}
-                {canAdjust ? (
+                {showActionsColumn ? (
                   <td className="py-2">
                     <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "PURCHASE" })
-                      }
-                    >
-                      Stock In/Out
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "PROJECT_ALLOCATION" })
-                      }
-                    >
-                      Allocate to Project
-                    </Button>
-                      {canAdjust ? (
+                      {canMoveStock ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "ADJUSTMENT" })
+                          }
+                        >
+                          Stock In/Out
+                        </Button>
+                      ) : null}
+                      {canAllocateProject ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setLedgerDialog({
+                              open: true,
+                              itemId: item.id,
+                              itemName: item.name,
+                              defaultType: "PROJECT_ALLOCATION",
+                            })
+                          }
+                        >
+                          Allocate to Project
+                        </Button>
+                      ) : null}
+                      {canEditDelete ? (
                         <Button size="sm" variant="outline" onClick={() => setEditItem(item)}>
                           Edit
                         </Button>
                       ) : null}
-                      <DeleteButton url={`/api/inventory/${item.id}`} />
+                      {canEditDelete ? <DeleteButton url={`/api/inventory/${item.id}`} /> : null}
                     </div>
                   </td>
                 ) : null}
@@ -192,32 +207,43 @@ export function InventoryTable({
                 : []),
             ]}
             actions={
-              canAdjust ? (
+              showActionsColumn ? (
                 <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() =>
-                      setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "PURCHASE" })
-                    }
-                  >
-                    Stock In/Out
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() =>
-                      setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "PROJECT_ALLOCATION" })
-                    }
-                  >
-                    Allocate
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditItem(item)}>
-                    Edit
-                  </Button>
-                  <DeleteButton url={`/api/inventory/${item.id}`} />
+                  {canMoveStock ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() =>
+                        setLedgerDialog({ open: true, itemId: item.id, itemName: item.name, defaultType: "ADJUSTMENT" })
+                      }
+                    >
+                      Stock In/Out
+                    </Button>
+                  ) : null}
+                  {canAllocateProject ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() =>
+                        setLedgerDialog({
+                          open: true,
+                          itemId: item.id,
+                          itemName: item.name,
+                          defaultType: "PROJECT_ALLOCATION",
+                        })
+                      }
+                    >
+                      Allocate
+                    </Button>
+                  ) : null}
+                  {canEditDelete ? (
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditItem(item)}>
+                      Edit
+                    </Button>
+                  ) : null}
+                  {canEditDelete ? <DeleteButton url={`/api/inventory/${item.id}`} /> : null}
                 </>
               ) : null
             }
@@ -232,6 +258,8 @@ export function InventoryTable({
         itemName={ledgerDialog.itemName}
         canViewCost={canViewCost}
         defaultType={ledgerDialog.defaultType}
+        canAdjust={canAdjust}
+        canRequest={canRequest}
       />
       <InventoryFormDialog
         open={Boolean(editItem)}

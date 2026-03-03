@@ -26,6 +26,7 @@ export default async function InventoryPage({
   const canViewCost = await requirePermission(session.user.id, "inventory.view_cost");
   const canViewSelling = await requirePermission(session.user.id, "inventory.view_selling");
   const canAdjust = await requirePermission(session.user.id, "inventory.adjust");
+  const canRequest = await requirePermission(session.user.id, "inventory.request");
   if (!canView) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
@@ -152,6 +153,7 @@ export default async function InventoryPage({
         canViewCost={canViewCost}
         canViewSelling={canViewSelling}
         canAdjust={canAdjust}
+        canRequest={canRequest}
       />
 
       {items.length === 0 && (

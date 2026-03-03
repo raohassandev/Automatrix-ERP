@@ -10,6 +10,11 @@ export type ItemDetailPolicy = {
   canAccessPage: boolean;
   tabs: Record<ItemDetailTab, boolean>;
   canViewUnitCosts: boolean;
+  workhubActions: {
+    start_po_with_item: boolean;
+    add_note: boolean;
+    add_attachment: boolean;
+  };
 };
 
 export type ItemDetailHeader = {
@@ -95,6 +100,10 @@ function buildPolicy(
   perms: {
     canAccessPage: boolean;
     canViewUnitCosts: boolean;
+    canProcureEdit: boolean;
+    canProcureViewAll: boolean;
+    canInventoryView: boolean;
+    canInventoryViewSelling: boolean;
   },
 ): ItemDetailPolicy {
   const canAccessPage = perms.canAccessPage;
@@ -124,7 +133,19 @@ function buildPolicy(
     // keep default tabs
   }
 
-  return { role, canAccessPage, tabs, canViewUnitCosts };
+  const canProcure = perms.canProcureEdit && perms.canProcureViewAll;
+  const canAnnotate = perms.canInventoryView || perms.canInventoryViewSelling;
+  return {
+    role,
+    canAccessPage,
+    tabs,
+    canViewUnitCosts,
+    workhubActions: {
+      start_po_with_item: canProcure,
+      add_note: canAnnotate,
+      add_attachment: canAnnotate,
+    },
+  };
 }
 
 async function getAssignedProjectRefs(userId: string) {
@@ -152,13 +173,20 @@ export async function getItemDetailForUser(args: {
   ledgerPage: number;
 }) {
   const role = await getUserRoleName(args.userId);
-  const [canAccessPage, canViewUnitCosts] = await Promise.all([
+  const [canAccessPage, canViewUnitCosts, canProcureEdit, canProcureViewAll, canInventoryViewSelling] = await Promise.all([
     requirePermission(args.userId, "inventory.view"),
     requirePermission(args.userId, "inventory.view_cost"),
+    requirePermission(args.userId, "procurement.edit"),
+    requirePermission(args.userId, "procurement.view_all"),
+    requirePermission(args.userId, "inventory.view_selling"),
   ]);
   const policy = buildPolicy(role, {
     canAccessPage,
     canViewUnitCosts,
+    canProcureEdit,
+    canProcureViewAll,
+    canInventoryView: canAccessPage,
+    canInventoryViewSelling,
   });
   if (!policy.canAccessPage) {
     return { ok: false as const, status: 403 as const, error: "Forbidden" };
