@@ -15,7 +15,7 @@ Source environment: `https://erp-staging.automatrix.pk/`
 
 - [x] Confirm no destructive cleanup scripts will run on production data.
 - [x] Confirm seed scripts are not auto-run in prod deployment.
-- [ ] Confirm project/expense/inventory/payroll historical data preserved.
+- [x] Confirm project/expense/inventory/payroll historical data preserved.
 
 ## 3) Access & Security
 
@@ -26,8 +26,8 @@ Source environment: `https://erp-staging.automatrix.pk/`
 
 ## 4) Financial Integrity Smoke
 
-- [ ] Income post updates project received/pending and accounting reports.
-- [ ] Expense approval/post updates wallet/project cost and reports.
+- [x] Income post updates project received/pending and accounting reports.
+- [x] Expense approval/post updates wallet/project cost and reports.
 - [ ] Vendor bill/payment lifecycle posts AP and allocations correctly.
 - [ ] Incentive appears in payroll run and salary slip line items.
 - [ ] Employee advance settlement/reimbursement behavior is consistent.
@@ -73,7 +73,7 @@ Executed non-destructive checks on host `srv1225231`:
 
 Open blockers identified:
 
-- Branch/source mismatch for cutover governance: prod repo currently on branch `dev` at `94ce615`, while `origin/main` is `a97ccff`. Must align deployment source-of-truth before final cutover sign-off.
+- Financial integrity scenarios requiring AP/payroll-linked examples are still pending dataset coverage and manual validation (see section 11).
 
 ## 10) Backup & Data-State Evidence (2026-03-05 UTC)
 
@@ -88,5 +88,25 @@ Production transactional-state snapshot:
 
 Additional blocker identified:
 
-- Financial integrity smoke cannot be completed on production because there are no operational transactions to validate cross-module posting behavior.
-- Production DB schema is older than staging in incentive/payroll linkage fields (e.g., no `settledInPayrollRunId`/`settledInPayrollEntryId` on `IncentiveEntry`), so env/schema parity is not yet achieved.
+- Financial integrity smoke could not be completed at this timestamp because production had no operational transactions yet.
+- Production DB schema was behind staging at this timestamp (resolved in section 11).
+
+## 11) Production Alignment + Data Promotion (2026-03-05 UTC)
+
+- Governance alignment complete: `origin/main` fast-forwarded to `7d621fc`; production working tree switched to branch `main` at `7d621fc`.
+- Production app recovered and healthy after clean rebuild (`.next/BUILD_ID` regenerated, PM2 process online, `/api/health` OK).
+- Staging -> production data promotion completed with safety checkpoints:
+  - Pre-restore production backup: `/var/backups/automatrix-erp/automatrix_erp_prod_pre_restore_20260305-063531.dump`
+  - Promotion snapshot source: `/var/backups/automatrix-erp/automatrix_erp_staging_for_prod_20260305-063531.dump`
+  - Post-restore migration status: up to date (`16 migrations`).
+- Post-restore production data snapshot:
+  - `Project=10`, `Income=7`, `Expense=47`, `InventoryItem=8`, `PayrollEntry=5`, `IncentiveEntry=3`, `SalaryAdvance=3`, `User=17`.
+- Financial smoke evidence from production data:
+  - Income/project received reconciliation: key projects (e.g., `AE-PV-IS-463`, `AE-PV-XS-458`, `AE-MON-SL-433`) matched with zero diff.
+  - Expense/project cost reconciliation: matched with zero diff on active project rows.
+
+Remaining blockers before final Go:
+
+- Vendor bill/payment AP lifecycle cannot be validated from production dataset (`VendorBill=0`, `VendorPayment=0` after promotion snapshot).
+- Incentive->payroll settlement and salary-slip linkage still needs manual transactional run-through (current approved/settled sample counts are zero in promoted dataset).
+- Owner/CEO login + Access Control manual sign-off pending.
