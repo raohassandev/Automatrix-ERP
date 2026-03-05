@@ -133,28 +133,28 @@ test.describe("Staging Deep Audit", () => {
 
   test("Cross-module entry effect: Expense (own-pocket) -> Approval -> Reimbursement Paid -> Journal", async ({ baseURL }) => {
     const financeApi = await request.newContext({ baseURL, storageState: states.finance, ignoreHTTPSErrors: true });
-    const engineerApi = await request.newContext({ baseURL, storageState: states.engineer, ignoreHTTPSErrors: true });
+    const submitterApi = await request.newContext({ baseURL, storageState: states.store, ignoreHTTPSErrors: true });
 
-    // Ensure engineer is assigned to at least one project.
+    // Ensure submitter is assigned to at least one project.
     const [usersRes, projectsRes] = await Promise.all([financeApi.get("/api/users/list"), financeApi.get("/api/projects")]);
     expect(usersRes.ok()).toBeTruthy();
     expect(projectsRes.ok()).toBeTruthy();
     const usersJson = await usersRes.json();
     const projectsJson = await projectsRes.json();
-    const engineer = (usersJson.data || []).find((u: { email?: string }) =>
-      String(u.email || "").toLowerCase() === USERS.engineer.email,
+    const submitter = (usersJson.data || []).find((u: { email?: string }) =>
+      String(u.email || "").toLowerCase() === USERS.store.email,
     );
     const project = projectsJson?.data?.[0];
-    expect(engineer?.id).toBeTruthy();
+    expect(submitter?.id).toBeTruthy();
     expect(project?.id).toBeTruthy();
 
     await financeApi.post(`/api/projects/${project.id}/assignments`, {
-      data: { assignments: [{ userId: engineer.id, role: "MEMBER" }] },
+      data: { assignments: [{ userId: submitter.id, role: "MEMBER" }] },
     });
 
     const [categoriesRes, settingsRes] = await Promise.all([
-      engineerApi.get("/api/categories?type=expense"),
-      engineerApi.get("/api/settings/organization"),
+      submitterApi.get("/api/categories?type=expense"),
+      submitterApi.get("/api/settings/organization"),
     ]);
     expect(categoriesRes.ok()).toBeTruthy();
     expect(settingsRes.ok()).toBeTruthy();
@@ -164,11 +164,12 @@ test.describe("Staging Deep Audit", () => {
     const threshold = Number(settingsJson?.data?.expenseReceiptThreshold || 0);
     const amount = Math.max(100, threshold + 1);
     const unique = Date.now();
+    const description = `STAGING_AUDIT_EXPENSE_${unique}`;
 
-    const createExpense = await engineerApi.post("/api/expenses", {
+    const createExpense = await submitterApi.post("/api/expenses", {
       data: {
         date: new Date().toISOString().slice(0, 10),
-        description: `STAGING_AUDIT_EXPENSE_${unique}`,
+        description,
         category,
         amount,
         paymentMode: "Cash",
@@ -196,7 +197,7 @@ test.describe("Staging Deep Audit", () => {
     expect(approveRes.ok()).toBeTruthy();
 
     // Own-pocket expense stays payable until reimbursement settlement.
-    const approvedExpenseRes = await financeApi.get(`/api/expenses?search=${expenseId}`);
+    const approvedExpenseRes = await financeApi.get(`/api/expenses?search=${encodeURIComponent(description)}&limit=50`);
     expect(approvedExpenseRes.ok()).toBeTruthy();
     const approvedExpenseJson = await approvedExpenseRes.json();
     const approvedExpense = (approvedExpenseJson?.data?.expenses || []).find((e: { id?: string }) => e.id === expenseId);
@@ -210,7 +211,7 @@ test.describe("Staging Deep Audit", () => {
     const journalsJson = await journalsRes.json();
     expect((journalsJson?.data || []).length).toBeGreaterThan(0);
 
-    await engineerApi.dispose();
+    await submitterApi.dispose();
     await financeApi.dispose();
   });
 });
