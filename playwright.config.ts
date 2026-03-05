@@ -41,8 +41,11 @@ const config: PlaywrightTestConfig = {
       NEXTAUTH_URL: process.env.NEXTAUTH_URL || "http://localhost:3000",
       AUTH_SECRET: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "e2e-secret",
       AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST || "true",
+      AUTH_ENABLE_CREDENTIALS: process.env.AUTH_ENABLE_CREDENTIALS || "1",
       CI: process.env.CI || "true",
-      DATABASE_URL: e2eDbUrl || process.env.DATABASE_URL || "",
+      ...(e2eDbUrl || process.env.DATABASE_URL
+        ? { DATABASE_URL: e2eDbUrl || process.env.DATABASE_URL }
+        : {}),
     },
     url: "http://localhost:3000",
     reuseExistingServer: true,

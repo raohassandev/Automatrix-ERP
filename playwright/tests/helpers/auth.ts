@@ -3,9 +3,12 @@ import { expect, type Page } from "@playwright/test";
 export async function loginAs(page: Page, email: string, password = process.env.E2E_TEST_PASSWORD || "e2e") {
   await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 45_000 });
 
-  const credentialsPanel = page.locator("div", { hasText: "Email login (staging/internal)" }).first();
-  const emailInput = credentialsPanel.getByPlaceholder("Email");
-  const passwordInput = credentialsPanel.getByPlaceholder("Password");
+  const credentialsPanel = page
+    .locator("div.rounded-md.border.border-border.bg-muted\\/30.p-3.text-sm")
+    .filter({ has: page.getByText("Email login (staging/internal)", { exact: true }) })
+    .first();
+  const emailInput = credentialsPanel.getByPlaceholder("Email").first();
+  const passwordInput = credentialsPanel.getByPlaceholder("Password").first();
   const credentialsButton = credentialsPanel.getByRole("button", { name: "Sign in with Email" });
   await expect(emailInput).toBeVisible();
   await expect(passwordInput).toBeVisible();

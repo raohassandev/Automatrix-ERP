@@ -36,7 +36,8 @@ export default async function PayrollPage({
   const take = 20;
   const skip = (page - 1) * take;
 
-  const [runs, total, employees] = await Promise.all([
+  const [runs, total, employees, pendingIncentivePayrollAgg, settledIncentivePayrollAgg, openSalaryAdvanceAgg] =
+    await Promise.all([
     prisma.payrollRun.findMany({
       orderBy: { periodStart: "desc" },
       include: { entries: true },
@@ -45,6 +46,27 @@ export default async function PayrollPage({
     }),
     prisma.payrollRun.count(),
     prisma.employee.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, email: true } }),
+    prisma.incentiveEntry.aggregate({
+      where: {
+        payoutMode: "PAYROLL",
+        settlementStatus: "UNSETTLED",
+        status: { in: ["PENDING", "APPROVED"] },
+      },
+      _sum: { amount: true },
+    }),
+    prisma.incentiveEntry.aggregate({
+      where: {
+        payoutMode: "PAYROLL",
+        settlementStatus: "SETTLED",
+        status: "APPROVED",
+      },
+      _sum: { amount: true },
+    }),
+    prisma.salaryAdvance.aggregate({
+      where: { status: "OPEN" },
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / take));
@@ -58,6 +80,10 @@ export default async function PayrollPage({
     },
     { totalNet: 0, totalEntries: 0, approvedRuns: 0 },
   );
+  const pendingIncentivePayroll = Number(pendingIncentivePayrollAgg._sum.amount || 0);
+  const settledIncentivePayroll = Number(settledIncentivePayrollAgg._sum.amount || 0);
+  const openSalaryAdvance = Number(openSalaryAdvanceAgg._sum.amount || 0);
+  const openSalaryAdvanceCount = Number(openSalaryAdvanceAgg._count._all || 0);
 
   return (
     <div className="grid gap-6">
@@ -71,22 +97,55 @@ export default async function PayrollPage({
             {canEdit ? <PayrollRunCreateButton employees={employees} /> : null}
           </div>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
-            <div className="text-sm text-sky-700">Runs on this page</div>
-            <div className="text-xl font-semibold text-sky-800">{runs.length}</div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <a
+            href="/incentives"
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+          >
+            Incentives
+          </a>
+          <a
+            href="/salary-advances"
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+          >
+            Salary Advances
+          </a>
+          <a
+            href="/reports/employee-expenses"
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+          >
+            Employee Expense Report
+          </a>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900/60 dark:bg-sky-950/30">
+            <div className="text-sm text-sky-700 dark:text-sky-300">Runs on this page</div>
+            <div className="text-xl font-semibold text-sky-800 dark:text-sky-100">{runs.length}</div>
           </div>
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
-            <div className="text-sm text-indigo-700">Payroll Entries</div>
-            <div className="text-xl font-semibold text-indigo-800">{summary.totalEntries}</div>
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4 dark:border-indigo-900/60 dark:bg-indigo-950/30">
+            <div className="text-sm text-indigo-700 dark:text-indigo-300">Payroll Entries</div>
+            <div className="text-xl font-semibold text-indigo-800 dark:text-indigo-100">{summary.totalEntries}</div>
           </div>
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
-            <div className="text-sm text-emerald-700">Net Pay</div>
-            <div className="text-xl font-semibold text-emerald-800">{formatMoney(summary.totalNet)}</div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+            <div className="text-sm text-emerald-700 dark:text-emerald-300">Net Pay</div>
+            <div className="text-xl font-semibold text-emerald-800 dark:text-emerald-100">{formatMoney(summary.totalNet)}</div>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
-            <div className="text-sm text-amber-700">Approved/Posted</div>
-            <div className="text-xl font-semibold text-amber-800">{summary.approvedRuns}</div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+            <div className="text-sm text-amber-700 dark:text-amber-300">Approved/Posted</div>
+            <div className="text-xl font-semibold text-amber-800 dark:text-amber-100">{summary.approvedRuns}</div>
+          </div>
+          <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-900/60 dark:bg-violet-950/30">
+            <div className="text-sm text-violet-700 dark:text-violet-300">Incentive Pending (Payroll)</div>
+            <div className="text-xl font-semibold text-violet-800 dark:text-violet-100">{formatMoney(pendingIncentivePayroll)}</div>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+            <div className="text-sm text-emerald-700 dark:text-emerald-300">Incentive Settled (Payroll)</div>
+            <div className="text-xl font-semibold text-emerald-800 dark:text-emerald-100">{formatMoney(settledIncentivePayroll)}</div>
+          </div>
+          <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-4 dark:border-rose-900/60 dark:bg-rose-950/30">
+            <div className="text-sm text-rose-700 dark:text-rose-300">Open Salary Advances</div>
+            <div className="text-xl font-semibold text-rose-800 dark:text-rose-100">{formatMoney(openSalaryAdvance)}</div>
+            <div className="text-xs text-rose-700/80 dark:text-rose-300/80">{openSalaryAdvanceCount} employee advance(s)</div>
           </div>
         </div>
       </div>

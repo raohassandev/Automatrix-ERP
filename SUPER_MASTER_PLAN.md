@@ -424,7 +424,7 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
-### 11.1 Status Snapshot (As of 2026-03-03, updated after fast-track closure batch 1)
+### 11.1 Status Snapshot (As of 2026-03-05, updated after fast-track closure batch 2)
 
 Legend:
 - `[x]` Completed (target end-state achieved)
@@ -457,25 +457,26 @@ Snapshot note:
 - Modules `1`, `2`, `3`, `10`, `16`, `17`, `18` are now marked `[x]` after controls hardening (receipt policy enforcement, approvals SLA/queue visibility, audit/search API depth, and controls BI snapshots).
 - Access governance UX is now business-first in Settings: Role Templates, User Feature Access Matrix (ALLOW/DENY overrides), and Approval Routes by amount (Stage 1/2/3 labels replacing raw L1/L2/L3 jargon).
 - Fast-track closure batch 1 completed for implemented modules: finance role baseline tightened (no CEO dashboard by default), vendor-payments page/API permission parity aligned, approvals table action-column visibility hardened, mobile form/navigation polish expanded, and regression specs refreshed for staging drift tolerance.
+- Fast-track closure batch 2 completed for implemented modules: payroll control panel hardened (pending/settled payroll incentives + open salary advances KPIs), payroll quick links added for operator flow, dark-theme KPI contrast normalized, and Playwright staging role/mobile/payroll regression revalidated.
 - Remaining depth now continues under modules `19` and `20`.
 
-### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-03
+### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05
 
 Workstreams and current state:
-- `A` RBAC/UI Consistency: `[~]` In Progress  
-  Completed: sidebar/mobile menu parity hardening, key route/API parity checks, finance baseline restriction for CEO metrics.
-- `B` Mobile UX Hardening: `[~]` In Progress  
-  Completed: mobile navigation search/quick links, dialog/sheet usability and responsive table overflow fixes on critical screens.
-- `C` Transaction Integrity Validation: `[~]` In Progress  
-  Completed: targeted role-based Playwright regression on inventory/project/vendor/workhub flows; further end-to-end accounting chain validation remains.
-- `D` Deep Audit Discrepancy Burn-Down: `[~]` In Progress  
-  Completed: discrepancy matrix and evidence docs refreshed; critical findings continue to be closed in batched passes.
+- `A` RBAC/UI Consistency: `[x]` Completed for implemented-module baseline  
+  Completed: sidebar/mobile menu parity hardening, key route/API parity checks, finance baseline restriction for CEO metrics, role-scoped mobile visibility confirmed on staging.
+- `B` Mobile UX Hardening: `[x]` Completed for implemented-module baseline  
+  Completed: mobile navigation search/quick links, dialog/sheet usability and responsive action visibility fixes on approvals/payroll/project critical paths.
+- `C` Transaction Integrity Validation: `[x]` Completed for implemented-module baseline  
+  Completed: staging regression validated payroll advance lock rules, payroll policy signal path, and mobile salary-advances usability; existing finance/procurement/project integrity suites remain green in current baseline.
+- `D` Deep Audit Discrepancy Burn-Down: `[x]` Completed  
+  Completed: discrepancy matrix and evidence docs refreshed; no open critical/high/medium/low findings in latest implemented-module staging pass.
 - `E` Go-Live Readiness + Plan Sync: `[~]` In Progress  
-  Completed: production cutover checklist and staging safety controls documented; final Go/No-Go depends on closure of open high findings in current audit cycle.
+  Completed: production cutover checklist and rollback runbook documented; staging remains deployment source of truth pending monitored production stabilization window.
 
-Latest discrepancy baseline (`docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md`):
+Latest discrepancy baseline (`docs/STAGING_ROLE_DEEP_AUDIT_2026-03-05.md`):
 - Open: `CRITICAL 0`, `HIGH 0`, `MEDIUM 0`, `LOW 0`.
-- Closure status: implemented-module fast-track discrepancy burn-down is complete for current staging baseline; remaining work is production cutover execution and monitored rollout.
+- Closure status: implemented-module fast-track discrepancy burn-down is complete for current staging baseline; remaining work is production monitored rollout and module `19`/`20` expansion.
 
 ### 11.2 Owner-Critical Module Status (Requested)
 

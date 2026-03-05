@@ -14,7 +14,7 @@ Scope: Implemented modules only
 
 | Severity | Module | Area | Discrepancy | Evidence | Status | Owner |
 |---|---|---|---|---|---|---|
-| - | - | - | All previously open critical/high discrepancies are closed in latest audit baseline. | `docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md` | Closed | Engineering |
+| - | - | - | All previously open critical/high discrepancies are closed in latest audit baseline. | `docs/STAGING_ROLE_DEEP_AUDIT_2026-03-05.md` | Closed | Engineering |
 
 ## Closure Rules
 
