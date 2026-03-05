@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { formatMoney } from "@/lib/format";
+import { getDashboardDataEnhanced } from "@/lib/dashboard";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -29,6 +31,7 @@ export default async function DashboardPage() {
   const canViewReports = canViewReportsOwn || canViewReportsTeam || canViewReportsAll;
   const canViewControls = canViewApprovals || canViewAllApprovals || canViewAudit;
   const canViewWorkspace = canViewOwnEmployees || canViewAllEmployees || canSubmitExpense;
+  const dashboardMetrics = await getDashboardDataEnhanced("THIS_MONTH");
 
   return (
     <div className="grid gap-6">
@@ -45,6 +48,33 @@ export default async function DashboardPage() {
           </div>
         ) : null}
       </div>
+
+      {dashboardMetrics ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
+            <div className="text-sm text-emerald-700">Income (This Month)</div>
+            <div className="mt-2 text-2xl font-semibold text-emerald-900">{formatMoney(dashboardMetrics.totalIncome)}</div>
+            <div className="mt-1 text-xs text-emerald-800/80">Entries: {dashboardMetrics.incomeCount}</div>
+          </div>
+          <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-5 shadow-sm">
+            <div className="text-sm text-rose-700">Expense (This Month)</div>
+            <div className="mt-2 text-2xl font-semibold text-rose-900">{formatMoney(dashboardMetrics.totalExpenses)}</div>
+            <div className="mt-1 text-xs text-rose-800/80">Entries: {dashboardMetrics.expenseCount}</div>
+          </div>
+          <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-5 shadow-sm">
+            <div className="text-sm text-sky-700">Net Position</div>
+            <div className="mt-2 text-2xl font-semibold text-sky-900">{formatMoney(dashboardMetrics.netProfit)}</div>
+            <div className="mt-1 text-xs text-sky-800/80">Margin: {dashboardMetrics.profitMargin.toFixed(1)}%</div>
+          </div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-5 shadow-sm">
+            <div className="text-sm text-amber-700">Pending Queue</div>
+            <div className="mt-2 text-2xl font-semibold text-amber-900">{dashboardMetrics.pendingApprovals}</div>
+            <div className="mt-1 text-xs text-amber-800/80">
+              Recovery: {formatMoney(dashboardMetrics.pendingRecovery)}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {canViewProcurement || canEditProcurement ? (
@@ -65,6 +95,9 @@ export default async function DashboardPage() {
                   Vendor Payments
                 </Link>
               ) : null}
+              <Link className="underline" href="/reports/procurement">
+                Procurement Report
+              </Link>
             </div>
           </div>
         ) : null}
@@ -81,6 +114,9 @@ export default async function DashboardPage() {
               </Link>
               <Link className="underline" href="/reports/inventory">
                 Inventory Report
+              </Link>
+              <Link className="underline" href="/inventory/warehouses">
+                Warehouses
               </Link>
             </div>
           </div>
@@ -100,6 +136,9 @@ export default async function DashboardPage() {
                   Audit Log
                 </Link>
               ) : null}
+              <Link className="underline" href="/reports/controls">
+                Exceptions Report
+              </Link>
             </div>
           </div>
         ) : null}
@@ -121,6 +160,11 @@ export default async function DashboardPage() {
               <Link className="underline" href="/reports">
                 All Reports
               </Link>
+              {canViewAccounting || canManageAccounting ? (
+                <Link className="underline" href="/reports/accounting/cash-position">
+                  Cash Position
+                </Link>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -137,6 +181,12 @@ export default async function DashboardPage() {
               </Link>
               <Link className="underline" href="/expenses">
                 Expenses
+              </Link>
+              <Link className="underline" href="/payroll">
+                Payroll
+              </Link>
+              <Link className="underline" href="/hrms/attendance">
+                HR Attendance
               </Link>
             </div>
           </div>

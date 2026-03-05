@@ -50,6 +50,7 @@ export default function ApprovalQueue({
   const [pending, startTransition] = useTransition();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkReject, setShowBulkReject] = useState(false);
+  const [showBulkApprove, setShowBulkApprove] = useState(false);
   const [bulkRejectReason, setBulkRejectReason] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [search, setSearch] = useState("");
@@ -92,19 +93,15 @@ export default function ApprovalQueue({
 
   const handleBulkApprove = async () => {
     if (selectedIds.size === 0) return;
+    setShowBulkApprove(true);
+  };
 
-    const selected = approvals.filter((a) => selectedIds.has(a.id));
-    const expenseIds = selected.filter((a) => a.type === "EXPENSE").map((a) => a.id);
-    const incomeIds = selected.filter((a) => a.type === "INCOME").map((a) => a.id);
-
-    const confirmed = window.confirm(
-      `Approve ${selectedIds.size} item(s)?\n\nExpenses: ${expenseIds.length}, Income: ${incomeIds.length}.`
-    );
-
-    if (!confirmed) return;
-
+  const confirmBulkApprove = async () => {
     startTransition(async () => {
       try {
+        const selected = approvals.filter((a) => selectedIds.has(a.id));
+        const expenseIds = selected.filter((a) => a.type === "EXPENSE").map((a) => a.id);
+        const incomeIds = selected.filter((a) => a.type === "INCOME").map((a) => a.id);
         const results = { successful: 0, failed: 0 };
 
         if (expenseIds.length > 0) {
@@ -144,6 +141,7 @@ export default function ApprovalQueue({
           description: `Successful: ${results.successful}, Failed: ${results.failed}`,
         });
         setSelectedIds(new Set());
+        setShowBulkApprove(false);
         router.refresh();
       } catch (err) {
         const message = err instanceof Error ? err.message : "An error occurred";
@@ -327,7 +325,66 @@ export default function ApprovalQueue({
       )}
 
       {/* Approvals Table */}
-      <div className="mb-6 overflow-x-auto rounded-lg bg-card shadow">
+      <div className="mb-4 space-y-3 md:hidden">
+        {filteredApprovals.map((expense) => {
+          const walletBalance = parseFloat(expense.walletBalance.toString());
+          const walletHold = parseFloat(expense.walletHold.toString());
+          const availableBalance = walletBalance - walletHold;
+          const amount = parseFloat(expense.amount.toString());
+          return (
+            <div key={expense.id} className="rounded-lg border bg-card p-4 shadow-sm">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-xs text-muted-foreground">{new Date(expense.date).toLocaleDateString()}</div>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(expense.id)}
+                    onChange={() => handleSelectOne(expense.id)}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  Select
+                </label>
+              </div>
+              <div className="text-sm font-semibold">
+                {expense.submittedBy.name || expense.submittedBy.email}
+              </div>
+              <div className="text-xs text-muted-foreground">{expense.submittedBy.email}</div>
+              <div className="mt-2 text-sm">{expense.description}</div>
+              <div className="mt-1 text-xs text-muted-foreground">Category: {expense.category}</div>
+              {expense.project ? (
+                <div className="mt-1 text-xs text-muted-foreground">Project: {expense.project}</div>
+              ) : null}
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold">{formatMoney(amount)}</span>
+                <ApprovalLevelBadge level={expense.requiredApprovalLevel} />
+              </div>
+              {expense.type === "EXPENSE" ? (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Wallet available: <span className="font-medium">{formatMoney(availableBalance)}</span>
+                </div>
+              ) : null}
+              <div className="mt-3">
+                {expense.type === "INCOME" ? (
+                  <IncomeApprovalActions incomeId={expense.id} amount={amount} status={expense.status} />
+                ) : (
+                  <ApprovalActions
+                    expenseId={expense.id}
+                    amount={amount}
+                    employeeName={expense.submittedBy.name || expense.submittedBy.email}
+                    currentBalance={availableBalance}
+                    afterBalance={availableBalance}
+                    categoryLimit={expense.categoryLimit ?? undefined}
+                    categoryStrict={expense.categoryStrict ?? undefined}
+                    status={expense.status}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mb-6 hidden overflow-x-auto rounded-lg bg-card shadow md:block">
         <table className="min-w-[1460px] divide-y divide-border">
           <thead className="bg-muted">
             <tr>
@@ -531,6 +588,38 @@ export default function ApprovalQueue({
       {showHistory && <ApprovalHistory history={history} />}
 
       {/* Bulk Reject Modal */}
+      {showBulkApprove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
+          <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-foreground">
+              Approve {selectedIds.size} Item(s)
+            </h3>
+            <p className="mb-4 text-sm text-muted-foreground">
+              This will run full approval posting for selected records.
+            </p>
+            <div className="mb-5 rounded-md border border-border bg-muted/30 p-3 text-sm">
+              <div>Expense items: {approvals.filter((a) => selectedIds.has(a.id) && a.type === "EXPENSE").length}</div>
+              <div>Income items: {approvals.filter((a) => selectedIds.has(a.id) && a.type === "INCOME").length}</div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                onClick={() => setShowBulkApprove(false)}
+                disabled={pending}
+                variant="ghost"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmBulkApprove}
+                disabled={pending}
+              >
+                {pending ? "Approving..." : "Confirm Approve"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showBulkReject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">

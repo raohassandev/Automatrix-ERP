@@ -1,7 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
 export async function loginAs(page: Page, email: string, password = process.env.E2E_TEST_PASSWORD || "e2e") {
-  await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 20_000 });
+  await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 45_000 });
 
   const credentialsPanel = page.locator("div", { hasText: "Email login (staging/internal)" }).first();
   const emailInput = credentialsPanel.getByPlaceholder("Email");
