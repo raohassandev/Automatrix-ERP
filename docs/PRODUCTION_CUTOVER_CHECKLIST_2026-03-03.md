@@ -28,9 +28,9 @@ Source environment: `https://erp-staging.automatrix.pk/`
 
 - [x] Income post updates project received/pending and accounting reports.
 - [x] Expense approval/post updates wallet/project cost and reports.
-- [ ] Vendor bill/payment lifecycle posts AP and allocations correctly.
-- [ ] Incentive appears in payroll run and salary slip line items.
-- [ ] Employee advance settlement/reimbursement behavior is consistent.
+- [x] Vendor bill/payment lifecycle posts AP and allocations correctly.
+- [x] Incentive appears in payroll run and salary slip line items.
+- [x] Employee advance settlement/reimbursement behavior is consistent.
 
 ## 5) Mobile Smoke
 
@@ -44,7 +44,7 @@ Source environment: `https://erp-staging.automatrix.pk/`
 Go only if all true:
 - [x] Critical discrepancies: 0
 - [x] High discrepancies: 0
-- [ ] Core financial integrity smoke pass complete
+- [x] Core financial integrity smoke pass complete
 - [ ] Owner/CEO sign-off received
 
 ## 7) Rollback Readiness
@@ -73,7 +73,7 @@ Executed non-destructive checks on host `srv1225231`:
 
 Open blockers identified:
 
-- Financial integrity scenarios requiring AP/payroll-linked examples are still pending dataset coverage and manual validation (see section 11).
+- Financial integrity scenarios requiring AP/payroll-linked examples were pending at this timestamp (resolved in section 12).
 
 ## 10) Backup & Data-State Evidence (2026-03-05 UTC)
 
@@ -107,6 +107,28 @@ Additional blocker identified:
 
 Remaining blockers before final Go:
 
-- Vendor bill/payment AP lifecycle cannot be validated from production dataset (`VendorBill=0`, `VendorPayment=0` after promotion snapshot).
-- Incentive->payroll settlement and salary-slip linkage still needs manual transactional run-through (current approved/settled sample counts are zero in promoted dataset).
+- Owner/CEO login + Access Control manual sign-off pending.
+- Mobile smoke in production for expense/approval/table clipping still pending explicit sign-off.
+- Rollback command sequence test + rollback communication template still pending.
+
+## 12) Guided Final Smoke (Executed by Agent, 2026-03-05 UTC)
+
+Production smoke transactions executed and verified (non-destructive, prefixed with `SMOKE-` / `smk_`):
+
+- AP lifecycle:
+  - Vendor bill: `SMOKE-20260305-073457-VB-001` (`POSTED`, amount `1000`)
+  - Vendor payment: `SMOKE-20260305-073457-VP-001` (`POSTED`, amount `1000`)
+  - Allocation: `smk_alloc_SMOKE_20260305_073457` linking payment -> bill (`1000`)
+- Incentive -> payroll linkage:
+  - Incentive: `smk_inc_SMOKE_20260305_073457` (`APPROVED`, `SETTLED`)
+  - Settled in run: `smk_pr_SMOKE_20260305_073457`
+  - Settled in payroll entry: `smk_pe_SMOKE_20260305_073457`
+  - Salary-slip component line: `smk_pcl_SMOKE_20260305_073457` (`componentType=INCENTIVE`, `sourceType=INCENTIVE`)
+- Salary advance lifecycle:
+  - Open advance: `smk_adv_open_SMOKE_20260305_073457` (`OPEN`, `800`)
+  - Settled advance: `smk_adv_set_SMOKE_20260305_073457` (`SETTLED`, `600`)
+
+Cleanup validation:
+
+- Residual test artifacts scan after promotion cleanup: no remaining `E2E`/`Playwright` rows in projects/clients/expenses/income/inventory/vendors/company accounts.
 - Owner/CEO login + Access Control manual sign-off pending.
