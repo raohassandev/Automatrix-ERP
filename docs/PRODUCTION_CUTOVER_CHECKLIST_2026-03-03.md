@@ -7,8 +7,8 @@ Source environment: `https://erp-staging.automatrix.pk/`
 
 - [x] Confirm latest staging deployment commit hash and build artifacts.
 - [x] Confirm DB backup completed and restore test validated.
-- [ ] Confirm migration plan and rollback SQL/strategy documented.
-- [ ] Confirm production env parity (`NEXTAUTH_URL`, auth providers, DB, storage, PM2).
+- [x] Confirm migration plan and rollback SQL/strategy documented.
+- [x] Confirm production env parity (`NEXTAUTH_URL`, auth providers, DB, storage, PM2).
 - [x] Confirm credentials-login test mode disabled for production.
 
 ## 2) Data Safety
@@ -52,7 +52,7 @@ Go only if all true:
 - [x] Previous release artifact/commit ID recorded.
 - [x] DB rollback point-in-time identified.
 - [ ] Rollback command sequence tested in staging-like environment.
-- [ ] Communication template prepared for rollback event.
+- [x] Communication template prepared for rollback event.
 
 ## 8) Validation Evidence (2026-03-03 post-deploy)
 
@@ -132,3 +132,12 @@ Cleanup validation:
 
 - Residual test artifacts scan after promotion cleanup: no remaining `E2E`/`Playwright` rows in projects/clients/expenses/income/inventory/vendors/company accounts.
 - Owner/CEO login + Access Control manual sign-off pending.
+
+## 13) Rollback and Migration Documentation (2026-03-05 UTC)
+
+- Migration and rollback runbook documented: `docs/PRODUCTION_ROLLBACK_RUNBOOK_2026-03-05.md`
+- Rollback communication template documented: `docs/ROLLBACK_COMMUNICATION_TEMPLATE_2026-03-05.md`
+- Production env parity evidence completed via host checks:
+  - auth URL and mode guards
+  - PM2 process + health endpoint
+  - migrations status (`up to date`)
