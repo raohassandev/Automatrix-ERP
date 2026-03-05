@@ -209,9 +209,17 @@ export function ExpenseEditDialog({ open, onOpenChange, expense }: ExpenseEditDi
               <SelectContent>
                 <SelectItem value="COMPANY_DIRECT">Company Direct</SelectItem>
                 <SelectItem value="COMPANY_ACCOUNT">Company Account</SelectItem>
+                <SelectItem value="EMPLOYEE_POCKET">Employee Own Pocket (Reimburse)</SelectItem>
                 <SelectItem value="EMPLOYEE_WALLET">Employee Wallet</SelectItem>
               </SelectContent>
             </Select>
+            <div className="text-xs text-muted-foreground">
+              {form.paymentSource === "EMPLOYEE_WALLET"
+                ? "Advance-funded expense. It will not be reimbursed again."
+                : form.paymentSource === "EMPLOYEE_POCKET"
+                ? "Own-pocket expense. It becomes payable after approval and then reimbursed."
+                : "Company-paid expense source."}
+            </div>
           </div>
 
           {form.paymentSource === "COMPANY_ACCOUNT" ? (

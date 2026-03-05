@@ -11,6 +11,7 @@ export const PERMISSIONS = {
     "expenses.view_all",
     "expenses.edit",
     "expenses.mark_paid",
+    "expenses.reopen_approved",
     "income.view_all",
     "income.add",
     "income.edit",

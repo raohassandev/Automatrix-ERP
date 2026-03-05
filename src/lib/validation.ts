@@ -6,7 +6,7 @@ export const expenseSchema = z.object({
   category: z.string().min(1),
   amount: z.number().positive(),
   paymentMode: z.string().min(1),
-  paymentSource: z.enum(["EMPLOYEE_WALLET", "COMPANY_DIRECT", "COMPANY_ACCOUNT"]).optional(),
+  paymentSource: z.enum(["EMPLOYEE_WALLET", "EMPLOYEE_POCKET", "COMPANY_DIRECT", "COMPANY_ACCOUNT"]).optional(),
   companyAccountId: z.string().min(1).optional(),
   expenseType: z.enum(["COMPANY", "OWNER_PERSONAL"]).optional(),
   project: z.string().min(1).optional(),

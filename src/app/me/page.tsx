@@ -6,6 +6,13 @@ import { formatMoney } from "@/lib/format";
 import Link from "next/link";
 import { MobileCard } from "@/components/MobileCard";
 
+function resolveExpenseAmount(expense: { status: string; amount: number | { toString(): string }; approvedAmount: number | { toString(): string } | null }) {
+  if ((expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED" || expense.status === "PAID") && expense.approvedAmount) {
+    return Number(expense.approvedAmount);
+  }
+  return Number(expense.amount);
+}
+
 export default async function MyDashboardPage() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -50,7 +57,7 @@ export default async function MyDashboardPage() {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg] = await Promise.all([
+  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg, pocketPayableAgg] = await Promise.all([
     prisma.projectAssignment.findMany({
       where: { userId: session.user.id },
       select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
@@ -74,6 +81,7 @@ export default async function MyDashboardPage() {
         amount: true,
         approvedAmount: true,
         status: true,
+        paymentSource: true,
         project: true,
       },
     }),
@@ -125,6 +133,14 @@ export default async function MyDashboardPage() {
       where: { employeeId: employee.id, type: "DEBIT", sourceType: { in: ["COMPANY_ADVANCE_ADJUSTMENT", "EXPENSE_SETTLEMENT"] } },
       _sum: { amount: true },
     }),
+    prisma.expense.aggregate({
+      where: {
+        submittedById: session.user.id,
+        paymentSource: "EMPLOYEE_POCKET",
+        status: { in: ["APPROVED", "PARTIALLY_APPROVED"] },
+      },
+      _sum: { approvedAmount: true, amount: true },
+    }),
   ]);
 
   const walletBalance = Number(employee.walletBalance || 0);
@@ -134,6 +150,7 @@ export default async function MyDashboardPage() {
   const advanceIssued = Number(advanceIssueAgg._sum.amount || 0);
   const advanceSettled = Number(advanceSettlementAgg._sum.amount || 0);
   const advanceOutstanding = Math.max(0, advanceIssued - advanceSettled);
+  const pocketPayable = Number(pocketPayableAgg._sum.approvedAmount || pocketPayableAgg._sum.amount || 0);
   const latestSalary = Number(payrollEntries[0]?.netPay || 0);
   const expenseStatusMap = new Map(expenseCounts.map((row) => [row.status, row._count._all]));
   const assignedProjects = assignments.map((a) => a.project);
@@ -167,7 +184,7 @@ export default async function MyDashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-6 shadow-sm">
           <div className="text-sm text-indigo-700">Pending Incentive (Payroll)</div>
           <div className="mt-2 text-xl font-semibold text-indigo-900">{formatMoney(pendingPayrollIncentive)}</div>
@@ -179,6 +196,10 @@ export default async function MyDashboardPage() {
         <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-6 shadow-sm">
           <div className="text-sm text-amber-700">Advance Outstanding</div>
           <div className="mt-2 text-xl font-semibold text-amber-900">{formatMoney(advanceOutstanding)}</div>
+        </div>
+        <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
+          <div className="text-sm text-rose-700">Own-Pocket Reimbursement Due</div>
+          <div className="mt-2 text-xl font-semibold text-rose-900">{formatMoney(pocketPayable)}</div>
         </div>
       </div>
 
@@ -217,7 +238,7 @@ export default async function MyDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {["PENDING_L1", "PENDING_L2", "PENDING_L3", "APPROVED"].map((status) => (
+        {["PENDING_L1", "PENDING_L2", "PENDING_L3", "PARTIALLY_APPROVED", "APPROVED", "PAID"].map((status) => (
           <div key={status} className="rounded-xl border bg-card p-6 shadow-sm">
             <div className="text-sm text-muted-foreground">{status.replace("_", " ")}</div>
             <div className="mt-2 text-xl font-semibold">
@@ -326,10 +347,7 @@ export default async function MyDashboardPage() {
               </thead>
               <tbody>
                 {expenses.map((exp) => {
-                  const usedAmount =
-                    exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount
-                      ? Number(exp.approvedAmount)
-                      : Number(exp.amount);
+                  const usedAmount = resolveExpenseAmount(exp);
                   return (
                     <tr key={exp.id} className="border-b">
                       <td className="py-2">{new Date(exp.date).toLocaleDateString()}</td>
@@ -345,10 +363,7 @@ export default async function MyDashboardPage() {
           </div>
           <div className="mt-4 space-y-3 md:hidden">
             {expenses.map((exp) => {
-              const usedAmount =
-                exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount
-                  ? Number(exp.approvedAmount)
-                  : Number(exp.amount);
+              const usedAmount = resolveExpenseAmount(exp);
               return (
                 <MobileCard
                   key={exp.id}

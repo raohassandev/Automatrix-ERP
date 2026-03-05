@@ -43,6 +43,7 @@ interface Expense {
   remarks?: string | null;
   project: string;
   amount: number;
+  approvedAmount?: number | null;
   status: string;
   paymentMode: string;
   paymentSource?: string | null;
@@ -78,6 +79,17 @@ function ExpensesPageContent() {
   const canCreate = canAccess(["expenses.submit"]);
   const canEditAny = canAccess(["expenses.edit"]);
   const canMarkPaid = canAccess(["expenses.mark_paid"]);
+  const canReopen = canAccess(["expenses.reopen_approved"]);
+  const effectiveAmount = (row: Expense) => {
+    if (
+      (row.status === "APPROVED" || row.status === "PARTIALLY_APPROVED" || row.status === "PAID") &&
+      row.approvedAmount !== null &&
+      row.approvedAmount !== undefined
+    ) {
+      return Number(row.approvedAmount);
+    }
+    return Number(row.amount || 0);
+  };
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "APPROVED":
@@ -108,17 +120,23 @@ function ExpensesPageContent() {
 
   const summary = expenses.reduce(
     (acc, row) => {
-      const amount = Number(row.amount || 0);
+      const amount = effectiveAmount(row);
       acc.total += amount;
       if (row.status.startsWith("PENDING")) acc.pending += amount;
-      if (row.status === "APPROVED") acc.approved += amount;
+      if (row.status === "APPROVED" || row.status === "PARTIALLY_APPROVED") acc.approved += amount;
       if (row.status === "PAID") acc.paid += amount;
       return acc;
     },
     { total: 0, pending: 0, approved: 0, paid: 0 },
   );
 
-  const selectableApproved = expenses.filter((row) => row.status === "APPROVED").map((row) => row.id);
+  const selectableApproved = expenses
+    .filter(
+      (row) =>
+        (row.status === "APPROVED" || row.status === "PARTIALLY_APPROVED") &&
+        row.paymentSource !== "EMPLOYEE_WALLET",
+    )
+    .map((row) => row.id);
   const allApprovedSelected =
     selectableApproved.length > 0 && selectableApproved.every((id) => selectedIds.has(id));
 
@@ -172,6 +190,7 @@ function ExpensesPageContent() {
                 { label: "Pending L2", value: "PENDING_L2" },
                 { label: "Pending L3", value: "PENDING_L3" },
                 { label: "Approved", value: "APPROVED" },
+                { label: "Partially Approved", value: "PARTIALLY_APPROVED" },
                 { label: "Rejected", value: "REJECTED" },
                 { label: "Paid", value: "PAID" },
               ]}
@@ -190,6 +209,7 @@ function ExpensesPageContent() {
               options={[
                 { label: "Company Direct", value: "COMPANY_DIRECT" },
                 { label: "Company Account", value: "COMPANY_ACCOUNT" },
+                { label: "Employee Own Pocket", value: "EMPLOYEE_POCKET" },
                 { label: "Employee Wallet", value: "EMPLOYEE_WALLET" },
               ]}
             />
@@ -232,7 +252,7 @@ function ExpensesPageContent() {
         {canMarkPaid ? (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 p-3">
             <div className="text-sm text-muted-foreground">
-              Selected approved expenses: {selectedIds.size}
+              Selected payable/approved expenses: {selectedIds.size}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -247,14 +267,14 @@ function ExpensesPageContent() {
                 }}
                 disabled={selectableApproved.length === 0}
               >
-                {allApprovedSelected ? "Clear Approved" : "Select All Approved"}
+                {allApprovedSelected ? "Clear Selected" : "Select All Eligible"}
               </Button>
               <Button
                 size="sm"
                 onClick={bulkMarkPaid}
                 disabled={bulkPending || selectedIds.size === 0}
               >
-                {bulkPending ? "Posting..." : "Bulk Mark Paid"}
+                {bulkPending ? "Posting..." : "Bulk Reimburse Paid"}
               </Button>
             </div>
           </div>
@@ -283,7 +303,12 @@ function ExpensesPageContent() {
                       <input
                         type="checkbox"
                         checked={selectedIds.has(expense.id)}
-                        disabled={expense.status !== "APPROVED"}
+                        disabled={
+                          !(
+                            (expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED") &&
+                            expense.paymentSource === "EMPLOYEE_POCKET"
+                          )
+                        }
                         onChange={(e) => {
                           setSelectedIds((prev) => {
                             const next = new Set(prev);
@@ -301,7 +326,7 @@ function ExpensesPageContent() {
                         {col.key === 'date'
                           ? new Date(expense.date).toLocaleDateString()
                           : col.key === 'amount'
-                          ? formatMoney(Number(expense.amount))
+                          ? formatMoney(effectiveAmount(expense))
                           : col.key === 'description'
                           ? expense.description
                           : col.key === 'category'
@@ -335,6 +360,7 @@ function ExpensesPageContent() {
                       canEditAny={canEditAny}
                       currentUserId={currentUserId}
                       canMarkPaid={canMarkPaid}
+                      canReopen={canReopen}
                     />
                   </td>
                 </tr>
@@ -365,7 +391,7 @@ function ExpensesPageContent() {
                 { label: "Project", value: expense.project || "-" },
                 { label: "Source", value: expense.paymentSource || "-" },
                 { label: "Account", value: expense.companyAccountName || "-" },
-                { label: "Amount", value: formatMoney(Number(expense.amount)) },
+                { label: "Amount", value: formatMoney(effectiveAmount(expense)) },
                 { label: "Status", value: `${expense.status}${expense.inventoryLedgerId ? " (LEGACY)" : ""}` },
                 { label: "Date", value: new Date(expense.date).toLocaleDateString() },
               ]}
@@ -375,6 +401,7 @@ function ExpensesPageContent() {
                   canEditAny={canEditAny}
                   currentUserId={currentUserId}
                   canMarkPaid={canMarkPaid}
+                  canReopen={canReopen}
                 />
               }
             />

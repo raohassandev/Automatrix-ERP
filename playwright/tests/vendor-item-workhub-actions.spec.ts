@@ -32,14 +32,16 @@ async function openActionsMenu(
 ) {
   const trigger = page.getByTestId("workhub-actions-button").first();
   await expect(trigger).toBeVisible();
-  for (let i = 0; i < 3; i += 1) {
+  // Staging build can need extra hydration time before click handlers bind.
+  await page.waitForTimeout(400);
+  for (let i = 0; i < 8; i += 1) {
     await trigger.click();
     const target = page.getByRole("menuitem", { name: expected }).first();
-    if (await target.isVisible().catch(() => false)) {
+    if (await target.isVisible({ timeout: 400 }).catch(() => false)) {
       return target;
     }
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(350);
   }
   return page.getByRole("menuitem", { name: expected }).first();
 }

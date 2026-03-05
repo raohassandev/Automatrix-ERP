@@ -93,7 +93,7 @@ export const expenseSchema = z.object({
   projectId: z.string().uuid('Invalid project ID').optional(),
   paymentMode: z.enum(['Cash', 'Bank Transfer', 'Credit Card', 'Other'])
     .default('Cash'),
-  paymentSource: z.enum(['EMPLOYEE_WALLET', 'COMPANY_DIRECT', 'COMPANY_ACCOUNT'])
+  paymentSource: z.enum(['EMPLOYEE_WALLET', 'EMPLOYEE_POCKET', 'COMPANY_DIRECT', 'COMPANY_ACCOUNT'])
     .default('COMPANY_DIRECT'),
   expenseType: z.enum(['COMPANY', 'OWNER_PERSONAL']).default('COMPANY'),
   inventoryItemId: z.string().uuid('Invalid inventory item').optional(),

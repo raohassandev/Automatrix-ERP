@@ -106,8 +106,9 @@ export default async function EmployeeExpenseReportPage({
   filtered.forEach((exp: ExpenseRow) => {
     const key = exp.submittedById || "unknown";
     const usedAmount =
-      exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount !== null
-        ? Number(exp.approvedAmount)
+      (exp.status === "APPROVED" || exp.status === "PARTIALLY_APPROVED" || exp.status === "PAID") &&
+      exp.approvedAmount !== null
+        ? exp.approvedAmount
         : Number(exp.amount);
     const entry = aggregated.get(key) || {
       name: exp.submittedBy?.name || "Unknown",

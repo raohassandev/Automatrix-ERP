@@ -32,11 +32,13 @@ export function ExpenseActions({
   canEditAny,
   currentUserId,
   canMarkPaid,
+  canReopen,
 }: {
   expense: Expense;
   canEditAny: boolean;
   currentUserId?: string | null;
   canMarkPaid?: boolean;
+  canReopen?: boolean;
 }) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
@@ -46,7 +48,14 @@ export function ExpenseActions({
   const isOwner = expense.submittedById && currentUserId && expense.submittedById === currentUserId;
   const canEdit = !isLegacyInventoryExpense && isPending && (canEditAny || isOwner);
   const canDelete = !isLegacyInventoryExpense && isPending && (canEditAny || isOwner);
-  const canSetPaid = Boolean(canMarkPaid) && expense.status === "APPROVED";
+  const canSetPaid =
+    Boolean(canMarkPaid) &&
+    (expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED") &&
+    expense.paymentSource !== "EMPLOYEE_WALLET";
+  const canReopenForEdit =
+    Boolean(canReopen) &&
+    (expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED") &&
+    expense.paymentSource === "EMPLOYEE_POCKET";
 
   async function markAsPaid() {
     setMarkingPaid(true);
@@ -67,12 +76,31 @@ export function ExpenseActions({
     }
   }
 
+  async function reopenForEdit() {
+    try {
+      const res = await fetch(`/api/expenses/${expense.id}/reopen`, { method: "PUT" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        throw new Error(data?.error || "Failed to reopen expense");
+      }
+      toast.success("Expense moved back to pending for correction");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to reopen expense");
+    }
+  }
+
   return (
     <>
       <div className="flex gap-2">
         {canSetPaid ? (
           <Button size="sm" variant="outline" onClick={markAsPaid} disabled={markingPaid}>
             {markingPaid ? "Posting..." : "Mark Paid"}
+          </Button>
+        ) : null}
+        {canReopenForEdit ? (
+          <Button size="sm" variant="outline" onClick={reopenForEdit}>
+            Reopen
           </Button>
         ) : null}
         {canEdit ? (

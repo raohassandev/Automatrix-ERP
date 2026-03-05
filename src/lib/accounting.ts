@@ -330,6 +330,8 @@ export async function postExpenseApprovalJournal(
   let creditCode: string = GL_CODES.CASH_ON_HAND;
   if (source === "EMPLOYEE_WALLET") {
     creditCode = GL_CODES.WALLET_CLEARING;
+  } else if (source === "EMPLOYEE_POCKET") {
+    creditCode = GL_CODES.PAYROLL_PAYABLE;
   } else if (input.companyAccountId) {
     creditCode = await resolveCompanyAccountCashCode(tx, input.companyAccountId);
   }
@@ -346,6 +348,43 @@ export async function postExpenseApprovalJournal(
     lines: [
       { glCode: GL_CODES.OPERATING_EXPENSE, debit: amount, projectId },
       { glCode: creditCode, credit: amount, projectId },
+    ],
+  });
+}
+
+export async function postExpenseReimbursementPaymentJournal(
+  tx: Tx,
+  input: {
+    expenseId: string;
+    amount: number;
+    paymentDate: Date;
+    companyAccountId?: string | null;
+    projectRef?: string | null;
+    userId?: string | null;
+    memo?: string | null;
+  },
+) {
+  const amount = round2(Number(input.amount || 0));
+  if (amount <= 0) {
+    throw new Error("Reimbursement payment amount must be greater than zero.");
+  }
+  const projectId = await resolveProjectDbId(tx, input.projectRef);
+  const cashCode = input.companyAccountId
+    ? await resolveCompanyAccountCashCode(tx, input.companyAccountId)
+    : GL_CODES.CASH_ON_HAND;
+
+  return createPostedJournal(tx, {
+    sourceType: "EXPENSE_REIMBURSEMENT_PAYMENT",
+    sourceId: input.expenseId,
+    documentDate: input.paymentDate,
+    postingDate: input.paymentDate,
+    createdById: input.userId || null,
+    postedById: input.userId || null,
+    voucherPrefix: "ERP",
+    memo: input.memo || "Expense reimbursement payment posting",
+    lines: [
+      { glCode: GL_CODES.PAYROLL_PAYABLE, debit: amount, projectId },
+      { glCode: cashCode, credit: amount, projectId },
     ],
   });
 }

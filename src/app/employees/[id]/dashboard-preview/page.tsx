@@ -5,6 +5,13 @@ import { redirect } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import Link from "next/link";
 
+function resolveExpenseAmount(expense: { status: string; amount: number | { toString(): string }; approvedAmount: number | { toString(): string } | null }) {
+  if ((expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED" || expense.status === "PAID") && expense.approvedAmount) {
+    return Number(expense.approvedAmount);
+  }
+  return Number(expense.amount);
+}
+
 export default async function EmployeeDashboardPreviewPage({
   params,
 }: {
@@ -112,7 +119,7 @@ export default async function EmployeeDashboardPreviewPage({
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        {["PENDING_L1", "PENDING_L2", "PENDING_L3", "APPROVED"].map((status) => (
+        {["PENDING_L1", "PENDING_L2", "PENDING_L3", "PARTIALLY_APPROVED", "APPROVED", "PAID"].map((status) => (
           <div key={status} className="rounded-xl border bg-card p-6 shadow-sm">
             <div className="text-sm text-muted-foreground">{status.replace("_", " ")}</div>
             <div className="mt-2 text-xl font-semibold">{expenseStatusMap.get(status) || 0}</div>
@@ -184,10 +191,7 @@ export default async function EmployeeDashboardPreviewPage({
               </thead>
               <tbody>
                 {expenses.map((exp) => {
-                  const usedAmount =
-                    exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount
-                      ? Number(exp.approvedAmount)
-                      : Number(exp.amount);
+                  const usedAmount = resolveExpenseAmount(exp);
                   return (
                     <tr key={exp.id} className="border-b">
                       <td className="py-2">{new Date(exp.date).toLocaleDateString()}</td>
@@ -206,4 +210,3 @@ export default async function EmployeeDashboardPreviewPage({
     </div>
   );
 }
-

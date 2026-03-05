@@ -344,9 +344,17 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
                 <SelectContent>
                   <SelectItem value="COMPANY_DIRECT">Company Direct</SelectItem>
                   <SelectItem value="COMPANY_ACCOUNT">Company Account</SelectItem>
+                  <SelectItem value="EMPLOYEE_POCKET">Employee Own Pocket (Reimburse)</SelectItem>
                   <SelectItem value="EMPLOYEE_WALLET">Employee Wallet</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="text-xs text-muted-foreground">
+                {form.paymentSource === "EMPLOYEE_WALLET"
+                  ? "Use when expense is covered from already issued advance. It will not be reimbursed again."
+                  : form.paymentSource === "EMPLOYEE_POCKET"
+                  ? "Use when employee paid personally. It will become payable after approval and needs reimbursement settlement."
+                  : "Use company-paid sources when company has already paid directly."}
+              </div>
             </div>
 
             {form.paymentSource === "COMPANY_ACCOUNT" ? (

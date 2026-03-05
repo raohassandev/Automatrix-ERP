@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { logAudit } from '@/lib/audit';
 import { requirePermission } from '@/lib/rbac';
-import { postExpenseApprovalJournal } from '@/lib/accounting';
+import { postExpenseReimbursementPaymentJournal } from '@/lib/accounting';
 
 export async function PUT(
   request: NextRequest,
@@ -28,9 +28,15 @@ export async function PUT(
     return NextResponse.json({ success: false, error: 'Expense not found' }, { status: 404 });
   }
 
-  if (expense.status !== 'APPROVED') {
+  if (!["APPROVED", "PARTIALLY_APPROVED"].includes(expense.status)) {
     return NextResponse.json(
       { success: false, error: `Cannot mark as paid expense with status: ${expense.status}` },
+      { status: 400 }
+    );
+  }
+  if (expense.paymentSource === "EMPLOYEE_WALLET") {
+    return NextResponse.json(
+      { success: false, error: "Advance-funded wallet expenses are already settled and cannot be paid again." },
       { status: 400 }
     );
   }
@@ -41,16 +47,17 @@ export async function PUT(
       data: { status: 'PAID' },
     });
 
-    await postExpenseApprovalJournal(tx, {
-      expenseId: updated.id,
-      amount: Number(updated.approvedAmount || updated.amount),
-      expenseDate: updated.date,
-      paymentSource: updated.paymentSource,
-      companyAccountId: updated.companyAccountId,
-      projectRef: updated.project,
-      userId: session.user.id,
-      memo: 'Expense mark-as-paid posting',
-    });
+    if (updated.paymentSource === "EMPLOYEE_POCKET") {
+      await postExpenseReimbursementPaymentJournal(tx, {
+        expenseId: updated.id,
+        amount: Number(updated.approvedAmount || updated.amount),
+        paymentDate: new Date(),
+        companyAccountId: updated.companyAccountId,
+        projectRef: updated.project,
+        userId: session.user.id,
+        memo: 'Expense reimbursement payment posting',
+      });
+    }
 
     return updated;
   });
@@ -60,7 +67,7 @@ export async function PUT(
     entity: 'Expense',
     entityId: updatedExpense.id,
     field: 'status',
-    oldValue: 'APPROVED',
+    oldValue: expense.status,
     newValue: 'PAID',
     userId: session.user.id,
   });

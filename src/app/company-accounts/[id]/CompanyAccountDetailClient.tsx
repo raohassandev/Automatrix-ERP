@@ -106,12 +106,12 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
                 size="sm"
                 data-testid="workhub-actions-button"
                 aria-expanded={actionsOpen}
-                onClick={() => setActionsOpen((prev) => !prev)}
+                onClick={() => setActionsOpen(true)}
               >
                 Actions
               </Button>
               {actionsOpen ? (
-                <div className="absolute right-0 z-40 mt-2 min-w-[220px] rounded-md border border-border bg-popover p-1 shadow-md">
+                <div role="menu" className="absolute right-0 z-40 mt-2 min-w-[240px] rounded-md border border-border bg-popover p-1 shadow-md">
                   {workhub.actions.record_vendor_payment ? (
                     <button
                       type="button"

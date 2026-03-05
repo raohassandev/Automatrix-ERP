@@ -114,11 +114,17 @@ export async function approveExpense(params: {
 
   // Start transaction
   const result = await prisma.$transaction(async (tx) => {
+    const isEmployeePocket = expense.paymentSource === "EMPLOYEE_POCKET";
+    const targetStatus =
+      isEmployeePocket
+        ? (finalAmount < Number(expense.amount) ? "PARTIALLY_APPROVED" : "APPROVED")
+        : "PAID";
+
     // Update expense status
     const updatedExpense = await tx.expense.update({
       where: { id: expenseId },
       data: {
-        status: finalAmount < Number(expense.amount) ? 'PARTIALLY_APPROVED' : 'APPROVED',
+        status: targetStatus,
         approvedById: approverId,
         approvedAmount: new Prisma.Decimal(finalAmount),
       },
@@ -194,7 +200,7 @@ export async function approveExpense(params: {
       entityId: expenseId,
       userId: approverId,
       changes: {
-        status: { from: 'PENDING', to: 'APPROVED' },
+        status: { from: expense.status, to: targetStatus },
         approvedAmount: finalAmount,
         walletDeduction: expense.paymentSource === 'EMPLOYEE_WALLET' ? finalAmount : 0,
         newWalletBalance: newBalance ?? undefined,
@@ -206,7 +212,12 @@ export async function approveExpense(params: {
       data: {
         userId: expense.submittedById,
         type: 'SUCCESS',
-        message: `Your expense of PKR  ${finalAmount} has been approved${expense.paymentSource === 'EMPLOYEE_WALLET' ? ' and deducted from your wallet' : ''}.`,
+        message:
+          expense.paymentSource === "EMPLOYEE_WALLET"
+            ? `Your expense of PKR ${finalAmount} is approved and settled from your advance wallet.`
+            : expense.paymentSource === "EMPLOYEE_POCKET"
+            ? `Your expense of PKR ${finalAmount} is approved and pending company reimbursement.`
+            : `Your expense of PKR ${finalAmount} is approved and marked paid.`,
         status: 'UNREAD',
       },
     });

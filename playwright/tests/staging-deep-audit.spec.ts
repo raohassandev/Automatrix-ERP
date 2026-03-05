@@ -131,7 +131,7 @@ test.describe("Staging Deep Audit", () => {
     await storeCtx.close();
   });
 
-  test("Cross-module entry effect: Expense -> Approval -> Paid -> Journal", async ({ baseURL }) => {
+  test("Cross-module entry effect: Expense (own-pocket) -> Approval -> Reimbursement Paid -> Journal", async ({ baseURL }) => {
     const financeApi = await request.newContext({ baseURL, storageState: states.finance, ignoreHTTPSErrors: true });
     const engineerApi = await request.newContext({ baseURL, storageState: states.engineer, ignoreHTTPSErrors: true });
 
@@ -172,7 +172,7 @@ test.describe("Staging Deep Audit", () => {
         category,
         amount,
         paymentMode: "Cash",
-        paymentSource: "COMPANY_DIRECT",
+        paymentSource: "EMPLOYEE_POCKET",
         project: project.id,
         receiptUrl: "https://example.com/staging-audit-receipt.pdf",
         remarks: "staging deep audit",
@@ -194,6 +194,13 @@ test.describe("Staging Deep Audit", () => {
       data: { expenseId, action: "APPROVE", approvedAmount: amount },
     });
     expect(approveRes.ok()).toBeTruthy();
+
+    // Own-pocket expense stays payable until reimbursement settlement.
+    const approvedExpenseRes = await financeApi.get(`/api/expenses?search=${expenseId}`);
+    expect(approvedExpenseRes.ok()).toBeTruthy();
+    const approvedExpenseJson = await approvedExpenseRes.json();
+    const approvedExpense = (approvedExpenseJson?.data?.expenses || []).find((e: { id?: string }) => e.id === expenseId);
+    expect(approvedExpense?.status).toBe("APPROVED");
 
     const markPaidRes = await financeApi.put(`/api/expenses/${expenseId}/mark-as-paid`);
     expect(markPaidRes.ok()).toBeTruthy();

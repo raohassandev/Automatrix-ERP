@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
-import { postExpenseApprovalJournal } from "@/lib/accounting";
+import { postExpenseReimbursementPaymentJournal } from "@/lib/accounting";
 
 const bulkSchema = z.object({
   expenseIds: z.array(z.string().min(1)).min(1).max(200),
@@ -57,8 +57,12 @@ export async function PUT(req: Request) {
       results.skipped.push({ id, reason: "Expense not found" });
       continue;
     }
-    if (expense.status !== "APPROVED") {
+    if (!["APPROVED", "PARTIALLY_APPROVED"].includes(expense.status)) {
       results.skipped.push({ id, reason: `Invalid status: ${expense.status}` });
+      continue;
+    }
+    if (expense.paymentSource === "EMPLOYEE_WALLET") {
+      results.skipped.push({ id, reason: "Advance-funded wallet expense is already settled." });
       continue;
     }
 
@@ -67,16 +71,17 @@ export async function PUT(req: Request) {
         where: { id: expense.id },
         data: { status: "PAID" },
       });
-      await postExpenseApprovalJournal(tx, {
-        expenseId: updated.id,
-        amount: Number(updated.approvedAmount || updated.amount),
-        expenseDate: updated.date,
-        paymentSource: updated.paymentSource,
-        companyAccountId: updated.companyAccountId,
-        projectRef: updated.project,
-        userId: session.user.id,
-        memo: "Expense bulk mark-as-paid posting",
-      });
+      if (updated.paymentSource === "EMPLOYEE_POCKET") {
+        await postExpenseReimbursementPaymentJournal(tx, {
+          expenseId: updated.id,
+          amount: Number(updated.approvedAmount || updated.amount),
+          paymentDate: new Date(),
+          companyAccountId: updated.companyAccountId,
+          projectRef: updated.project,
+          userId: session.user.id,
+          memo: "Expense bulk reimbursement payment posting",
+        });
+      }
     });
 
     await logAudit({
@@ -84,7 +89,7 @@ export async function PUT(req: Request) {
       entity: "Expense",
       entityId: expense.id,
       field: "status",
-      oldValue: "APPROVED",
+      oldValue: expense.status,
       newValue: "PAID",
       userId: session.user.id,
     });

@@ -31,7 +31,7 @@ export default function ExpenseForm() {
     category: "",
     amount: "",
     paymentMode: "",
-    paymentSource: "COMPANY_DIRECT" as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
+    paymentSource: "COMPANY_DIRECT" as "EMPLOYEE_WALLET" | "EMPLOYEE_POCKET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT",
     companyAccountId: "",
     expenseType: "COMPANY" as "COMPANY" | "OWNER_PERSONAL",
     project: "",
@@ -261,10 +261,11 @@ export default function ExpenseForm() {
         <select
           className="rounded-md border px-3 py-2"
           value={form.paymentSource}
-          onChange={(e) => setForm({ ...form, paymentSource: e.target.value as "EMPLOYEE_WALLET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT" })}
+          onChange={(e) => setForm({ ...form, paymentSource: e.target.value as "EMPLOYEE_WALLET" | "EMPLOYEE_POCKET" | "COMPANY_DIRECT" | "COMPANY_ACCOUNT" })}
         >
           <option value="COMPANY_DIRECT">Company Paid (Direct)</option>
           <option value="COMPANY_ACCOUNT">Company Paid (Account)</option>
+          <option value="EMPLOYEE_POCKET">Employee Own Pocket (Reimburse)</option>
           <option value="EMPLOYEE_WALLET">Employee Wallet</option>
         </select>
         {form.paymentSource === "COMPANY_ACCOUNT" ? (

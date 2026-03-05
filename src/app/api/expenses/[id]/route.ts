@@ -144,6 +144,30 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   } else if (parsed.data.companyAccountId !== undefined || parsed.data.paymentSource !== undefined) {
     data.companyAccountId = null;
   }
+  if (nextPaymentSource === "EMPLOYEE_POCKET") {
+    const submitter = await prisma.user.findUnique({
+      where: { id: expense.submittedById },
+      select: { email: true },
+    });
+    if (submitter?.email) {
+      const employee = await prisma.employee.findUnique({
+        where: { email: submitter.email },
+        select: { walletBalance: true, walletHold: true },
+      });
+      if (employee) {
+        const availableAdvance = Number(employee.walletBalance) - Number(employee.walletHold || 0);
+        if (availableAdvance > 0) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Employee still has company advance available (PKR ${availableAdvance.toLocaleString()}). Keep this as Employee Wallet or settle advance first.`,
+            },
+            { status: 400 },
+          );
+        }
+      }
+    }
+  }
   const nextProject =
     parsed.data.project !== undefined
       ? parsed.data.project

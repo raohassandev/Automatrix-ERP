@@ -355,13 +355,14 @@ export async function POST(req: Request) {
     let approvedById: string | null = null;
     let approvedAmount: number | null = null;
 
-    // Check if payment source is EMPLOYEE_WALLET
+    // Payment source governs accounting and payout lifecycle.
     const paymentSource = sanitizedData.paymentSource || 'COMPANY_DIRECT';
     let resolvedCompanyAccountId: string | null = null;
 
-    // Owner personal expenses auto-approve and cannot use employee wallet
+    // Owner personal expenses auto-approve and cannot use employee wallet.
+    // If employee paid from own pocket, keep as APPROVED (payable) until reimbursement.
     if (expenseType === 'OWNER_PERSONAL') {
-      status = 'APPROVED';
+      status = paymentSource === "EMPLOYEE_POCKET" ? "APPROVED" : "PAID";
       approvedById = session.user.id;
       approvedAmount = sanitizedData.amount;
       if (paymentSource === 'EMPLOYEE_WALLET') {
@@ -391,14 +392,15 @@ export async function POST(req: Request) {
       }
       resolvedCompanyAccountId = account.id;
     }
+    const requiresEmployeeWalletContext =
+      paymentSource === "EMPLOYEE_WALLET" || paymentSource === "EMPLOYEE_POCKET";
     let employeeRecord: {
       id: string;
       walletBalance: Prisma.Decimal;
       walletHold: Prisma.Decimal;
     } | null = null;
-
-    if (paymentSource === 'EMPLOYEE_WALLET') {
-      // Validate that user has an employee record and sufficient wallet balance
+    let availableAdvance = 0;
+    if (requiresEmployeeWalletContext) {
       const user = await prisma.user.findUnique({
         where: { id: session.user.id },
         select: { email: true },
@@ -408,30 +410,39 @@ export async function POST(req: Request) {
         return NextResponse.json({ success: false, error: 'User not found' }, { status: 400 });
       }
 
-      const employee = await prisma.employee.findUnique({
+      employeeRecord = await prisma.employee.findUnique({
         where: { email: user.email },
         select: { id: true, walletBalance: true, walletHold: true },
       });
 
-      if (!employee) {
+      if (!employeeRecord) {
         return NextResponse.json(
-          { success: false, error: 'Employee record not found. Cannot use wallet payment.' },
+          { success: false, error: 'Employee record not found. Cannot use this payment source.' },
           { status: 400 },
         );
       }
+      availableAdvance = Number(employeeRecord.walletBalance) - Number(employeeRecord.walletHold || 0);
+    }
 
-      const available = Number(employee.walletBalance) - Number(employee.walletHold || 0);
-      if (available < sanitizedData.amount) {
+    if (paymentSource === 'EMPLOYEE_WALLET') {
+      if (availableAdvance < sanitizedData.amount) {
         return NextResponse.json(
           {
             success: false,
-            error: `Insufficient available wallet balance. Available: ${available}, Required: ${sanitizedData.amount}`,
+            error: `Insufficient available wallet balance. Available: ${availableAdvance}, Required: ${sanitizedData.amount}`,
           },
           { status: 400 },
         );
       }
-
-      employeeRecord = employee;
+    }
+    if (paymentSource === "EMPLOYEE_POCKET" && availableAdvance > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `You still have company advance available (PKR ${availableAdvance.toLocaleString()}). Use Employee Wallet for advance-funded spending or settle/clear advance first.`,
+        },
+        { status: 400 },
+      );
     }
 
     // Create expense and deduct from wallet in a transaction
@@ -443,7 +454,7 @@ export async function POST(req: Request) {
           category: sanitizedData.category,
           amount: new Prisma.Decimal(sanitizedData.amount),
           paymentMode: sanitizedData.paymentMode,
-          paymentSource: paymentSource as 'EMPLOYEE_WALLET' | 'COMPANY_DIRECT' | 'COMPANY_ACCOUNT',
+          paymentSource: paymentSource as 'EMPLOYEE_WALLET' | 'EMPLOYEE_POCKET' | 'COMPANY_DIRECT' | 'COMPANY_ACCOUNT',
           companyAccountId: resolvedCompanyAccountId || undefined,
           expenseType,
           project: resolvedProjectRef,
@@ -499,7 +510,12 @@ export async function POST(req: Request) {
     await createNotification({
       userId: session.user.id,
       type: 'EXPENSE_SUBMITTED',
-      message: `Expense submitted for ${sanitizedData.amount}${paymentSource === 'EMPLOYEE_WALLET' ? ' (paid from wallet)' : ''}.`,
+      message:
+        paymentSource === "EMPLOYEE_WALLET"
+          ? `Expense submitted for ${sanitizedData.amount} (from issued advance wallet).`
+          : paymentSource === "EMPLOYEE_POCKET"
+          ? `Expense submitted for ${sanitizedData.amount} (employee own pocket, reimbursement required after approval).`
+          : `Expense submitted for ${sanitizedData.amount}.`,
     });
 
     if (sanitizedData.categoryRequest) {
