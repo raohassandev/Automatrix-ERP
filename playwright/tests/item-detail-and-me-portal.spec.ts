@@ -129,7 +129,7 @@ test.describe.serial("Item Detail + My Portal (RBAC + mobile)", () => {
       await page.goto("/me");
       await expect(page.getByRole("heading", { name: "My Dashboard" }).first()).toBeVisible();
       await page.goto(`/employees/${employeeId}`);
-      await expect(page.getByRole("main").getByText(/do not have access/i).first()).toBeVisible();
+      await expect(page.getByRole("main").getByText(/do not have access|forbidden|access denied/i).first()).toBeVisible();
       await ctx.close();
     }
   });

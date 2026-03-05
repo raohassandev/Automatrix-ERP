@@ -26,6 +26,24 @@ async function ensureStorageState(
   await ctx.close();
 }
 
+async function openActionsMenu(
+  page: import("@playwright/test").Page,
+  expected: RegExp,
+) {
+  const trigger = page.getByTestId("workhub-actions-button").first();
+  await expect(trigger).toBeVisible();
+  for (let i = 0; i < 3; i += 1) {
+    await trigger.click();
+    const target = page.getByRole("menuitem", { name: expected }).first();
+    if (await target.isVisible().catch(() => false)) {
+      return target;
+    }
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(200);
+  }
+  return page.getByRole("menuitem", { name: expected }).first();
+}
+
 test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   let vendorDbId = "";
   let vendorName = "";
@@ -149,9 +167,8 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
-      await expect(page.getByTestId("workhub-actions-button").first()).toBeVisible();
-      await page.getByTestId("workhub-actions-button").first().click();
-      await expect(page.getByRole("menuitem", { name: "Record Vendor Payment" }).first()).toBeVisible();
+      const vendorPaymentAction = await openActionsMenu(page, /Record Vendor Payment/i);
+      await expect(vendorPaymentAction).toBeVisible();
       await ctx.close();
     }
 
@@ -177,8 +194,8 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ ...devices["iPhone 13"], baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
-      await page.getByTestId("workhub-actions-button").first().click();
-      await expect(page.getByRole("menuitem", { name: "Add Account Note" }).first()).toBeVisible();
+      const noteAction = await openActionsMenu(page, /Add Account Note/i);
+      await expect(noteAction).toBeVisible();
       await expect(page.getByText("Section")).toBeVisible();
       await ctx.close();
     }

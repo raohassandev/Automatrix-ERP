@@ -125,9 +125,9 @@ test.describe("Staging Deep Audit", () => {
     const storeCtx = await browser.newContext({ baseURL, storageState: states.store, ignoreHTTPSErrors: true });
     const storePage = await storeCtx.newPage();
     await storePage.goto("/audit", { waitUntil: "networkidle" });
-    await expect(storePage.locator("body")).toContainText(/do not have access|forbidden/i);
+    await expect(storePage.locator("body")).toContainText(/do not have access|forbidden|access denied/i);
     await storePage.goto(`/employees/${employeeId}`, { waitUntil: "networkidle" });
-    await expect(storePage.locator("body")).toContainText(/do not have access|forbidden/i);
+    await expect(storePage.locator("body")).toContainText(/do not have access|forbidden|access denied/i);
     await storeCtx.close();
   });
 

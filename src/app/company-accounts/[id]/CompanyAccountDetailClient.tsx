@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatMoney } from "@/lib/format";
 import type { CompanyAccountDetailData, CompanyAccountDetailTab } from "@/lib/company-account-detail-policy";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/FormDialog";
 import { Input } from "@/components/ui/input";
@@ -36,6 +35,7 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
   const [paymentOpen, setPaymentOpen] = React.useState(false);
   const [noteOpen, setNoteOpen] = React.useState(false);
   const [attachmentOpen, setAttachmentOpen] = React.useState(false);
+  const [actionsOpen, setActionsOpen] = React.useState(false);
 
   const [note, setNote] = React.useState("");
   const [attachment, setAttachment] = React.useState({ fileName: "", url: "", mimeType: "", sizeBytes: "" });
@@ -100,25 +100,59 @@ export function CompanyAccountDetailClient({ detail }: { detail: CompanyAccountD
           </div>
 
           {anyActions ? (
-            <div className="md:ml-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" data-testid="workhub-actions-button">
-                    Actions
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+            <div className="relative md:ml-4">
+              <Button
+                variant="outline"
+                size="sm"
+                data-testid="workhub-actions-button"
+                aria-expanded={actionsOpen}
+                onClick={() => setActionsOpen((prev) => !prev)}
+              >
+                Actions
+              </Button>
+              {actionsOpen ? (
+                <div className="absolute right-0 z-40 mt-2 min-w-[220px] rounded-md border border-border bg-popover p-1 shadow-md">
                   {workhub.actions.record_vendor_payment ? (
-                    <DropdownMenuItem onSelect={() => setPaymentOpen(true)}>Record Vendor Payment</DropdownMenuItem>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent"
+                      onClick={() => {
+                        setActionsOpen(false);
+                        setPaymentOpen(true);
+                      }}
+                    >
+                      Record Vendor Payment
+                    </button>
                   ) : null}
                   {workhub.actions.add_note ? (
-                    <DropdownMenuItem onSelect={() => setNoteOpen(true)}>Add Account Note</DropdownMenuItem>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent"
+                      onClick={() => {
+                        setActionsOpen(false);
+                        setNoteOpen(true);
+                      }}
+                    >
+                      Add Account Note
+                    </button>
                   ) : null}
                   {workhub.actions.add_attachment ? (
-                    <DropdownMenuItem onSelect={() => setAttachmentOpen(true)}>Add Account Attachment (URL)</DropdownMenuItem>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="block w-full rounded px-3 py-2 text-left text-sm hover:bg-accent"
+                      onClick={() => {
+                        setActionsOpen(false);
+                        setAttachmentOpen(true);
+                      }}
+                    >
+                      Add Account Attachment (URL)
+                    </button>
                   ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

@@ -71,9 +71,9 @@ export function InventoryTable({
   };
 
   return (
-    <div className="rounded-xl border bg-card p-6 shadow-sm">
-      <div className="hidden md:block overflow-x-auto">
-        <table className="w-full text-sm">
+    <div className="rounded-xl border bg-card p-6 shadow-sm overflow-x-hidden">
+      <div className="hidden md:block w-full max-w-full overflow-x-auto">
+        <table className="w-full table-fixed text-sm">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
               <th className="py-2">Item</th>
@@ -93,13 +93,13 @@ export function InventoryTable({
               const tone = getStockTone(item);
               return (
               <tr key={item.id} className="border-b">
-                <td className="py-2">
+                <td className="py-2 break-words">
                   <Link className="underline underline-offset-2" href={`/inventory/items/${item.id}`}>
                     {item.name}
                   </Link>
                 </td>
-                <td className="py-2">{item.sku || "-"}</td>
-                <td className="py-2">{item.category}</td>
+                <td className="py-2 break-words">{item.sku || "-"}</td>
+                <td className="py-2 break-words">{item.category}</td>
                 <td className="py-2 font-medium">{Number(item.quantity)}</td>
                 {canViewCost ? (
                   <td className="py-2">
@@ -130,7 +130,7 @@ export function InventoryTable({
                 ) : null}
                 {showActionsColumn ? (
                   <td className="py-2">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       {canMoveStock ? (
                         <Button
                           size="sm"

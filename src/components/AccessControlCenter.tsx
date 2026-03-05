@@ -415,11 +415,8 @@ export default function AccessControlCenter() {
 
       <CardContent>
         {tab === "roles" && (
-          <div className="overflow-x-auto">
-            <div
-              className="grid min-w-[980px] items-start gap-4"
-              style={{ gridTemplateColumns: "300px minmax(0, 1fr)" }}
-            >
+          <div className="min-w-0">
+            <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
             <div className="sticky top-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b px-3 py-3">
                 <div className="mb-2 text-sm font-semibold text-slate-800">Roles</div>
@@ -481,7 +478,7 @@ export default function AccessControlCenter() {
               </div>
 
               <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
-                <div className="sticky top-0 z-10 grid grid-cols-[1fr,auto] border-b bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <div className="sticky top-0 z-10 grid gap-2 border-b bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid-cols-[minmax(0,1fr)_auto]">
                   <div>Permission</div>
                   <div>Access</div>
                 </div>
@@ -492,7 +489,7 @@ export default function AccessControlCenter() {
                     const mode = getRoleMode(row, roleDraft);
                     const selfEnabled = row.supportsSelf;
                     return (
-                      <div key={row.key} className="grid grid-cols-[1fr,auto] gap-3 border-b px-4 py-3">
+                      <div key={row.key} className="grid gap-3 border-b px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto]">
                         <div>
                           <div className="font-medium text-slate-800">{permissionActionLabel(row.key)}</div>
                           <div className="text-xs text-slate-500">{row.key}</div>

@@ -30,7 +30,7 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 overflow-x-hidden">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Settings</h1>
         <p className="mt-2 text-muted-foreground">
