@@ -28,7 +28,8 @@ This file is the running action list for closure, hardening, and go-live readine
 - [ ] Role data drift check:
   - [x] Re-save/sync role templates on staging.  
     Evidence (2026-03-07): executed `POST /api/access-control/roles/sync` on `https://erp-staging.automatrix.pk`, response `changedCount: 14`.
-  - [ ] Confirm effective permissions match expected defaults for all active users.
+  - [x] Confirm effective permissions match expected defaults for all active users.  
+    Evidence (2026-03-07): `pnpm verify:staging:effective-permissions` -> `noOverrideMismatchCount: 0` across 17 active users.
 
 ## 3) Expense & Reimbursement Hardening (Current pass follow-up)
 

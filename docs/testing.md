@@ -142,6 +142,16 @@ Critical staging gate:
 pnpm test:staging:critical
 ```
 
+Critical staging gate (faster parallel mode for long-pass local batches):
+```bash
+pnpm test:staging:critical:fast
+```
+
+Effective-permission parity verification (all active users):
+```bash
+pnpm verify:staging:effective-permissions
+```
+
 Full staging regression:
 ```bash
 pnpm test:staging:full
@@ -150,6 +160,6 @@ pnpm test:staging:full
 Recommended cadence:
 1. Implement 4-8 related fixes locally.
 2. Run `pnpm typecheck` and `pnpm lint` on touched files.
-3. Run `pnpm test:staging:critical`.
+3. Run `pnpm test:staging:critical:fast` during active development, then `pnpm test:staging:critical` before final push.
 4. Push once.
 5. Run `pnpm test:staging:full` only for release-candidate batches.

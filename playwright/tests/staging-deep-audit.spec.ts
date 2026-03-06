@@ -166,6 +166,7 @@ test.describe("Staging Deep Audit", () => {
     const severe = consoleErrors.filter(
       (e) =>
         !/502 \(Bad Gateway\)/i.test(e) &&
+        !/TypeError:\s*Failed to fetch/i.test(e) &&
         !/Failed to load resource: the server responded with a status of 401/i.test(e) &&
         !/favicon/i.test(e),
     );

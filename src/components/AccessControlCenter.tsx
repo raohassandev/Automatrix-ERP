@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -206,7 +206,7 @@ export default function AccessControlCenter() {
     );
   }, [activeRoleGroup, roleSearch]);
 
-  const loadRoleTemplates = async () => {
+  const loadRoleTemplates = useCallback(async () => {
     const res = await fetch("/api/access-control/roles", { cache: "no-store" });
     const data = await res.json();
     if (!res.ok) {
@@ -225,9 +225,9 @@ export default function AccessControlCenter() {
 
     const roleForDraft = (data.roles || []).find((role: RoleTemplate) => role.id === nextRoleId);
     setRoleDraft(new Set(roleForDraft?.permissionKeys || []));
-  };
+  }, [selectedModule, selectedRoleId]);
 
-  const loadUserOverrides = async (userId?: string) => {
+  const loadUserOverrides = useCallback(async (userId?: string) => {
     const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
     const res = await fetch(`/api/access-control/user-overrides${query}`, { cache: "no-store" });
     const data = await res.json();
@@ -258,9 +258,9 @@ export default function AccessControlCenter() {
       draft[override.permissionKey] = override.effect;
     }
     setUserOverrideDraft(draft);
-  };
+  }, [selectedUserId]);
 
-  const loadApprovalRoutes = async () => {
+  const loadApprovalRoutes = useCallback(async () => {
     const res = await fetch("/api/access-control/approval-routes", { cache: "no-store" });
     const data = await res.json();
     if (!res.ok) {
@@ -268,7 +268,7 @@ export default function AccessControlCenter() {
     }
     setApprovalRoles(data.roles || []);
     setApprovalModules(data.approvalRoutes || []);
-  };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -289,7 +289,7 @@ export default function AccessControlCenter() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [loadApprovalRoutes, loadRoleTemplates, loadUserOverrides]);
 
   const openRoleDialog = (role: RoleTemplate) => {
     setSelectedRoleId(role.id);
