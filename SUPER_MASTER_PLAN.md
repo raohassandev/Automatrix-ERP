@@ -460,6 +460,8 @@ Snapshot note:
 - Fast-track closure batch 2 completed for implemented modules: payroll control panel hardened (pending/settled payroll incentives + open salary advances KPIs), payroll quick links added for operator flow, dark-theme KPI contrast normalized, and Playwright staging role/mobile/payroll regression revalidated.
 - Fast-track closure batch 3 completed for implemented modules: project/item/workhub RBAC staging specs hardened for hydration timing, staging deep-audit login/502 resilience improved, and mistaken-approval reopen control validated with permission-gated workflow.
 - Fast-track closure batch 4 completed for implemented modules: advance-vs-own-pocket guard and wallet double-pay prevention were validated in staging deep audit with balance-restore safety handling for test operations.
+- Fast-track closure batch 5 completed for implemented modules: async `searchParams` runtime fixes were applied across finance/operations pages (audit, journals, employees, HRMS, payroll, procurement, inventory ledger), removing Next.js 16 route-runtime regressions.
+- Fast-track closure batch 6 completed for implemented modules: staging-safe role/mobile/finance/project/payroll/procurement/inventory audits were rerun and passed; auth helper retries were hardened for transient staging sign-in/session issues.
 - Remaining depth now continues under modules `19` and `20`.
 
 ### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05

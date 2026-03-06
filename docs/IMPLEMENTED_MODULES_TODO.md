@@ -19,8 +19,10 @@ This file is the running action list for closure, hardening, and go-live readine
 ## 2) Security / RBAC Closure
 
 - [ ] Final long-tail RBAC parity sweep for implemented modules:
-  - [ ] Sidebar/mobile links hidden when unauthorized.
-  - [ ] Route + API permission parity for each visible action.
+  - [x] Sidebar/mobile links hidden when unauthorized.  
+    Evidence (2026-03-06): `playwright/tests/role-deep-audit.spec.ts`, `playwright/tests/mobile-role-navigation.spec.ts`
+  - [x] Route + API permission parity for each visible action.  
+    Evidence (2026-03-06): `playwright/tests/project-detail-rbac.spec.ts`, `playwright/tests/project-workhub-actions.spec.ts`, `playwright/tests/vendor-item-workhub-actions.spec.ts`, `playwright/tests/inventory-rbac-actions.spec.ts`
   - [ ] Remove remaining permissive fallback blocks called out in `docs/RBAC_PERMISSION_SURFACE_MAP_2026-03-03.md`.
 - [ ] Role data drift check:
   - [ ] Re-save/sync role templates on staging.
@@ -48,10 +50,14 @@ This file is the running action list for closure, hardening, and go-live readine
 - [x] Full role deep audit run after latest deploy (`playwright/tests/role-deep-audit.spec.ts`) and discrepancy-only report refresh.  
   Evidence (2026-03-06): `docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md`, `playwright/tests/role-deep-audit.spec.ts`
 - [ ] Final cross-module reconciliation pass (staging) for:
-  - [ ] Project received/pending vs income entries.
-  - [ ] Project cost vs approved/paid expenses.
-  - [ ] AP aging vs vendor bill/payment allocations.
-  - [ ] Employee wallet/advance/reimbursement consistency.
+  - [x] Project received/pending vs income entries.  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts` (`Cross-module reconciliation` case)
+  - [x] Project cost vs approved/paid expenses.  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
+  - [x] AP aging vs vendor bill/payment allocations.  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
+  - [x] Employee wallet/advance/reimbursement consistency.  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`, `playwright/tests/payroll-deep-audit.spec.ts`, `playwright/tests/procurement-inventory-controls.spec.ts`
 
 ## 5) Planning Hygiene
 
