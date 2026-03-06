@@ -170,6 +170,7 @@ export default function AccessControlCenter() {
   const [selectedRoleId, setSelectedRoleId] = useState<string>("");
   const [roleDraft, setRoleDraft] = useState<Set<string>>(new Set());
   const [savingRole, setSavingRole] = useState(false);
+  const [syncingRoles, setSyncingRoles] = useState(false);
   const [roleSearch, setRoleSearch] = useState("");
   const [roleListSearch, setRoleListSearch] = useState("");
   const [selectedModule, setSelectedModule] = useState("");
@@ -318,6 +319,26 @@ export default function AccessControlCenter() {
     }
   };
 
+  const syncRoleTemplates = async () => {
+    setSyncingRoles(true);
+    try {
+      const res = await fetch("/api/access-control/roles/sync", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to sync role templates");
+      }
+      toast.success(`Role templates synced. ${data.changedCount || 0} role(s) changed.`);
+      await loadRoleTemplates();
+      await loadUserOverrides(selectedUserId || undefined);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to sync role templates");
+    } finally {
+      setSyncingRoles(false);
+    }
+  };
+
   const saveUserOverrides = async () => {
     if (!selectedUserId) return;
     setSavingUser(true);
@@ -448,7 +469,12 @@ export default function AccessControlCenter() {
 
             <div className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
               <div className="border-b px-4 py-3">
-                <div className="text-lg font-semibold text-slate-900">{selectedRole?.name || "Select a role"}</div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-lg font-semibold text-slate-900">{selectedRole?.name || "Select a role"}</div>
+                  <Button type="button" variant="outline" size="sm" onClick={syncRoleTemplates} disabled={syncingRoles}>
+                    {syncingRoles ? "Syncing..." : "Sync Baseline Roles"}
+                  </Button>
+                </div>
                 <div className="mt-3 grid gap-2 md:grid-cols-[220px,1fr]">
                   <Select value={activeRoleGroup?.module || ""} onValueChange={setSelectedModule}>
                     <SelectTrigger>

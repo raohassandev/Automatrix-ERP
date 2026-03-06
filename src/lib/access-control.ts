@@ -61,7 +61,20 @@ function getStaticRolePermissionKeys(roleName: string) {
     return [];
   }
   const keys = (PERMISSIONS[roleName as RoleName] ?? []) as readonly string[];
-  return keys.filter((key) => key !== "*");
+  const roleKey = roleName as RoleName;
+
+  const baseline = keys.includes("*")
+    ? new Set(PERMISSION_KEYS)
+    : new Set(keys.filter((key) => key !== "*"));
+
+  for (const deniedKey of ROLE_LOCKED_DENY[roleKey] ?? []) {
+    baseline.delete(deniedKey);
+  }
+  if (roleKey === "Finance Manager") {
+    baseline.delete("dashboard.view_all_metrics");
+  }
+
+  return Array.from(baseline).sort((a, b) => a.localeCompare(b));
 }
 
 export async function ensureBuiltInRoleTemplateDefaults() {
@@ -104,6 +117,50 @@ export async function ensureBuiltInRoleTemplateDefaults() {
       skipDuplicates: true,
     });
   }
+}
+
+export async function syncBuiltInRoleTemplateDefaults() {
+  await ensurePermissionCatalog();
+
+  const builtInRoleNames = Object.keys(PERMISSIONS);
+  const roles = await prisma.role.findMany({
+    where: { name: { in: builtInRoleNames } },
+    select: {
+      id: true,
+      name: true,
+      permissions: {
+        include: { permission: true },
+      },
+    },
+  });
+
+  const summary: Array<{
+    roleId: string;
+    roleName: string;
+    beforeCount: number;
+    afterCount: number;
+    changed: boolean;
+  }> = [];
+
+  for (const role of roles) {
+    const targetKeys = getStaticRolePermissionKeys(role.name);
+    const beforeKeys = role.permissions.map((entry) => entry.permission.key).sort((a, b) => a.localeCompare(b));
+    const changed =
+      beforeKeys.length !== targetKeys.length ||
+      beforeKeys.some((value, index) => value !== targetKeys[index]);
+
+    await replaceRolePermissions(role.id, targetKeys);
+
+    summary.push({
+      roleId: role.id,
+      roleName: role.name,
+      beforeCount: beforeKeys.length,
+      afterCount: targetKeys.length,
+      changed,
+    });
+  }
+
+  return summary.sort((a, b) => a.roleName.localeCompare(b.roleName));
 }
 
 export async function getEffectivePermissionsForUser(userId: string): Promise<EffectivePermissionsResult> {
