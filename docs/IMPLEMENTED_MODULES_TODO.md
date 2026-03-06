@@ -29,12 +29,14 @@ This file is the running action list for closure, hardening, and go-live readine
 ## 3) Expense & Reimbursement Hardening (Current pass follow-up)
 
 - [ ] Run role-by-role UAT for new `EMPLOYEE_POCKET` flow:
-  - [ ] Employee with advance available cannot submit own-pocket.
+  - [x] Employee with advance available cannot submit own-pocket.  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
   - [x] Employee with zero advance can submit own-pocket.  
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
   - [x] Approval creates payable state (`APPROVED/PARTIALLY_APPROVED`), then settlement to `PAID`.  
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
-  - [ ] Wallet-funded expenses cannot be paid again (double-pay prevention).
+  - [x] Wallet-funded expenses cannot be paid again (double-pay prevention).  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
 - [ ] UAT for mistaken-approval reopen:
   - [x] Only `expenses.reopen_approved` users can reopen.  
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`

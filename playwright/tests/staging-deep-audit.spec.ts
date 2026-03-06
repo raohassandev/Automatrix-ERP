@@ -314,4 +314,143 @@ test.describe("Staging Deep Audit", () => {
     await submitterApi.dispose();
     await financeApi.dispose();
   });
+
+  test("Advance-funded controls: own-pocket blocked when advance exists and wallet expense cannot be paid twice", async ({ baseURL }) => {
+    const financeApi = await request.newContext({ baseURL, storageState: states.finance, ignoreHTTPSErrors: true });
+    const submitterApi = await request.newContext({ baseURL, storageState: states.store, ignoreHTTPSErrors: true });
+
+    const [usersRes, projectsRes, employeesRes, companyAccountsRes, categoriesRes, settingsRes] = await Promise.all([
+      financeApi.get("/api/users/list"),
+      financeApi.get("/api/projects"),
+      financeApi.get("/api/employees"),
+      financeApi.get("/api/company-accounts"),
+      submitterApi.get("/api/categories?type=expense"),
+      submitterApi.get("/api/settings/organization"),
+    ]);
+    expect(usersRes.ok()).toBeTruthy();
+    expect(projectsRes.ok()).toBeTruthy();
+    expect(employeesRes.ok()).toBeTruthy();
+    expect(companyAccountsRes.ok()).toBeTruthy();
+    expect(categoriesRes.ok()).toBeTruthy();
+    expect(settingsRes.ok()).toBeTruthy();
+
+    const usersJson = await usersRes.json();
+    const projectsJson = await projectsRes.json();
+    const employeesJson = await employeesRes.json();
+    const companyAccountsJson = await companyAccountsRes.json();
+    const categoriesJson = await categoriesRes.json();
+    const settingsJson = await settingsRes.json();
+
+    const submitterUser = (usersJson.data || []).find((u: { email?: string }) =>
+      String(u.email || "").toLowerCase() === USERS.store.email,
+    );
+    const submitterEmployee = (employeesJson.data || []).find((e: { email?: string }) =>
+      String(e.email || "").toLowerCase() === USERS.store.email,
+    );
+    const project = projectsJson?.data?.[0];
+    const companyAccount = (companyAccountsJson?.data || []).find((a: { isActive?: boolean }) => a.isActive !== false);
+    expect(submitterUser?.id).toBeTruthy();
+    expect(submitterEmployee?.id).toBeTruthy();
+    expect(project?.id).toBeTruthy();
+    expect(companyAccount?.id).toBeTruthy();
+
+    const originalBalance = Number(submitterEmployee?.walletBalance || 0);
+    const category = categoriesJson?.categories?.[0]?.name || "General";
+    const threshold = Number(settingsJson?.data?.expenseReceiptThreshold || 0);
+    const amount = Math.max(150, threshold + 1);
+    const unique = Date.now();
+
+    await financeApi.post(`/api/projects/${project.id}/assignments`, {
+      data: { assignments: [{ userId: submitterUser.id, role: "MEMBER" }] },
+    });
+
+    const topupReference = `STAGING_AUDIT_ADV_${unique}`;
+    const topupRes = await financeApi.post("/api/employees/wallet", {
+      data: {
+        employeeId: submitterEmployee.id,
+        type: "CREDIT",
+        amount: amount + 200,
+        reference: topupReference,
+        companyAccountId: companyAccount.id,
+        purpose: "COMPANY_ADVANCE",
+      },
+    });
+    expect(topupRes.ok()).toBeTruthy();
+
+    try {
+      const blockedOwnPocketRes = await submitterApi.post("/api/expenses", {
+        data: {
+          date: new Date().toISOString().slice(0, 10),
+          description: `STAGING_AUDIT_ADV_BLOCK_${unique}`,
+          category,
+          amount,
+          paymentMode: "Cash",
+          paymentSource: "EMPLOYEE_POCKET",
+          project: project.id,
+          receiptUrl: "https://example.com/staging-audit-advance-block.pdf",
+          remarks: "advance guard check",
+          ignoreDuplicate: true,
+        },
+      });
+      expect(blockedOwnPocketRes.status()).toBe(400);
+      const blockedOwnPocketJson = await blockedOwnPocketRes.json();
+      expect(String(blockedOwnPocketJson?.error || "")).toMatch(/advance available|employee wallet/i);
+
+      const walletExpenseRes = await submitterApi.post("/api/expenses", {
+        data: {
+          date: new Date().toISOString().slice(0, 10),
+          description: `STAGING_AUDIT_WALLET_EXP_${unique}`,
+          category,
+          amount,
+          paymentMode: "Cash",
+          paymentSource: "EMPLOYEE_WALLET",
+          project: project.id,
+          receiptUrl: "https://example.com/staging-audit-wallet-expense.pdf",
+          remarks: "wallet settlement control check",
+          ignoreDuplicate: true,
+        },
+      });
+      expect(walletExpenseRes.ok()).toBeTruthy();
+      const walletExpenseJson = await walletExpenseRes.json();
+      const walletExpenseId = walletExpenseJson?.data?.id;
+      expect(walletExpenseId).toBeTruthy();
+
+      const approveWalletExpenseRes = await financeApi.post("/api/approvals", {
+        data: { expenseId: walletExpenseId, action: "APPROVE", approvedAmount: amount },
+      });
+      expect(approveWalletExpenseRes.ok()).toBeTruthy();
+
+      const markPaidWalletRes = await financeApi.put(`/api/expenses/${walletExpenseId}/mark-as-paid`);
+      expect(markPaidWalletRes.status()).toBe(400);
+      const markPaidWalletJson = await markPaidWalletRes.json();
+      expect(String(markPaidWalletJson?.error || "")).toMatch(/already settled|cannot mark as paid/i);
+    } finally {
+      const employeesAfterRes = await financeApi.get("/api/employees");
+      if (employeesAfterRes.ok()) {
+        const employeesAfterJson = await employeesAfterRes.json();
+        const submitterAfter = (employeesAfterJson.data || []).find((e: { email?: string }) =>
+          String(e.email || "").toLowerCase() === USERS.store.email,
+        );
+        const currentBalance = Number(submitterAfter?.walletBalance || 0);
+        const delta = currentBalance - originalBalance;
+        if (Math.abs(delta) >= 1) {
+          const restoreType = delta > 0 ? "DEBIT" : "CREDIT";
+          const restoreAmount = Math.abs(delta);
+          await financeApi.post("/api/employees/wallet", {
+            data: {
+              employeeId: submitterEmployee.id,
+              type: restoreType,
+              amount: restoreAmount,
+              reference: `STAGING_AUDIT_RESTORE_${unique}`,
+              ...(restoreType === "CREDIT" ? { companyAccountId: companyAccount.id } : {}),
+              purpose: "ADJUSTMENT",
+            },
+          });
+        }
+      }
+    }
+
+    await submitterApi.dispose();
+    await financeApi.dispose();
+  });
 });
