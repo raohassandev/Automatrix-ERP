@@ -10,8 +10,10 @@ This file is the running action list for closure, hardening, and go-live readine
 - [ ] Owner/CEO final sign-off on staging access-control behavior (role templates + per-user overrides + approval routes).
 - [ ] Production manual smoke (mobile):
   - [ ] Expense submit flow on phone width.
-  - [ ] Approvals action controls visible/clickable on phone + tablet widths.
-  - [ ] No blocking horizontal clipping on key pages (`/settings`, `/inventory`, `/approvals`, `/expenses`).
+  - [x] Approvals action controls visible/clickable on phone + tablet widths.  
+    Evidence (2026-03-06): `playwright/tests/dashboard-approvals-mobile-smoke.spec.ts`
+  - [x] No blocking horizontal clipping on key pages (`/settings`, `/inventory`, `/approvals`, `/expenses`).  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts` finance UX route sweep
 - [ ] Rollback drill execution in staging-like environment using `docs/PRODUCTION_ROLLBACK_RUNBOOK_2026-03-05.md` (not only documented, actually executed).
 
 ## 2) Security / RBAC Closure
@@ -28,16 +30,21 @@ This file is the running action list for closure, hardening, and go-live readine
 
 - [ ] Run role-by-role UAT for new `EMPLOYEE_POCKET` flow:
   - [ ] Employee with advance available cannot submit own-pocket.
-  - [ ] Employee with zero advance can submit own-pocket.
-  - [ ] Approval creates payable state (`APPROVED/PARTIALLY_APPROVED`), then settlement to `PAID`.
+  - [x] Employee with zero advance can submit own-pocket.  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
+  - [x] Approval creates payable state (`APPROVED/PARTIALLY_APPROVED`), then settlement to `PAID`.  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
   - [ ] Wallet-funded expenses cannot be paid again (double-pay prevention).
 - [ ] UAT for mistaken-approval reopen:
-  - [ ] Only `expenses.reopen_approved` users can reopen.
-  - [ ] Reopened expense returns to pending and becomes editable by submitter.
+  - [x] Only `expenses.reopen_approved` users can reopen.  
+    Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
+  - [x] Reopened expense returns to pending and becomes editable by submitter.  
+    Evidence (2026-03-06): status reset verified in `playwright/tests/staging-deep-audit.spec.ts` (`^PENDING_`)
 
 ## 4) Reporting / Reconciliation Confidence
 
-- [ ] Full role deep audit run after latest deploy (`playwright/tests/role-deep-audit.spec.ts`) and discrepancy-only report refresh.
+- [x] Full role deep audit run after latest deploy (`playwright/tests/role-deep-audit.spec.ts`) and discrepancy-only report refresh.  
+  Evidence (2026-03-06): `docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md`, `playwright/tests/role-deep-audit.spec.ts`
 - [ ] Final cross-module reconciliation pass (staging) for:
   - [ ] Project received/pending vs income entries.
   - [ ] Project cost vs approved/paid expenses.

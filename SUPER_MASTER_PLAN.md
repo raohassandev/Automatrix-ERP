@@ -424,7 +424,7 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
-### 11.1 Status Snapshot (As of 2026-03-05, updated after fast-track closure batch 2)
+### 11.1 Status Snapshot (As of 2026-03-06, updated after fast-track closure batch 3)
 
 Legend:
 - `[x]` Completed (target end-state achieved)
@@ -458,6 +458,7 @@ Snapshot note:
 - Access governance UX is now business-first in Settings: Role Templates, User Feature Access Matrix (ALLOW/DENY overrides), and Approval Routes by amount (Stage 1/2/3 labels replacing raw L1/L2/L3 jargon).
 - Fast-track closure batch 1 completed for implemented modules: finance role baseline tightened (no CEO dashboard by default), vendor-payments page/API permission parity aligned, approvals table action-column visibility hardened, mobile form/navigation polish expanded, and regression specs refreshed for staging drift tolerance.
 - Fast-track closure batch 2 completed for implemented modules: payroll control panel hardened (pending/settled payroll incentives + open salary advances KPIs), payroll quick links added for operator flow, dark-theme KPI contrast normalized, and Playwright staging role/mobile/payroll regression revalidated.
+- Fast-track closure batch 3 completed for implemented modules: project/item/workhub RBAC staging specs hardened for hydration timing, staging deep-audit login/502 resilience improved, and mistaken-approval reopen control validated with permission-gated workflow.
 - Remaining depth now continues under modules `19` and `20`.
 
 ### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05
@@ -474,7 +475,7 @@ Workstreams and current state:
 - `E` Go-Live Readiness + Plan Sync: `[~]` In Progress  
   Completed: production cutover checklist and rollback runbook documented; staging remains deployment source of truth pending monitored production stabilization window.
 
-Latest discrepancy baseline (`docs/STAGING_ROLE_DEEP_AUDIT_2026-03-05.md`):
+Latest discrepancy baseline (`docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md`):
 - Open: `CRITICAL 0`, `HIGH 0`, `MEDIUM 0`, `LOW 0`.
 - Closure status: implemented-module fast-track discrepancy burn-down is complete for current staging baseline; remaining work is production monitored rollout and module `19`/`20` expansion.
 

@@ -206,4 +206,112 @@ test.describe("Staging Deep Audit", () => {
     await submitterApi.dispose();
     await financeApi.dispose();
   });
+
+  test("Mistaken approval reopen: permission-gated and resets own-pocket expense to pending", async ({ baseURL }) => {
+    const financeApi = await request.newContext({ baseURL, storageState: states.finance, ignoreHTTPSErrors: true });
+    const submitterApi = await request.newContext({ baseURL, storageState: states.store, ignoreHTTPSErrors: true });
+
+    const [usersRes, projectsRes] = await Promise.all([financeApi.get("/api/users/list"), financeApi.get("/api/projects")]);
+    expect(usersRes.ok()).toBeTruthy();
+    expect(projectsRes.ok()).toBeTruthy();
+    const usersJson = await usersRes.json();
+    const projectsJson = await projectsRes.json();
+    const financeUser = (usersJson.data || []).find((u: { email?: string }) =>
+      String(u.email || "").toLowerCase() === USERS.finance.email,
+    );
+    const submitter = (usersJson.data || []).find((u: { email?: string }) =>
+      String(u.email || "").toLowerCase() === USERS.store.email,
+    );
+    const project = projectsJson?.data?.[0];
+    expect(financeUser?.id).toBeTruthy();
+    expect(submitter?.id).toBeTruthy();
+    expect(project?.id).toBeTruthy();
+
+    const overridesRes = await financeApi.get(`/api/access-control/user-overrides?userId=${financeUser.id}`);
+    expect(overridesRes.ok()).toBeTruthy();
+    const overridesJson = await overridesRes.json();
+    const originalOverrides = Array.isArray(overridesJson?.selectedUser?.overrides)
+      ? overridesJson.selectedUser.overrides
+      : [];
+    const hasReopenOverride = originalOverrides.some(
+      (row: { permissionKey?: string; effect?: string }) =>
+        row.permissionKey === "expenses.reopen_approved" && row.effect === "ALLOW",
+    );
+    const workingOverrides = hasReopenOverride
+      ? originalOverrides
+      : [...originalOverrides, { permissionKey: "expenses.reopen_approved", effect: "ALLOW", reason: "staging audit temporary allow" }];
+    const grantRes = await financeApi.put("/api/access-control/user-overrides", {
+      data: {
+        userId: financeUser.id,
+        overrides: workingOverrides,
+      },
+    });
+    expect(grantRes.ok()).toBeTruthy();
+
+    try {
+      await financeApi.post(`/api/projects/${project.id}/assignments`, {
+        data: { assignments: [{ userId: submitter.id, role: "MEMBER" }] },
+      });
+
+      const [categoriesRes, settingsRes] = await Promise.all([
+        submitterApi.get("/api/categories?type=expense"),
+        submitterApi.get("/api/settings/organization"),
+      ]);
+      expect(categoriesRes.ok()).toBeTruthy();
+      expect(settingsRes.ok()).toBeTruthy();
+      const categoriesJson = await categoriesRes.json();
+      const settingsJson = await settingsRes.json();
+      const category = categoriesJson?.categories?.[0]?.name || "General";
+      const threshold = Number(settingsJson?.data?.expenseReceiptThreshold || 0);
+      const amount = Math.max(120, threshold + 1);
+      const unique = Date.now();
+      const description = `STAGING_AUDIT_REOPEN_${unique}`;
+
+      const createExpense = await submitterApi.post("/api/expenses", {
+        data: {
+          date: new Date().toISOString().slice(0, 10),
+          description,
+          category,
+          amount,
+          paymentMode: "Cash",
+          paymentSource: "EMPLOYEE_POCKET",
+          project: project.id,
+          receiptUrl: "https://example.com/staging-audit-reopen-receipt.pdf",
+          remarks: "staging reopen control audit",
+          ignoreDuplicate: true,
+        },
+      });
+      expect(createExpense.ok()).toBeTruthy();
+      const createJson = await createExpense.json();
+      const expenseId = createJson?.data?.id;
+      expect(expenseId).toBeTruthy();
+
+      const approveRes = await financeApi.post("/api/approvals", {
+        data: { expenseId, action: "APPROVE", approvedAmount: amount },
+      });
+      expect(approveRes.ok()).toBeTruthy();
+
+      const submitterReopenRes = await submitterApi.put(`/api/expenses/${expenseId}/reopen`);
+      expect(submitterReopenRes.status()).toBe(403);
+
+      const financeReopenRes = await financeApi.put(`/api/expenses/${expenseId}/reopen`);
+      expect(financeReopenRes.ok()).toBeTruthy();
+
+      const checkRes = await financeApi.get(`/api/expenses?search=${encodeURIComponent(description)}&limit=50`);
+      expect(checkRes.ok()).toBeTruthy();
+      const checkJson = await checkRes.json();
+      const reopened = (checkJson?.data?.expenses || []).find((e: { id?: string }) => e.id === expenseId);
+      expect(String(reopened?.status || "")).toMatch(/^PENDING_/);
+    } finally {
+      await financeApi.put("/api/access-control/user-overrides", {
+        data: {
+          userId: financeUser.id,
+          overrides: originalOverrides,
+        },
+      });
+    }
+
+    await submitterApi.dispose();
+    await financeApi.dispose();
+  });
 });
