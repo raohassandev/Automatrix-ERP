@@ -48,8 +48,8 @@ export default async function RootLayout({
             {/* Sidebar - Desktop only */}
             <Sidebar />
 
-            {/* Main content - with left margin on desktop for sidebar */}
-            <div className="md:pl-64">
+            {/* Main content - shifted after fixed desktop sidebar without width overflow */}
+            <div className="md:ml-64">
               <header className="sticky top-0 z-40 border-b border-border bg-card/95 px-4 py-3 backdrop-blur md:hidden">
                 <div className="flex items-center justify-between">
                   <div className="text-base font-semibold">AutoMatrix ERP</div>

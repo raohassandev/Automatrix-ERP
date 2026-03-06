@@ -15,9 +15,19 @@ export async function loginAs(page: Page, email: string, password = process.env.
     .locator("div.rounded-md.border.border-border.bg-muted\\/30.p-3.text-sm")
     .filter({ has: page.getByText("Email login (staging/internal)", { exact: true }) })
     .first();
-  const emailInput = credentialsPanel.getByPlaceholder("Email").first();
-  const passwordInput = credentialsPanel.getByPlaceholder("Password").first();
-  const credentialsButton = credentialsPanel.getByRole("button", { name: "Sign in with Email" });
+  const e2ePanel = page
+    .locator("div.rounded-md.border.border-border.bg-muted\\/30.p-3.text-sm")
+    .filter({ has: page.getByText("E2E login (local only)", { exact: true }) })
+    .first();
+
+  const useE2EPanel = await e2ePanel.isVisible().catch(() => false);
+  const authPanel = useE2EPanel ? e2ePanel : credentialsPanel;
+  const emailInput = authPanel.getByPlaceholder("Email").first();
+  const passwordInput = authPanel.getByPlaceholder("Password").first();
+  const credentialsButton = useE2EPanel
+    ? authPanel.getByRole("button", { name: /E2E Sign in/i })
+    : authPanel.getByRole("button", { name: "Sign in with Email" });
+
   await expect(emailInput).toBeVisible();
   await expect(passwordInput).toBeVisible();
   await expect(credentialsButton).toBeVisible();
@@ -36,7 +46,7 @@ export async function loginAs(page: Page, email: string, password = process.env.
   if (await credentialsButton.isEnabled().catch(() => false)) {
     await credentialsButton.click();
     await page.waitForTimeout(350);
-  } else {
+  } else if (!useE2EPanel) {
     // Fallback for occasional client-side state lag on staging login UI.
     const csrfRes = await page.request.get("/api/auth/csrf");
     const csrfJson = (await csrfRes.json().catch(() => null)) as { csrfToken?: string } | null;
@@ -54,6 +64,8 @@ export async function loginAs(page: Page, email: string, password = process.env.
       },
     });
     await page.waitForTimeout(350);
+  } else {
+    throw new Error(`E2E sign-in button remained disabled for ${email}`);
   }
 
   let sessionJson: { user?: { email?: string } } | null = null;

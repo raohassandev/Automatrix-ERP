@@ -13,16 +13,47 @@ const states = {
   store: "playwright/.auth/staging-store.json",
 };
 
+function parseCsv(content: string) {
+  const lines = content.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  const rows = lines.map((line) => {
+    const fields: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i += 1) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i += 1;
+          continue;
+        }
+        inQuotes = !inQuotes;
+        continue;
+      }
+      if (ch === "," && !inQuotes) {
+        fields.push(current);
+        current = "";
+        continue;
+      }
+      current += ch;
+    }
+    fields.push(current);
+    return fields;
+  });
+  const [header, ...data] = rows;
+  return { header, data };
+}
+
 async function bootstrapState(
   browser: import("@playwright/test").Browser,
   baseURL: string | undefined,
   email: string,
-  _password: string,
+  password: string,
   storagePath: string,
 ) {
   const ctx = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
   const page = await ctx.newPage();
-  await loginAs(page, email);
+  await loginAs(page, email, password);
   await ctx.storageState({ path: storagePath });
   await ctx.close();
 }
@@ -449,6 +480,224 @@ test.describe("Staging Deep Audit", () => {
         }
       }
     }
+
+    await submitterApi.dispose();
+    await financeApi.dispose();
+  });
+
+  test("Cross-module reconciliation: project income/cost, AP outstanding, and export consistency", async ({ baseURL }) => {
+    const financeApi = await request.newContext({ baseURL, storageState: states.finance, ignoreHTTPSErrors: true });
+    const submitterApi = await request.newContext({ baseURL, storageState: states.store, ignoreHTTPSErrors: true });
+    const unique = Date.now();
+
+    const [usersRes, employeesRes, categoriesRes, accountsRes] = await Promise.all([
+      financeApi.get("/api/users/list"),
+      financeApi.get("/api/employees"),
+      submitterApi.get("/api/categories?type=expense"),
+      financeApi.get("/api/company-accounts"),
+    ]);
+    expect(usersRes.ok()).toBeTruthy();
+    expect(employeesRes.ok()).toBeTruthy();
+    expect(categoriesRes.ok()).toBeTruthy();
+    expect(accountsRes.ok()).toBeTruthy();
+
+    const usersJson = await usersRes.json();
+    const employeesJson = await employeesRes.json();
+    const categoriesJson = await categoriesRes.json();
+    const accountsJson = await accountsRes.json();
+
+    const storeUser = (usersJson.data || []).find((u: { email?: string }) =>
+      String(u.email || "").toLowerCase() === USERS.store.email,
+    );
+    const storeEmployee = (employeesJson.data || []).find((e: { email?: string }) =>
+      String(e.email || "").toLowerCase() === USERS.store.email,
+    );
+    expect(storeUser?.id).toBeTruthy();
+    expect(storeEmployee?.id).toBeTruthy();
+
+    const account = (accountsJson.data || []).find((row: { isActive?: boolean }) => row.isActive !== false);
+    expect(account?.id).toBeTruthy();
+
+    const clientRes = await financeApi.post("/api/clients", {
+      data: { name: `STAGING_REC_CLIENT_${unique}` },
+    });
+    expect(clientRes.ok()).toBeTruthy();
+    const clientId = (await clientRes.json())?.data?.id;
+    expect(clientId).toBeTruthy();
+
+    const contractValue = 20_000;
+    const createProjectRes = await financeApi.post("/api/projects", {
+      data: {
+        projectId: `STAGING-REC-${unique}`,
+        name: `STAGING_REC_PROJECT_${unique}`,
+        clientId,
+        startDate: new Date().toISOString().slice(0, 10),
+        status: "ACTIVE",
+        contractValue,
+      },
+    });
+    expect(createProjectRes.ok()).toBeTruthy();
+    const project = (await createProjectRes.json())?.data;
+    expect(project?.id).toBeTruthy();
+
+    await financeApi.post(`/api/projects/${project.id}/assignments`, {
+      data: { assignments: [{ userId: storeUser.id, role: "MEMBER" }] },
+    });
+
+    const incomeAmount = 10_000;
+    const createIncomeRes = await financeApi.post("/api/income", {
+      data: {
+        date: new Date().toISOString().slice(0, 10),
+        source: `Project Payment ${unique}`,
+        category: "Project Payment",
+        amount: incomeAmount,
+        paymentMode: "Bank",
+        companyAccountId: account.id,
+        project: project.id,
+        remarks: "staging reconciliation income",
+      },
+    });
+    expect(createIncomeRes.ok()).toBeTruthy();
+
+    const createVendorRes = await financeApi.post("/api/vendors", {
+      data: {
+        name: `STAGING_REC_VENDOR_${unique}`,
+        contactName: "Reconciliation Vendor",
+        phone: "03001234567",
+        email: `staging-rec-${unique}@example.com`,
+        status: "ACTIVE",
+      },
+    });
+    expect(createVendorRes.ok()).toBeTruthy();
+    const vendorId = (await createVendorRes.json())?.data?.id;
+    expect(vendorId).toBeTruthy();
+
+    const billAmount = 3_000;
+    const createBillRes = await financeApi.post("/api/procurement/vendor-bills", {
+      data: {
+        billNumber: `BILL-REC-${unique}`,
+        vendorId,
+        projectRef: project.id,
+        billDate: new Date().toISOString().slice(0, 10),
+        currency: "PKR",
+        lines: [
+          {
+            description: "Reconciliation test service line",
+            total: billAmount,
+          },
+        ],
+      },
+    });
+    expect(createBillRes.ok()).toBeTruthy();
+    const bill = (await createBillRes.json())?.data;
+    expect(bill?.id).toBeTruthy();
+
+    for (const action of ["SUBMIT", "APPROVE", "POST"] as const) {
+      const stepRes = await financeApi.patch(`/api/procurement/vendor-bills/${bill.id}`, {
+        data: { action },
+      });
+      expect(stepRes.ok()).toBeTruthy();
+    }
+
+    const paymentAmount = 1_200;
+    const createPaymentRes = await financeApi.post("/api/procurement/vendor-payments", {
+      data: {
+        paymentNumber: `PAY-REC-${unique}`,
+        vendorId,
+        projectRef: project.id,
+        paymentDate: new Date().toISOString().slice(0, 10),
+        companyAccountId: account.id,
+        method: "Bank Transfer",
+        amount: paymentAmount,
+        allocations: [{ vendorBillId: bill.id, amount: paymentAmount }],
+      },
+    });
+    expect(createPaymentRes.ok()).toBeTruthy();
+    const payment = (await createPaymentRes.json())?.data;
+    expect(payment?.id).toBeTruthy();
+
+    for (const action of ["SUBMIT", "APPROVE", "POST"] as const) {
+      const stepRes = await financeApi.patch(`/api/procurement/vendor-payments/${payment.id}`, {
+        data: { action },
+      });
+      expect(stepRes.ok()).toBeTruthy();
+    }
+
+    const category = categoriesJson?.categories?.[0]?.name || "General";
+    const expenseAmount = 500;
+    const createExpenseRes = await submitterApi.post("/api/expenses", {
+      data: {
+        date: new Date().toISOString().slice(0, 10),
+        description: `STAGING_REC_EXP_${unique}`,
+        category,
+        amount: expenseAmount,
+        paymentMode: "Cash",
+        paymentSource: "EMPLOYEE_POCKET",
+        project: project.id,
+        receiptUrl: "https://example.com/staging-rec-expense.pdf",
+        remarks: "staging reconciliation expense",
+        ignoreDuplicate: true,
+      },
+    });
+    expect(createExpenseRes.ok()).toBeTruthy();
+    const expenseId = (await createExpenseRes.json())?.data?.id;
+    expect(expenseId).toBeTruthy();
+
+    const approveExpenseRes = await financeApi.post("/api/approvals", {
+      data: { expenseId, action: "APPROVE", approvedAmount: expenseAmount },
+    });
+    expect(approveExpenseRes.ok()).toBeTruthy();
+
+    const payExpenseRes = await financeApi.put(`/api/expenses/${expenseId}/mark-as-paid`);
+    expect(payExpenseRes.ok()).toBeTruthy();
+
+    const projectDetailRes = await financeApi.get(`/api/projects/${project.id}/detail`);
+    expect(projectDetailRes.ok()).toBeTruthy();
+    const projectDetail = (await projectDetailRes.json())?.data;
+    const costs = projectDetail?.costs;
+    expect(costs).toBeTruthy();
+
+    // Reconciliation assertions on fresh deterministic records.
+    expect(Number(costs.approvedIncomeReceived)).toBeCloseTo(incomeAmount, 2);
+    expect(Number(costs.apOutstanding)).toBeCloseTo(billAmount - paymentAmount, 2);
+    expect(Number(costs.pendingRecovery)).toBeCloseTo(contractValue - incomeAmount, 2);
+    expect(Number(costs.costToDate)).toBeCloseTo(billAmount + expenseAmount, 2);
+
+    const listRes = await financeApi.get("/api/projects");
+    expect(listRes.ok()).toBeTruthy();
+    const listJson = await listRes.json();
+    const listed = (listJson?.data || []).find((row: { id?: string }) => row.id === project.id);
+    expect(Number(listed?.receivedAmount || 0)).toBeCloseTo(incomeAmount, 2);
+    expect(Number(listed?.pendingRecovery || 0)).toBeCloseTo(contractValue - incomeAmount, 2);
+
+    const billDetailRes = await financeApi.get(`/api/procurement/vendor-bills/${bill.id}`);
+    expect(billDetailRes.ok()).toBeTruthy();
+    const billDetail = (await billDetailRes.json())?.data;
+    expect(Number(billDetail?.outstandingAmount || 0)).toBeCloseTo(billAmount - paymentAmount, 2);
+
+    const apExportRes = await financeApi.get(`/api/reports/ap/export?vendor=${encodeURIComponent(`STAGING_REC_VENDOR_${unique}`)}`);
+    expect(apExportRes.ok()).toBeTruthy();
+    const apCsv = await apExportRes.text();
+    const parsedAp = parseCsv(apCsv);
+    const matchingRow = parsedAp.data.find((row) => row[0] === `BILL-REC-${unique}`);
+    expect(matchingRow).toBeTruthy();
+    const outstandingField = String(matchingRow?.[6] || "");
+    const outstandingValue = Number(outstandingField.replace(/[^0-9.-]/g, ""));
+    expect(outstandingValue).toBeCloseTo(billAmount - paymentAmount, 2);
+
+    const employeesAfterRes = await financeApi.get("/api/employees");
+    expect(employeesAfterRes.ok()).toBeTruthy();
+    const employeesAfterJson = await employeesAfterRes.json();
+    const storeEmployeeAfter = (employeesAfterJson?.data || []).find((row: { email?: string }) =>
+      String(row.email || "").toLowerCase() === USERS.store.email,
+    );
+    expect(storeEmployeeAfter).toBeTruthy();
+
+    const meWalletRes = await submitterApi.get("/api/me/wallet/export");
+    expect(meWalletRes.ok()).toBeTruthy();
+    const meWalletCsv = await meWalletRes.text();
+    // Own-pocket expenses are reimbursed through company payment, not wallet debit.
+    expect(meWalletCsv).not.toContain(expenseId);
 
     await submitterApi.dispose();
     await financeApi.dispose();
