@@ -1,7 +1,15 @@
 import { expect, type Page } from "@playwright/test";
 
 export async function loginAs(page: Page, email: string, password = process.env.E2E_TEST_PASSWORD || "e2e") {
-  await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 30_000 });
+  // Staging can briefly return 502 during PM2/nginx restart windows.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 30_000 });
+    const isBadGateway = await page.getByText("502 Bad Gateway").first().isVisible().catch(() => false);
+    if (!isBadGateway) {
+      break;
+    }
+    await page.waitForTimeout(1200 * (attempt + 1));
+  }
 
   const credentialsPanel = page
     .locator("div.rounded-md.border.border-border.bg-muted\\/30.p-3.text-sm")

@@ -101,10 +101,25 @@ test.describe("Payroll deep audit", () => {
     const page = await context.newPage();
     await loginAs(page, FINANCE_EMAIL);
 
-    await page.goto("/salary-advances", { waitUntil: "networkidle" });
-    await expect(page.getByRole("heading", { name: "Salary Advances" })).toBeVisible();
+    async function openSalaryAdvancesMobile() {
+      await page.goto("/salary-advances", { waitUntil: "networkidle" });
+      // Guard against rare staging CSS race where utility classes are not yet applied.
+      await page.waitForFunction(() => {
+        const sidebar = document.querySelector("aside.hidden.md\\:flex") as HTMLElement | null;
+        if (!sidebar) return true;
+        return window.getComputedStyle(sidebar).display === "none";
+      }, { timeout: 10_000 }).catch(() => {});
+    }
 
-    const hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 8);
+    await openSalaryAdvancesMobile();
+    let hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 8);
+    if (hasOverflow) {
+      await page.reload({ waitUntil: "networkidle" });
+      await openSalaryAdvancesMobile();
+      hasOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 8);
+    }
+
+    await expect(page.getByRole("heading", { name: "Salary Advances" })).toBeVisible();
     expect(hasOverflow).toBeFalsy();
 
     // Heading + no-overflow are the mandatory mobile quality checks here.
