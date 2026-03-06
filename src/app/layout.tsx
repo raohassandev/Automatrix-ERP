@@ -49,14 +49,14 @@ export default async function RootLayout({
             <Sidebar />
 
             {/* Main content - shifted after fixed desktop sidebar without width overflow */}
-            <div className="md:ml-64">
+            <div className="min-w-0 md:ml-64">
               <header className="sticky top-0 z-40 border-b border-border bg-card/95 px-4 py-3 backdrop-blur md:hidden">
                 <div className="flex items-center justify-between">
                   <div className="text-base font-semibold">AutoMatrix ERP</div>
                   <MobileMenu />
                 </div>
               </header>
-              <main className="px-4 py-6 md:px-6 md:py-8">{children}</main>
+              <main className="min-w-0 overflow-x-hidden px-4 py-6 md:px-6 md:py-8">{children}</main>
             </div>
 
             <FloatingActionButton />

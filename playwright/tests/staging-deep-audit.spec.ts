@@ -44,6 +44,36 @@ function parseCsv(content: string) {
   return { header, data };
 }
 
+async function ensureNoAvailableAdvance(
+  financeApi: import("@playwright/test").APIRequestContext,
+  employeeId: string,
+  referencePrefix: string,
+) {
+  const employeesRes = await financeApi.get("/api/employees");
+  expect(employeesRes.ok()).toBeTruthy();
+  const employeesJson = await employeesRes.json();
+  const employee = (employeesJson?.data || []).find((row: { id?: string }) => row.id === employeeId);
+  expect(employee?.id).toBeTruthy();
+
+  const available = Number(employee?.walletBalance || 0) - Number(employee?.walletHold || 0);
+  if (available <= 0.01) return;
+
+  const debitAmount = Number(available.toFixed(2));
+  const debitRes = await financeApi.post("/api/employees/wallet", {
+    data: {
+      employeeId,
+      type: "DEBIT",
+      amount: debitAmount,
+      reference: `${referencePrefix}_${Date.now()}`,
+      purpose: "COMPANY_ADVANCE",
+    },
+  });
+  if (!debitRes.ok()) {
+    const body = await debitRes.text();
+    throw new Error(`Failed to clear available advance before own-pocket flow: ${debitRes.status()} ${body}`);
+  }
+}
+
 async function bootstrapState(
   browser: import("@playwright/test").Browser,
   baseURL: string | undefined,
@@ -159,21 +189,32 @@ test.describe("Staging Deep Audit", () => {
     const submitterApi = await request.newContext({ baseURL, storageState: states.store, ignoreHTTPSErrors: true });
 
     // Ensure submitter is assigned to at least one project.
-    const [usersRes, projectsRes] = await Promise.all([financeApi.get("/api/users/list"), financeApi.get("/api/projects")]);
+    const [usersRes, projectsRes, employeesRes] = await Promise.all([
+      financeApi.get("/api/users/list"),
+      financeApi.get("/api/projects"),
+      financeApi.get("/api/employees"),
+    ]);
     expect(usersRes.ok()).toBeTruthy();
     expect(projectsRes.ok()).toBeTruthy();
+    expect(employeesRes.ok()).toBeTruthy();
     const usersJson = await usersRes.json();
     const projectsJson = await projectsRes.json();
+    const employeesJson = await employeesRes.json();
     const submitter = (usersJson.data || []).find((u: { email?: string }) =>
       String(u.email || "").toLowerCase() === USERS.store.email,
     );
+    const submitterEmployee = (employeesJson.data || []).find((e: { email?: string }) =>
+      String(e.email || "").toLowerCase() === USERS.store.email,
+    );
     const project = projectsJson?.data?.[0];
     expect(submitter?.id).toBeTruthy();
+    expect(submitterEmployee?.id).toBeTruthy();
     expect(project?.id).toBeTruthy();
 
     await financeApi.post(`/api/projects/${project.id}/assignments`, {
       data: { assignments: [{ userId: submitter.id, role: "MEMBER" }] },
     });
+    await ensureNoAvailableAdvance(financeApi, submitterEmployee.id, "STAGING_CLEAR_ADV_OWN_POCKET");
 
     const [categoriesRes, settingsRes] = await Promise.all([
       submitterApi.get("/api/categories?type=expense"),
@@ -242,20 +283,30 @@ test.describe("Staging Deep Audit", () => {
     const financeApi = await request.newContext({ baseURL, storageState: states.finance, ignoreHTTPSErrors: true });
     const submitterApi = await request.newContext({ baseURL, storageState: states.store, ignoreHTTPSErrors: true });
 
-    const [usersRes, projectsRes] = await Promise.all([financeApi.get("/api/users/list"), financeApi.get("/api/projects")]);
+    const [usersRes, projectsRes, employeesRes] = await Promise.all([
+      financeApi.get("/api/users/list"),
+      financeApi.get("/api/projects"),
+      financeApi.get("/api/employees"),
+    ]);
     expect(usersRes.ok()).toBeTruthy();
     expect(projectsRes.ok()).toBeTruthy();
+    expect(employeesRes.ok()).toBeTruthy();
     const usersJson = await usersRes.json();
     const projectsJson = await projectsRes.json();
+    const employeesJson = await employeesRes.json();
     const financeUser = (usersJson.data || []).find((u: { email?: string }) =>
       String(u.email || "").toLowerCase() === USERS.finance.email,
     );
     const submitter = (usersJson.data || []).find((u: { email?: string }) =>
       String(u.email || "").toLowerCase() === USERS.store.email,
     );
+    const submitterEmployee = (employeesJson.data || []).find((e: { email?: string }) =>
+      String(e.email || "").toLowerCase() === USERS.store.email,
+    );
     const project = projectsJson?.data?.[0];
     expect(financeUser?.id).toBeTruthy();
     expect(submitter?.id).toBeTruthy();
+    expect(submitterEmployee?.id).toBeTruthy();
     expect(project?.id).toBeTruthy();
 
     const overridesRes = await financeApi.get(`/api/access-control/user-overrides?userId=${financeUser.id}`);
@@ -283,6 +334,7 @@ test.describe("Staging Deep Audit", () => {
       await financeApi.post(`/api/projects/${project.id}/assignments`, {
         data: { assignments: [{ userId: submitter.id, role: "MEMBER" }] },
       });
+      await ensureNoAvailableAdvance(financeApi, submitterEmployee.id, "STAGING_CLEAR_ADV_REOPEN");
 
       const [categoriesRes, settingsRes] = await Promise.all([
         submitterApi.get("/api/categories?type=expense"),
@@ -514,6 +566,7 @@ test.describe("Staging Deep Audit", () => {
     );
     expect(storeUser?.id).toBeTruthy();
     expect(storeEmployee?.id).toBeTruthy();
+    await ensureNoAvailableAdvance(financeApi, storeEmployee.id, "STAGING_CLEAR_ADV_RECON");
 
     const account = (accountsJson.data || []).find((row: { isActive?: boolean }) => row.isActive !== false);
     expect(account?.id).toBeTruthy();
