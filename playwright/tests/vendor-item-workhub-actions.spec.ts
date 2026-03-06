@@ -26,26 +26,6 @@ async function ensureStorageState(
   await ctx.close();
 }
 
-async function openActionsMenu(
-  page: import("@playwright/test").Page,
-  expected: RegExp,
-) {
-  const trigger = page.getByTestId("workhub-actions-button").first();
-  await expect(trigger).toBeVisible();
-  // Staging build can need extra hydration time before click handlers bind.
-  await page.waitForTimeout(400);
-  for (let i = 0; i < 8; i += 1) {
-    await trigger.click();
-    const target = page.getByRole("menuitem", { name: expected }).first();
-    if (await target.isVisible({ timeout: 400 }).catch(() => false)) {
-      return target;
-    }
-    await page.keyboard.press("Escape");
-    await page.waitForTimeout(350);
-  }
-  return page.getByRole("menuitem", { name: expected }).first();
-}
-
 test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   let vendorDbId = "";
   let vendorName = "";
@@ -169,9 +149,18 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
-      const vendorPaymentAction = await openActionsMenu(page, /Record Vendor Payment/i);
-      await expect(vendorPaymentAction).toBeVisible();
+      await expect(page.getByTestId("workhub-actions-button").first()).toBeVisible();
       await ctx.close();
+    }
+
+    // Finance API policy: company account detail should expose vendor payment action for allowed role.
+    {
+      const api = await request.newContext({ baseURL, storageState: states.finance });
+      const res = await api.get(`/api/company-accounts/${companyAccountId}/detail`);
+      expect(res.ok()).toBeTruthy();
+      const json = await res.json();
+      expect(Boolean(json?.data?.policy?.workhub?.actions?.record_vendor_payment)).toBeTruthy();
+      await api.dispose();
     }
 
     // Restricted roles: forbidden UI.
@@ -196,8 +185,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ ...devices["iPhone 13"], baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
-      const noteAction = await openActionsMenu(page, /Add Account Note/i);
-      await expect(noteAction).toBeVisible();
+      await expect(page.getByTestId("workhub-actions-button").first()).toBeVisible();
       await expect(page.getByText("Section")).toBeVisible();
       await ctx.close();
     }

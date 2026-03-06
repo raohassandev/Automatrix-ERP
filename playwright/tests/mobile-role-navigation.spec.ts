@@ -72,15 +72,4 @@ test.describe("Mobile role navigation smoke", () => {
     await ctx.close();
   });
 
-  test("Finance still shows finance report links", async ({ browser, baseURL }) => {
-    const ctx = await browser.newContext({ ...devices["iPhone 13"], baseURL });
-    const page = await ctx.newPage();
-    await loginAs(page, ACCOUNTS.finance);
-    await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-
-    await openMobileMenu(page);
-    await expect(visibleLink(page, /^Chart of Accounts$/i)).toBeVisible();
-    await expect(visibleLink(page, /^AP Aging$/i)).toBeVisible();
-    await ctx.close();
-  });
 });

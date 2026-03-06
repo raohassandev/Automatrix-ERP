@@ -133,13 +133,26 @@ test.describe("Staging Deep Audit", () => {
       "/accounting/journals",
     ];
 
+    const gotoStable = async (route: string) => {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          await page.goto(route, { waitUntil: "domcontentloaded", timeout: 30_000 });
+          await page.waitForTimeout(250);
+          return;
+        } catch {
+          if (attempt === 2) throw new Error(`Could not load route: ${route}`);
+          await page.waitForTimeout(1000 * (attempt + 1));
+        }
+      }
+    };
+
     for (const route of routes) {
-      await page.goto(route, { waitUntil: "networkidle" });
+      await gotoStable(route);
       let body = await page.locator("body").innerText();
       // Staging can briefly return 502 during deployment restarts; retry once.
       if (/502 Bad Gateway/i.test(body)) {
         await page.waitForTimeout(1200);
-        await page.goto(route, { waitUntil: "networkidle" });
+        await gotoStable(route);
         body = await page.locator("body").innerText();
       }
       expect.soft(page.url(), `redirected unexpectedly at ${route}`).not.toContain("/login");

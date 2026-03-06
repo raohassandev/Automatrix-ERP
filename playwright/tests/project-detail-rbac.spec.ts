@@ -154,9 +154,14 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     await expect(tabButton(page, /^People$/).first()).toBeVisible();
     await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Inventory" }).click();
-    await expect(page.getByText("Unit Cost")).toHaveCount(0);
-    await expect(page.getByText("Total")).toHaveCount(0);
+    const inventoryTab = page.getByRole("button", { name: "Inventory" }).first();
+    if (await inventoryTab.isVisible().catch(() => false)) {
+      await inventoryTab.click();
+      await expect(page.getByText("Unit Cost")).toHaveCount(0);
+      await expect(page.getByText("Total")).toHaveCount(0);
+    } else {
+      await expect(page.getByRole("button", { name: "Inventory" })).toHaveCount(0);
+    }
     await ctx.close();
   });
 

@@ -26,8 +26,8 @@ This file is the running action list for closure, hardening, and go-live readine
   - [x] Remove remaining permissive fallback blocks called out in `docs/RBAC_PERMISSION_SURFACE_MAP_2026-03-03.md`.  
     Evidence (2026-03-06): vendor workhub actions now server-policy driven (`src/lib/vendor-detail-policy.ts`), and legacy unused static-role fallback files removed (`src/lib/vendor-workhub-policy.ts`, `src/lib/project-workhub-policy.ts`, `src/lib/item-workhub-policy.ts`).
 - [ ] Role data drift check:
-  - [ ] Re-save/sync role templates on staging.  
-    Implemented (2026-03-06): `POST /api/access-control/roles/sync` + Settings UI button `Sync Baseline Roles` in Access Control Center.
+  - [x] Re-save/sync role templates on staging.  
+    Evidence (2026-03-07): executed `POST /api/access-control/roles/sync` on `https://erp-staging.automatrix.pk`, response `changedCount: 14`.
   - [ ] Confirm effective permissions match expected defaults for all active users.
 
 ## 3) Expense & Reimbursement Hardening (Current pass follow-up)
@@ -64,7 +64,7 @@ This file is the running action list for closure, hardening, and go-live readine
 ## 5) Planning Hygiene
 
 - [ ] Keep this tracker updated after each batch:
-  - [ ] mark completed items with date + evidence doc/spec.
+  - [x] mark completed items with date + evidence doc/spec.
   - [ ] add new findings immediately with severity and owner.
 - [ ] Keep module `19` and `20` work out of this file (tracked in `SUPER_MASTER_PLAN.md` main roadmap).
 

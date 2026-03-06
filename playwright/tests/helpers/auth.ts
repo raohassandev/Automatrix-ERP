@@ -1,33 +1,36 @@
 import { expect, type Page } from "@playwright/test";
 
 export async function loginAs(page: Page, email: string, password = process.env.E2E_TEST_PASSWORD || "e2e") {
-  for (let authAttempt = 0; authAttempt < 3; authAttempt += 1) {
+  for (let authAttempt = 0; authAttempt < 4; authAttempt += 1) {
     // Staging can briefly return 502 during PM2/nginx restart windows.
-    for (let attempt = 0; attempt < 5; attempt += 1) {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
       await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 30_000 });
       const isBadGateway = await page.getByText("502 Bad Gateway").first().isVisible().catch(() => false);
       if (!isBadGateway) {
-        break;
+        // If already signed in, /login can redirect away. Session check below handles this.
+        const hasEmailField = await page.getByPlaceholder("Email").first().isVisible().catch(() => false);
+        if (hasEmailField || !page.url().includes("/login")) {
+          break;
+        }
       }
       await page.waitForTimeout(1200 * (attempt + 1));
     }
 
-    const credentialsPanel = page
-      .locator("div.rounded-md.border.border-border.bg-muted\\/30.p-3.text-sm")
-      .filter({ has: page.getByText("Email login (staging/internal)", { exact: true }) })
-      .first();
-    const e2ePanel = page
-      .locator("div.rounded-md.border.border-border.bg-muted\\/30.p-3.text-sm")
-      .filter({ has: page.getByText("E2E login (local only)", { exact: true }) })
-      .first();
+    // Fast path: if session already exists, return without touching login form.
+    const preSession = await page.request.get("/api/auth/session");
+    const preSessionJson = (await preSession.json().catch(() => null)) as { user?: { email?: string } } | null;
+    if (preSessionJson?.user?.email) {
+      if (page.url().includes("/login")) {
+        await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 12_000 }).catch(async () => {
+          await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 12_000 });
+        });
+      }
+      return;
+    }
 
-    const useE2EPanel = await e2ePanel.isVisible().catch(() => false);
-    const authPanel = useE2EPanel ? e2ePanel : credentialsPanel;
-    const emailInput = authPanel.getByPlaceholder("Email").first();
-    const passwordInput = authPanel.getByPlaceholder("Password").first();
-    const credentialsButton = useE2EPanel
-      ? authPanel.getByRole("button", { name: /E2E Sign in/i })
-      : authPanel.getByRole("button", { name: "Sign in with Email" });
+    const emailInput = page.getByPlaceholder("Email").first();
+    const passwordInput = page.getByPlaceholder("Password").first();
+    const credentialsButton = page.getByRole("button", { name: /Sign in with Email|E2E Sign in/i }).first();
 
     await expect(emailInput).toBeVisible();
     await expect(passwordInput).toBeVisible();
@@ -44,10 +47,13 @@ export async function loginAs(page: Page, email: string, password = process.env.
       }
       await page.waitForTimeout(200);
     }
+    const buttonLabel = ((await credentialsButton.textContent().catch(() => "")) || "").toLowerCase();
+    const isE2EButton = buttonLabel.includes("e2e");
+
     if (await credentialsButton.isEnabled().catch(() => false)) {
       await credentialsButton.click();
       await page.waitForTimeout(350);
-    } else if (!useE2EPanel) {
+    } else if (!isE2EButton) {
       // Fallback for occasional client-side state lag on staging login UI.
       const csrfRes = await page.request.get("/api/auth/csrf");
       const csrfJson = (await csrfRes.json().catch(() => null)) as { csrfToken?: string } | null;
