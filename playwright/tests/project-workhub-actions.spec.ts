@@ -103,6 +103,7 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.finance });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
     if (!canProjectView) {
       await expect(page.getByText("You do not have access to this project.")).toBeVisible();
       await ctx.close();
@@ -132,6 +133,7 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
     await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Add Attachment (URL)" }).first()).toBeVisible();
@@ -144,6 +146,7 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.store });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
     await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Add Attachment (URL)" }).first()).toBeVisible();
@@ -164,6 +167,7 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
     });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
     await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
     await ctx.close();

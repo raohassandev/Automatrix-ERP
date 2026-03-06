@@ -111,6 +111,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.finance });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { name: "Project" })).toBeVisible({ timeout: 15_000 }).catch(() => {});
     await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
     if (canViewCosts) {
@@ -147,6 +148,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
     await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
     await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
     await expect(tabButton(page, /^People$/).first()).toBeVisible();
@@ -162,6 +164,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.sales });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
     await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
     await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
     await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
@@ -174,6 +177,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.technician });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
     await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
     await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
     await expect(tabButton(page, /^Inventory$/)).toHaveCount(0);
@@ -186,6 +190,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     const ctx = await browser.newContext({ baseURL, storageState: states.store });
     const page = await ctx.newPage();
     await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForLoadState("networkidle");
     await expect(tabButton(page, /^Inventory$/).first()).toBeVisible();
     await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
     await page.getByRole("button", { name: "Inventory" }).click();
@@ -203,14 +208,15 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     await page.goto("/projects", { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.getByRole("link", { name: /E2E Project Detail/i }).first().click();
     await expect(page).toHaveURL(/\/projects\/.+/);
+    await page.waitForLoadState("networkidle");
 
     // Mobile uses dropdown select for tabs.
     const select = page
       .locator("select")
-      .filter({ has: page.locator("option", { hasText: /^Documents$/ }) })
+      .filter({ has: page.locator('option[value="documents"]') })
       .first();
     await expect(select).toBeVisible();
-    await select.selectOption({ label: "Documents" });
+    await select.selectOption("documents");
     await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
     await ctx.close();
   });

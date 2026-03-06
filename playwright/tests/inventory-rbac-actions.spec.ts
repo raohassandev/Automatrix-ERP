@@ -110,6 +110,7 @@ test.describe.serial("Inventory RBAC actions", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/inventory/items/${itemId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await page.waitForLoadState("networkidle");
       await expect(page.getByTestId("workhub-actions-button")).toBeVisible();
       await page.getByTestId("workhub-actions-button").click();
       if (financeCanProcure) {
@@ -124,6 +125,7 @@ test.describe.serial("Inventory RBAC actions", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
       await page.goto(`/inventory/items/${itemId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await page.waitForLoadState("networkidle");
       if (!engineerCanAccessItem) {
         await expect(page.getByText("You do not have access to this item.")).toBeVisible();
         await ctx.close();
