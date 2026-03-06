@@ -98,9 +98,9 @@ function fmtDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
-function buildWorkhub(role: RoleName): CompanyAccountWorkhubPolicy {
-  // Phase 1: finance-only. We still keep "note/attachment" here, but access is gated at page-level.
-  const canManage = role === "CEO" || role === "Owner" || role === "Admin" || role === "CFO" || role === "Finance Manager" || role === "Accountant";
+function buildWorkhub(role: RoleName, canManage: boolean): CompanyAccountWorkhubPolicy {
+  // Phase 1: finance-only and permission-driven. Use effective permission result
+  // so user-level overrides remain authoritative.
   return {
     role,
     actions: {
@@ -134,7 +134,7 @@ export async function getCompanyAccountDetailForUser(args: {
     role,
     canAccessPage: true,
     tabs,
-    workhub: buildWorkhub(role),
+    workhub: buildWorkhub(role, canAccessPage),
   };
 
   const account = await prisma.companyAccount.findUnique({
