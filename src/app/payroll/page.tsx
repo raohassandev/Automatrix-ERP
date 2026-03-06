@@ -12,7 +12,7 @@ import { MobileCard } from "@/components/MobileCard";
 export default async function PayrollPage({
   searchParams,
 }: {
-  searchParams: { page?: string };
+  searchParams: Promise<{ page?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -31,7 +31,7 @@ export default async function PayrollPage({
     );
   }
 
-  const params = searchParams;
+  const params = await searchParams;
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 20;
   const skip = (page - 1) * take;

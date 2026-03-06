@@ -12,7 +12,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 export default async function VendorBillsPage({
   searchParams,
 }: {
-  searchParams: { search?: string; page?: string };
+  searchParams: Promise<{ search?: string; page?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) return redirect("/login");
@@ -28,8 +28,9 @@ export default async function VendorBillsPage({
     );
   }
 
-  const search = (searchParams.search || "").trim();
-  const page = Math.max(parseInt(searchParams.page || "1", 10), 1);
+  const params = await searchParams;
+  const search = (params.search || "").trim();
+  const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;
   const skip = (page - 1) * take;
 

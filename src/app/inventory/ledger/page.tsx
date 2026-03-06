@@ -8,7 +8,7 @@ import { PageState } from "@/components/PageState";
 export default async function InventoryLedgerPage({
   searchParams,
 }: {
-  searchParams: { page?: string; q?: string; type?: string; from?: string; to?: string; warehouseId?: string };
+  searchParams: Promise<{ page?: string; q?: string; type?: string; from?: string; to?: string; warehouseId?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -30,15 +30,13 @@ export default async function InventoryLedgerPage({
     );
   }
 
-  // NOTE: searchParams is not a promise here, it's an object.
-  // The error was likely due to how it was passed to the client component.
-  // We pass the plain object directly.
-  const page = Math.max(parseInt(searchParams.page || "1", 10), 1);
-  const query = (searchParams.q || "").trim();
-  const type = (searchParams.type || "").trim();
-  const warehouseId = (searchParams.warehouseId || "").trim();
-  const from = searchParams.from;
-  const to = searchParams.to;
+  const params = await searchParams;
+  const page = Math.max(parseInt(params.page || "1", 10), 1);
+  const query = (params.q || "").trim();
+  const type = (params.type || "").trim();
+  const warehouseId = (params.warehouseId || "").trim();
+  const from = params.from;
+  const to = params.to;
   const take = 25;
   const skip = (page - 1) * take;
 
@@ -111,7 +109,7 @@ export default async function InventoryLedgerPage({
       canViewCost={canViewCost}
       canAdjust={canAdjust}
       canRequest={canRequest}
-      searchParams={searchParams}
+      searchParams={params}
     />
   );
 }

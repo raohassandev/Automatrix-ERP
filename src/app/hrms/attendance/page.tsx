@@ -10,7 +10,7 @@ import { AttendanceManager } from "@/components/hrms/AttendanceManager";
 export default async function HrmsAttendancePage({
   searchParams,
 }: {
-  searchParams: { search?: string; status?: string; from?: string; to?: string };
+  searchParams: Promise<{ search?: string; status?: string; from?: string; to?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) return redirect("/login");
@@ -25,10 +25,11 @@ export default async function HrmsAttendancePage({
     );
   }
 
-  const search = (searchParams.search || "").trim();
-  const status = (searchParams.status || "").trim();
-  const from = (searchParams.from || "").trim();
-  const to = (searchParams.to || "").trim();
+  const params = await searchParams;
+  const search = (params.search || "").trim();
+  const status = (params.status || "").trim();
+  const from = (params.from || "").trim();
+  const to = (params.to || "").trim();
 
   const where: import("@prisma/client").Prisma.AttendanceEntryWhereInput = {};
   if (scope.employeeId) {

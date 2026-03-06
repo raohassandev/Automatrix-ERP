@@ -11,12 +11,12 @@ import { formatMoney } from "@/lib/format";
 export default async function JournalsPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
     from?: string;
     to?: string;
     status?: string;
-  };
+  }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) return redirect("/login");
@@ -31,10 +31,11 @@ export default async function JournalsPage({
     );
   }
 
-  const search = (searchParams.search || "").trim();
-  const status = (searchParams.status || "").trim().toUpperCase();
-  const from = searchParams.from;
-  const to = searchParams.to;
+  const params = await searchParams;
+  const search = (params.search || "").trim();
+  const status = (params.status || "").trim().toUpperCase();
+  const from = params.from;
+  const to = params.to;
 
   const where: import("@prisma/client").Prisma.JournalEntryWhereInput = {};
   if (search) {

@@ -11,7 +11,7 @@ import Link from "next/link";
 export default async function AuditPage({
   searchParams,
 }: {
-  searchParams: { search?: string; page?: string; action?: string; entity?: string; from?: string; to?: string };
+  searchParams: Promise<{ search?: string; page?: string; action?: string; entity?: string; from?: string; to?: string }>;
 }) {
   const session = await auth();
 
@@ -30,7 +30,7 @@ export default async function AuditPage({
     );
   }
 
-  const params = searchParams;
+  const params = await searchParams;
   const search = (params.search || "").trim();
   const action = (params.action || "").trim();
   const entity = (params.entity || "").trim();
