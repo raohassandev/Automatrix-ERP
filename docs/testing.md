@@ -132,3 +132,24 @@ Rules:
 - Staging only; never enable this on production.
 - Keep allowlist policy enforced (only ACTIVE employees can sign in).
 - Disable/remove credentials mode after QA stabilization and before production hardening signoff.
+
+## Staging batch gate (recommended to reduce deploy cycles)
+
+Use these before pushing to `dev` so fixes are bundled and deployment runs once per stable batch.
+
+Critical staging gate:
+```bash
+pnpm test:staging:critical
+```
+
+Full staging regression:
+```bash
+pnpm test:staging:full
+```
+
+Recommended cadence:
+1. Implement 4-8 related fixes locally.
+2. Run `pnpm typecheck` and `pnpm lint` on touched files.
+3. Run `pnpm test:staging:critical`.
+4. Push once.
+5. Run `pnpm test:staging:full` only for release-candidate batches.
