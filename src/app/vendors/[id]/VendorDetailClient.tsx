@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import type { VendorDetailData, VendorDetailTab } from "@/lib/vendor-detail-policy";
-import { buildVendorWorkhubPolicy } from "@/lib/vendor-workhub-policy";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/FormDialog";
@@ -36,7 +35,7 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
   const router = useRouter();
   const tabs = (Object.keys(detail.policy.tabs) as VendorDetailTab[]).filter((t) => detail.policy.tabs[t]);
   const [active, setActive] = React.useState<VendorDetailTab>(tabs[0] || "activity");
-  const workhub = buildVendorWorkhubPolicy(detail.policy.role);
+  const workhub = detail.policy.workhubActions;
 
   const [poOpen, setPoOpen] = React.useState(false);
   const [billOpen, setBillOpen] = React.useState(false);
@@ -82,7 +81,7 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
     if (!res.ok) throw new Error(json.error || "Failed to add attachment");
   }
 
-  const anyActions = Object.values(workhub.actions).some(Boolean);
+  const anyActions = Object.values(workhub).some(Boolean);
 
   return (
     <div className="grid gap-6">
@@ -126,19 +125,19 @@ export function VendorDetailClient({ detail }: { detail: VendorDetailData }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {workhub.actions.create_po ? (
+                  {workhub.create_po ? (
                     <DropdownMenuItem onSelect={() => setPoOpen(true)}>Create PO for this Vendor</DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.create_vendor_bill ? (
+                  {workhub.create_vendor_bill ? (
                     <DropdownMenuItem onSelect={() => setBillOpen(true)}>Create Vendor Bill for this Vendor</DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.record_vendor_payment ? (
+                  {workhub.record_vendor_payment ? (
                     <DropdownMenuItem onSelect={() => setPaymentOpen(true)}>Record Vendor Payment</DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.add_note ? (
+                  {workhub.add_note ? (
                     <DropdownMenuItem onSelect={() => setNoteOpen(true)}>Add Vendor Note</DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.add_attachment ? (
+                  {workhub.add_attachment ? (
                     <DropdownMenuItem onSelect={() => setAttachmentOpen(true)}>Add Vendor Attachment (URL)</DropdownMenuItem>
                   ) : null}
                 </DropdownMenuContent>

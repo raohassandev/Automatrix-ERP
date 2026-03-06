@@ -10,6 +10,13 @@ export type VendorDetailPolicy = {
   canAccessPage: boolean;
   tabs: Record<VendorDetailTab, boolean>;
   canViewAmounts: boolean;
+  workhubActions: {
+    create_po: boolean;
+    create_vendor_bill: boolean;
+    record_vendor_payment: boolean;
+    add_note: boolean;
+    add_attachment: boolean;
+  };
 };
 
 export type VendorDetailHeader = {
@@ -92,10 +99,12 @@ function buildPolicy(
   role: RoleName,
   perms: {
     canViewProcurementAll: boolean;
+    canEditProcurement: boolean;
     canViewVendorsAll: boolean;
     canViewProjectsAll: boolean;
     canViewAssignedProjects: boolean;
     canViewAmounts: boolean;
+    canManageCompanyAccounts: boolean;
   },
 ): VendorDetailPolicy {
   // Vendor detail is a procurement-facing view, but we allow limited read access for other roles via scoping.
@@ -134,7 +143,16 @@ function buildPolicy(
     tabs.aging = false;
   }
 
-  return { role, canAccessPage, tabs, canViewAmounts };
+  const canProcure = perms.canEditProcurement && perms.canViewProcurementAll;
+  const workhubActions = {
+    create_po: canProcure,
+    create_vendor_bill: canProcure,
+    record_vendor_payment: perms.canManageCompanyAccounts,
+    add_note: canAccessPage,
+    add_attachment: canAccessPage,
+  };
+
+  return { role, canAccessPage, tabs, canViewAmounts, workhubActions };
 }
 
 async function getAssignedProjectRefs(userId: string) {
@@ -181,23 +199,29 @@ export async function getVendorDetailForUser(args: { userId: string; vendorDbId:
   const role = await getUserRoleName(args.userId);
   const [
     canViewProcurementAll,
+    canEditProcurement,
     canViewVendorsAll,
     canViewProjectsAll,
     canViewAssignedProjects,
     canViewAmounts,
+    canManageCompanyAccounts,
   ] = await Promise.all([
     requirePermission(args.userId, "procurement.view_all"),
+    requirePermission(args.userId, "procurement.edit"),
     requirePermission(args.userId, "vendors.view_all"),
     requirePermission(args.userId, "projects.view_all"),
     requirePermission(args.userId, "projects.view_assigned"),
     requirePermission(args.userId, "inventory.view_cost"),
+    requirePermission(args.userId, "company_accounts.manage"),
   ]);
   const policy = buildPolicy(role, {
     canViewProcurementAll,
+    canEditProcurement,
     canViewVendorsAll,
     canViewProjectsAll,
     canViewAssignedProjects,
     canViewAmounts,
+    canManageCompanyAccounts,
   });
   const isSalesOrMarketing = policy.role === "Sales" || policy.role === "Marketing";
   const isStoreOrTech = policy.role === "Store Keeper" || policy.role === "Staff";
