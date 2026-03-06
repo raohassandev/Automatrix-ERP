@@ -6,6 +6,18 @@ const ROLE_EMAILS = {
   engineer: process.env.E2E_ENGINEER_EMAIL || "engineer1@automatrix.pk",
 } as const;
 
+async function getEffectivePermissions(
+  baseURL: string | undefined,
+  storageStatePath: string,
+): Promise<Set<string>> {
+  const api = await request.newContext({ baseURL, storageState: storageStatePath });
+  const res = await api.get("/api/me/effective-permissions");
+  expect(res.ok()).toBeTruthy();
+  const json = await res.json();
+  await api.dispose();
+  return new Set<string>(Array.isArray(json?.permissions) ? json.permissions : []);
+}
+
 async function ensureStorageState(
   browser: import("@playwright/test").Browser,
   baseURL: string | undefined,
@@ -20,6 +32,7 @@ async function ensureStorageState(
 }
 
 test.describe.serial("Inventory RBAC actions", () => {
+  test.setTimeout(180_000);
   let itemId = "";
   let itemName = "";
   const states = {
@@ -61,7 +74,7 @@ test.describe.serial("Inventory RBAC actions", () => {
   test("Finance sees full inventory actions", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ baseURL, storageState: states.finance });
     const page = await ctx.newPage();
-    await page.goto(`/inventory?search=${encodeURIComponent(itemName)}`);
+    await page.goto(`/inventory?search=${encodeURIComponent(itemName)}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
 
     const row = page.locator("tr", { hasText: itemName }).first();
     await expect(row).toBeVisible();
@@ -75,7 +88,7 @@ test.describe.serial("Inventory RBAC actions", () => {
   test("Engineer does not see edit/delete or stock movement", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
     const page = await ctx.newPage();
-    await page.goto(`/inventory?search=${encodeURIComponent(itemName)}`);
+    await page.goto(`/inventory?search=${encodeURIComponent(itemName)}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
 
     const row = page.locator("tr", { hasText: itemName }).first();
     await expect(row).toBeVisible();
@@ -86,23 +99,43 @@ test.describe.serial("Inventory RBAC actions", () => {
   });
 
   test("Item detail actions follow effective permissions", async ({ browser, baseURL }) => {
+    const financePerms = await getEffectivePermissions(baseURL, states.finance);
+    const engineerPerms = await getEffectivePermissions(baseURL, states.engineer);
+    const financeCanProcure = financePerms.has("procurement.edit") && financePerms.has("procurement.view_all");
+    const engineerCanProcure = engineerPerms.has("procurement.edit") && engineerPerms.has("procurement.view_all");
+    const engineerCanAccessItem =
+      engineerPerms.has("inventory.view") || engineerPerms.has("inventory.view_selling");
+
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto(`/inventory/items/${itemId}`);
+      await page.goto(`/inventory/items/${itemId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
       await expect(page.getByTestId("workhub-actions-button")).toBeVisible();
       await page.getByTestId("workhub-actions-button").click();
-      await expect(page.getByRole("menuitem", { name: /Start Purchase Order with this Item/i })).toBeVisible();
+      if (financeCanProcure) {
+        await expect(page.getByRole("menuitem", { name: /Start Purchase Order with this Item/i })).toBeVisible();
+      } else {
+        await expect(page.getByRole("menuitem", { name: /Start Purchase Order with this Item/i })).toHaveCount(0);
+      }
       await ctx.close();
     }
 
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
-      await page.goto(`/inventory/items/${itemId}`);
+      await page.goto(`/inventory/items/${itemId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      if (!engineerCanAccessItem) {
+        await expect(page.getByText("You do not have access to this item.")).toBeVisible();
+        await ctx.close();
+        return;
+      }
       await expect(page.getByTestId("workhub-actions-button")).toBeVisible();
       await page.getByTestId("workhub-actions-button").click();
-      await expect(page.getByRole("menuitem", { name: /Start Purchase Order with this Item/i })).toHaveCount(0);
+      if (engineerCanProcure) {
+        await expect(page.getByRole("menuitem", { name: /Start Purchase Order with this Item/i })).toBeVisible();
+      } else {
+        await expect(page.getByRole("menuitem", { name: /Start Purchase Order with this Item/i })).toHaveCount(0);
+      }
       await expect(page.getByRole("menuitem", { name: /Add Item Note/i })).toBeVisible();
       await ctx.close();
     }

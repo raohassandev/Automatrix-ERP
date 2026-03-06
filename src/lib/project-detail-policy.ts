@@ -9,6 +9,14 @@ export type ProjectDetailPolicy = {
   role: RoleName;
   canAccessPage: boolean;
   tabs: Record<ProjectDetailTab, boolean>;
+  workhubActions: {
+    create_po: boolean;
+    receive_grn: boolean;
+    create_vendor_bill: boolean;
+    assign_people: boolean;
+    add_note: boolean;
+    add_attachment: boolean;
+  };
   // Field-level masking
   canViewUnitCosts: boolean;
   canViewFinancialTotals: boolean;
@@ -171,6 +179,8 @@ function buildPolicy(
   perms: {
     canViewAll: boolean;
     canViewAssigned: boolean;
+    canProcureViewAll: boolean;
+    canProcureEdit: boolean;
     canViewUnitCosts: boolean;
     canViewFinancialTotals: boolean;
     canViewInventory: boolean;
@@ -217,10 +227,22 @@ function buildPolicy(
     tabs.execution = false;
   }
 
+  const canProcure = canAccessPage && perms.canProcureEdit && perms.canProcureViewAll;
+  const canAssign = canAccessPage && perms.canAssignProjects;
+  const canAnnotate = canAccessPage;
+
   return {
     role,
     canAccessPage,
     tabs,
+    workhubActions: {
+      create_po: canProcure,
+      receive_grn: canProcure,
+      create_vendor_bill: canProcure,
+      assign_people: canAssign,
+      add_note: canAnnotate,
+      add_attachment: canAnnotate,
+    },
     canViewUnitCosts,
     canViewFinancialTotals,
     incentives: {
@@ -236,6 +258,8 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   const [
     canViewAll,
     canViewAssigned,
+    canProcureViewAll,
+    canProcureEdit,
     canViewUnitCosts,
     canViewFinancialTotals,
     canViewAllMetrics,
@@ -249,6 +273,8 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   ] = await Promise.all([
     requirePermission(args.userId, "projects.view_all"),
     requirePermission(args.userId, "projects.view_assigned"),
+    requirePermission(args.userId, "procurement.view_all"),
+    requirePermission(args.userId, "procurement.edit"),
     requirePermission(args.userId, "inventory.view_cost"),
     requirePermission(args.userId, "projects.view_financials"),
     requirePermission(args.userId, "dashboard.view_all_metrics"),
@@ -264,6 +290,8 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   const policy = buildPolicy(role, {
     canViewAll,
     canViewAssigned,
+    canProcureViewAll,
+    canProcureEdit,
     canViewUnitCosts,
     canViewFinancialTotals: canViewFinancialTotals || canViewAllMetrics,
     canViewInventory,

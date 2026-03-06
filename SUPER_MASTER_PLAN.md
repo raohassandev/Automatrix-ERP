@@ -478,6 +478,12 @@ Latest discrepancy baseline (`docs/STAGING_ROLE_DEEP_AUDIT_2026-03-05.md`):
 - Open: `CRITICAL 0`, `HIGH 0`, `MEDIUM 0`, `LOW 0`.
 - Closure status: implemented-module fast-track discrepancy burn-down is complete for current staging baseline; remaining work is production monitored rollout and module `19`/`20` expansion.
 
+### 11.4 Live TODO Tracker (Implemented Modules)
+
+- Active closure tracker file: [docs/IMPLEMENTED_MODULES_TODO.md](docs/IMPLEMENTED_MODULES_TODO.md)
+- Rule: any new discrepancy/idea for implemented modules must be logged there first, then executed in batch.
+- This prevents loss of owner feedback, audit findings, and pending go-live tasks between development passes.
+
 ### 11.2 Owner-Critical Module Status (Requested)
 
 - Finance & Accounting Core (`14`): `[x]` Completed
@@ -527,6 +533,7 @@ Reason: core employee lifecycle (wallet/advances + attendance + leave + payroll 
   - employee master lifecycle, attendance/leave (phaseable), self-service
   - monthly payroll runs, salary structures, deductions with approvals
   - project incentives/commissions tied to project closure and policy
+  - employee profile maturity + task performance/verification/grading workflow (role-controlled visibility)
 - Dependency: Phase 2 accounting core must exist for payroll journals.
 
 ### Phase 4 (execution depth)

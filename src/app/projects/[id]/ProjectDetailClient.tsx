@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import type { ProjectDetailData, ProjectDetailTab } from "@/lib/project-detail-policy";
-import { buildProjectWorkhubPolicy } from "@/lib/project-workhub-policy";
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/FormDialog";
 import { Input } from "@/components/ui/input";
@@ -53,7 +52,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
     (t) => detail.policy.tabs[t],
   );
   const [active, setActive] = React.useState<ProjectDetailTab>(tabs[0] || "activity");
-  const workhub = buildProjectWorkhubPolicy(detail.policy.role);
+  const workhubActions = detail.policy.workhubActions;
 
   const [poOpen, setPoOpen] = React.useState(false);
   const [grnOpen, setGrnOpen] = React.useState(false);
@@ -251,7 +250,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
     if (!res.ok) throw new Error(json.error || "Failed to update task");
   }
 
-  const anyActions = Object.values(workhub.actions).some(Boolean);
+  const anyActions = Object.values(workhubActions).some(Boolean);
 
   return (
     <div className="grid gap-6">
@@ -324,32 +323,32 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {workhub.actions.create_po ? (
+                  {workhubActions.create_po ? (
                     <DropdownMenuItem onSelect={() => setPoOpen(true)}>
                       Create Purchase Order for this Project
                     </DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.receive_grn ? (
+                  {workhubActions.receive_grn ? (
                     <DropdownMenuItem onSelect={() => setGrnOpen(true)}>
                       Receive Goods (GRN) for this Project
                     </DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.create_vendor_bill ? (
+                  {workhubActions.create_vendor_bill ? (
                     <DropdownMenuItem onSelect={() => setBillOpen(true)}>
                       Create Vendor Bill for this Project
                     </DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.assign_people ? (
+                  {workhubActions.assign_people ? (
                     <DropdownMenuItem onSelect={() => setAssignOpen(true)}>
                       Assign People to Project
                     </DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.add_note ? (
+                  {workhubActions.add_note ? (
                     <DropdownMenuItem onSelect={() => setNoteOpen(true)}>
                       Add Project Note
                     </DropdownMenuItem>
                   ) : null}
-                  {workhub.actions.add_attachment ? (
+                  {workhubActions.add_attachment ? (
                     <DropdownMenuItem onSelect={() => setAttachmentOpen(true)}>
                       Add Attachment (URL)
                     </DropdownMenuItem>

@@ -18,10 +18,10 @@ function hasPermissionFromSet(permissionSet: Set<string>, permission: string) {
 export function useEffectivePermissions(roleName: RoleName) {
   const [permissions, setPermissions] = useState<string[] | null>(null);
   const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
 
   useEffect(() => {
     if (status !== "authenticated") {
-      setPermissions(null);
       return;
     }
     let isMounted = true;
@@ -47,18 +47,28 @@ export function useEffectivePermissions(roleName: RoleName) {
   }, [status]);
 
   const permissionSet = useMemo(() => {
+    if (!isAuthenticated) {
+      const fallback = new Set<string>();
+      for (const permissionKey of PERMISSION_KEYS) {
+        if (hasPermission(roleName, permissionKey)) {
+          fallback.add(permissionKey);
+        }
+      }
+      return fallback;
+    }
+
     if (permissions) {
       return new Set(permissions);
     }
 
-    const fallback = new Set<string>();
-    for (const permissionKey of PERMISSION_KEYS) {
-      if (hasPermission(roleName, permissionKey)) {
-        fallback.add(permissionKey);
-      }
+    // Secure-by-default for authenticated sessions: don't expose role-static UI
+    // before the effective-permissions API (role + user overrides) loads.
+    if (isAuthenticated) {
+      return new Set<string>();
     }
-    return fallback;
-  }, [permissions, roleName]);
+
+    return new Set<string>();
+  }, [isAuthenticated, permissions, roleName]);
 
   const canAccess = (requiredPermissions?: string[]) => {
     if (!requiredPermissions || requiredPermissions.length === 0) {

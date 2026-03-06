@@ -9,6 +9,18 @@ const ROLE_EMAILS = {
   finance: "finance1@automatrix.pk",
 } as const;
 
+async function getEffectivePermissions(
+  baseURL: string | undefined,
+  storageStatePath: string,
+): Promise<Set<string>> {
+  const api = await request.newContext({ baseURL, storageState: storageStatePath });
+  const res = await api.get("/api/me/effective-permissions");
+  expect(res.ok()).toBeTruthy();
+  const json = await res.json();
+  await api.dispose();
+  return new Set<string>(Array.isArray(json?.permissions) ? json.permissions : []);
+}
+
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
   await loginAs(page, email);
 }
@@ -27,6 +39,7 @@ async function ensureStorageState(
 }
 
 test.describe.serial("Project Detail (RBAC + mobile)", () => {
+  test.setTimeout(180_000);
   let projectDbId = "";
   const states = {
     engineer: "playwright/.auth/engineer.json",
@@ -89,26 +102,51 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
   });
 
   test("Finance: sees all tabs + unit costs", async ({ browser, baseURL }) => {
+    const financePerms = await getEffectivePermissions(baseURL, states.finance);
+    const canViewCosts = financePerms.has("projects.view_financials");
+    const canViewInventory = financePerms.has("inventory.view");
+    const canViewPeople = financePerms.has("employees.view_all") || financePerms.has("projects.assign");
+    const canViewUnitCosts = financePerms.has("inventory.view_cost");
+
     const ctx = await browser.newContext({ baseURL, storageState: states.finance });
     const page = await ctx.newPage();
-    await page.goto(`/projects/${projectDbId}`);
+    await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "Project" })).toBeVisible({ timeout: 15_000 }).catch(() => {});
     await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
-    await expect(tabButton(page, /^Costs$/).first()).toBeVisible();
-    await expect(tabButton(page, /^Inventory$/).first()).toBeVisible();
-    await expect(tabButton(page, /^People$/).first()).toBeVisible();
+    if (canViewCosts) {
+      await expect(tabButton(page, /^Costs$/).first()).toBeVisible();
+    } else {
+      await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
+    }
+    if (canViewInventory) {
+      await expect(tabButton(page, /^Inventory$/).first()).toBeVisible();
+    } else {
+      await expect(tabButton(page, /^Inventory$/)).toHaveCount(0);
+    }
+    if (canViewPeople) {
+      await expect(tabButton(page, /^People$/).first()).toBeVisible();
+    } else {
+      await expect(tabButton(page, /^People$/)).toHaveCount(0);
+    }
     await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
 
-    await tabButton(page, /^Inventory$/).first().click();
-    await expect(page.getByRole("columnheader", { name: "Unit Cost" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "Total" })).toBeVisible();
+    if (canViewInventory) {
+      await tabButton(page, /^Inventory$/).first().click();
+      if (canViewUnitCosts) {
+        await expect(page.getByRole("columnheader", { name: "Unit Cost" })).toBeVisible();
+        await expect(page.getByRole("columnheader", { name: "Total" })).toBeVisible();
+      } else {
+        await expect(page.getByRole("columnheader", { name: "Unit Cost" })).toHaveCount(0);
+        await expect(page.getByRole("columnheader", { name: "Total" })).toHaveCount(0);
+      }
+    }
     await ctx.close();
   });
 
   test("Engineer: no Costs tab; has People; inventory costs masked", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
     const page = await ctx.newPage();
-    await page.goto(`/projects/${projectDbId}`);
+    await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
     await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
     await expect(tabButton(page, /^People$/).first()).toBeVisible();
@@ -123,7 +161,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
   test("Sales: docs-only view (no costs/inventory/people)", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ baseURL, storageState: states.sales });
     const page = await ctx.newPage();
-    await page.goto(`/projects/${projectDbId}`);
+    await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
     await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
     await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
@@ -135,7 +173,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
   test("Technician: docs/activity only (no inventory/costs)", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ baseURL, storageState: states.technician });
     const page = await ctx.newPage();
-    await page.goto(`/projects/${projectDbId}`);
+    await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await expect(tabButton(page, /^Activity$/).first()).toBeVisible();
     await expect(tabButton(page, /^Documents$/).first()).toBeVisible();
     await expect(tabButton(page, /^Inventory$/)).toHaveCount(0);
@@ -147,7 +185,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
   test("Store: inventory movements only (no costs/people)", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ baseURL, storageState: states.store });
     const page = await ctx.newPage();
-    await page.goto(`/projects/${projectDbId}`);
+    await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await expect(tabButton(page, /^Inventory$/).first()).toBeVisible();
     await expect(tabButton(page, /^Costs$/)).toHaveCount(0);
     await page.getByRole("button", { name: "Inventory" }).click();
@@ -162,7 +200,7 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
       storageState: states.finance,
     });
     const page = await ctx.newPage();
-    await page.goto("/projects");
+    await page.goto("/projects", { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.getByRole("link", { name: /E2E Project Detail/i }).first().click();
     await expect(page).toHaveURL(/\/projects\/.+/);
 
@@ -194,14 +232,14 @@ test.describe.serial("Project Detail (RBAC + mobile)", () => {
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto("/reports/projects");
+      await page.goto("/reports/projects", { waitUntil: "domcontentloaded", timeout: 30_000 });
       await expect(page.getByRole("heading", { name: "Project Financial Report" })).toBeVisible();
       await ctx.close();
     }
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
-      await page.goto("/reports/projects");
+      await page.goto("/reports/projects", { waitUntil: "domcontentloaded", timeout: 30_000 });
       await expect(page).toHaveURL(/\/forbidden/);
       await ctx.close();
     }

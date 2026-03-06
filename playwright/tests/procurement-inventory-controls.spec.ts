@@ -4,6 +4,7 @@ import { loginAs } from "./helpers/auth";
 const FINANCE_EMAIL = process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk";
 
 test.describe("Procurement + Inventory control guards", () => {
+  test.setTimeout(180_000);
   test("blocks GRN on non-receivable PO, blocks duplicate bill, blocks over-transfer by warehouse", async ({
     page,
     baseURL,

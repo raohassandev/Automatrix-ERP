@@ -70,7 +70,7 @@ test.describe.serial("Inventory identity guards", () => {
       expect(ids).toContain(createdId);
     } finally {
       for (const id of createdIds) {
-        await page.request.delete(`/api/inventory/${id}`);
+        await page.request.delete(`/api/inventory/${id}`, { timeout: 10_000 }).catch(() => null);
       }
     }
   });

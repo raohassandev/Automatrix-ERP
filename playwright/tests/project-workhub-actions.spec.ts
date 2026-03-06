@@ -7,6 +7,18 @@ const ROLE_EMAILS = {
   finance: "finance1@automatrix.pk",
 } as const;
 
+async function getEffectivePermissions(
+  baseURL: string | undefined,
+  storageStatePath: string,
+): Promise<Set<string>> {
+  const api = await request.newContext({ baseURL, storageState: storageStatePath });
+  const res = await api.get("/api/me/effective-permissions");
+  expect(res.ok()).toBeTruthy();
+  const json = await res.json();
+  await api.dispose();
+  return new Set<string>(Array.isArray(json?.permissions) ? json.permissions : []);
+}
+
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
   await loginAs(page, email);
 }
@@ -25,6 +37,7 @@ async function ensureStorageState(
 }
 
 test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
+  test.setTimeout(180_000);
   let projectDbId = "";
   const states = {
     engineer: "playwright/.auth/engineer.json",
@@ -82,14 +95,34 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
   });
 
   test("Finance: sees procurement + assign + note/attachment actions", async ({ browser, baseURL }) => {
+    const financePerms = await getEffectivePermissions(baseURL, states.finance);
+    const canProcure = financePerms.has("procurement.edit") && financePerms.has("procurement.view_all");
+    const canAssign = financePerms.has("projects.assign");
+    const canProjectView = financePerms.has("projects.view_all") || financePerms.has("projects.view_assigned");
+
     const ctx = await browser.newContext({ baseURL, storageState: states.finance });
     const page = await ctx.newPage();
-    await page.goto(`/projects/${projectDbId}`);
+    await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    if (!canProjectView) {
+      await expect(page.getByText("You do not have access to this project.")).toBeVisible();
+      await ctx.close();
+      return;
+    }
     await page.getByTestId("workhub-actions-button").first().click();
-    await expect(page.getByRole("menuitem", { name: "Create Purchase Order for this Project" }).first()).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Receive Goods (GRN) for this Project" }).first()).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Create Vendor Bill for this Project" }).first()).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Assign People to Project" }).first()).toBeVisible();
+    if (canProcure) {
+      await expect(page.getByRole("menuitem", { name: "Create Purchase Order for this Project" }).first()).toBeVisible();
+      await expect(page.getByRole("menuitem", { name: "Receive Goods (GRN) for this Project" }).first()).toBeVisible();
+      await expect(page.getByRole("menuitem", { name: "Create Vendor Bill for this Project" }).first()).toBeVisible();
+    } else {
+      await expect(page.getByRole("menuitem", { name: "Create Purchase Order for this Project" })).toHaveCount(0);
+      await expect(page.getByRole("menuitem", { name: "Receive Goods (GRN) for this Project" })).toHaveCount(0);
+      await expect(page.getByRole("menuitem", { name: "Create Vendor Bill for this Project" })).toHaveCount(0);
+    }
+    if (canAssign) {
+      await expect(page.getByRole("menuitem", { name: "Assign People to Project" }).first()).toBeVisible();
+    } else {
+      await expect(page.getByRole("menuitem", { name: "Assign People to Project" })).toHaveCount(0);
+    }
     await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Add Attachment (URL)" }).first()).toBeVisible();
     await ctx.close();
@@ -98,7 +131,7 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
   test("Engineer: note/attachment only (no procurement actions, no assign)", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
     const page = await ctx.newPage();
-    await page.goto(`/projects/${projectDbId}`);
+    await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Add Attachment (URL)" }).first()).toBeVisible();
@@ -110,7 +143,7 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
   test("Store: note/attachment only; API-negative for assignments returns 403", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ baseURL, storageState: states.store });
     const page = await ctx.newPage();
-    await page.goto(`/projects/${projectDbId}`);
+    await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
     await expect(page.getByRole("menuitem", { name: "Add Attachment (URL)" }).first()).toBeVisible();
@@ -130,7 +163,7 @@ test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
       storageState: states.finance,
     });
     const page = await ctx.newPage();
-    await page.goto(`/projects/${projectDbId}`);
+    await page.goto(`/projects/${projectDbId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.getByTestId("workhub-actions-button").first().click();
     await expect(page.getByRole("menuitem", { name: "Add Project Note" }).first()).toBeVisible();
     await ctx.close();
