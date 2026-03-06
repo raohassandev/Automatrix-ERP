@@ -489,6 +489,23 @@ Latest discrepancy baseline (`docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md`):
 - Rule: any new discrepancy/idea for implemented modules must be logged there first, then executed in batch.
 - This prevents loss of owner feedback, audit findings, and pending go-live tasks between development passes.
 
+### 11.5 Task Management Architecture Decision (2026-03-07)
+
+- Decision: build **Task Management** as a separate operational module, integrated with HRMS (not embedded only inside HRMS).
+- Reason:
+  - task execution belongs to operations/projects/procurement/engineering, not HR-only workflows
+  - HRMS should consume verified task outcomes for profiling/performance, not own end-to-end task lifecycle
+  - cleaner RBAC and better scaling for cross-module execution control
+- Integration contract:
+  - Task module owns: assignment, execution state, reminders/escalations, verification queue, evidence trail
+  - HRMS owns: employee profile, performance insights, growth/weakness trends, manager/CEO review views
+  - Shared objects: employees, org hierarchy, projects, notifications, audit logs
+- Planned capability baseline:
+  - rich task editor + checklist + attachments
+  - multi-assignee support (primary owner + contributors)
+  - overdue/pending nudges + escalation alerts
+  - completion ranking with calibration controls to reduce manager bias and protect company training investment
+
 ### 11.2 Owner-Critical Module Status (Requested)
 
 - Finance & Accounting Core (`14`): `[x]` Completed
@@ -539,6 +556,7 @@ Reason: core employee lifecycle (wallet/advances + attendance + leave + payroll 
   - monthly payroll runs, salary structures, deductions with approvals
   - project incentives/commissions tied to project closure and policy
   - employee profile maturity + task performance/verification/grading workflow (role-controlled visibility)
+  - task management module integration (rich tasks, multi-assignee, SLA reminders/escalations, evidence-based verification)
 - Dependency: Phase 2 accounting core must exist for payroll journals.
 
 ### Phase 4 (execution depth)

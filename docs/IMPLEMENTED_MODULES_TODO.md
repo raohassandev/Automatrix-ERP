@@ -70,6 +70,11 @@ This file is the running action list for closure, hardening, and go-live readine
 
 ## 6) HR Profile + Task Performance (Planned Next)
 
+- [x] Architecture decision locked (2026-03-07):
+  - Task Management will be a **separate module** integrated with HRMS.
+  - Task module = execution engine; HRMS = profile/performance consumer.
+  - Rationale: cross-functional operations scope, cleaner RBAC, better scale.
+
 - [ ] Define and implement **Simple Employee Profile v1** (self-service first):
   - [ ] Personal/profile basics (name, role, manager, join date, service period).
   - [ ] HR summary (attendance, leave balances/requests, payroll snapshot, wallet snapshot).
@@ -81,19 +86,43 @@ This file is the running action list for closure, hardening, and go-live readine
     - client-facing view is separate and explicitly controlled
 
 - [ ] Define and implement **Task Assignment + Completion Performance v1**:
+  - [ ] Task authoring foundation:
+    - rich text description editor
+    - checklist/subtasks
+    - evidence attachments/links
+    - acceptance criteria section
+  - [ ] Assignment model:
+    - multiple assignees
+    - primary owner + contributors
+    - due date + priority + estimate
+  - [ ] Task status lifecycle:
+    - `TODO -> IN_PROGRESS -> BLOCKED -> DONE -> VERIFIED -> CLOSED`
+    - blocked reason mandatory
   - [ ] Owner/manager dashboards: task assignment/completion charts by employee/team.
   - [ ] Employee dashboard: own assigned/completed/overdue tasks trend.
   - [ ] Overdue attention controls:
     - due-date SLA monitoring
-    - assignee alerts
+    - assignee alerts (in-app + email; mobile push-ready event model)
     - manager/CEO escalation alerts based on threshold
   - [ ] Completion verification & grading:
     - verifier = immediate manager by default
     - CEO/Owner override allowed by permission
     - grading dimensions (interest/effort/capability/learning/lag/improvement need)
     - grading visibility controlled by role policy
+  - [ ] Fairness and anti-bias controls:
+    - low-rating evidence note required
+    - calibration review path (manager + skip-level/HR/CEO permission)
+    - audit trail for score edits and reviewer comments
 
 - [ ] Add new permission set for performance workflow before implementation:
+  - [ ] `tasks.manage`
+  - [ ] `tasks.assign`
+  - [ ] `tasks.view_team`
+  - [ ] `tasks.view_company`
+  - [ ] `tasks.verify`
+  - [ ] `tasks.close`
+  - [ ] `tasks.reopen`
+  - [ ] `tasks.attach_evidence`
   - [ ] `tasks.verify_completion`
   - [ ] `tasks.grade_completion`
   - [ ] `tasks.view_team_performance`
