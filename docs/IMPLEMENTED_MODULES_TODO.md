@@ -69,7 +69,7 @@ This file is the running action list for closure, hardening, and go-live readine
 - [ ] Keep this tracker updated after each batch:
   - [x] mark completed items with date + evidence doc/spec.
   - [x] add new findings immediately with severity and owner.  
-    Evidence (2026-03-07): no new discrepancies in latest `qa:staging:rc` run (`40/40` core + mobile expense submit smoke), and prior flaky project/vendor action assignment timing fixed in `playwright/tests/vendor-item-workhub-actions.spec.ts`.
+    Evidence (2026-03-07): no new discrepancies in latest `qa:staging:postgreen` run (`40/40` core + mobile expense submit smoke + vendor/item/project suite `10/10` at `retries=0`), documented in `docs/STAGING_POSTGREEN_AUDIT_2026-03-07.md`.
 - [ ] Keep module `19` and `20` work out of this file (tracked in `SUPER_MASTER_PLAN.md` main roadmap).
 
 ## 6) HR Profile + Task Performance (Planned Next)

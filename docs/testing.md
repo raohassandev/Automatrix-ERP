@@ -162,6 +162,11 @@ Release-candidate staging gate (batch + mobile expense submit smoke):
 pnpm qa:staging:rc
 ```
 
+Post-deploy deep gate (after GitHub action turns green):
+```bash
+pnpm qa:staging:postgreen
+```
+
 Full staging regression:
 ```bash
 pnpm test:staging:full
@@ -172,4 +177,5 @@ Recommended cadence:
 2. Run `pnpm typecheck` and `pnpm lint` on touched files.
 3. Run `pnpm test:staging:critical:fast` during active development, then `pnpm test:staging:critical` before final push.
 4. Push once.
-5. Run `pnpm test:staging:full` only for release-candidate batches.
+5. After deployment is green, run `pnpm qa:staging:postgreen` for deterministic RBAC/mobile regression confidence.
+6. Run `pnpm test:staging:full` only for release-candidate batches.

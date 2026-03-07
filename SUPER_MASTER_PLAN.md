@@ -466,6 +466,8 @@ Snapshot note:
 - Fast-track closure batch 8 completed for implemented modules: added automated effective-permission parity verifier for all active users, resolved Access Control Center hook dependency warning, and introduced fast parallel staging critical gate for long-pass batching.
 - Fast-track closure batch 9 completed for implemented modules: release-candidate staging batch gate was added (`qa:staging:rc`), mobile expense submit smoke was stabilized and passing, and project/vender workhub RBAC suites were hardened against parallel-run action-menu timing races.
 - Fast-track closure batch 10 completed for implemented modules: vendor/project workhub RBAC suite was hardened against assignment drift (first-run stability), and full staging RC gate revalidated green (`40/40` core + mobile expense submit smoke) after fix.
+- Fast-track closure batch 11 completed for implemented modules: post-deploy deep gate was standardized (`qa:staging:postgreen`) to run RC validation plus zero-retry vendor/item/project workhub stability checks for deterministic green-cycle signoff.
+- Fast-track closure batch 12 completed for implemented modules: post-green discrepancy-only audit refreshed (`docs/STAGING_POSTGREEN_AUDIT_2026-03-07.md`) with `0` open defects and explicit residual go-live process blockers.
 - Remaining depth now continues under modules `19` and `20`.
 
 ### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05
