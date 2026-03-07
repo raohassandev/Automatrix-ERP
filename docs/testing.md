@@ -152,6 +152,11 @@ Effective-permission parity verification (all active users):
 pnpm verify:staging:effective-permissions
 ```
 
+One-command long-pass batch gate:
+```bash
+pnpm qa:staging:batch
+```
+
 Full staging regression:
 ```bash
 pnpm test:staging:full

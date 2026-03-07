@@ -230,22 +230,36 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     // Engineer: can submit expense on assigned project.
     {
       const api = await request.newContext({ baseURL, storageState: states.engineer });
-      const res = await api.post("/api/expenses", {
-        data: {
-          date: today,
-          description: `E2E engineer travel ${unique}`,
-          category: `E2E Misc ${unique}`,
-          amount: 1500,
-          paymentMode: "Cash",
-          paymentSource: "COMPANY_DIRECT",
-          expenseType: "COMPANY",
-          project: projectRef,
-          ignoreDuplicate: true,
-        },
-      });
-      if (!res.ok()) {
-        const body = await res.text();
-        throw new Error(`Engineer expense submit failed: ${res.status()} ${body}`);
+      let lastStatus = 0;
+      let lastBody = "";
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const res = await api.post("/api/expenses", {
+          data: {
+            date: today,
+            description: `E2E engineer travel ${unique}`,
+            category: `E2E Misc ${unique}`,
+            amount: 1500,
+            paymentMode: "Cash",
+            paymentSource: "COMPANY_DIRECT",
+            expenseType: "COMPANY",
+            project: projectRef,
+            ignoreDuplicate: true,
+          },
+        });
+        lastStatus = res.status();
+        if (res.ok()) {
+          lastBody = "";
+          break;
+        }
+        lastBody = await res.text();
+        if (lastStatus === 403 && /not assigned to the selected project/i.test(lastBody) && attempt < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)));
+          continue;
+        }
+        break;
+      }
+      if (lastStatus < 200 || lastStatus >= 300) {
+        throw new Error(`Engineer expense submit failed: ${lastStatus} ${lastBody}`);
       }
       await api.dispose();
     }
