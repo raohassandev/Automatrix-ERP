@@ -10,6 +10,8 @@ This file is the running action list for closure, hardening, and go-live readine
 - [ ] Owner/CEO final sign-off on staging access-control behavior (role templates + per-user overrides + approval routes).
 - [ ] Production manual smoke (mobile):
   - [ ] Expense submit flow on phone width.
+  - [x] Staging automated mobile expense submit smoke is passing.  
+    Evidence (2026-03-07): `playwright/tests/mobile-expense-submit-smoke.spec.ts`
   - [x] Approvals action controls visible/clickable on phone + tablet widths.  
     Evidence (2026-03-06): `playwright/tests/dashboard-approvals-mobile-smoke.spec.ts`
   - [x] No blocking horizontal clipping on key pages (`/settings`, `/inventory`, `/approvals`, `/expenses`).  

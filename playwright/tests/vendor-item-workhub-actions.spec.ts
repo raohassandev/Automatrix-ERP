@@ -13,6 +13,19 @@ async function uiLogin(page: import("@playwright/test").Page, email: string) {
   await loginAs(page, email);
 }
 
+async function openWorkhubActions(page: import("@playwright/test").Page) {
+  const trigger = page.getByTestId("workhub-actions-button").first();
+  await expect(trigger).toBeVisible({ timeout: 20_000 });
+  for (let i = 0; i < 6; i += 1) {
+    await trigger.click();
+    const hasMenu = await page.getByRole("menu").first().isVisible().catch(() => false);
+    if (hasMenu) return;
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(250);
+  }
+  throw new Error("Could not open workhub actions menu");
+}
+
 async function ensureStorageState(
   browser: import("@playwright/test").Browser,
   baseURL: string | undefined,
@@ -33,6 +46,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   let projectDbId = "";
   let projectRef = "";
   let otherUserId = "";
+  let engineerUserId = "";
   let companyAccountId = "";
   const states = {
     engineer: "playwright/.auth/engineer.json",
@@ -90,6 +104,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       (usersJson.data || []).map((u: { email: string; id: string }) => [String(u.email).toLowerCase(), u.id]),
     );
     otherUserId = byEmail.get(ROLE_EMAILS.finance) || "";
+    engineerUserId = byEmail.get(ROLE_EMAILS.engineer) || "";
 
     const assignRes = await api.post(`/api/projects/${projectDbId}/assignments`, {
       data: {
@@ -253,6 +268,15 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
         }
         lastBody = await res.text();
         if (lastStatus === 403 && /not assigned to the selected project/i.test(lastBody) && attempt < 3) {
+          if (engineerUserId) {
+            const repairApi = await request.newContext({ baseURL, storageState: states.finance });
+            await repairApi.post(`/api/projects/${projectDbId}/assignments`, {
+              data: {
+                assignments: [{ userId: engineerUserId }],
+              },
+            });
+            await repairApi.dispose();
+          }
           await new Promise((resolve) => setTimeout(resolve, 1200 * (attempt + 1)));
           continue;
         }
@@ -324,7 +348,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
       await page.goto(`/projects/${projectDbId}`);
-      await page.getByTestId("workhub-actions-button").first().click();
+      await openWorkhubActions(page);
       await expect(page.getByText("Create Purchase Order for this Project")).toBeVisible();
       await expect(page.getByText("Receive Goods (GRN) for this Project")).toBeVisible();
       await expect(page.getByText("Create Vendor Bill for this Project")).toBeVisible();
@@ -338,7 +362,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
       await page.goto(`/projects/${projectDbId}`);
-      await page.getByTestId("workhub-actions-button").first().click();
+      await openWorkhubActions(page);
       await expect(page.getByText("Add Project Note")).toBeVisible();
       await expect(page.getByText("Assign People to Project")).toHaveCount(0);
       await expect(page.getByText("Create Purchase Order for this Project")).toHaveCount(0);
@@ -350,7 +374,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
       const ctx = await browser.newContext({ baseURL, storageState: states.store });
       const page = await ctx.newPage();
       await page.goto(`/projects/${projectDbId}`);
-      await page.getByTestId("workhub-actions-button").first().click();
+      await openWorkhubActions(page);
       await expect(page.getByText("Add Project Note")).toBeVisible();
       await expect(page.getByText("Assign People to Project")).toHaveCount(0);
       await ctx.close();

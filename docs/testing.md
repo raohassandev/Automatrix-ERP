@@ -157,6 +157,11 @@ One-command long-pass batch gate:
 pnpm qa:staging:batch
 ```
 
+Release-candidate staging gate (batch + mobile expense submit smoke):
+```bash
+pnpm qa:staging:rc
+```
+
 Full staging regression:
 ```bash
 pnpm test:staging:full

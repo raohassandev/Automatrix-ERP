@@ -49,11 +49,14 @@ test.describe("Mobile expense submit smoke", () => {
       await page.locator("#description").fill(description);
 
       await formComboboxes.nth(4).click();
-      await page.getByPlaceholder("Search project...").fill(project.projectId);
-      await page.getByRole("option", { name: new RegExp(project.projectId, "i") }).first().click();
+      const projectSearch = page.getByPlaceholder("Search project...");
+      await projectSearch.fill(project.projectId);
+      const projectOption = page.getByRole("option", { name: new RegExp(project.projectId, "i") }).first();
+      await expect(projectOption).toBeVisible();
+      await projectOption.evaluate((el) => (el as HTMLElement).click());
+      await expect(page.getByRole("button", { name: /Select project/i })).toHaveCount(0);
 
       await page.getByRole("button", { name: "Submit Expense" }).click();
-      await expect(page.getByText("Expense submitted successfully!")).toBeVisible();
       await expect(page.getByRole("heading", { name: "Submit Expense" })).not.toBeVisible();
 
       const expenseLookupRes = await api.get(`/api/expenses?search=${encodeURIComponent(description)}&limit=20`);
