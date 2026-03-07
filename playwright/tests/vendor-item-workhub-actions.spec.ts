@@ -39,6 +39,19 @@ async function ensureStorageState(
   await ctx.close();
 }
 
+async function ensureProjectUsersAssigned(
+  baseURL: string | undefined,
+  storageStatePath: string,
+  projectId: string,
+  userIds: string[],
+) {
+  const assignments = userIds.filter(Boolean).map((userId) => ({ userId }));
+  if (assignments.length === 0) return;
+  const api = await request.newContext({ baseURL, storageState: storageStatePath });
+  await api.post(`/api/projects/${projectId}/assignments`, { data: { assignments } });
+  await api.dispose();
+}
+
 test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   let vendorDbId = "";
   let vendorName = "";
@@ -47,6 +60,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   let projectRef = "";
   let otherUserId = "";
   let engineerUserId = "";
+  let storeUserId = "";
   let companyAccountId = "";
   const states = {
     engineer: "playwright/.auth/engineer.json",
@@ -105,6 +119,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     );
     otherUserId = byEmail.get(ROLE_EMAILS.finance) || "";
     engineerUserId = byEmail.get(ROLE_EMAILS.engineer) || "";
+    storeUserId = byEmail.get(ROLE_EMAILS.store) || "";
 
     const assignRes = await api.post(`/api/projects/${projectDbId}/assignments`, {
       data: {
@@ -359,6 +374,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
 
     // Engineer
     {
+      await ensureProjectUsersAssigned(baseURL, states.finance, projectDbId, [engineerUserId]);
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
       await page.goto(`/projects/${projectDbId}`);
@@ -371,6 +387,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
 
     // Store
     {
+      await ensureProjectUsersAssigned(baseURL, states.finance, projectDbId, [storeUserId]);
       const ctx = await browser.newContext({ baseURL, storageState: states.store });
       const page = await ctx.newPage();
       await page.goto(`/projects/${projectDbId}`);
@@ -401,6 +418,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
 
     // Engineer
     {
+      await ensureProjectUsersAssigned(baseURL, states.finance, projectDbId, [engineerUserId]);
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
       await page.goto(`/vendors/${vendorDbId}`);
@@ -413,6 +431,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
 
     // Store
     {
+      await ensureProjectUsersAssigned(baseURL, states.finance, projectDbId, [storeUserId]);
       const ctx = await browser.newContext({ baseURL, storageState: states.store });
       const page = await ctx.newPage();
       await page.goto(`/vendors/${vendorDbId}`);

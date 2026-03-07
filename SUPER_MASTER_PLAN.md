@@ -465,6 +465,7 @@ Snapshot note:
 - Fast-track closure batch 7 completed for implemented modules: role-template baseline sync was executed on staging (14 role templates normalized), and the full staging critical suite was rerun green (`40/40`) after RBAC/mobile/deep-audit test resilience hardening.
 - Fast-track closure batch 8 completed for implemented modules: added automated effective-permission parity verifier for all active users, resolved Access Control Center hook dependency warning, and introduced fast parallel staging critical gate for long-pass batching.
 - Fast-track closure batch 9 completed for implemented modules: release-candidate staging batch gate was added (`qa:staging:rc`), mobile expense submit smoke was stabilized and passing, and project/vender workhub RBAC suites were hardened against parallel-run action-menu timing races.
+- Fast-track closure batch 10 completed for implemented modules: vendor/project workhub RBAC suite was hardened against assignment drift (first-run stability), and full staging RC gate revalidated green (`40/40` core + mobile expense submit smoke) after fix.
 - Remaining depth now continues under modules `19` and `20`.
 
 ### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05

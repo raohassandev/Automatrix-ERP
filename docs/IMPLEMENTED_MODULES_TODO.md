@@ -20,14 +20,14 @@ This file is the running action list for closure, hardening, and go-live readine
 
 ## 2) Security / RBAC Closure
 
-- [ ] Final long-tail RBAC parity sweep for implemented modules:
+- [x] Final long-tail RBAC parity sweep for implemented modules:
   - [x] Sidebar/mobile links hidden when unauthorized.  
     Evidence (2026-03-06): `playwright/tests/role-deep-audit.spec.ts`, `playwright/tests/mobile-role-navigation.spec.ts`
   - [x] Route + API permission parity for each visible action.  
     Evidence (2026-03-06): `playwright/tests/project-detail-rbac.spec.ts`, `playwright/tests/project-workhub-actions.spec.ts`, `playwright/tests/vendor-item-workhub-actions.spec.ts`, `playwright/tests/inventory-rbac-actions.spec.ts`
   - [x] Remove remaining permissive fallback blocks called out in `docs/RBAC_PERMISSION_SURFACE_MAP_2026-03-03.md`.  
     Evidence (2026-03-06): vendor workhub actions now server-policy driven (`src/lib/vendor-detail-policy.ts`), and legacy unused static-role fallback files removed (`src/lib/vendor-workhub-policy.ts`, `src/lib/project-workhub-policy.ts`, `src/lib/item-workhub-policy.ts`).
-- [ ] Role data drift check:
+- [x] Role data drift check:
   - [x] Re-save/sync role templates on staging.  
     Evidence (2026-03-07): executed `POST /api/access-control/roles/sync` on `https://erp-staging.automatrix.pk`, response `changedCount: 14`.
   - [x] Confirm effective permissions match expected defaults for all active users.  
@@ -35,7 +35,7 @@ This file is the running action list for closure, hardening, and go-live readine
 
 ## 3) Expense & Reimbursement Hardening (Current pass follow-up)
 
-- [ ] Run role-by-role UAT for new `EMPLOYEE_POCKET` flow:
+- [x] Run role-by-role UAT for new `EMPLOYEE_POCKET` flow:
   - [x] Employee with advance available cannot submit own-pocket.  
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
   - [x] Employee with zero advance can submit own-pocket.  
@@ -44,7 +44,7 @@ This file is the running action list for closure, hardening, and go-live readine
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
   - [x] Wallet-funded expenses cannot be paid again (double-pay prevention).  
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
-- [ ] UAT for mistaken-approval reopen:
+- [x] UAT for mistaken-approval reopen:
   - [x] Only `expenses.reopen_approved` users can reopen.  
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
   - [x] Reopened expense returns to pending and becomes editable by submitter.  
@@ -54,7 +54,7 @@ This file is the running action list for closure, hardening, and go-live readine
 
 - [x] Full role deep audit run after latest deploy (`playwright/tests/role-deep-audit.spec.ts`) and discrepancy-only report refresh.  
   Evidence (2026-03-06): `docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md`, `playwright/tests/role-deep-audit.spec.ts`
-- [ ] Final cross-module reconciliation pass (staging) for:
+- [x] Final cross-module reconciliation pass (staging) for:
   - [x] Project received/pending vs income entries.  
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts` (`Cross-module reconciliation` case)
   - [x] Project cost vs approved/paid expenses.  
@@ -68,7 +68,8 @@ This file is the running action list for closure, hardening, and go-live readine
 
 - [ ] Keep this tracker updated after each batch:
   - [x] mark completed items with date + evidence doc/spec.
-  - [ ] add new findings immediately with severity and owner.
+  - [x] add new findings immediately with severity and owner.  
+    Evidence (2026-03-07): no new discrepancies in latest `qa:staging:rc` run (`40/40` core + mobile expense submit smoke), and prior flaky project/vendor action assignment timing fixed in `playwright/tests/vendor-item-workhub-actions.spec.ts`.
 - [ ] Keep module `19` and `20` work out of this file (tracked in `SUPER_MASTER_PLAN.md` main roadmap).
 
 ## 6) HR Profile + Task Performance (Planned Next)
