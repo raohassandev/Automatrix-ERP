@@ -166,17 +166,18 @@ export default async function MyDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Wallet Balance</div>
-          <div className="mt-2 text-xl font-semibold">{formatMoney(walletBalance)}</div>
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm">
+          <div className="text-sm text-emerald-700 dark:text-emerald-300">Available Wallet</div>
+          <div className="mt-2 text-xl font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(walletAvailable)}</div>
+          <div className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">Balance minus hold amount</div>
         </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">On Hold</div>
-          <div className="mt-2 text-xl font-semibold">{formatMoney(walletHold)}</div>
+        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm">
+          <div className="text-sm text-indigo-700 dark:text-indigo-300">Issued Balance</div>
+          <div className="mt-2 text-xl font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(walletBalance)}</div>
         </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm text-muted-foreground">Available</div>
-          <div className="mt-2 text-xl font-semibold">{formatMoney(walletAvailable)}</div>
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm">
+          <div className="text-sm text-amber-700 dark:text-amber-300">On Hold (Pending)</div>
+          <div className="mt-2 text-xl font-semibold text-amber-900 dark:text-amber-100">{formatMoney(walletHold)}</div>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Latest Salary</div>

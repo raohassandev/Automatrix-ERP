@@ -104,7 +104,7 @@ export async function getDashboardDataEnhanced(
 
   const employee = await prisma.employee.findUnique({
     where: { email },
-    select: { walletBalance: true },
+    select: { walletBalance: true, walletHold: true },
   });
 
   // Calculate date range based on filter
@@ -231,6 +231,8 @@ export async function getDashboardDataEnhanced(
   const rejectedExpenses = Number(rejectedExpensesSum._sum.amount || 0);
   const profitMargin = totalIncome > 0 ? (netProfit / totalIncome) * 100 : 0;
   const walletBalance = Number(employee?.walletBalance || 0);
+  const walletHold = Number(employee?.walletHold || 0);
+  const walletAvailable = walletBalance - walletHold;
 
 
   return {
@@ -246,6 +248,8 @@ export async function getDashboardDataEnhanced(
     incomeCount,
     profitMargin,
     walletBalance,
+    walletHold,
+    walletAvailable,
   };
 }
 
