@@ -218,10 +218,10 @@ export default function ApprovalQueue({
   if (approvals.length === 0) {
     return (
       <>
-        <div className="rounded-lg bg-card p-12 text-center shadow">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+        <div className="rounded-lg border border-border bg-card/95 p-12 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15">
             <svg
-              className="h-8 w-8 text-green-600"
+              className="h-8 w-8 text-emerald-600 dark:text-emerald-300"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -256,7 +256,7 @@ export default function ApprovalQueue({
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-card p-4 shadow">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card/95 p-4 shadow-sm">
         <div>
           <div className="text-sm text-muted-foreground">Filters</div>
           <div className="text-xs text-muted-foreground">
@@ -295,8 +295,8 @@ export default function ApprovalQueue({
 
       {/* Bulk Actions Bar */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex items-center justify-between rounded-lg bg-blue-50 p-4">
-          <div className="text-sm font-medium text-blue-900">
+        <div className="mb-4 flex items-center justify-between rounded-lg border border-primary/30 bg-primary/10 p-4">
+          <div className="text-sm font-medium text-primary">
             {selectedIds.size} item(s) selected
           </div>
           <div className="flex gap-2">
@@ -384,7 +384,7 @@ export default function ApprovalQueue({
         })}
       </div>
 
-      <div className="mb-6 hidden overflow-x-auto rounded-lg bg-card shadow md:block">
+      <div className="mb-6 hidden overflow-x-auto rounded-lg border border-border bg-card/95 shadow-sm md:block">
         <table className="min-w-[1460px] divide-y divide-border">
           <thead className="bg-muted">
             <tr>
@@ -442,7 +442,7 @@ export default function ApprovalQueue({
                 <tr
                   key={expense.id}
                   className={`hover:bg-accent ${
-                    selectedIds.has(expense.id) ? "bg-blue-50" : ""
+                    selectedIds.has(expense.id) ? "bg-primary/10" : ""
                   }`}
                 >
                   <td className="px-6 py-4">
@@ -466,8 +466,8 @@ export default function ApprovalQueue({
                     <span
                       className={`rounded-full px-2 py-1 text-xs font-medium ${
                         expense.type === "INCOME"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-amber-100 text-amber-800"
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                          : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
                       }`}
                     >
                       {expense.type}
@@ -481,7 +481,7 @@ export default function ApprovalQueue({
                       {expense.description}
                     </div>
                     {expense.categoryRequest && (
-                      <div className="mt-1 text-xs text-amber-700">
+                      <div className="mt-1 text-xs text-amber-700 dark:text-amber-300">
                         Category request: {expense.categoryRequest}
                       </div>
                     )}
@@ -510,16 +510,16 @@ export default function ApprovalQueue({
                         <div
                           className={`font-medium ${
                             isInsufficient
-                              ? "text-red-600"
+                              ? "text-red-600 dark:text-red-400"
                               : isLow
-                              ? "text-yellow-600"
-                              : "text-green-600"
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-emerald-600 dark:text-emerald-400"
                           }`}
                         >
                           After (full): {formatMoney(afterBalance)}
                         </div>
                         {isInsufficient && (
-                          <div className="flex items-center gap-1 text-xs text-red-600">
+                          <div className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400">
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path
                                 strokeLinecap="round"
@@ -532,7 +532,7 @@ export default function ApprovalQueue({
                           </div>
                         )}
                         {isLow && !isInsufficient && (
-                          <div className="text-xs text-yellow-600">Low balance</div>
+                          <div className="text-xs text-amber-600 dark:text-amber-400">Low balance</div>
                         )}
                       </div>
                     )}
@@ -568,7 +568,7 @@ export default function ApprovalQueue({
       </div>
 
       {filteredApprovals.length === 0 && approvals.length > 0 && (
-        <div className="rounded-lg bg-card p-6 text-center text-muted-foreground shadow">
+        <div className="rounded-lg border border-border bg-card/95 p-6 text-center text-muted-foreground shadow-sm">
           No approvals match the current filters.
         </div>
       )}
@@ -589,8 +589,8 @@ export default function ApprovalQueue({
 
       {/* Bulk Reject Modal */}
       {showBulkApprove && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
-          <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-[1px]">
+          <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-2xl">
             <h3 className="mb-4 text-lg font-semibold text-foreground">
               Approve {selectedIds.size} Item(s)
             </h3>
@@ -621,8 +621,8 @@ export default function ApprovalQueue({
       )}
 
       {showBulkReject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[1px]">
+          <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-2xl">
             <h3 className="mb-4 text-lg font-semibold text-foreground">
               Reject {selectedIds.size} Expense(s)
             </h3>
@@ -760,8 +760,8 @@ function IncomeApprovalActions({
       </div>
 
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="w-full max-w-md rounded-lg bg-card p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[1px]">
+          <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-2xl">
             <h3 className="mb-3 text-lg font-semibold text-foreground">Reject Income</h3>
             <p className="mb-4 text-sm text-muted-foreground">
               Provide a reason for rejection.
@@ -824,31 +824,30 @@ function ApprovalLevelBadge({ level }: { level: string }) {
 
 function ApprovalHistory({ history }: { history: HistoryItem[] }) {
   return (
-    <div className="mt-6 rounded-lg bg-card p-6 shadow">
+    <div className="mt-6 rounded-lg border border-border bg-card/95 p-6 shadow-sm">
       <h3 className="mb-4 text-lg font-semibold text-foreground">Recent Approval History</h3>
       <div className="space-y-3">
         {history.map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between border-l-4 border-border bg-muted p-3"
-            style={{
-              borderLeftColor: item.status === "APPROVED" ? "#10b981" : "#ef4444",
-            }}
+            className={`flex items-center justify-between border-l-4 bg-muted p-3 ${
+              item.status === "APPROVED" ? "border-l-emerald-500" : "border-l-red-500"
+            }`}
           >
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <span
                   className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${
                     item.status === "APPROVED"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                      : "bg-red-500/15 text-red-700 dark:text-red-300"
                   }`}
                 >
                   {item.status}
                 </span>
                 <span
                   className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${
-                    item.type === "INCOME" ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"
+                    item.type === "INCOME" ? "bg-sky-500/15 text-sky-700 dark:text-sky-300" : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
                   }`}
                 >
                   {item.type}

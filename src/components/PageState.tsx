@@ -10,7 +10,7 @@ const STATE_META: Record<StateType, { icon: typeof Inbox; title: string; tone: s
   empty: {
     icon: Inbox,
     title: "No data found",
-    tone: "text-slate-500",
+    tone: "text-muted-foreground",
   },
   forbidden: {
     icon: Ban,
@@ -62,4 +62,3 @@ export function PageState({
     </div>
   );
 }
-

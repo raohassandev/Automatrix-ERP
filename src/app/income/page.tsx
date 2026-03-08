@@ -17,7 +17,7 @@ import type { Prisma } from "@prisma/client";
 export default async function IncomePage({
   searchParams,
 }: {
-  searchParams: { search?: string; page?: string; status?: string };
+  searchParams: Promise<{ search?: string; page?: string; status?: string }>;
 }) {
   const session = await auth();
   const userId = session?.user?.id;
@@ -34,7 +34,7 @@ export default async function IncomePage({
   const canEditAny = await requirePermission(userId, "income.edit");
   const canExport = canViewAll || canViewOwn;
 
-  const params = searchParams;
+  const params = await searchParams;
   const search = (params.search || "").trim();
   const status = (params.status || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);

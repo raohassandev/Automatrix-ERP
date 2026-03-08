@@ -89,7 +89,7 @@ export default function IncomeForm() {
   }
 
   return (
-    <div className="rounded-xl border bg-white p-6 shadow-sm">
+    <div className="rounded-xl border bg-card p-6 shadow-sm">
       <h2 className="text-lg font-semibold">Log Income</h2>
       <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
         For invoice receipt, pick invoice from dropdown. System prevents over-receiving.
@@ -181,7 +181,7 @@ export default function IncomeForm() {
         />
       </div>
       <button
-        className="mt-4 rounded-md bg-black px-4 py-2 text-white"
+        className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
         onClick={() => startTransition(submit)}
         disabled={pending}
       >

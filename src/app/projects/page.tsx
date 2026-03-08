@@ -126,11 +126,11 @@ export default async function ProjectsPage({
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-indigo-50 p-8 shadow-sm">
+      <div className="rounded-xl border border-border bg-gradient-to-br from-background via-card to-muted/30 p-8 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Projects</h1>
-            <p className="mt-2 text-slate-600">Track project health, timeline status, and cash recovery.</p>
+            <p className="mt-2 text-muted-foreground">Track project health, timeline status, and cash recovery.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-[220px]">
@@ -154,23 +154,23 @@ export default async function ProjectsPage({
           </div>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4">
-            <div className="text-sm text-emerald-700">Active</div>
-            <div className="text-xl font-semibold text-emerald-800">{stats.active}</div>
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
+            <div className="text-sm text-emerald-700 dark:text-emerald-300">Active</div>
+            <div className="text-xl font-semibold text-emerald-900 dark:text-emerald-100">{stats.active}</div>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4">
-            <div className="text-sm text-amber-700">On Hold</div>
-            <div className="text-xl font-semibold text-amber-800">{stats.onHold}</div>
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+            <div className="text-sm text-amber-700 dark:text-amber-300">On Hold</div>
+            <div className="text-xl font-semibold text-amber-900 dark:text-amber-100">{stats.onHold}</div>
           </div>
-          <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-4">
-            <div className="text-sm text-sky-700">Total Contract</div>
-            <div className="text-xl font-semibold text-sky-800">
+          <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
+            <div className="text-sm text-primary">Total Contract</div>
+            <div className="text-xl font-semibold text-foreground">
               {canViewFinancials ? formatMoney(stats.contract) : "-"}
             </div>
           </div>
-          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
-            <div className="text-sm text-rose-700">Cash To Recover</div>
-            <div className="text-xl font-semibold text-rose-800">
+          <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-4">
+            <div className="text-sm text-rose-700 dark:text-rose-300">Cash To Recover</div>
+            <div className="text-xl font-semibold text-rose-900 dark:text-rose-100">
               {canViewFinancials ? formatMoney(stats.pending) : "-"}
             </div>
           </div>

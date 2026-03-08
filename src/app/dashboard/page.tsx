@@ -51,25 +51,25 @@ export default async function DashboardPage() {
 
       {dashboardMetrics ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-5 shadow-sm">
-            <div className="text-sm text-emerald-700">Income (This Month)</div>
-            <div className="mt-2 text-2xl font-semibold text-emerald-900">{formatMoney(dashboardMetrics.totalIncome)}</div>
-            <div className="mt-1 text-xs text-emerald-800/80">Entries: {dashboardMetrics.incomeCount}</div>
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 shadow-sm">
+            <div className="text-sm text-emerald-700 dark:text-emerald-300">Income (This Month)</div>
+            <div className="mt-2 text-2xl font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(dashboardMetrics.totalIncome)}</div>
+            <div className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">Entries: {dashboardMetrics.incomeCount}</div>
           </div>
-          <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-5 shadow-sm">
-            <div className="text-sm text-rose-700">Expense (This Month)</div>
-            <div className="mt-2 text-2xl font-semibold text-rose-900">{formatMoney(dashboardMetrics.totalExpenses)}</div>
-            <div className="mt-1 text-xs text-rose-800/80">Entries: {dashboardMetrics.expenseCount}</div>
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 shadow-sm">
+            <div className="text-sm text-rose-700 dark:text-rose-300">Expense (This Month)</div>
+            <div className="mt-2 text-2xl font-semibold text-rose-900 dark:text-rose-100">{formatMoney(dashboardMetrics.totalExpenses)}</div>
+            <div className="mt-1 text-xs text-rose-700/80 dark:text-rose-300/80">Entries: {dashboardMetrics.expenseCount}</div>
           </div>
-          <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-5 shadow-sm">
-            <div className="text-sm text-sky-700">Net Position</div>
-            <div className="mt-2 text-2xl font-semibold text-sky-900">{formatMoney(dashboardMetrics.netProfit)}</div>
-            <div className="mt-1 text-xs text-sky-800/80">Margin: {dashboardMetrics.profitMargin.toFixed(1)}%</div>
+          <div className="rounded-xl border border-primary/30 bg-primary/10 p-5 shadow-sm">
+            <div className="text-sm text-primary">Net Position</div>
+            <div className="mt-2 text-2xl font-semibold text-foreground">{formatMoney(dashboardMetrics.netProfit)}</div>
+            <div className="mt-1 text-xs text-muted-foreground">Margin: {dashboardMetrics.profitMargin.toFixed(1)}%</div>
           </div>
-          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-5 shadow-sm">
-            <div className="text-sm text-amber-700">Pending Queue</div>
-            <div className="mt-2 text-2xl font-semibold text-amber-900">{dashboardMetrics.pendingApprovals}</div>
-            <div className="mt-1 text-xs text-amber-800/80">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-5 shadow-sm">
+            <div className="text-sm text-amber-700 dark:text-amber-300">Pending Queue</div>
+            <div className="mt-2 text-2xl font-semibold text-amber-900 dark:text-amber-100">{dashboardMetrics.pendingApprovals}</div>
+            <div className="mt-1 text-xs text-amber-700/80 dark:text-amber-300/80">
               Recovery: {formatMoney(dashboardMetrics.pendingRecovery)}
             </div>
           </div>

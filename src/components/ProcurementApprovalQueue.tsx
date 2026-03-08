@@ -23,9 +23,9 @@ export interface ProcurementApprovalItem {
 }
 
 function levelClass(level: "L1" | "L2" | "L3") {
-  if (level === "L1") return "bg-emerald-100 text-emerald-800";
-  if (level === "L2") return "bg-amber-100 text-amber-800";
-  return "bg-red-100 text-red-800";
+  if (level === "L1") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
+  if (level === "L2") return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
+  return "bg-red-500/15 text-red-700 dark:text-red-300";
 }
 
 function documentHref(item: ProcurementApprovalItem) {
@@ -97,7 +97,7 @@ export default function ProcurementApprovalQueue({
   }
 
   return (
-    <div className="mb-8 overflow-hidden rounded-lg bg-card shadow">
+    <div className="mb-8 overflow-hidden rounded-lg border border-border bg-card/95 shadow-sm">
       <div className="border-b border-border bg-muted/40 px-4 py-3">
         <h2 className="text-lg font-semibold text-foreground">Procurement Approvals</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -141,7 +141,7 @@ export default function ProcurementApprovalQueue({
                   {item.type === "VENDOR_BILL" ? "Vendor Bill" : "Vendor Payment"}
                 </td>
                 <td className="px-4 py-3 text-sm">
-                  <Link href={documentHref(item)} className="font-medium text-blue-700 hover:underline">
+                  <Link href={documentHref(item)} className="font-medium text-primary hover:underline">
                     {item.number}
                   </Link>
                 </td>

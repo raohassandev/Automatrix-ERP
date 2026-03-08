@@ -421,10 +421,10 @@ export default function AccessControlCenter() {
   }
 
   return (
-    <Card className="border-slate-200 bg-gradient-to-b from-slate-50 to-white">
+    <Card className="border-border bg-gradient-to-b from-background via-card to-muted/20">
       <CardHeader>
-        <CardTitle className="text-xl text-slate-900">Access Control Center</CardTitle>
-        <CardDescription className="text-slate-600">
+        <CardTitle className="text-xl text-foreground">Access Control Center</CardTitle>
+        <CardDescription className="text-muted-foreground">
           Configure role templates, user-level access, and approval routes with business-friendly controls.
         </CardDescription>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -438,9 +438,9 @@ export default function AccessControlCenter() {
         {tab === "roles" && (
           <div className="min-w-0">
             <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-            <div className="sticky top-4 overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <div className="sticky top-4 overflow-hidden rounded-lg border border-border bg-card">
               <div className="border-b px-3 py-3">
-                <div className="mb-2 text-sm font-semibold text-slate-800">Roles</div>
+                <div className="mb-2 text-sm font-semibold text-foreground">Roles</div>
                 <Input
                   placeholder="Search role..."
                   value={roleListSearch}
@@ -456,21 +456,21 @@ export default function AccessControlCenter() {
                       type="button"
                       onClick={() => openRoleDialog(role)}
                       className={`w-full rounded-lg border px-3 py-2.5 text-left transition ${
-                        selected ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white hover:bg-slate-50"
+                        selected ? "border-primary/40 bg-primary/10" : "border-border bg-card hover:bg-muted/40"
                       }`}
                     >
-                      <div className="font-medium text-slate-900">{role.name}</div>
-                      <div className="text-xs text-slate-500">{role.permissionKeys.length} permissions</div>
+                      <div className="font-medium text-foreground">{role.name}</div>
+                      <div className="text-xs text-muted-foreground">{role.permissionKeys.length} permissions</div>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card">
               <div className="border-b px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-lg font-semibold text-slate-900">{selectedRole?.name || "Select a role"}</div>
+                  <div className="text-lg font-semibold text-foreground">{selectedRole?.name || "Select a role"}</div>
                   <Button type="button" variant="outline" size="sm" onClick={syncRoleTemplates} disabled={syncingRoles}>
                     {syncingRoles ? "Syncing..." : "Sync Baseline Roles"}
                   </Button>
@@ -489,7 +489,7 @@ export default function AccessControlCenter() {
                     </SelectContent>
                   </Select>
                   <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                    <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground/80" />
                     <Input
                       className="pl-9"
                       placeholder="Search permission..."
@@ -498,18 +498,18 @@ export default function AccessControlCenter() {
                     />
                   </div>
                 </div>
-                <div className="mt-2 text-xs text-slate-500">
+                <div className="mt-2 text-xs text-muted-foreground">
                   Enabled permissions: {roleDraft.size}
                 </div>
               </div>
 
               <div className="max-h-[calc(100vh-260px)] overflow-y-auto">
-                <div className="sticky top-0 z-10 grid gap-2 border-b bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="sticky top-0 z-10 grid gap-2 border-b bg-muted/40 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:grid-cols-[minmax(0,1fr)_auto]">
                   <div>Permission</div>
                   <div>Access</div>
                 </div>
                 {roleRows.length === 0 ? (
-                  <div className="px-4 py-8 text-sm text-slate-500">No permissions found for this module/search.</div>
+                  <div className="px-4 py-8 text-sm text-muted-foreground">No permissions found for this module/search.</div>
                 ) : (
                   roleRows.map((row) => {
                     const mode = getRoleMode(row, roleDraft);
@@ -517,8 +517,8 @@ export default function AccessControlCenter() {
                     return (
                       <div key={row.key} className="grid gap-3 border-b px-4 py-3 md:grid-cols-[minmax(0,1fr)_auto]">
                         <div>
-                          <div className="font-medium text-slate-800">{permissionActionLabel(row.key)}</div>
-                          <div className="text-xs text-slate-500">{row.key}</div>
+                          <div className="font-medium text-foreground">{permissionActionLabel(row.key)}</div>
+                          <div className="text-xs text-muted-foreground">{row.key}</div>
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-2">
                           {(["YES", "NO", "SELF", "CUSTOM"] as const).map((option) => {
@@ -532,10 +532,10 @@ export default function AccessControlCenter() {
                                 onClick={() => setRoleDraft((prev) => applyRoleMode(row, option, prev))}
                                 className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
                                   checked
-                                    ? "border-sky-600 bg-sky-600 text-white"
+                                    ? "border-primary bg-primary text-primary-foreground"
                                     : disabled
-                                      ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                                      : "border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
+                                      ? "cursor-not-allowed border-border bg-muted/50 text-muted-foreground/80"
+                                      : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/10"
                                 }`}
                               >
                                 {checked ? <Check className="h-3 w-3" /> : null}
@@ -561,7 +561,7 @@ export default function AccessControlCenter() {
                   Reset Changes
                 </Button>
                 <Button
-                  className="mt-2 w-full bg-sky-600 hover:bg-sky-700 sm:ml-2 sm:mt-0 sm:w-auto"
+                  className="mt-2 w-full bg-primary hover:bg-primary/90 sm:ml-2 sm:mt-0 sm:w-auto"
                   onClick={saveRoleTemplate}
                   disabled={savingRole || !selectedRoleId}
                 >
@@ -576,7 +576,7 @@ export default function AccessControlCenter() {
         {tab === "users" && (
           <div className="grid gap-4 lg:grid-cols-[320px,1fr]">
             <div className="space-y-2">
-              <div className="text-sm font-medium text-slate-700">Users</div>
+              <div className="text-sm font-medium text-foreground">Users</div>
               <div className="max-h-[640px] space-y-2 overflow-y-auto pr-1">
                 {users.map((user) => (
                   <button
@@ -585,16 +585,16 @@ export default function AccessControlCenter() {
                     onClick={() => loadUserOverrides(user.id)}
                     className={`w-full rounded-lg border p-3 text-left transition ${
                       selectedUserId === user.id
-                        ? "border-emerald-300 bg-emerald-50"
-                        : "border-slate-200 bg-white hover:bg-slate-50"
+                        ? "border-emerald-500/40 bg-emerald-500/10"
+                        : "border-border bg-card hover:bg-muted/40"
                     }`}
                   >
-                    <div className="font-medium text-slate-900">{user.name || user.email}</div>
-                    <div className="text-xs text-slate-500">{user.email}</div>
+                    <div className="font-medium text-foreground">{user.name || user.email}</div>
+                    <div className="text-xs text-muted-foreground">{user.email}</div>
                     <div className="mt-2 flex flex-wrap gap-1">
                       <Badge variant="outline">{user.roleName}</Badge>
-                      <Badge variant="outline" className="border-emerald-200 text-emerald-700">{user.allowCount} allow</Badge>
-                      <Badge variant="outline" className="border-rose-200 text-rose-700">{user.denyCount} deny</Badge>
+                      <Badge variant="outline" className="border-emerald-200 text-emerald-700 dark:text-emerald-300">{user.allowCount} allow</Badge>
+                      <Badge variant="outline" className="border-rose-500/30 text-rose-700 dark:text-rose-300">{user.denyCount} deny</Badge>
                     </div>
                   </button>
                 ))}
@@ -602,11 +602,11 @@ export default function AccessControlCenter() {
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-lg border border-slate-200 bg-white p-3">
-                <div className="text-sm text-slate-500">Selected user</div>
-                <div className="text-lg font-semibold text-slate-900">{selectedUser?.name || selectedUser?.email || "Select user"}</div>
+              <div className="rounded-lg border border-border bg-card p-3">
+                <div className="text-sm text-muted-foreground">Selected user</div>
+                <div className="text-lg font-semibold text-foreground">{selectedUser?.name || selectedUser?.email || "Select user"}</div>
                 {selectedUser ? (
-                  <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-600">
+                  <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     <span>Base role: {selectedUser.roleName}</span>
                     <span>Effective features: {selectedUser.effectivePermissions.length}</span>
                   </div>
@@ -614,17 +614,17 @@ export default function AccessControlCenter() {
               </div>
 
               {userCatalog.map((group) => (
-                <div key={group.module} className="rounded-lg border border-slate-200 bg-white p-3">
-                  <div className="mb-2 text-sm font-semibold text-slate-800">{moduleLabel(group.module)}</div>
+                <div key={group.module} className="rounded-lg border border-border bg-card p-3">
+                  <div className="mb-2 text-sm font-semibold text-foreground">{moduleLabel(group.module)}</div>
                   <div className="space-y-2">
                     {group.permissions.map((permission) => (
-                      <div key={permission.key} className="grid gap-2 rounded border border-slate-100 bg-slate-50 p-2 sm:grid-cols-[1fr,200px] sm:items-center">
+                      <div key={permission.key} className="grid gap-2 rounded border border-border/60 bg-muted/40 p-2 sm:grid-cols-[1fr,200px] sm:items-center">
                         <div>
-                          <div className="text-sm font-medium text-slate-800">{permission.label}</div>
-                          <div className="text-xs text-slate-500">{permission.key}</div>
+                          <div className="text-sm font-medium text-foreground">{permission.label}</div>
+                          <div className="text-xs text-muted-foreground">{permission.key}</div>
                         </div>
                         <select
-                          className="h-9 rounded-md border border-slate-300 bg-white px-2 text-sm"
+                          className="h-9 rounded-md border border-border bg-card px-2 text-sm"
                           value={userOverrideDraft[permission.key] || "INHERIT"}
                           onChange={(event) =>
                             setUserOverrideDraft((prev) => ({
@@ -655,23 +655,23 @@ export default function AccessControlCenter() {
         {tab === "routes" && (
           <div className="space-y-4">
             {approvalModules.map((moduleEntry) => (
-              <div key={moduleEntry.module} className="rounded-lg border border-slate-200 bg-white p-4">
+              <div key={moduleEntry.module} className="rounded-lg border border-border bg-card p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-lg font-semibold text-slate-900">{moduleEntry.moduleLabel} approval routes</h3>
-                  <Badge variant="outline" className="border-amber-200 text-amber-700">{moduleEntry.stages.length} stages</Badge>
+                  <h3 className="text-lg font-semibold text-foreground">{moduleEntry.moduleLabel} approval routes</h3>
+                  <Badge variant="outline" className="border-border text-muted-foreground">{moduleEntry.stages.length} stages</Badge>
                 </div>
 
                 <div className="space-y-3">
                   {moduleEntry.stages.map((stage) => (
-                    <div key={stage.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div key={stage.id} className="rounded-lg border border-border bg-muted/40 p-3">
                       <div className="grid gap-3 md:grid-cols-[140px,1fr] md:items-start">
                         <div>
-                          <div className="text-xs uppercase tracking-wide text-slate-500">Stage</div>
-                          <div className="text-sm font-semibold text-slate-900">{stage.stageLabel}</div>
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground">Stage</div>
+                          <div className="text-sm font-semibold text-foreground">{stage.stageLabel}</div>
                         </div>
                         <div className="space-y-3">
                           <div className="grid gap-2 sm:grid-cols-2">
-                            <label className="text-sm text-slate-700">
+                            <label className="text-sm text-foreground">
                               From amount
                               <Input
                                 type="number"
@@ -685,7 +685,7 @@ export default function AccessControlCenter() {
                                 }
                               />
                             </label>
-                            <label className="text-sm text-slate-700">
+                            <label className="text-sm text-foreground">
                               To amount (blank = open)
                               <Input
                                 type="number"
@@ -702,10 +702,10 @@ export default function AccessControlCenter() {
                           </div>
 
                           <div>
-                            <div className="mb-1 text-sm font-medium text-slate-700">Approver roles</div>
+                            <div className="mb-1 text-sm font-medium text-foreground">Approver roles</div>
                             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                               {approvalRoles.map((role) => (
-                                <label key={role.id} className="flex items-center gap-2 rounded border border-slate-100 bg-white px-2 py-1.5 text-sm text-slate-700">
+                                <label key={role.id} className="flex items-center gap-2 rounded border border-border/60 bg-card px-2 py-1.5 text-sm text-foreground">
                                   <input
                                     type="checkbox"
                                     className="h-4 w-4"
@@ -726,7 +726,7 @@ export default function AccessControlCenter() {
                           </div>
 
                           <div className="flex justify-end">
-                            <Button onClick={() => saveApprovalStage(moduleEntry.module, stage)} disabled={savingRouteId === stage.id} className="bg-amber-600 hover:bg-amber-700">
+                            <Button onClick={() => saveApprovalStage(moduleEntry.module, stage)} disabled={savingRouteId === stage.id}>
                               {savingRouteId === stage.id ? "Saving..." : "Save Stage"}
                             </Button>
                           </div>

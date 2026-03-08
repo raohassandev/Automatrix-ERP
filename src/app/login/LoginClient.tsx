@@ -58,7 +58,7 @@ export function LoginClient({
       <div className="mt-6 grid gap-3">
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-white hover:bg-gray-800"
+          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90"
           onClick={() => startTransition(handleGoogleLogin)}
           disabled={pending}
         >
@@ -123,7 +123,7 @@ export function LoginClient({
           </div>
         ) : null}
 
-        {message ? <p className="text-sm text-red-600">{message}</p> : null}
+        {message ? <p className="text-sm text-destructive">{message}</p> : null}
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ export default function EmployeeForm() {
   }
 
   return (
-    <div className="rounded-xl border bg-white p-6 shadow-sm">
+    <div className="rounded-xl border bg-card p-6 shadow-sm">
       <h2 className="text-lg font-semibold">Add Employee</h2>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <input
@@ -84,7 +84,7 @@ export default function EmployeeForm() {
         />
       </div>
       <button
-        className="mt-4 rounded-md bg-black px-4 py-2 text-white"
+        className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
         onClick={() => startTransition(submit)}
         disabled={pending}
       >

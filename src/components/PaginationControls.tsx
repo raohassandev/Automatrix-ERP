@@ -33,7 +33,7 @@ export default function PaginationControls({
         <ChevronLeft className="h-4 w-4" />
         <span className="ml-2">Previous</span>
       </Button>
-      <span className="text-sm text-gray-600">
+      <span className="text-sm text-muted-foreground">
         Page {currentPage} of {totalPages}
       </span>
       <Button

@@ -66,15 +66,15 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
   ];
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-card p-5 shadow-sm dark:border-slate-800">
+    <section className="rounded-xl border border-border bg-card/95 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Executive Summary</h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          <h2 className="text-lg font-semibold text-foreground">Executive Summary</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Owner snapshot for cash control, recoveries, and project profitability.
           </p>
         </div>
-        <div className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">
+        <div className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
           Live finance metrics
         </div>
       </div>
@@ -111,9 +111,9 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/45">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Cash Exposure Mix</h3>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Recovered cash vs current receivable and vendor pressure</p>
+        <div className="rounded-lg border border-border bg-muted/35 p-4">
+          <h3 className="text-sm font-semibold text-foreground">Cash Exposure Mix</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Recovered cash vs current receivable and vendor pressure</p>
           <div className="mt-3 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -136,9 +136,9 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/45">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Profit Bridge</h3>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">How income converts into project profit after costs</p>
+        <div className="rounded-lg border border-border bg-muted/35 p-4">
+          <h3 className="text-sm font-semibold text-foreground">Profit Bridge</h3>
+          <p className="mt-1 text-xs text-muted-foreground">How income converts into project profit after costs</p>
           <div className="mt-3 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={profitBridge} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
@@ -184,7 +184,7 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <Link
-          className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 font-medium text-sky-800 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200"
+          className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-medium text-primary"
           href={`/income?search=${encodeURIComponent(projectId)}`}
         >
           Open income

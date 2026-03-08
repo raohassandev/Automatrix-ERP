@@ -132,21 +132,21 @@ export default async function InventoryPage({
           </div>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
-            <div className="text-sm text-sky-700">Items</div>
-            <div className="text-xl font-semibold text-sky-800">{items.length}</div>
+          <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
+            <div className="text-sm text-primary">Items</div>
+            <div className="text-xl font-semibold text-foreground">{items.length}</div>
           </div>
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
-            <div className="text-sm text-emerald-700">Total Quantity</div>
-            <div className="text-xl font-semibold text-emerald-800">{summary.quantity}</div>
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
+            <div className="text-sm text-emerald-700 dark:text-emerald-300">Total Quantity</div>
+            <div className="text-xl font-semibold text-emerald-900 dark:text-emerald-100">{summary.quantity}</div>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
-            <div className="text-sm text-amber-700">Low Stock Items</div>
-            <div className="text-xl font-semibold text-amber-800">{summary.lowStock}</div>
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+            <div className="text-sm text-amber-700 dark:text-amber-300">Low Stock Items</div>
+            <div className="text-xl font-semibold text-amber-900 dark:text-amber-100">{summary.lowStock}</div>
           </div>
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
-            <div className="text-sm text-indigo-700">Inventory Value</div>
-            <div className="text-xl font-semibold text-indigo-800">
+          <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-4">
+            <div className="text-sm text-indigo-700 dark:text-indigo-300">Inventory Value</div>
+            <div className="text-xl font-semibold text-indigo-900 dark:text-indigo-100">
               {canViewCost ? formatMoney(summary.value) : "-"}
             </div>
           </div>

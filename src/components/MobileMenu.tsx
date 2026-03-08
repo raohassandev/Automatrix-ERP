@@ -119,14 +119,14 @@ export default function MobileMenu() {
                       <Link
                         href="/dashboard"
                         onClick={() => setOpen(false)}
-                        className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                        className="text-sm font-medium text-muted-foreground hover:text-foreground"
                       >
                         Dashboard
                       </Link>
                       <Link
                         href="/me"
                         onClick={() => setOpen(false)}
-                        className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                        className="text-sm font-medium text-muted-foreground hover:text-foreground"
                       >
                         My Portal
                       </Link>
@@ -155,12 +155,12 @@ export default function MobileMenu() {
           </SheetContent>
         </Sheet>
       </div>
-      <nav className="hidden md:flex md:flex-wrap md:gap-4 md:text-sm md:text-gray-600">
+      <nav className="hidden md:flex md:flex-wrap md:gap-4 md:text-sm md:text-muted-foreground">
         {navGroups
           .flatMap((group) => group.items)
           .filter((item) => canAccess(item.permissions))
           .map((item) => (
-            <Link key={item.href} href={item.href} className="hover:text-gray-900">
+            <Link key={item.href} href={item.href} className="hover:text-foreground">
               {item.name}
             </Link>
           ))}

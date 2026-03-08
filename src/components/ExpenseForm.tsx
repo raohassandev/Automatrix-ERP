@@ -216,7 +216,7 @@ export default function ExpenseForm() {
         {duplicateItems.map((dup) => (
           <div key={dup.id} className="rounded-md border px-3 py-2">
             <div className="font-medium">{dup.description}</div>
-            <div className="text-gray-600">
+            <div className="text-muted-foreground">
               {new Date(dup.date).toLocaleDateString()} · {dup.amount} · {dup.status}
             </div>
           </div>
@@ -226,7 +226,7 @@ export default function ExpenseForm() {
   }
 
   return (
-    <div className="rounded-xl border bg-white p-6 shadow-sm">
+    <div className="rounded-xl border bg-card p-6 shadow-sm">
       <h2 className="text-lg font-semibold">Submit Expense</h2>
       <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
         Fill in 4 basics: date, category, amount, and project. Use Procurement for stock/material purchases.
@@ -242,7 +242,7 @@ export default function ExpenseForm() {
           value={form.category}
           onChange={(value) => setForm({ ...form, category: value })}
         />
-        <div className="md:col-span-2 text-xs text-gray-600">
+        <div className="md:col-span-2 text-xs text-muted-foreground">
           {categoriesLoading ? (
             "Loading category limits..."
           ) : selectedCategory?.maxAmount ? (
@@ -307,8 +307,8 @@ export default function ExpenseForm() {
           placeholder={form.expenseType === "OWNER_PERSONAL" ? "Personal expense (no project)" : "Select project"}
           disabled={form.expenseType === "OWNER_PERSONAL"}
         />
-        <div className="rounded-md border px-3 py-2 text-xs text-gray-600 md:col-span-2">
-          <div className="font-medium text-gray-900">Stock purchases</div>
+        <div className="rounded-md border px-3 py-2 text-xs text-muted-foreground md:col-span-2">
+          <div className="font-medium text-foreground">Stock purchases</div>
           <div>
             Phase 1 rule: Expenses are non-stock only. For stock purchases use Procurement -&gt; PO/GRN/Vendor Bill.
           </div>
@@ -342,8 +342,8 @@ export default function ExpenseForm() {
           <div
             className={`rounded-md border px-3 py-2 text-xs md:col-span-2 ${
               requiresReceipt
-                ? "border-rose-200 bg-rose-50 text-rose-800"
-                : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                ? "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+                : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
             }`}
           >
             {requiresReceipt
@@ -366,7 +366,7 @@ export default function ExpenseForm() {
         />
       </div>
       <button
-        className="mt-4 rounded-md bg-sky-700 px-4 py-2 text-white hover:bg-sky-800"
+        className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
         onClick={() => startTransition(() => submit())}
         disabled={pending}
       >
@@ -378,7 +378,7 @@ export default function ExpenseForm() {
         title="Possible duplicate expense"
         onClose={() => setDuplicateModalOpen(false)}
       >
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           We found similar expenses you submitted recently. Review them below.
         </p>
         {renderDuplicates()}
@@ -390,7 +390,7 @@ export default function ExpenseForm() {
             Cancel
           </button>
           <button
-            className="rounded-md bg-sky-700 px-4 py-2 text-white hover:bg-sky-800"
+            className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
             onClick={() => {
               setDuplicateModalOpen(false);
               startTransition(() => submit(true));

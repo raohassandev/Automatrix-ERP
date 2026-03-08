@@ -125,7 +125,7 @@ export default function AttachmentForm() {
       ) : null}
 
       <button
-        className="mt-4 rounded-md bg-black px-4 py-2 text-white"
+        className="mt-4 rounded-md bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90"
         onClick={() => startTransition(submit)}
         disabled={pending}
       >

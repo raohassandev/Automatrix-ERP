@@ -39,11 +39,11 @@ function tabLabel(tab: ProjectDetailTab) {
 function statusPillClass(status: string) {
   const normalized = String(status || "").toUpperCase();
   if (normalized === "ACTIVE") return "border-emerald-200 bg-emerald-100 text-emerald-900";
-  if (normalized === "ON_HOLD") return "border-amber-200 bg-amber-100 text-amber-900";
+  if (normalized === "ON_HOLD") return "border-amber-200 bg-amber-100 text-amber-900 dark:text-amber-100";
   if (normalized === "COMPLETED" || normalized === "CLOSED") {
-    return "border-slate-200 bg-slate-100 text-slate-800";
+    return "border-border bg-muted/50 text-foreground";
   }
-  return "border-sky-200 bg-sky-100 text-sky-900";
+  return "border-primary/30 bg-primary/10 text-primary";
 }
 
 export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
@@ -254,8 +254,8 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
 
   return (
     <div className="grid gap-6">
-      <div className="relative overflow-hidden rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-5 shadow-sm md:p-6">
-        <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-sky-200/40" />
+      <div className="relative overflow-hidden rounded-xl border border-border bg-gradient-to-br from-background via-card to-muted/30 p-5 shadow-sm md:p-6">
+        <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-primary/15" />
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 relative z-10">
             <div className="text-sm font-medium text-sky-700">{detail.header.projectId}</div>
@@ -267,7 +267,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 {detail.header.status.replaceAll("_", " ")}
               </span>
             </div>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span>
                 Client:{" "}
                 <Link className="font-medium text-sky-800 underline underline-offset-2" href={`/clients?search=${encodeURIComponent(detail.header.client.name)}`}>
@@ -279,23 +279,23 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
               <span>
                 Manager:{" "}
                 {detail.header.manager ? (
-                  <span className="font-medium text-slate-900">{detail.header.manager.name}</span>
+                  <span className="font-medium text-foreground">{detail.header.manager.name}</span>
                 ) : (
                   "-"
                 )}
               </span>
             </div>
           </div>
-          <div className="relative z-10 text-xs text-slate-600">
+          <div className="relative z-10 text-xs text-muted-foreground">
             Role: <span className="font-medium text-foreground">{detail.policy.role}</span>
             {detail.projectSwitcher.options.length > 1 ? (
               <div className="mt-3 w-full md:w-80">
-                <Label htmlFor="project-switcher" className="text-[11px] uppercase tracking-wide text-slate-600">
+                <Label htmlFor="project-switcher" className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Switch Project
                 </Label>
                 <select
                   id="project-switcher"
-                  className="mt-1 w-full rounded-md border border-slate-300 bg-white/95 px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
                   value={detail.projectSwitcher.currentProjectDbId}
                   onChange={(e) => {
                     const nextId = e.target.value;
@@ -361,37 +361,61 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
       </div>
 
       {detail.costs ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4">
-            <div className="text-xs font-medium text-emerald-800">Money In (Approved)</div>
-            <div className="mt-2 text-xl font-semibold text-emerald-900">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
-            <div className="mt-1 text-xs text-emerald-700">Pending income: {formatMoney(detail.costs.pendingIncomeSubmitted)}</div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <div className="rounded-xl border border-primary/25 bg-primary/10 p-4 shadow-sm">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-primary/90">Total Budget</div>
+            <div className="mt-2 text-2xl font-semibold text-foreground">{formatMoney(detail.costs.contractValue)}</div>
+            <div className="mt-1 text-xs text-muted-foreground">Contracted project value</div>
           </div>
-          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4">
-            <div className="text-xs font-medium text-rose-800">Money Out (Cost to Date)</div>
-            <div className="mt-2 text-xl font-semibold text-rose-900">{formatMoney(detail.costs.costToDate)}</div>
-            <div className="mt-1 text-xs text-rose-700">Pending expenses: {formatMoney(detail.costs.pendingExpenseSubmitted)}</div>
+
+          <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-sm">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Money In</div>
+            <div className="mt-2 text-2xl font-semibold text-emerald-900 dark:text-emerald-100">
+              {formatMoney(detail.costs.approvedIncomeReceived)}
+            </div>
+            <div className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
+              Pending: {formatMoney(detail.costs.pendingIncomeSubmitted)}
+            </div>
           </div>
+
+          <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 shadow-sm">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">Money Out</div>
+            <div className="mt-2 text-2xl font-semibold text-rose-900 dark:text-rose-100">
+              {formatMoney(detail.costs.costToDate)}
+            </div>
+            <div className="mt-1 text-xs text-rose-700 dark:text-rose-300">
+              Pending: {formatMoney(detail.costs.pendingExpenseSubmitted)}
+            </div>
+          </div>
+
           <div
-            className={`rounded-lg border p-4 ${
+            className={`rounded-xl border p-4 shadow-sm ${
               detail.costs.projectProfit >= 0
-                ? "border-emerald-200 bg-emerald-50/60"
-                : "border-red-200 bg-red-50/70"
+                ? "border-emerald-500/30 bg-emerald-500/10"
+                : "border-red-500/30 bg-red-500/10"
             }`}
           >
-            <div className="text-xs font-medium text-slate-700">Current Profit</div>
-            <div className="mt-2 text-xl font-semibold">{formatMoney(detail.costs.projectProfit)}</div>
-            <div className="mt-1 text-xs text-slate-600">Margin: {detail.costs.marginPercent.toFixed(1)}%</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Current Profit</div>
+            <div className="mt-2 text-2xl font-semibold text-foreground">{formatMoney(detail.costs.projectProfit)}</div>
+            <div className="mt-1 text-xs text-muted-foreground">Margin: {detail.costs.marginPercent.toFixed(1)}%</div>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4">
-            <div className="text-xs font-medium text-amber-900">Cash to Recover</div>
-            <div className="mt-2 text-xl font-semibold text-amber-900">{formatMoney(detail.costs.pendingRecovery)}</div>
-            <div className="mt-1 text-xs text-amber-800">Overdue: {formatMoney(detail.costs.risk.overdueRecoveryAmount)}</div>
+
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-sm">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">Cash to Recover</div>
+            <div className="mt-2 text-2xl font-semibold text-amber-900 dark:text-amber-100">
+              {formatMoney(detail.costs.pendingRecovery)}
+            </div>
+            <div className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+              Overdue: {formatMoney(detail.costs.risk.overdueRecoveryAmount)}
+            </div>
           </div>
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-4">
-            <div className="text-xs font-medium text-indigo-900">Unpaid Vendor Bills</div>
-            <div className="mt-2 text-xl font-semibold text-indigo-900">{formatMoney(detail.costs.apOutstanding)}</div>
-            <div className="mt-1 text-xs text-indigo-800">
+
+          <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-4 shadow-sm">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-800 dark:text-indigo-200">Vendor Outstanding</div>
+            <div className="mt-2 text-2xl font-semibold text-indigo-900 dark:text-indigo-100">
+              {formatMoney(detail.costs.apOutstanding)}
+            </div>
+            <div className="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
               Billed {formatMoney(detail.costs.apBilledTotal)} / Paid {formatMoney(detail.costs.apPaidTotal)}
             </div>
           </div>
@@ -697,7 +721,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             <>
               <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900 dark:bg-emerald-950/35">
-                  <div className="text-xs font-medium text-emerald-800 dark:text-emerald-200">Money In (Approved)</div>
+                  <div className="text-xs font-medium text-emerald-700 dark:text-emerald-200">Money In (Approved)</div>
                   <div className="mt-2 text-lg font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
                 </div>
                 <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-900 dark:bg-rose-950/30">
@@ -709,7 +733,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   <div className="mt-2 text-lg font-semibold text-amber-900 dark:text-amber-100">{formatMoney(detail.costs.pendingRecovery)}</div>
                 </div>
                 <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
-                  <div className="text-xs font-medium text-indigo-800 dark:text-indigo-200">Vendor Outstanding</div>
+                  <div className="text-xs font-medium text-indigo-700 dark:text-indigo-200">Vendor Outstanding</div>
                   <div className="mt-2 text-lg font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(detail.costs.apOutstanding)}</div>
                 </div>
                 <div
@@ -719,9 +743,9 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                       : "border-red-200 bg-red-50/70"
                   }`}
                 >
-                  <div className="text-xs font-medium text-slate-700">Current Profit</div>
+                  <div className="text-xs font-medium text-muted-foreground">Current Profit</div>
                   <div className="mt-2 text-lg font-semibold">{formatMoney(detail.costs.projectProfit)}</div>
-                  <div className="mt-1 text-xs text-slate-600">{detail.costs.marginPercent.toFixed(1)}% margin</div>
+                  <div className="mt-1 text-xs text-muted-foreground">{detail.costs.marginPercent.toFixed(1)}% margin</div>
                 </div>
               </div>
 
@@ -739,7 +763,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
               </div>
 
               <div className="mt-4 grid gap-4 xl:grid-cols-3">
-                <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+                <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
                   <h3 className="text-sm font-semibold text-sky-900 dark:text-sky-100">Revenue & Recovery</h3>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex items-center justify-between gap-3">
@@ -779,36 +803,36 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   <h3 className="text-sm font-semibold text-indigo-900 dark:text-indigo-100">Payables & Costs</h3>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-indigo-800">AP billed (posted)</span>
-                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.apBilledTotal)}</span>
+                      <span className="text-indigo-700 dark:text-indigo-300">AP billed (posted)</span>
+                      <span className="font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(detail.costs.apBilledTotal)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-indigo-800">AP paid (posted)</span>
-                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.apPaidTotal)}</span>
+                      <span className="text-indigo-700 dark:text-indigo-300">AP paid (posted)</span>
+                      <span className="font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(detail.costs.apPaidTotal)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-indigo-800">AP outstanding</span>
-                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.apOutstanding)}</span>
+                      <span className="text-indigo-700 dark:text-indigo-300">AP outstanding</span>
+                      <span className="font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(detail.costs.apOutstanding)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-indigo-800">Non-stock approved</span>
-                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.nonStockExpensesApproved)}</span>
+                      <span className="text-indigo-700 dark:text-indigo-300">Non-stock approved</span>
+                      <span className="font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(detail.costs.nonStockExpensesApproved)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-indigo-800">Incentives</span>
-                      <span className="font-semibold text-indigo-900">{formatMoney(detail.costs.incentivesApproved)}</span>
+                      <span className="text-indigo-700 dark:text-indigo-300">Incentives</span>
+                      <span className="font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(detail.costs.incentivesApproved)}</span>
                     </div>
                   </div>
                   <div className="mt-3 text-xs">
                     <Link
-                      className="font-medium text-indigo-800 underline underline-offset-2"
+                      className="font-medium text-indigo-700 dark:text-indigo-300 underline underline-offset-2"
                       href={`/procurement/vendor-bills?search=${encodeURIComponent(detail.header.projectId)}`}
                     >
                       Open vendor bills
                     </Link>
                     <span className="mx-1 text-indigo-700">•</span>
                     <Link
-                      className="font-medium text-indigo-800 underline underline-offset-2"
+                      className="font-medium text-indigo-700 dark:text-indigo-300 underline underline-offset-2"
                       href={`/procurement/vendor-payments?search=${encodeURIComponent(detail.header.projectId)}`}
                     >
                       Open vendor payments
@@ -820,29 +844,29 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   <h3 className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">Profitability View</h3>
                   <div className="mt-3 space-y-2 text-sm">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-emerald-800">Total project costs</span>
+                      <span className="text-emerald-700 dark:text-emerald-300">Total project costs</span>
                       <span className="font-semibold text-emerald-900">{formatMoney(detail.costs.totalProjectCosts)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-emerald-800">Current profit</span>
+                      <span className="text-emerald-700 dark:text-emerald-300">Current profit</span>
                       <span className="font-semibold text-emerald-900">{formatMoney(detail.costs.projectProfit)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-emerald-800">Gross margin</span>
+                      <span className="text-emerald-700 dark:text-emerald-300">Gross margin</span>
                       <span className="font-semibold text-emerald-900">{formatMoney(detail.costs.grossMargin)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-emerald-800">Margin %</span>
+                      <span className="text-emerald-700 dark:text-emerald-300">Margin %</span>
                       <span className="font-semibold text-emerald-900">{detail.costs.marginPercent.toFixed(1)}%</span>
                     </div>
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-emerald-800">Pending expenses</span>
+                      <span className="text-emerald-700 dark:text-emerald-300">Pending expenses</span>
                       <span className="font-semibold text-emerald-900">{formatMoney(detail.costs.pendingExpenseSubmitted)}</span>
                     </div>
                   </div>
                   <div className="mt-3 text-xs">
                     <Link
-                      className="font-medium text-emerald-800 underline underline-offset-2"
+                      className="font-medium text-emerald-700 dark:text-emerald-300 underline underline-offset-2"
                       href={`/expenses/by-project?project=${encodeURIComponent(detail.header.projectId)}`}
                     >
                       Open expenses
@@ -1065,7 +1089,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           ) : (
             <>
               {detail.inventory.note ? (
-                <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
                   {detail.inventory.note}
                 </div>
               ) : null}
@@ -1221,21 +1245,21 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           ) : (
             <>
               <div className="mt-4 grid gap-4 md:grid-cols-6">
-                <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3">
+                <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
                   <div className="text-xs text-sky-700">Total</div>
                   <div className="mt-1 text-lg font-semibold text-sky-900">{detail.execution.summary.total}</div>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-                  <div className="text-xs text-slate-700">To Do</div>
-                  <div className="mt-1 text-lg font-semibold text-slate-900">{detail.execution.summary.todo}</div>
+                <div className="rounded-lg border border-border bg-muted/40 p-3">
+                  <div className="text-xs text-muted-foreground">To Do</div>
+                  <div className="mt-1 text-lg font-semibold text-foreground">{detail.execution.summary.todo}</div>
                 </div>
                 <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
                   <div className="text-xs text-indigo-700">In Progress</div>
-                  <div className="mt-1 text-lg font-semibold text-indigo-900">{detail.execution.summary.inProgress}</div>
+                  <div className="mt-1 text-lg font-semibold text-indigo-900 dark:text-indigo-100">{detail.execution.summary.inProgress}</div>
                 </div>
                 <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
                   <div className="text-xs text-amber-700">Blocked</div>
-                  <div className="mt-1 text-lg font-semibold text-amber-900">{detail.execution.summary.blocked}</div>
+                  <div className="mt-1 text-lg font-semibold text-amber-900 dark:text-amber-100">{detail.execution.summary.blocked}</div>
                 </div>
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
                   <div className="text-xs text-emerald-700">Done</div>
