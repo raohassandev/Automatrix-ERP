@@ -22,86 +22,89 @@ CREATE TEMP TABLE tmp_projects AS
 SELECT id FROM "Project"
 WHERE "projectId" ILIKE 'PRJ-E2E-%'
    OR "projectId" ILIKE 'SMOKE-%'
+   OR "projectId" ILIKE 'STAGING-%'
    OR name ILIKE '%E2E%'
    OR name ILIKE '%SMOKE%'
+   OR name ILIKE '%STAGING%'
    OR name ILIKE '%PLAYWRIGHT%';
 
 CREATE TEMP TABLE tmp_clients AS
 SELECT id FROM "Client"
-WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%PLAYWRIGHT%';
+WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%' OR name ILIKE '%PLAYWRIGHT%';
 
 CREATE TEMP TABLE tmp_vendors AS
 SELECT id FROM "Vendor"
-WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%PLAYWRIGHT%' OR COALESCE("contactName",'') ILIKE '%E2E%';
+WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%' OR name ILIKE '%PLAYWRIGHT%' OR COALESCE("contactName",'') ILIKE '%E2E%';
 
 CREATE TEMP TABLE tmp_items AS
 SELECT id FROM "InventoryItem"
 WHERE name ILIKE '%E2E%' OR COALESCE(sku,'') ILIKE '%E2E%' OR category ILIKE '%E2E%'
-   OR name ILIKE '%SMOKE%' OR COALESCE(sku,'') ILIKE '%SMOKE%';
+   OR name ILIKE '%SMOKE%' OR COALESCE(sku,'') ILIKE '%SMOKE%'
+   OR name ILIKE '%STAGING%' OR COALESCE(sku,'') ILIKE '%STAGING%';
 
 CREATE TEMP TABLE tmp_accounts AS
 SELECT id FROM "CompanyAccount"
-WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%PLAYWRIGHT%';
+WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%' OR name ILIKE '%PLAYWRIGHT%';
 
 CREATE TEMP TABLE tmp_expenses AS
 SELECT id FROM "Expense"
-WHERE description ILIKE '%E2E%' OR description ILIKE '%SMOKE%' OR description ILIKE 'MOBILE_EXP_SMOKE_%'
-   OR category ILIKE '%E2E%' OR category ILIKE '%SMOKE%'
+WHERE description ILIKE '%E2E%' OR description ILIKE '%SMOKE%' OR description ILIKE '%STAGING%' OR description ILIKE 'MOBILE_EXP_SMOKE_%'
+   OR category ILIKE '%E2E%' OR category ILIKE '%SMOKE%' OR category ILIKE '%STAGING%'
    OR COALESCE(project,'') ILIKE 'PRJ-E2E-%'
    OR COALESCE("externalId",'') ILIKE '%E2E%'
    OR COALESCE("companyAccountId",'') IN (SELECT id FROM tmp_accounts);
 
 CREATE TEMP TABLE tmp_incomes AS
 SELECT id FROM "Income"
-WHERE source ILIKE '%E2E%' OR source ILIKE '%SMOKE%' OR category ILIKE '%E2E%' OR category ILIKE '%SMOKE%'
+WHERE source ILIKE '%E2E%' OR source ILIKE '%SMOKE%' OR source ILIKE '%STAGING%' OR category ILIKE '%E2E%' OR category ILIKE '%SMOKE%' OR category ILIKE '%STAGING%'
    OR COALESCE(project,'') ILIKE 'PRJ-E2E-%'
    OR COALESCE("externalId",'') ILIKE '%E2E%'
    OR COALESCE("companyAccountId",'') IN (SELECT id FROM tmp_accounts);
 
 CREATE TEMP TABLE tmp_po AS
 SELECT id FROM "PurchaseOrder"
-WHERE "poNumber" ILIKE '%E2E%' OR "poNumber" ILIKE '%SMOKE%'
-   OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR "vendorName" ILIKE '%E2E%' OR "vendorName" ILIKE '%SMOKE%'
+WHERE "poNumber" ILIKE '%E2E%' OR "poNumber" ILIKE '%SMOKE%' OR "poNumber" ILIKE '%STAGING%'
+   OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR "vendorName" ILIKE '%E2E%' OR "vendorName" ILIKE '%SMOKE%' OR "vendorName" ILIKE '%STAGING%'
    OR COALESCE("vendorId",'') IN (SELECT id FROM tmp_vendors);
 
 CREATE TEMP TABLE tmp_grn AS
 SELECT id FROM "GoodsReceipt"
-WHERE "grnNumber" ILIKE '%E2E%' OR "grnNumber" ILIKE '%SMOKE%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%';
+WHERE "grnNumber" ILIKE '%E2E%' OR "grnNumber" ILIKE '%SMOKE%' OR "grnNumber" ILIKE '%STAGING%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%';
 
 CREATE TEMP TABLE tmp_bills AS
 SELECT id FROM "VendorBill"
-WHERE "billNumber" ILIKE '%E2E%' OR "billNumber" ILIKE '%SMOKE%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%'
+WHERE "billNumber" ILIKE '%E2E%' OR "billNumber" ILIKE '%SMOKE%' OR "billNumber" ILIKE '%STAGING%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%' OR COALESCE(notes,'') ILIKE '%STAGING%'
    OR COALESCE("vendorId",'') IN (SELECT id FROM tmp_vendors);
 
 CREATE TEMP TABLE tmp_payments AS
 SELECT id FROM "VendorPayment"
-WHERE "paymentNumber" ILIKE '%E2E%' OR "paymentNumber" ILIKE '%SMOKE%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%'
+WHERE "paymentNumber" ILIKE '%E2E%' OR "paymentNumber" ILIKE '%SMOKE%' OR "paymentNumber" ILIKE '%STAGING%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%' OR COALESCE(notes,'') ILIKE '%STAGING%'
    OR COALESCE("vendorId",'') IN (SELECT id FROM tmp_vendors)
    OR COALESCE("companyAccountId",'') IN (SELECT id FROM tmp_accounts);
 
 CREATE TEMP TABLE tmp_incentives AS
 SELECT id FROM "IncentiveEntry"
-WHERE COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR COALESCE(reason,'') ILIKE '%E2E%' OR COALESCE(reason,'') ILIKE '%SMOKE%' OR COALESCE(reason,'') ILIKE 'smk_%';
+WHERE COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR COALESCE(reason,'') ILIKE '%E2E%' OR COALESCE(reason,'') ILIKE '%SMOKE%' OR COALESCE(reason,'') ILIKE '%STAGING%' OR COALESCE(reason,'') ILIKE 'smk_%';
 
 CREATE TEMP TABLE tmp_advances AS
 SELECT id FROM "SalaryAdvance"
-WHERE reason ILIKE '%E2E%' OR reason ILIKE '%SMOKE%' OR reason ILIKE 'smk_%';
+WHERE reason ILIKE '%E2E%' OR reason ILIKE '%SMOKE%' OR reason ILIKE '%STAGING%' OR reason ILIKE 'smk_%';
 
 CREATE TEMP TABLE tmp_runs AS
 SELECT id FROM "PayrollRun"
-WHERE COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%' OR COALESCE(notes,'') ILIKE 'smk_%';
+WHERE COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%' OR COALESCE(notes,'') ILIKE '%STAGING%' OR COALESCE(notes,'') ILIKE 'smk_%';
 
 CREATE TEMP TABLE tmp_entries AS
 SELECT id FROM "PayrollEntry" WHERE "payrollRunId" IN (SELECT id FROM tmp_runs);
 
 CREATE TEMP TABLE tmp_commissions AS
 SELECT id FROM "CommissionEntry"
-WHERE COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR COALESCE(reason,'') ILIKE '%E2E%' OR COALESCE(reason,'') ILIKE '%SMOKE%' OR COALESCE(reason,'') ILIKE 'smk_%';
+WHERE COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR COALESCE(reason,'') ILIKE '%E2E%' OR COALESCE(reason,'') ILIKE '%SMOKE%' OR COALESCE(reason,'') ILIKE '%STAGING%' OR COALESCE(reason,'') ILIKE 'smk_%';
 
 SELECT 'projects' AS entity, count(*) AS rows FROM tmp_projects
 UNION ALL SELECT 'clients', count(*) FROM tmp_clients
@@ -130,86 +133,89 @@ CREATE TEMP TABLE tmp_projects AS
 SELECT id FROM "Project"
 WHERE "projectId" ILIKE 'PRJ-E2E-%'
    OR "projectId" ILIKE 'SMOKE-%'
+   OR "projectId" ILIKE 'STAGING-%'
    OR name ILIKE '%E2E%'
    OR name ILIKE '%SMOKE%'
+   OR name ILIKE '%STAGING%'
    OR name ILIKE '%PLAYWRIGHT%';
 
 CREATE TEMP TABLE tmp_clients AS
 SELECT id FROM "Client"
-WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%PLAYWRIGHT%';
+WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%' OR name ILIKE '%PLAYWRIGHT%';
 
 CREATE TEMP TABLE tmp_vendors AS
 SELECT id FROM "Vendor"
-WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%PLAYWRIGHT%' OR COALESCE("contactName",'') ILIKE '%E2E%';
+WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%' OR name ILIKE '%PLAYWRIGHT%' OR COALESCE("contactName",'') ILIKE '%E2E%';
 
 CREATE TEMP TABLE tmp_items AS
 SELECT id FROM "InventoryItem"
 WHERE name ILIKE '%E2E%' OR COALESCE(sku,'') ILIKE '%E2E%' OR category ILIKE '%E2E%'
-   OR name ILIKE '%SMOKE%' OR COALESCE(sku,'') ILIKE '%SMOKE%';
+   OR name ILIKE '%SMOKE%' OR COALESCE(sku,'') ILIKE '%SMOKE%'
+   OR name ILIKE '%STAGING%' OR COALESCE(sku,'') ILIKE '%STAGING%';
 
 CREATE TEMP TABLE tmp_accounts AS
 SELECT id FROM "CompanyAccount"
-WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%PLAYWRIGHT%';
+WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%' OR name ILIKE '%PLAYWRIGHT%';
 
 CREATE TEMP TABLE tmp_expenses AS
 SELECT id FROM "Expense"
-WHERE description ILIKE '%E2E%' OR description ILIKE '%SMOKE%' OR description ILIKE 'MOBILE_EXP_SMOKE_%'
-   OR category ILIKE '%E2E%' OR category ILIKE '%SMOKE%'
+WHERE description ILIKE '%E2E%' OR description ILIKE '%SMOKE%' OR description ILIKE '%STAGING%' OR description ILIKE 'MOBILE_EXP_SMOKE_%'
+   OR category ILIKE '%E2E%' OR category ILIKE '%SMOKE%' OR category ILIKE '%STAGING%'
    OR COALESCE(project,'') ILIKE 'PRJ-E2E-%'
    OR COALESCE("externalId",'') ILIKE '%E2E%'
    OR COALESCE("companyAccountId",'') IN (SELECT id FROM tmp_accounts);
 
 CREATE TEMP TABLE tmp_incomes AS
 SELECT id FROM "Income"
-WHERE source ILIKE '%E2E%' OR source ILIKE '%SMOKE%' OR category ILIKE '%E2E%' OR category ILIKE '%SMOKE%'
+WHERE source ILIKE '%E2E%' OR source ILIKE '%SMOKE%' OR source ILIKE '%STAGING%' OR category ILIKE '%E2E%' OR category ILIKE '%SMOKE%' OR category ILIKE '%STAGING%'
    OR COALESCE(project,'') ILIKE 'PRJ-E2E-%'
    OR COALESCE("externalId",'') ILIKE '%E2E%'
    OR COALESCE("companyAccountId",'') IN (SELECT id FROM tmp_accounts);
 
 CREATE TEMP TABLE tmp_po AS
 SELECT id FROM "PurchaseOrder"
-WHERE "poNumber" ILIKE '%E2E%' OR "poNumber" ILIKE '%SMOKE%'
-   OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR "vendorName" ILIKE '%E2E%' OR "vendorName" ILIKE '%SMOKE%'
+WHERE "poNumber" ILIKE '%E2E%' OR "poNumber" ILIKE '%SMOKE%' OR "poNumber" ILIKE '%STAGING%'
+   OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR "vendorName" ILIKE '%E2E%' OR "vendorName" ILIKE '%SMOKE%' OR "vendorName" ILIKE '%STAGING%'
    OR COALESCE("vendorId",'') IN (SELECT id FROM tmp_vendors);
 
 CREATE TEMP TABLE tmp_grn AS
 SELECT id FROM "GoodsReceipt"
-WHERE "grnNumber" ILIKE '%E2E%' OR "grnNumber" ILIKE '%SMOKE%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%';
+WHERE "grnNumber" ILIKE '%E2E%' OR "grnNumber" ILIKE '%SMOKE%' OR "grnNumber" ILIKE '%STAGING%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%';
 
 CREATE TEMP TABLE tmp_bills AS
 SELECT id FROM "VendorBill"
-WHERE "billNumber" ILIKE '%E2E%' OR "billNumber" ILIKE '%SMOKE%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%'
+WHERE "billNumber" ILIKE '%E2E%' OR "billNumber" ILIKE '%SMOKE%' OR "billNumber" ILIKE '%STAGING%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%' OR COALESCE(notes,'') ILIKE '%STAGING%'
    OR COALESCE("vendorId",'') IN (SELECT id FROM tmp_vendors);
 
 CREATE TEMP TABLE tmp_payments AS
 SELECT id FROM "VendorPayment"
-WHERE "paymentNumber" ILIKE '%E2E%' OR "paymentNumber" ILIKE '%SMOKE%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%'
+WHERE "paymentNumber" ILIKE '%E2E%' OR "paymentNumber" ILIKE '%SMOKE%' OR "paymentNumber" ILIKE '%STAGING%' OR COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%' OR COALESCE(notes,'') ILIKE '%STAGING%'
    OR COALESCE("vendorId",'') IN (SELECT id FROM tmp_vendors)
    OR COALESCE("companyAccountId",'') IN (SELECT id FROM tmp_accounts);
 
 CREATE TEMP TABLE tmp_incentives AS
 SELECT id FROM "IncentiveEntry"
-WHERE COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR COALESCE(reason,'') ILIKE '%E2E%' OR COALESCE(reason,'') ILIKE '%SMOKE%' OR COALESCE(reason,'') ILIKE 'smk_%';
+WHERE COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR COALESCE(reason,'') ILIKE '%E2E%' OR COALESCE(reason,'') ILIKE '%SMOKE%' OR COALESCE(reason,'') ILIKE '%STAGING%' OR COALESCE(reason,'') ILIKE 'smk_%';
 
 CREATE TEMP TABLE tmp_advances AS
 SELECT id FROM "SalaryAdvance"
-WHERE reason ILIKE '%E2E%' OR reason ILIKE '%SMOKE%' OR reason ILIKE 'smk_%';
+WHERE reason ILIKE '%E2E%' OR reason ILIKE '%SMOKE%' OR reason ILIKE '%STAGING%' OR reason ILIKE 'smk_%';
 
 CREATE TEMP TABLE tmp_runs AS
 SELECT id FROM "PayrollRun"
-WHERE COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%' OR COALESCE(notes,'') ILIKE 'smk_%';
+WHERE COALESCE(notes,'') ILIKE '%E2E%' OR COALESCE(notes,'') ILIKE '%SMOKE%' OR COALESCE(notes,'') ILIKE '%STAGING%' OR COALESCE(notes,'') ILIKE 'smk_%';
 
 CREATE TEMP TABLE tmp_entries AS
 SELECT id FROM "PayrollEntry" WHERE "payrollRunId" IN (SELECT id FROM tmp_runs);
 
 CREATE TEMP TABLE tmp_commissions AS
 SELECT id FROM "CommissionEntry"
-WHERE COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%'
-   OR COALESCE(reason,'') ILIKE '%E2E%' OR COALESCE(reason,'') ILIKE '%SMOKE%' OR COALESCE(reason,'') ILIKE 'smk_%';
+WHERE COALESCE("projectRef",'') ILIKE 'PRJ-E2E-%' OR COALESCE("projectRef",'') ILIKE 'STAGING-%'
+   OR COALESCE(reason,'') ILIKE '%E2E%' OR COALESCE(reason,'') ILIKE '%SMOKE%' OR COALESCE(reason,'') ILIKE '%STAGING%' OR COALESCE(reason,'') ILIKE 'smk_%';
 
 DELETE FROM "Approval" WHERE "expenseId" IN (SELECT id FROM tmp_expenses) OR "incomeId" IN (SELECT id FROM tmp_incomes);
 DELETE FROM "PayrollComponentLine" WHERE "payrollEntryId" IN (SELECT id FROM tmp_entries)
@@ -301,23 +307,23 @@ SQL
 
 read -r -d '' VERIFY_SQL <<'SQL' || true
 SELECT 'projects' AS entity, count(*) AS rows FROM "Project"
-WHERE "projectId" ILIKE 'PRJ-E2E-%' OR "projectId" ILIKE 'SMOKE-%' OR name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%PLAYWRIGHT%'
+WHERE "projectId" ILIKE 'PRJ-E2E-%' OR "projectId" ILIKE 'SMOKE-%' OR "projectId" ILIKE 'STAGING-%' OR name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%' OR name ILIKE '%PLAYWRIGHT%'
 UNION ALL
-SELECT 'clients', count(*) FROM "Client" WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%PLAYWRIGHT%'
+SELECT 'clients', count(*) FROM "Client" WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%' OR name ILIKE '%PLAYWRIGHT%'
 UNION ALL
-SELECT 'vendors', count(*) FROM "Vendor" WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%PLAYWRIGHT%'
+SELECT 'vendors', count(*) FROM "Vendor" WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%' OR name ILIKE '%PLAYWRIGHT%'
 UNION ALL
-SELECT 'items', count(*) FROM "InventoryItem" WHERE name ILIKE '%E2E%' OR COALESCE(sku,'') ILIKE '%E2E%' OR category ILIKE '%E2E%' OR name ILIKE '%SMOKE%'
+SELECT 'items', count(*) FROM "InventoryItem" WHERE name ILIKE '%E2E%' OR COALESCE(sku,'') ILIKE '%E2E%' OR category ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%'
 UNION ALL
-SELECT 'expenses', count(*) FROM "Expense" WHERE description ILIKE '%E2E%' OR description ILIKE '%SMOKE%' OR description ILIKE 'MOBILE_EXP_SMOKE_%'
+SELECT 'expenses', count(*) FROM "Expense" WHERE description ILIKE '%E2E%' OR description ILIKE '%SMOKE%' OR description ILIKE '%STAGING%' OR description ILIKE 'MOBILE_EXP_SMOKE_%'
 UNION ALL
-SELECT 'incomes', count(*) FROM "Income" WHERE source ILIKE '%E2E%' OR source ILIKE '%SMOKE%'
+SELECT 'incomes', count(*) FROM "Income" WHERE source ILIKE '%E2E%' OR source ILIKE '%SMOKE%' OR source ILIKE '%STAGING%'
 UNION ALL
-SELECT 'vendor_bills', count(*) FROM "VendorBill" WHERE "billNumber" ILIKE '%E2E%' OR "billNumber" ILIKE '%SMOKE%'
+SELECT 'vendor_bills', count(*) FROM "VendorBill" WHERE "billNumber" ILIKE '%E2E%' OR "billNumber" ILIKE '%SMOKE%' OR "billNumber" ILIKE '%STAGING%'
 UNION ALL
-SELECT 'vendor_payments', count(*) FROM "VendorPayment" WHERE "paymentNumber" ILIKE '%E2E%' OR "paymentNumber" ILIKE '%SMOKE%'
+SELECT 'vendor_payments', count(*) FROM "VendorPayment" WHERE "paymentNumber" ILIKE '%E2E%' OR "paymentNumber" ILIKE '%SMOKE%' OR "paymentNumber" ILIKE '%STAGING%'
 UNION ALL
-SELECT 'company_accounts', count(*) FROM "CompanyAccount" WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%'
+SELECT 'company_accounts', count(*) FROM "CompanyAccount" WHERE name ILIKE '%E2E%' OR name ILIKE '%SMOKE%' OR name ILIKE '%STAGING%'
 ORDER BY entity;
 SQL
 
