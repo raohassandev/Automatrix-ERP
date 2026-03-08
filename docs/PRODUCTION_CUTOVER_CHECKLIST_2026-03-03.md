@@ -51,7 +51,7 @@ Go only if all true:
 
 - [x] Previous release artifact/commit ID recorded.
 - [x] DB rollback point-in-time identified.
-- [ ] Rollback command sequence tested in staging-like environment.
+- [x] Rollback command sequence tested in staging-like environment.
 - [x] Communication template prepared for rollback event.
 
 ## 8) Validation Evidence (2026-03-03 post-deploy)
@@ -109,7 +109,7 @@ Remaining blockers before final Go:
 
 - Owner/CEO login + Access Control manual sign-off pending.
 - Mobile smoke in production for expense/approval/table clipping still pending explicit sign-off.
-- Rollback command sequence test + rollback communication template still pending.
+- Rollback communication template sign-off pending (template exists; approval communication flow to be finalized during production go/no-go).
 
 ## 12) Guided Final Smoke (Executed by Agent, 2026-03-05 UTC)
 
@@ -141,3 +141,15 @@ Cleanup validation:
   - auth URL and mode guards
   - PM2 process + health endpoint
   - migrations status (`up to date`)
+
+## 14) Staging Rollback Drill Execution Evidence (2026-03-08 UTC)
+
+- Executed scripted rollback drill on staging host (`hostinger-vps`) using:
+  - `MODE=execute ./scripts/rollback-drill-staging.sh`
+- Drill behavior validated:
+  - Rollback from `9899f69` to previous commit `5593d6a`
+  - Full rebuild + PM2 restart + health check
+  - Roll-forward back to `9899f69`
+  - Full rebuild + PM2 restart + health check
+- Result: `DRILL_COMPLETE rollback+roll-forward successful`
+- Evidence log: `docs/ROLLBACK_DRILL_LOG_20260308-134627.txt`

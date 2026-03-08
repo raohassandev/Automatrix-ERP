@@ -167,6 +167,12 @@ Post-deploy deep gate (after GitHub action turns green):
 pnpm qa:staging:postgreen
 ```
 
+Staging rollback drill (ops evidence):
+```bash
+pnpm ops:rollback:drill:staging:dry
+pnpm ops:rollback:drill:staging
+```
+
 Full staging regression:
 ```bash
 pnpm test:staging:full
@@ -179,3 +185,4 @@ Recommended cadence:
 4. Push once.
 5. After deployment is green, run `pnpm qa:staging:postgreen` for deterministic RBAC/mobile regression confidence.
 6. Run `pnpm test:staging:full` only for release-candidate batches.
+7. Run `pnpm ops:rollback:drill:staging` periodically and store the generated log in cutover evidence.

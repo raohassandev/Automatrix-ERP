@@ -22,5 +22,3 @@ Gate command: `pnpm qa:staging:postgreen`
 
 1. Owner/CEO final sign-off on Access Control behavior in staging.
 2. Production manual mobile smoke sign-off (expense submit + final UX confirmation).
-3. Rollback drill execution evidence in staging-like environment.
-

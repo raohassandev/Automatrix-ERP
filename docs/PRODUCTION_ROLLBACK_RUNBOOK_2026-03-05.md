@@ -86,3 +86,13 @@ curl -fsS http://127.0.0.1:3030/api/health
 3. Promote to `main`.
 4. Re-run cutover checklist before redeploying production.
 
+## 8) Staging Drill Automation
+
+To rehearse rollback sequence in staging-like setup:
+
+```bash
+pnpm ops:rollback:drill:staging:dry
+pnpm ops:rollback:drill:staging
+```
+
+Evidence log is written to `docs/ROLLBACK_DRILL_LOG_YYYYMMDD-HHMMSS.txt`.

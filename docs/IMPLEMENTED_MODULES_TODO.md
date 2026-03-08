@@ -16,7 +16,8 @@ This file is the running action list for closure, hardening, and go-live readine
     Evidence (2026-03-06): `playwright/tests/dashboard-approvals-mobile-smoke.spec.ts`
   - [x] No blocking horizontal clipping on key pages (`/settings`, `/inventory`, `/approvals`, `/expenses`).  
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts` finance UX route sweep
-- [ ] Rollback drill execution in staging-like environment using `docs/PRODUCTION_ROLLBACK_RUNBOOK_2026-03-05.md` (not only documented, actually executed).
+- [x] Rollback drill execution in staging-like environment using `docs/PRODUCTION_ROLLBACK_RUNBOOK_2026-03-05.md` (not only documented, actually executed).  
+  Evidence (2026-03-08): `MODE=execute ./scripts/rollback-drill-staging.sh` completed rollback (`9899f69 -> 5593d6a`) and roll-forward (`5593d6a -> 9899f69`) with health checks; log: `docs/ROLLBACK_DRILL_LOG_20260308-134627.txt`.
 
 ## 2) Security / RBAC Closure
 
