@@ -64,6 +64,8 @@ This file is the running action list for closure, hardening, and go-live readine
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`
   - [x] Employee wallet/advance/reimbursement consistency.  
     Evidence (2026-03-06): `playwright/tests/staging-deep-audit.spec.ts`, `playwright/tests/payroll-deep-audit.spec.ts`, `playwright/tests/procurement-inventory-controls.spec.ts`
+- [~] Legacy snapshot reconciliation exception review:
+  - [ ] `PV-89` has project received snapshot but no linked approved income rows (`docs/STAGING_READINESS_AUDIT_2026-03-08.md`).
 
 ## 5) Planning Hygiene
 

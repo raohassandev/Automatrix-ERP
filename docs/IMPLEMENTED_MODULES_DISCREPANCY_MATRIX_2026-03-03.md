@@ -1,20 +1,20 @@
 # Implemented Modules Discrepancy Matrix
 
-Date: 2026-03-07
+Date: 2026-03-08
 Scope: Implemented modules only
 
 ## Summary
 
 - Critical open: 0
 - High open: 0
-- Medium open: 0
+- Medium open: 1
 - Low open: 0
 
 ## Matrix
 
 | Severity | Module | Area | Discrepancy | Evidence | Status | Owner |
 |---|---|---|---|---|---|---|
-| - | - | - | No open discrepancies in implemented-module baseline after post-green staging gate rerun (`qa:staging:postgreen`) and zero-retry stability rerun of vendor/item/project workhub RBAC suite. | `docs/STAGING_POSTGREEN_AUDIT_2026-03-07.md`, `playwright/tests/staging-deep-audit.spec.ts`, `playwright/tests/vendor-item-workhub-actions.spec.ts`, `playwright/tests/mobile-expense-submit-smoke.spec.ts` | Closed | Engineering |
+| Medium | Projects / Finance | Legacy data reconciliation | Project `PV-89` has `receivedAmount` snapshot (`963,082`) but no linked approved income rows by `Income.project`. | `docs/STAGING_READINESS_AUDIT_2026-03-08.md` | Open (Owner decision needed) | Engineering + Owner |
 
 ## Closure Rules
 

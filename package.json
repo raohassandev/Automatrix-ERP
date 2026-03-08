@@ -23,6 +23,8 @@
     "qa:staging:batch": "pnpm verify:staging:effective-permissions && pnpm test:staging:critical:fast",
     "qa:staging:rc": "pnpm qa:staging:batch && playwright test --config=playwright.config.staging.ts playwright/tests/mobile-expense-submit-smoke.spec.ts",
     "qa:staging:postgreen": "pnpm qa:staging:rc && playwright test --config=playwright.config.staging.ts --workers=1 --retries=0 playwright/tests/vendor-item-workhub-actions.spec.ts",
+    "ops:staging:cleanup:test-artifacts:dry": "./scripts/cleanup-staging-test-artifacts.sh",
+    "ops:staging:cleanup:test-artifacts": "MODE=execute ./scripts/cleanup-staging-test-artifacts.sh",
     "ops:rollback:drill:staging:dry": "./scripts/rollback-drill-staging.sh",
     "ops:rollback:drill:staging": "MODE=execute ./scripts/rollback-drill-staging.sh",
     "test": "vitest run",

@@ -173,6 +173,12 @@ pnpm ops:rollback:drill:staging:dry
 pnpm ops:rollback:drill:staging
 ```
 
+Staging test-artifact cleanup (before user UAT):
+```bash
+pnpm ops:staging:cleanup:test-artifacts:dry
+pnpm ops:staging:cleanup:test-artifacts
+```
+
 Full staging regression:
 ```bash
 pnpm test:staging:full
@@ -186,3 +192,4 @@ Recommended cadence:
 5. After deployment is green, run `pnpm qa:staging:postgreen` for deterministic RBAC/mobile regression confidence.
 6. Run `pnpm test:staging:full` only for release-candidate batches.
 7. Run `pnpm ops:rollback:drill:staging` periodically and store the generated log in cutover evidence.
+8. Run `pnpm ops:staging:cleanup:test-artifacts` after deep QA runs so staging is left clean for business users.
