@@ -424,7 +424,7 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
-### 11.1 Status Snapshot (As of 2026-03-06, updated after fast-track closure batch 3)
+### 11.1 Status Snapshot (As of 2026-03-09, updated after fast-track closure batch 16)
 
 Legend:
 - `[x]` Completed (target end-state achieved)
@@ -470,6 +470,8 @@ Snapshot note:
 - Fast-track closure batch 12 completed for implemented modules: post-green discrepancy-only audit refreshed (`docs/STAGING_POSTGREEN_AUDIT_2026-03-07.md`) with `0` open defects and explicit residual go-live process blockers.
 - Fast-track closure batch 13 completed for implemented modules: staging rollback drill command sequence was executed end-to-end (rollback + roll-forward + health checks) with evidence log (`docs/ROLLBACK_DRILL_LOG_20260308-134627.txt`) and checklist closure.
 - Fast-track closure batch 14 completed for implemented modules: staging test-artifact cleanup automation added/executed, wallet-balance re-sync guard added after cleanup, full postgreen regression rerun passed, and readiness audit published (`docs/STAGING_READINESS_AUDIT_2026-03-08.md`) with one legacy project reconciliation exception (`PV-89`).
+- Fast-track closure batch 15 completed for implemented modules: dashboard + my-portal UX was upgraded with executive cash-signal context, trend deltas vs last month, role-safe quick actions, and mobile-safe readability improvements.
+- Fast-track closure batch 16 completed for implemented modules: approvals UX clarity (`Approved vs Paid`) and sticky action columns were hardened, project detail gained contract/recovery foreground strip, staging deep audits reran green, full postgreen gate reran green after test-harness stabilization, and staging test-artifact cleanup was re-executed with verification logs (`docs/STAGING_TEST_ARTIFACT_CLEANUP_20260309-100124.txt`).
 - Remaining depth now continues under modules `19` and `20`.
 
 ### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05
@@ -486,9 +488,9 @@ Workstreams and current state:
 - `E` Go-Live Readiness + Plan Sync: `[~]` In Progress  
   Completed: production cutover checklist and rollback runbook documented; staging remains deployment source of truth pending monitored production stabilization window.
 
-Latest discrepancy baseline (`docs/STAGING_ROLE_DEEP_AUDIT_2026-03-03.md`):
+Latest discrepancy baseline (`docs/STAGING_POSTGREEN_AUDIT_2026-03-09.md`):
 - Open: `CRITICAL 0`, `HIGH 0`, `MEDIUM 0`, `LOW 0`.
-- Closure status: implemented-module fast-track discrepancy burn-down is complete for current staging baseline; remaining work is production monitored rollout and module `19`/`20` expansion.
+- Closure status: implemented-module fast-track discrepancy burn-down is complete for current staging baseline except one legacy reconciliation exception (`PV-89`); remaining work is production monitored rollout and module `19`/`20` expansion.
 
 ### 11.4 Live TODO Tracker (Implemented Modules)
 

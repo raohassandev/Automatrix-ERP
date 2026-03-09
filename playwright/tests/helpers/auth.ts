@@ -88,7 +88,10 @@ export async function loginAs(page: Page, email: string, password = process.env.
         try {
           await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 12_000 });
         } catch {
-          await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 12_000 });
+          // Staging may perform a near-simultaneous redirect; fallback without failing auth.
+          await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 12_000 }).catch(async () => {
+            await page.waitForTimeout(400);
+          });
         }
       }
       return;

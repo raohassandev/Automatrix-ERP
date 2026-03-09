@@ -10,7 +10,7 @@ test.describe("Dashboard + Approvals mobile smoke", () => {
     await expect(page.getByText("Income (This Month)")).toBeVisible();
     await expect(page.getByText("Expense (This Month)")).toBeVisible();
     await expect(page.getByText("Net Position")).toBeVisible();
-    await expect(page.getByText("Pending Queue")).toBeVisible();
+    await expect(page.getByText("Pending Queue", { exact: true })).toBeVisible();
   });
 
   test("approvals actions remain visible and clickable on mobile width", async ({ browser }) => {

@@ -72,8 +72,18 @@ This file is the running action list for closure, hardening, and go-live readine
 - [ ] Keep this tracker updated after each batch:
   - [x] mark completed items with date + evidence doc/spec.
   - [x] add new findings immediately with severity and owner.  
-    Evidence (2026-03-07): no new discrepancies in latest `qa:staging:postgreen` run (`40/40` core + mobile expense submit smoke + vendor/item/project suite `10/10` at `retries=0`), documented in `docs/STAGING_POSTGREEN_AUDIT_2026-03-07.md`.
+    Evidence (2026-03-09): `qa:staging:postgreen` rerun green after smoke/auth test hardening; discrepancy-only report refreshed in `docs/STAGING_POSTGREEN_AUDIT_2026-03-09.md`.
 - [ ] Keep module `19` and `20` work out of this file (tracked in `SUPER_MASTER_PLAN.md` main roadmap).
+
+## 7) Latest Operations Evidence (2026-03-09)
+
+- [x] Effective permission parity check rerun: `pnpm verify:staging:effective-permissions` => `0` mismatches on `17` active users.
+- [x] Deep staging suites rerun green:
+  - `playwright/tests/role-deep-audit.spec.ts`
+  - `playwright/tests/staging-deep-audit.spec.ts`
+- [x] Staging test-artifact cleanup rerun + verified:
+  - dry run log: `docs/STAGING_TEST_ARTIFACT_CLEANUP_20260309-094912.txt`
+  - execute log: `docs/STAGING_TEST_ARTIFACT_CLEANUP_20260309-100124.txt`
 
 ## 6) HR Profile + Task Performance (Planned Next)
 
