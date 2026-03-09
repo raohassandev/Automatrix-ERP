@@ -226,6 +226,7 @@ export default async function MyDashboardPage() {
         </div>
       </div>
 
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Wallet Snapshot</div>
       <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm">
           <div className="text-sm text-emerald-700 dark:text-emerald-300">Wallet Available</div>
@@ -246,26 +247,27 @@ export default async function MyDashboardPage() {
         </div>
       </div>
 
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Advance and Reimbursement</div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-6 shadow-sm">
-          <div className="text-sm text-indigo-700">Pending Incentive (Payroll)</div>
-          <div className="mt-2 text-xl font-semibold text-indigo-900">{formatMoney(pendingPayrollIncentive)}</div>
+        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm">
+          <div className="text-sm text-indigo-700 dark:text-indigo-300">Pending Incentive (Payroll)</div>
+          <div className="mt-2 text-xl font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(pendingPayrollIncentive)}</div>
         </div>
-        <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-6 shadow-sm">
-          <div className="text-sm text-sky-700">Company Advance Issued</div>
-          <div className="mt-2 text-xl font-semibold text-sky-900">{formatMoney(advanceIssued)}</div>
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm">
+          <div className="text-sm text-sky-700 dark:text-sky-300">Company Advance Issued</div>
+          <div className="mt-2 text-xl font-semibold text-sky-900 dark:text-sky-100">{formatMoney(advanceIssued)}</div>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-6 shadow-sm">
-          <div className="text-sm text-amber-700">Advance Outstanding</div>
-          <div className="mt-2 text-xl font-semibold text-amber-900">{formatMoney(advanceOutstanding)}</div>
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm">
+          <div className="text-sm text-amber-700 dark:text-amber-300">Advance Outstanding</div>
+          <div className="mt-2 text-xl font-semibold text-amber-900 dark:text-amber-100">{formatMoney(advanceOutstanding)}</div>
         </div>
-        <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
-          <div className="text-sm text-rose-700">Own-Pocket Reimbursement Due</div>
-          <div className="mt-2 text-xl font-semibold text-rose-900">{formatMoney(pocketPayable)}</div>
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm">
+          <div className="text-sm text-rose-700 dark:text-rose-300">Own-Pocket Reimbursement Due</div>
+          <div className="mt-2 text-xl font-semibold text-rose-900 dark:text-rose-100">{formatMoney(pocketPayable)}</div>
           <div className="mt-2 text-xs">
             <Link
               href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=APPROVED`}
-              className="font-medium text-rose-700 underline underline-offset-2"
+              className="font-medium text-rose-700 dark:text-rose-300 underline underline-offset-2"
             >
               View approved reimbursements
             </Link>
@@ -274,25 +276,25 @@ export default async function MyDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-6 shadow-sm">
-          <div className="text-sm text-violet-700">Advance Used This Month</div>
-          <div className="mt-2 text-xl font-semibold text-violet-900">{formatMoney(advanceUsedThisMonth)}</div>
+        <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-6 shadow-sm">
+          <div className="text-sm text-violet-700 dark:text-violet-300">Advance Used This Month</div>
+          <div className="mt-2 text-xl font-semibold text-violet-900 dark:text-violet-100">{formatMoney(advanceUsedThisMonth)}</div>
           <div className="mt-2 text-xs">
             <Link
               href={`/wallets?employeeId=${employee.id}&type=DEBIT&from=${monthStartStr}&to=${monthEndStr}`}
-              className="font-medium text-violet-700 underline underline-offset-2"
+              className="font-medium text-violet-700 dark:text-violet-300 underline underline-offset-2"
             >
               Open wallet debits this month
             </Link>
           </div>
         </div>
-        <div className="rounded-xl border border-cyan-200 bg-cyan-50/60 p-6 shadow-sm">
-          <div className="text-sm text-cyan-700">Reimbursement Paid This Month</div>
-          <div className="mt-2 text-xl font-semibold text-cyan-900">{formatMoney(reimbursementPaidThisMonth)}</div>
+        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-6 shadow-sm">
+          <div className="text-sm text-cyan-700 dark:text-cyan-300">Reimbursement Paid This Month</div>
+          <div className="mt-2 text-xl font-semibold text-cyan-900 dark:text-cyan-100">{formatMoney(reimbursementPaidThisMonth)}</div>
           <div className="mt-2 text-xs">
             <Link
               href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=PAID&from=${monthStartStr}&to=${monthEndStr}`}
-              className="font-medium text-cyan-700 underline underline-offset-2"
+              className="font-medium text-cyan-700 dark:text-cyan-300 underline underline-offset-2"
             >
               Open paid reimbursements
             </Link>
@@ -300,22 +302,23 @@ export default async function MyDashboardPage() {
         </div>
       </div>
 
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attendance Snapshot</div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm">
-          <div className="text-sm text-emerald-700">This Month Present</div>
-          <div className="mt-2 text-xl font-semibold text-emerald-800">{attendanceMap.get("PRESENT") || 0}</div>
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm">
+          <div className="text-sm text-emerald-700 dark:text-emerald-300">This Month Present</div>
+          <div className="mt-2 text-xl font-semibold text-emerald-800 dark:text-emerald-300">{attendanceMap.get("PRESENT") || 0}</div>
         </div>
-        <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-6 shadow-sm">
-          <div className="text-sm text-amber-700">This Month Late</div>
-          <div className="mt-2 text-xl font-semibold text-amber-800">{attendanceMap.get("LATE") || 0}</div>
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm">
+          <div className="text-sm text-amber-700 dark:text-amber-300">This Month Late</div>
+          <div className="mt-2 text-xl font-semibold text-amber-800 dark:text-amber-300">{attendanceMap.get("LATE") || 0}</div>
         </div>
-        <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-6 shadow-sm">
-          <div className="text-sm text-rose-700">This Month Absent</div>
-          <div className="mt-2 text-xl font-semibold text-rose-800">{attendanceMap.get("ABSENT") || 0}</div>
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm">
+          <div className="text-sm text-rose-700 dark:text-rose-300">This Month Absent</div>
+          <div className="mt-2 text-xl font-semibold text-rose-800 dark:text-rose-300">{attendanceMap.get("ABSENT") || 0}</div>
         </div>
-        <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-6 shadow-sm">
-          <div className="text-sm text-sky-700">Leave Requests</div>
-          <div className="mt-2 text-xl font-semibold text-sky-800">{leaveRequests.length}</div>
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm">
+          <div className="text-sm text-sky-700 dark:text-sky-300">Leave Requests</div>
+          <div className="mt-2 text-xl font-semibold text-sky-800 dark:text-sky-300">{leaveRequests.length}</div>
         </div>
       </div>
 

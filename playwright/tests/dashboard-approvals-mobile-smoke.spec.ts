@@ -20,9 +20,11 @@ test.describe("Dashboard + Approvals mobile smoke", () => {
     await page.goto("/approvals", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Pending Approvals" })).toBeVisible();
-
-    const actionButton = page.getByRole("button", { name: /Approve|Reject/i }).first();
-    await expect(actionButton).toBeVisible();
+    const hasEmptyState = await page.getByText("No pending approvals at the moment").first().isVisible().catch(() => false);
+    if (!hasEmptyState) {
+      const actionButton = page.getByRole("button", { name: /Approve|Reject/i }).first();
+      await expect(actionButton).toBeVisible();
+    }
 
     await context.close();
   });

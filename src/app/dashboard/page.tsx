@@ -110,7 +110,11 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-5 text-sm text-amber-800 shadow-sm dark:text-amber-300">
+          Dashboard metrics are not available right now. Try again in a few moments.
+        </div>
+      )}
 
       {dashboardMetrics ? (
         <div className="grid gap-4 lg:grid-cols-3">
@@ -164,7 +168,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {canViewProcurement || canEditProcurement ? (
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-6 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Procurement Workspace</div>
             <div className="mt-3 grid gap-2 text-sm">
               <Link className="underline underline-offset-2" href="/procurement/purchase-orders">
@@ -189,7 +193,7 @@ export default async function DashboardPage() {
         ) : null}
 
         {canViewInventory ? (
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-6 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Inventory Workspace</div>
             <div className="mt-3 grid gap-2 text-sm">
               <Link className="underline underline-offset-2" href="/inventory">
@@ -209,7 +213,7 @@ export default async function DashboardPage() {
         ) : null}
 
         {canViewControls ? (
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Controls Workspace</div>
             <div className="mt-3 grid gap-2 text-sm">
               {canViewApprovals || canViewAllApprovals ? (
@@ -230,7 +234,7 @@ export default async function DashboardPage() {
         ) : null}
 
         {canViewReports ? (
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-6 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Reports Workspace</div>
             <div className="mt-3 grid gap-2 text-sm">
               {canViewAccounting || canManageAccounting || canManageCompanyAccounts ? (
@@ -256,7 +260,7 @@ export default async function DashboardPage() {
         ) : null}
 
         {canViewWorkspace ? (
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-6 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">My Workspace</div>
             <div className="mt-3 grid gap-2 text-sm">
               <Link className="underline underline-offset-2" href="/me">

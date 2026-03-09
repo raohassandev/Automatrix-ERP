@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { MermaidDiagram } from "@/components/MermaidDiagram";
+import CeoBlueprintBoard from "@/components/CeoBlueprintBoard";
 import { requirePermission } from "@/lib/rbac";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -37,24 +37,14 @@ export default async function CeoBlueprintPage() {
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-sky-500/10 p-6 shadow-sm md:p-8">
         <h1 className="text-2xl font-semibold">ERP Blueprint</h1>
         <p className="mt-2 text-muted-foreground">
-          Module map and cross-module flows for executive review.
+          Executive map of module boundaries, truth sources, and cross-module posting flow.
         </p>
       </div>
 
-      {diagrams.length === 0 ? (
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <p className="text-muted-foreground">No diagrams found.</p>
-        </div>
-      ) : (
-        diagrams.map((code, idx) => (
-          <div key={idx} className="rounded-xl border bg-card p-6 shadow-sm">
-            <MermaidDiagram code={code} />
-          </div>
-        ))
-      )}
+      <CeoBlueprintBoard diagrams={diagrams} />
     </div>
   );
 }

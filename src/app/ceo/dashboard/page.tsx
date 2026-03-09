@@ -171,7 +171,7 @@ export default async function CeoDashboardPage() {
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-sky-500/10 p-6 shadow-sm md:p-8">
         <h1 className="text-2xl font-semibold">CEO Dashboard</h1>
         <p className="mt-2 text-muted-foreground">
           Phase 1 truthful KPIs driven by procurement + inventory + allocations (no GL).
@@ -179,10 +179,10 @@ export default async function CeoDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">AP outstanding</div>
-          <div className="mt-2 text-2xl font-bold">{formatMoney(apOutstanding)}</div>
-          <div className="mt-1 text-sm text-muted-foreground">Overdue bills: {apOverdueCount}</div>
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm">
+          <div className="text-sm font-medium text-rose-700 dark:text-rose-300">AP outstanding</div>
+          <div className="mt-2 text-2xl font-bold text-rose-900 dark:text-rose-100">{formatMoney(apOutstanding)}</div>
+          <div className="mt-1 text-sm text-rose-700/80 dark:text-rose-300/80">Overdue bills: {apOverdueCount}</div>
           <div className="mt-3">
             <Link className="text-sm underline" href="/reports/ap">
               View AP aging
@@ -190,9 +190,9 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Purchases billed (this month)</div>
-          <div className="mt-2 text-2xl font-bold">
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm">
+          <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Purchases billed (this month)</div>
+          <div className="mt-2 text-2xl font-bold text-emerald-900 dark:text-emerald-100">
             {formatMoney(Number(purchasesBilledThisMonth._sum.totalAmount || 0))}
           </div>
           <div className="mt-3">
@@ -202,12 +202,12 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">GRN stock-in (this month)</div>
-          <div className="mt-2 text-2xl font-bold">
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm">
+          <div className="text-sm font-medium text-sky-700 dark:text-sky-300">GRN stock-in (this month)</div>
+          <div className="mt-2 text-2xl font-bold text-sky-900 dark:text-sky-100">
             {Number(grnActivity._sum.quantity || 0).toLocaleString()} units
           </div>
-          <div className="mt-1 text-sm text-muted-foreground">
+          <div className="mt-1 text-sm text-sky-700/80 dark:text-sky-300/80">
             Value: {formatMoney(Number(grnActivity._sum.total || 0))}
           </div>
           <div className="mt-3">
@@ -217,8 +217,8 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Payments (this month) by account</div>
+        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm">
+          <div className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Payments (this month) by account</div>
           <div className="mt-2 space-y-1 text-sm">
             {paymentsByAccount.length === 0 ? (
               <div className="text-muted-foreground">No posted vendor payments this month.</div>
@@ -238,9 +238,9 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Low stock items</div>
-          <div className="mt-2 text-2xl font-bold">{inventoryLowCount}</div>
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm">
+          <div className="text-sm font-medium text-amber-700 dark:text-amber-300">Low stock items</div>
+          <div className="mt-2 text-2xl font-bold text-amber-900 dark:text-amber-100">{inventoryLowCount}</div>
           <div className="mt-2 space-y-1 text-sm">
             {inventoryLow.length === 0 ? (
               <div className="text-muted-foreground">No low stock items.</div>
@@ -262,8 +262,8 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Inventory data quality</div>
+        <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-6 shadow-sm">
+          <div className="text-sm font-medium text-violet-700 dark:text-violet-300">Inventory data quality</div>
           <div className="mt-2 space-y-1 text-sm">
             <div className="flex items-center justify-between gap-3">
               <span>Items missing SKU</span>
@@ -289,8 +289,8 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <div className="text-sm font-medium text-muted-foreground">Approval queue (pending)</div>
+        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-6 shadow-sm">
+          <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">Approval queue (pending)</div>
           <div className="mt-2 space-y-1 text-sm">
             <div className="flex items-center justify-between">
               <span>PO (submitted)</span>

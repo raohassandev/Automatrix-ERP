@@ -24,6 +24,7 @@ export default async function NotificationsPage({
     (await requirePermission(session.user.id, "notifications.view_all")) ||
     (await requirePermission(session.user.id, "dashboard.view")) ||
     (await requirePermission(session.user.id, "reports.view_all"));
+  const canViewAll = await requirePermission(session.user.id, "notifications.view_all");
   const canEdit = await requirePermission(session.user.id, "notifications.edit");
   if (!canView) {
     return (
@@ -44,10 +45,10 @@ export default async function NotificationsPage({
   let notifications = [];
   let total = 0;
   try {
-    const where: Record<string, unknown> = { userId: session.user.id };
+    const where: Record<string, unknown> = canViewAll ? {} : { userId: session.user.id };
     if (search) {
       where.AND = [
-        { userId: session.user.id },
+        ...(canViewAll ? [] : [{ userId: session.user.id }]),
         {
           OR: [
             { type: { contains: search, mode: "insensitive" as const } },
@@ -82,14 +83,26 @@ export default async function NotificationsPage({
     );
   }
   const totalPages = Math.max(1, Math.ceil(total / take));
+  const unreadCount = notifications.filter((note) => note.status === "UNREAD" || note.status === "NEW").length;
+  const readCount = notifications.length - unreadCount;
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-sky-500/10 p-6 shadow-sm md:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Notifications</h1>
-            <p className="mt-2 text-muted-foreground">Personal notifications.</p>
+            <p className="mt-2 text-muted-foreground">
+              {canViewAll ? "Team + system notifications." : "Personal notifications."}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full border border-amber-500/35 bg-amber-500/15 px-3 py-1 font-medium text-amber-800 dark:text-amber-300">
+                Unread: {unreadCount}
+              </span>
+              <span className="rounded-full border border-emerald-500/35 bg-emerald-500/15 px-3 py-1 font-medium text-emerald-800 dark:text-emerald-300">
+                Read: {readCount}
+              </span>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-[220px]">
@@ -134,7 +147,7 @@ export default async function NotificationsPage({
                 const isUnread = note.status === "UNREAD" || note.status === "NEW";
                 const displayStatus = isUnread ? "UNREAD" : note.status;
                 return (
-                  <tr key={note.id} className={`border-b ${isUnread ? "bg-amber-50/60" : ""}`}>
+                  <tr key={note.id} className={`border-b ${isUnread ? "bg-amber-500/10 dark:bg-amber-500/15" : ""}`}>
                     <td className="py-2">
                       <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-foreground">
                         {note.type}
@@ -148,7 +161,9 @@ export default async function NotificationsPage({
                     <td className="py-2">
                       <span
                         className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                          isUnread ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"
+                          isUnread
+                            ? "bg-amber-500/15 text-amber-800 dark:text-amber-300"
+                            : "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
                         }`}
                       >
                         {displayStatus}

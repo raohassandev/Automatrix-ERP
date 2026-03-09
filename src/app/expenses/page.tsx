@@ -171,15 +171,15 @@ function ExpensesPageContent() {
 
   return (
     <div className="grid gap-6 overflow-x-hidden">
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-sky-500/10 p-6 shadow-sm md:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Expenses</h1>
             <p className="mt-2 text-muted-foreground">
-              A list of all expenses in the system.
+              Company expenses with approval status, reimbursement state, and source traceability.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-background/70 p-2">
             <DateRangePicker />
             <SearchInput placeholder="Search expenses..." />
             <QuerySelect
@@ -226,27 +226,27 @@ function ExpensesPageContent() {
           </div>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4">
-            <div className="text-sm text-sky-700">Total (Page)</div>
-            <div className="text-xl font-semibold text-sky-800">{formatMoney(summary.total)}</div>
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-4">
+            <div className="text-sm text-sky-700 dark:text-sky-300">Total (Page)</div>
+            <div className="text-xl font-semibold text-sky-900 dark:text-sky-100">{formatMoney(summary.total)}</div>
           </div>
-          <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-4">
-            <div className="text-sm text-amber-700">Pending (Page)</div>
-            <div className="text-xl font-semibold text-amber-800">{formatMoney(summary.pending)}</div>
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+            <div className="text-sm text-amber-700 dark:text-amber-300">Pending (Page)</div>
+            <div className="text-xl font-semibold text-amber-900 dark:text-amber-100">{formatMoney(summary.pending)}</div>
           </div>
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
-            <div className="text-sm text-emerald-700">Approved (Page)</div>
-            <div className="text-xl font-semibold text-emerald-800">{formatMoney(summary.approved)}</div>
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
+            <div className="text-sm text-emerald-700 dark:text-emerald-300">Approved (Page)</div>
+            <div className="text-xl font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(summary.approved)}</div>
           </div>
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-4">
-            <div className="text-sm text-indigo-700">Paid (Page)</div>
-            <div className="text-xl font-semibold text-indigo-800">{formatMoney(summary.paid)}</div>
+          <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-4">
+            <div className="text-sm text-indigo-700 dark:text-indigo-300">Paid (Page)</div>
+            <div className="text-xl font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(summary.paid)}</div>
           </div>
         </div>
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-900">
+        <div className="mb-4 rounded-md border border-amber-500/35 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
           Expense rule: expenses are non-stock only. Material purchasing must flow through Procurement (PO → GRN → Vendor Bill).
         </div>
         {canMarkPaid ? (
