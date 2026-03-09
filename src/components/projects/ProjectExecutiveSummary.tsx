@@ -111,7 +111,7 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
-        <div className="rounded-lg border border-border bg-muted/35 p-4">
+        <div className="rounded-lg border border-border bg-card/90 p-4">
           <h3 className="text-sm font-semibold text-foreground">Cash Exposure Mix</h3>
           <p className="mt-1 text-xs text-muted-foreground">Recovered cash vs current receivable and vendor pressure</p>
           <div className="mt-3 h-64">
@@ -130,22 +130,28 @@ export function ProjectExecutiveSummary({ costs, projectId }: { costs: ProjectCo
                     <Cell key={index} fill={cashMixColors[index % cashMixColors.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number | string | undefined) => formatMoney(Number(value || 0))} />
+                <Tooltip
+                  formatter={(value: number | string | undefined) => formatMoney(Number(value || 0))}
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-muted/35 p-4">
+        <div className="rounded-lg border border-border bg-card/90 p-4">
           <h3 className="text-sm font-semibold text-foreground">Profit Bridge</h3>
           <p className="mt-1 text-xs text-muted-foreground">How income converts into project profit after costs</p>
           <div className="mt-3 h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={profitBridge} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#64748b" opacity={0.35} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground))" opacity={0.22} />
                 <XAxis dataKey="label" tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
                 <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} tickFormatter={(v) => formatMoney(Number(v || 0), "")} />
-                <Tooltip formatter={(value: number | string | undefined) => formatMoney(Number(value || 0))} />
+                <Tooltip
+                  formatter={(value: number | string | undefined) => formatMoney(Number(value || 0))}
+                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                   {profitBridge.map((row) => (
                     <Cell key={row.label} fill={barFill(row.label)} />

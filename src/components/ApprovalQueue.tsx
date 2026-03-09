@@ -385,7 +385,7 @@ export default function ApprovalQueue({
       </div>
 
       <div className="mb-6 hidden overflow-x-auto rounded-lg border border-border bg-card/95 shadow-sm md:block">
-        <table className="min-w-[1460px] divide-y divide-border">
+        <table className="min-w-[1320px] divide-y divide-border">
           <thead className="bg-muted">
             <tr>
               <th className="px-6 py-3 text-left">
@@ -423,7 +423,7 @@ export default function ApprovalQueue({
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Level
               </th>
-              <th className="whitespace-nowrap bg-muted px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <th className="sticky right-0 z-20 whitespace-nowrap border-l border-border bg-muted px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Actions
               </th>
             </tr>
@@ -540,7 +540,7 @@ export default function ApprovalQueue({
                   <td className="whitespace-nowrap px-6 py-4">
                     <ApprovalLevelBadge level={expense.requiredApprovalLevel} />
                   </td>
-                  <td className="whitespace-nowrap bg-card px-6 py-4 text-sm">
+                  <td className="sticky right-0 z-10 whitespace-nowrap border-l border-border bg-card px-6 py-4 text-sm shadow-[-6px_0_8px_-8px_rgba(15,23,42,0.55)] dark:shadow-[-6px_0_8px_-8px_rgba(2,6,23,0.9)]">
                     {expense.type === "INCOME" ? (
                       <IncomeApprovalActions
                         incomeId={expense.id}
@@ -745,7 +745,7 @@ function IncomeApprovalActions({
 
   return (
     <>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button onClick={handleApprove} disabled={pending} size="sm">
           {pending ? "Processing..." : "Approve"}
         </Button>

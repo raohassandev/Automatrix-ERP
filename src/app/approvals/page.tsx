@@ -334,15 +334,24 @@ export default async function ApprovalsPage() {
           </p>
         </div>
 
+        <div className="mb-6 rounded-lg border border-primary/25 bg-primary/10 p-4">
+          <div className="text-sm font-semibold text-primary">Approval vs Payment</div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Approved</span> means entry is authorized and posted as per source rules.
+            <span className="mx-1">|</span>
+            <span className="font-medium text-foreground">Paid</span> means cash reimbursement/payment is completed.
+          </p>
+        </div>
+
         {/* Stats Cards */}
         <div className="mb-6 grid gap-4 md:grid-cols-5">
-          <div className="rounded-lg bg-card p-4 shadow">
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Total Pending</div>
             <div className="mt-2 text-3xl font-bold text-foreground">
               {approvalsWithWalletInfo.length + procurementApprovals.length}
             </div>
           </div>
-          <div className="rounded-lg bg-card p-4 shadow">
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Total Amount</div>
             <div className="mt-2 text-2xl font-bold text-foreground">
               {formatMoney(
@@ -357,7 +366,7 @@ export default async function ApprovalsPage() {
               )}
             </div>
           </div>
-          <div className="rounded-lg bg-card p-4 shadow">
+          <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Level L1</div>
             <div className="mt-2 text-3xl font-bold text-emerald-600">
               {
@@ -368,7 +377,7 @@ export default async function ApprovalsPage() {
               }
             </div>
           </div>
-          <div className="rounded-lg bg-card p-4 shadow">
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Level L2</div>
             <div className="mt-2 text-3xl font-bold text-amber-600">
               {
@@ -379,7 +388,7 @@ export default async function ApprovalsPage() {
               }
             </div>
           </div>
-          <div className="rounded-lg bg-card p-4 shadow">
+          <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 p-4 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Level L3</div>
             <div className="mt-2 text-3xl font-bold text-red-600">
               {
@@ -390,7 +399,7 @@ export default async function ApprovalsPage() {
               }
             </div>
           </div>
-          <div className="rounded-lg bg-card p-4 shadow">
+          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">Overdue (&gt;48h)</div>
             <div className={`mt-2 text-3xl font-bold ${overdueCount > 0 ? "text-rose-600" : "text-emerald-600"}`}>
               {overdueCount}

@@ -64,8 +64,11 @@ export default async function MyDashboardPage() {
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
+  const monthEnd = new Date();
+  const monthStartStr = monthStart.toISOString().slice(0, 10);
+  const monthEndStr = monthEnd.toISOString().slice(0, 10);
 
-  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg, pocketPayableAgg] = await Promise.all([
+  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg, pocketPayableAgg, advanceUsedThisMonthAgg, reimbursementPaidThisMonthRows] = await Promise.all([
     prisma.projectAssignment.findMany({
       where: { userId: session.user.id },
       select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
@@ -149,6 +152,24 @@ export default async function MyDashboardPage() {
       },
       _sum: { approvedAmount: true, amount: true },
     }),
+    prisma.walletLedger.aggregate({
+      where: {
+        employeeId: employee.id,
+        type: "DEBIT",
+        sourceType: { in: ["EXPENSE_SETTLEMENT", "COMPANY_ADVANCE_ADJUSTMENT"] },
+        date: { gte: monthStart, lte: monthEnd },
+      },
+      _sum: { amount: true },
+    }),
+    prisma.expense.findMany({
+      where: {
+        submittedById: session.user.id,
+        paymentSource: "EMPLOYEE_POCKET",
+        status: "PAID",
+        updatedAt: { gte: monthStart, lte: monthEnd },
+      },
+      select: { amount: true, approvedAmount: true },
+    }),
   ]);
 
   const walletBalance = Number(employee.walletBalance || 0);
@@ -159,6 +180,12 @@ export default async function MyDashboardPage() {
   const advanceSettled = Number(advanceSettlementAgg._sum.amount || 0);
   const advanceOutstanding = Math.max(0, advanceIssued - advanceSettled);
   const pocketPayable = Number(pocketPayableAgg._sum.approvedAmount || pocketPayableAgg._sum.amount || 0);
+  const advanceUsedThisMonth = Number(advanceUsedThisMonthAgg._sum.amount || 0);
+  const reimbursementPaidThisMonth = reimbursementPaidThisMonthRows.reduce((sum, row) => {
+    const approved = Number(row.approvedAmount || 0);
+    const submitted = Number(row.amount || 0);
+    return sum + (approved > 0 ? approved : submitted);
+  }, 0);
   const latestSalary = Number(payrollEntries[0]?.netPay || 0);
   const expenseStatusMap = new Map(expenseCounts.map((row) => [row.status, row._count._all]));
   const assignedProjects = assignments.map((a) => a.project);
@@ -235,6 +262,41 @@ export default async function MyDashboardPage() {
         <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
           <div className="text-sm text-rose-700">Own-Pocket Reimbursement Due</div>
           <div className="mt-2 text-xl font-semibold text-rose-900">{formatMoney(pocketPayable)}</div>
+          <div className="mt-2 text-xs">
+            <Link
+              href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=APPROVED`}
+              className="font-medium text-rose-700 underline underline-offset-2"
+            >
+              View approved reimbursements
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-6 shadow-sm">
+          <div className="text-sm text-violet-700">Advance Used This Month</div>
+          <div className="mt-2 text-xl font-semibold text-violet-900">{formatMoney(advanceUsedThisMonth)}</div>
+          <div className="mt-2 text-xs">
+            <Link
+              href={`/wallets?employeeId=${employee.id}&type=DEBIT&from=${monthStartStr}&to=${monthEndStr}`}
+              className="font-medium text-violet-700 underline underline-offset-2"
+            >
+              Open wallet debits this month
+            </Link>
+          </div>
+        </div>
+        <div className="rounded-xl border border-cyan-200 bg-cyan-50/60 p-6 shadow-sm">
+          <div className="text-sm text-cyan-700">Reimbursement Paid This Month</div>
+          <div className="mt-2 text-xl font-semibold text-cyan-900">{formatMoney(reimbursementPaidThisMonth)}</div>
+          <div className="mt-2 text-xs">
+            <Link
+              href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=PAID&from=${monthStartStr}&to=${monthEndStr}`}
+              className="font-medium text-cyan-700 underline underline-offset-2"
+            >
+              Open paid reimbursements
+            </Link>
+          </div>
         </div>
       </div>
 

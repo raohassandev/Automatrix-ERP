@@ -105,7 +105,7 @@ export default function ProcurementApprovalQueue({
         </p>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-border">
+        <table className="min-w-[1180px] divide-y divide-border">
           <thead className="bg-muted">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -129,7 +129,7 @@ export default function ProcurementApprovalQueue({
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Level
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <th className="sticky right-0 z-20 border-l border-border bg-muted px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Actions
               </th>
             </tr>
@@ -161,7 +161,7 @@ export default function ProcurementApprovalQueue({
                     {item.requiredApprovalLevel}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm">
+                <td className="sticky right-0 z-10 border-l border-border bg-card px-4 py-3 text-sm shadow-[-6px_0_8px_-8px_rgba(15,23,42,0.55)] dark:shadow-[-6px_0_8px_-8px_rgba(2,6,23,0.9)]">
                   <div className="flex min-w-[330px] items-center gap-2">
                     <input
                       className="w-40 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground"

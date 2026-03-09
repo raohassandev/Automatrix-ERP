@@ -106,6 +106,14 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   }, [detail.inventory?.entries]);
   const incentivePermissions = detail.policy.incentives;
   const canManageIncentives = incentivePermissions.canEdit || incentivePermissions.canApprove;
+  const recoveryRatePct =
+    detail.costs && detail.costs.contractValue > 0
+      ? (detail.costs.receivedAmount / detail.costs.contractValue) * 100
+      : 0;
+  const pendingRatePct =
+    detail.costs && detail.costs.contractValue > 0
+      ? (detail.costs.pendingRecovery / detail.costs.contractValue) * 100
+      : 0;
 
   async function updateIncentiveStatus(incentiveId: string, status: "APPROVED" | "REJECTED") {
     try {
@@ -258,7 +266,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
         <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-primary/15" />
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 relative z-10">
-            <div className="text-sm font-medium text-sky-700">{detail.header.projectId}</div>
+            <div className="text-sm font-medium text-sky-700 dark:text-sky-300">{detail.header.projectId}</div>
             <h1 className="mt-1 truncate text-2xl font-semibold">{detail.header.name}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span
@@ -270,7 +278,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span>
                 Client:{" "}
-                <Link className="font-medium text-sky-800 underline underline-offset-2" href={`/clients?search=${encodeURIComponent(detail.header.client.name)}`}>
+                <Link className="font-medium text-sky-800 underline underline-offset-2 dark:text-sky-200" href={`/clients?search=${encodeURIComponent(detail.header.client.name)}`}>
                   {detail.header.client.name}
                 </Link>
               </span>
@@ -361,9 +369,35 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
       </div>
 
       {detail.costs ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">Contract Amount</div>
+            <div className="mt-1 text-lg font-semibold text-foreground">{formatMoney(detail.costs.contractValue)}</div>
+          </div>
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Received</div>
+            <div className="mt-1 text-lg font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(detail.costs.receivedAmount)}</div>
+            <div className="text-xs text-emerald-700 dark:text-emerald-300">{recoveryRatePct.toFixed(1)}% of contract</div>
+          </div>
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">Pending Recovery</div>
+            <div className="mt-1 text-lg font-semibold text-amber-900 dark:text-amber-100">{formatMoney(detail.costs.pendingRecovery)}</div>
+            <div className="text-xs text-amber-800 dark:text-amber-200">{pendingRatePct.toFixed(1)}% of contract</div>
+          </div>
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">Recovery Health</div>
+            <div className="mt-1 text-lg font-semibold text-sky-900 dark:text-sky-100">
+              {(100 - Math.min(100, pendingRatePct)).toFixed(1)}%
+            </div>
+            <div className="text-xs text-sky-700 dark:text-sky-300">Lower pending ratio means stronger cash recovery</div>
+          </div>
+        </div>
+      ) : null}
+
+      {detail.costs ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
           <div className="rounded-xl border border-primary/25 bg-primary/10 p-4 shadow-sm">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-primary/90">Total Budget</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-primary/90">Contract Amount</div>
             <div className="mt-2 text-2xl font-semibold text-foreground">{formatMoney(detail.costs.contractValue)}</div>
             <div className="mt-1 text-xs text-muted-foreground">Contracted project value</div>
           </div>
