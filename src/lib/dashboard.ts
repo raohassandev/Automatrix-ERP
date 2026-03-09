@@ -156,6 +156,9 @@ export async function getDashboardDataEnhanced(
 
   const expenseWhere = canViewAllMetrics ? {} : { submittedById: userId };
   const incomeWhere = canViewAllMetrics ? {} : { addedById: userId };
+  const now = new Date();
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
   const [
     expenseSum,
@@ -168,6 +171,8 @@ export async function getDashboardDataEnhanced(
     rejectedExpensesSum,
     expenseCount,
     incomeCount,
+    prevMonthIncomeSum,
+    prevMonthExpenseSum,
   ] = await Promise.all([
     prisma.expense.aggregate({ 
       _sum: { amount: true },
@@ -218,11 +223,28 @@ export async function getDashboardDataEnhanced(
     }),
     prisma.expense.count({ where: { ...dateFilter, ...expenseWhere } }),
     prisma.income.count({ where: { ...dateFilter, ...incomeWhere } }),
+    prisma.income.aggregate({
+      _sum: { amount: true },
+      where: {
+        date: { gte: prevMonthStart, lte: prevMonthEnd },
+        ...incomeWhere,
+      },
+    }),
+    prisma.expense.aggregate({
+      _sum: { amount: true },
+      where: {
+        date: { gte: prevMonthStart, lte: prevMonthEnd },
+        ...expenseWhere,
+      },
+    }),
   ]);
 
   const totalExpenses = Number(expenseSum._sum.amount || 0);
   const totalIncome = Number(incomeSum._sum.amount || 0);
   const netProfit = totalIncome - totalExpenses;
+  const prevMonthIncome = Number(prevMonthIncomeSum._sum.amount || 0);
+  const prevMonthExpenses = Number(prevMonthExpenseSum._sum.amount || 0);
+  const prevMonthNet = prevMonthIncome - prevMonthExpenses;
   const lowStockCount = inventoryItems.filter(
     (item) => Number(item.quantity) <= Number(item.minStock)
   ).length;
@@ -250,6 +272,9 @@ export async function getDashboardDataEnhanced(
     walletBalance,
     walletHold,
     walletAvailable,
+    prevMonthIncome,
+    prevMonthExpenses,
+    prevMonthNet,
   };
 }
 

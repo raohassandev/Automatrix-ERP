@@ -13,6 +13,14 @@ function resolveExpenseAmount(expense: { status: string; amount: number | { toSt
   return Number(expense.amount);
 }
 
+function getStatusPillClass(status: string) {
+  const normalized = status.toUpperCase();
+  if (normalized === "PAID" || normalized === "APPROVED") return "border-emerald-500/35 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300";
+  if (normalized.includes("PENDING")) return "border-amber-500/35 bg-amber-500/15 text-amber-800 dark:text-amber-300";
+  if (normalized === "REJECTED") return "border-rose-500/35 bg-rose-500/15 text-rose-800 dark:text-rose-300";
+  return "border-slate-400/35 bg-slate-500/10 text-slate-700 dark:text-slate-300";
+}
+
 export default async function MyDashboardPage() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -158,25 +166,51 @@ export default async function MyDashboardPage() {
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">My Dashboard</h1>
-        <p className="mt-2 text-muted-foreground">
-          Personal wallet, expenses, and approvals snapshot.
-        </p>
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-sky-500/10 p-6 shadow-sm md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">My Dashboard</h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              Personal control panel for wallet, expenses, salary, and HR self-service.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+            <span className={`rounded-full border px-3 py-1 font-medium ${walletAvailable > 0 ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "border-rose-500/35 bg-rose-500/15 text-rose-800 dark:text-rose-300"}`}>
+              Available: {formatMoney(walletAvailable)}
+            </span>
+            <span className={`rounded-full border px-3 py-1 font-medium ${pocketPayable > 0 ? "border-amber-500/35 bg-amber-500/15 text-amber-800 dark:text-amber-300" : "border-emerald-500/35 bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"}`}>
+              Reimburse due: {formatMoney(pocketPayable)}
+            </span>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Link href="/expenses" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+            Submit Expense
+          </Link>
+          <Link href="/wallets" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+            Wallet History
+          </Link>
+          <Link href="/hrms/attendance" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+            Mark Attendance
+          </Link>
+          <Link href="/hrms/leave" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+            Apply Leave
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm">
-          <div className="text-sm text-emerald-700 dark:text-emerald-300">Available Wallet</div>
+          <div className="text-sm text-emerald-700 dark:text-emerald-300">Wallet Available</div>
           <div className="mt-2 text-xl font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(walletAvailable)}</div>
           <div className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">Balance minus hold amount</div>
         </div>
         <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm">
-          <div className="text-sm text-indigo-700 dark:text-indigo-300">Issued Balance</div>
+          <div className="text-sm text-indigo-700 dark:text-indigo-300">Wallet Balance</div>
           <div className="mt-2 text-xl font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(walletBalance)}</div>
         </div>
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm">
-          <div className="text-sm text-amber-700 dark:text-amber-300">On Hold (Pending)</div>
+          <div className="text-sm text-amber-700 dark:text-amber-300">On Hold</div>
           <div className="mt-2 text-xl font-semibold text-amber-900 dark:text-amber-100">{formatMoney(walletHold)}</div>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow-sm">
@@ -241,7 +275,7 @@ export default async function MyDashboardPage() {
       <div className="grid gap-4 md:grid-cols-3">
         {["PENDING_L1", "PENDING_L2", "PENDING_L3", "PARTIALLY_APPROVED", "APPROVED", "PAID"].map((status) => (
           <div key={status} className="rounded-xl border bg-card p-6 shadow-sm">
-            <div className="text-sm text-muted-foreground">{status.replace("_", " ")}</div>
+            <div className="text-sm text-muted-foreground">{status.replaceAll("_", " ")}</div>
             <div className="mt-2 text-xl font-semibold">
               {expenseStatusMap.get(status) || 0}
             </div>
@@ -353,12 +387,16 @@ export default async function MyDashboardPage() {
                     <tr key={exp.id} className="border-b">
                       <td className="py-2">{new Date(exp.date).toLocaleDateString()}</td>
                       <td className="py-2">{exp.description}</td>
-                      <td className="py-2">{exp.project || "-"}</td>
-                      <td className="py-2">{formatMoney(usedAmount)}</td>
-                      <td className="py-2">{exp.status}</td>
-                    </tr>
-                  );
-                })}
+                    <td className="py-2">{exp.project || "-"}</td>
+                    <td className="py-2">{formatMoney(usedAmount)}</td>
+                    <td className="py-2">
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusPillClass(exp.status)}`}>
+                        {exp.status}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -429,7 +467,11 @@ export default async function MyDashboardPage() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="py-2">{entry.status}</td>
+                    <td className="py-2">
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusPillClass(entry.status)}`}>
+                        {entry.status}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -493,7 +535,11 @@ export default async function MyDashboardPage() {
                     <td className="py-2">{new Date(entry.createdAt).toLocaleDateString()}</td>
                     <td className="py-2">{entry.projectRef || "-"}</td>
                     <td className="py-2">{formatMoney(Number(entry.amount))}</td>
-                    <td className="py-2">{entry.status}</td>
+                    <td className="py-2">
+                      <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusPillClass(entry.status)}`}>
+                        {entry.status}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -546,7 +592,11 @@ export default async function MyDashboardPage() {
                   <td className="py-2">{new Date(entry.createdAt).toLocaleDateString()}</td>
                   <td className="py-2">{formatMoney(Number(entry.amount))}</td>
                   <td className="py-2">{entry.reason}</td>
-                  <td className="py-2">{entry.status}</td>
+                  <td className="py-2">
+                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusPillClass(entry.status)}`}>
+                      {entry.status}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -590,7 +640,11 @@ export default async function MyDashboardPage() {
                     {new Date(row.startDate).toLocaleDateString()} - {new Date(row.endDate).toLocaleDateString()}
                   </td>
                   <td className="py-2">{Number(row.totalDays)}</td>
-                  <td className="py-2">{row.status}</td>
+                  <td className="py-2">
+                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusPillClass(row.status)}`}>
+                      {row.status}
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
