@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { employeeCodeFromId } from "@/lib/employee-display";
 
 type EmployeeOption = { id: string; name: string; email: string };
 
@@ -138,7 +139,7 @@ function IncentiveFormDialogInner({
             >
               {employees.map((employee) => (
                 <option key={employee.id} value={employee.id}>
-                  {employee.name} ({employee.email})
+                  {employeeCodeFromId(employee.id)} - {employee.name}
                 </option>
               ))}
             </select>

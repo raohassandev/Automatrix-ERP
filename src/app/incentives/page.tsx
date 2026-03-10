@@ -8,6 +8,8 @@ import PaginationControls from "@/components/PaginationControls";
 import { IncentiveCreateButton } from "@/components/IncentiveCreateButton";
 import { IncentiveActions } from "@/components/IncentiveActions";
 import { MobileCard } from "@/components/MobileCard";
+import { employeeCodeFromId } from "@/lib/employee-display";
+import Link from "next/link";
 
 export default async function IncentivesPage({
   searchParams,
@@ -109,7 +111,15 @@ export default async function IncentivesPage({
               {rows.map((row) => (
                 <tr key={row.id} className="border-b">
                   <td className="py-2">{new Date(row.createdAt).toLocaleDateString()}</td>
-                  <td className="py-2">{row.employee?.name || row.employee?.email || "-"}</td>
+                  <td className="py-2">
+                    {row.employee ? (
+                      <Link href={`/employees/${row.employeeId}`} className="font-medium text-primary underline underline-offset-2">
+                        {employeeCodeFromId(row.employeeId)} - {row.employee.name}
+                      </Link>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
                   <td className="py-2">{row.projectRef || "-"}</td>
                   <td className="py-2">{row.payoutMode || "-"}</td>
                   <td className="py-2">{formatMoney(Number(row.amount))}</td>
@@ -144,7 +154,7 @@ export default async function IncentivesPage({
           {rows.map((row) => (
             <MobileCard
               key={row.id}
-              title={row.employee?.name || row.employee?.email || "-"}
+              title={`${employeeCodeFromId(row.employeeId)} - ${row.employee?.name || "Employee"}`}
               subtitle={new Date(row.createdAt).toLocaleDateString()}
               fields={[
                 { label: "Project", value: row.projectRef || "-" },
