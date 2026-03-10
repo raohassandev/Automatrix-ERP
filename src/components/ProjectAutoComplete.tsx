@@ -38,13 +38,13 @@ export default function ProjectAutoComplete({
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        const res = await fetch('/api/projects');
+        const res = await fetch(`/api/projects?ts=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         if (!res.ok) {
           throw new Error(data.error || 'Failed to fetch projects');
         }
-        // Filter only active projects
-        const activeProjects = data.data?.filter((p: Project) => p.name) || [];
+        const activeProjects =
+          data.data?.filter((p: Project) => p?.projectId && p?.name) || [];
         setProjects(activeProjects);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'An error occurred';
