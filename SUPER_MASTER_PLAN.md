@@ -609,6 +609,16 @@ Latest discrepancy baseline (`docs/STAGING_POSTGREEN_AUDIT_2026-03-09.md`):
 - Operational runbook:
   - `docs/PAYROLL_AUTOMATION_RUNBOOK_2026-03-10.md`
 
+### 11.10 Post-Deploy Deep Audit Evidence (2026-03-10)
+
+- Staging deployment validated on commit `625d8b3`.
+- Deep audit rerun completed against deployed build:
+  - `pnpm test:staging:critical:fast` => `41/41` pass.
+- New non-destructive payroll settlement smoke included in critical gate:
+  - `playwright/tests/payroll-settlement-smoke.spec.ts`
+- Post-deploy discrepancy report:
+  - `docs/STAGING_DEEP_AUDIT_2026-03-10_POSTDEPLOY.md`
+
 ### 11.2 Owner-Critical Module Status (Requested)
 
 - Finance & Accounting Core (`14`): `[x]` Completed
