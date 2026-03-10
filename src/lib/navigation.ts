@@ -43,6 +43,7 @@ export const navGroups: NavGroup[] = [
     title: "Operations",
     items: [
       { name: "Projects", href: "/projects", icon: FolderKanban, permissions: ["projects.view_all", "projects.view_assigned"] },
+      { name: "Tasks", href: "/tasks", icon: FileCheck, permissions: ["tasks.view_all", "tasks.view_assigned"] },
       { name: "Procurement", href: "/procurement/purchase-orders", icon: FileText, permissions: ["procurement.view_all", "procurement.edit"] },
       { name: "Inventory", href: "/inventory", icon: Package, permissions: ["inventory.view"] },
       { name: "Warehouses", href: "/inventory/warehouses", icon: Package, permissions: ["inventory.view"] },

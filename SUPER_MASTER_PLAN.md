@@ -515,6 +515,33 @@ Latest discrepancy baseline (`docs/STAGING_POSTGREEN_AUDIT_2026-03-09.md`):
   - overdue/pending nudges + escalation alerts
   - completion ranking with calibration controls to reduce manager bias and protect company training investment
 
+### 11.6 Task Module Foundation Execution (2026-03-10)
+
+- Delivered foundation as separate module entry-point: `/tasks` workspace with two operational lanes:
+  - `Tasks` (execution list with status/progress lifecycle updates)
+  - `Recurring Templates` (interval-based task generation controls)
+- Delivered recurring engine baseline:
+  - `TaskTemplate` data model with `DAILY/WEEKLY/MONTHLY` schedules
+  - due-after-days support
+  - next-run cursor tracking (`nextRunAt`, `lastRunAt`)
+  - manual recurrence trigger endpoint (`POST /api/tasks/recurrence/run`) with duplicate prevention via `(templateId, instanceDate)` uniqueness
+- Delivered role-safe API boundary:
+  - `tasks.view_all`
+  - `tasks.view_assigned`
+  - `tasks.manage`
+  - `tasks.update_assigned`
+  - `tasks.review`
+  - `tasks.templates_manage`
+- Delivered UI/RBAC alignment:
+  - `Tasks` added to Operations sidebar and mobile navigation through permission-gated nav map
+  - project detail execution tab create/edit controls now permission-aware (`create/manage/update_assigned`)
+  - fallback API protection added for both project-scoped task routes and module task routes
+- Deepening items intentionally deferred to next pass (tracked in TODO):
+  - rich-text/checklist/evidence attachments
+  - multi-assignee contributors + reviewer queue
+  - SLA/escalation automation scheduler
+  - calibration and performance analytics rollups into HR profile
+
 ### 11.2 Owner-Critical Module Status (Requested)
 
 - Finance & Accounting Core (`14`): `[x]` Completed

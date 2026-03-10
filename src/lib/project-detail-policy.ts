@@ -9,6 +9,12 @@ export type ProjectDetailPolicy = {
   role: RoleName;
   canAccessPage: boolean;
   tabs: Record<ProjectDetailTab, boolean>;
+  execution: {
+    canCreate: boolean;
+    canManage: boolean;
+    canUpdateAssigned: boolean;
+    canReview: boolean;
+  };
   workhubActions: {
     create_po: boolean;
     receive_grn: boolean;
@@ -179,6 +185,11 @@ function buildPolicy(
   perms: {
     canViewAll: boolean;
     canViewAssigned: boolean;
+    canTasksViewAll: boolean;
+    canTasksViewAssigned: boolean;
+    canTasksManage: boolean;
+    canTasksUpdateAssigned: boolean;
+    canTasksReview: boolean;
     canProcureViewAll: boolean;
     canProcureEdit: boolean;
     canViewUnitCosts: boolean;
@@ -208,7 +219,9 @@ function buildPolicy(
     inventory: canAccessPage && !isSalesOrMarketing && !isStore && !isTechnician && perms.canViewInventory,
     // Store/Technician: no financial tabs; inventory movements allowed
     people: canAccessPage && (isEngineer || perms.canViewEmployeesAll || perms.canAssignProjects),
-    execution: canAccessPage && (perms.canViewAll || perms.canViewAssigned),
+    execution:
+      canAccessPage &&
+      (perms.canViewAll || perms.canViewAssigned || perms.canTasksViewAll || perms.canTasksViewAssigned),
     documents: canAccessPage,
   };
 
@@ -231,10 +244,18 @@ function buildPolicy(
   const canAssign = canAccessPage && perms.canAssignProjects;
   const canAnnotate = canAccessPage;
 
+  const canManageExecution = canAccessPage && (perms.canTasksManage || perms.canProcureEdit);
+
   return {
     role,
     canAccessPage,
     tabs,
+    execution: {
+      canCreate: canManageExecution,
+      canManage: canManageExecution,
+      canUpdateAssigned: canManageExecution || (canAccessPage && perms.canTasksUpdateAssigned),
+      canReview: canAccessPage && perms.canTasksReview,
+    },
     workhubActions: {
       create_po: canProcure,
       receive_grn: canProcure,
@@ -258,6 +279,11 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   const [
     canViewAll,
     canViewAssigned,
+    canTasksViewAll,
+    canTasksViewAssigned,
+    canTasksManage,
+    canTasksUpdateAssigned,
+    canTasksReview,
     canProcureViewAll,
     canProcureEdit,
     canViewUnitCosts,
@@ -273,6 +299,11 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   ] = await Promise.all([
     requirePermission(args.userId, "projects.view_all"),
     requirePermission(args.userId, "projects.view_assigned"),
+    requirePermission(args.userId, "tasks.view_all"),
+    requirePermission(args.userId, "tasks.view_assigned"),
+    requirePermission(args.userId, "tasks.manage"),
+    requirePermission(args.userId, "tasks.update_assigned"),
+    requirePermission(args.userId, "tasks.review"),
     requirePermission(args.userId, "procurement.view_all"),
     requirePermission(args.userId, "procurement.edit"),
     requirePermission(args.userId, "inventory.view_cost"),
@@ -290,6 +321,11 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
   const policy = buildPolicy(role, {
     canViewAll,
     canViewAssigned,
+    canTasksViewAll,
+    canTasksViewAssigned,
+    canTasksManage,
+    canTasksUpdateAssigned,
+    canTasksReview,
     canProcureViewAll,
     canProcureEdit,
     canViewUnitCosts,

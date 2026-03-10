@@ -106,6 +106,11 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   }, [detail.inventory?.entries]);
   const incentivePermissions = detail.policy.incentives;
   const canManageIncentives = incentivePermissions.canEdit || incentivePermissions.canApprove;
+  const executionPermissions = detail.policy.execution;
+  const canCreateTasks = executionPermissions.canCreate;
+  const canManageTasks = executionPermissions.canManage;
+  const canUpdateExecutionTasks = executionPermissions.canManage || executionPermissions.canUpdateAssigned;
+  const canReviewTasks = executionPermissions.canReview;
   const recoveryRatePct =
     detail.costs && detail.costs.contractValue > 0
       ? (detail.costs.receivedAmount / detail.costs.contractValue) * 100
@@ -230,13 +235,17 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   }
 
   async function createTask() {
+    if (!canCreateTasks) {
+      throw new Error("You do not have permission to create tasks.");
+    }
     if (!taskForm.title.trim()) {
       throw new Error("Task title is required.");
     }
-    const res = await fetch(`/api/projects/${detail.header.id}/tasks`, {
+    const res = await fetch(`/api/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        projectId: detail.header.id,
         title: taskForm.title.trim(),
         description: taskForm.description.trim() || undefined,
         priority: taskForm.priority,
@@ -249,7 +258,10 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   }
 
   async function updateTask(taskId: string, payload: Record<string, unknown>) {
-    const res = await fetch(`/api/projects/${detail.header.id}/tasks/${taskId}`, {
+    if (!canUpdateExecutionTasks && !canReviewTasks) {
+      throw new Error("You do not have permission to update tasks.");
+    }
+    const res = await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -1305,73 +1317,79 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 </div>
               </div>
 
-              <form
-                className="mt-4 rounded-lg border p-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  (async () => {
-                    try {
-                      setSavingTask(true);
-                      await withLoadingToast(createTask, { loading: "Creating task...", success: "Task created" });
-                      setTaskForm({ title: "", description: "", priority: "MEDIUM", dueDate: "", assignedToId: "" });
-                      router.refresh();
-                    } catch (err) {
-                      toast.error(err instanceof Error ? err.message : "Failed to create task");
-                    } finally {
-                      setSavingTask(false);
-                    }
-                  })();
-                }}
-              >
-                <div className="mb-3 text-sm font-semibold">Create Task</div>
-                <div className="grid gap-3 md:grid-cols-6">
-                  <input
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
-                    placeholder="Task title"
-                    value={taskForm.title}
-                    onChange={(e) => setTaskForm((prev) => ({ ...prev, title: e.target.value }))}
-                    required
-                  />
-                  <input
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
-                    placeholder="Description (optional)"
-                    value={taskForm.description}
-                    onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))}
-                  />
-                  <select
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    value={taskForm.priority}
-                    onChange={(e) => setTaskForm((prev) => ({ ...prev, priority: e.target.value }))}
-                  >
-                    <option value="LOW">LOW</option>
-                    <option value="MEDIUM">MEDIUM</option>
-                    <option value="HIGH">HIGH</option>
-                    <option value="CRITICAL">CRITICAL</option>
-                  </select>
-                  <input
-                    type="date"
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    value={taskForm.dueDate}
-                    onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))}
-                  />
-                  <select
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
-                    value={taskForm.assignedToId}
-                    onChange={(e) => setTaskForm((prev) => ({ ...prev, assignedToId: e.target.value }))}
-                  >
-                    <option value="">Unassigned</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {(u.name || u.email) + (u.role ? ` (${u.role})` : "")}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="md:col-span-4" />
-                  <Button type="submit" size="sm" disabled={savingTask} className="md:col-span-2">
-                    {savingTask ? "Creating..." : "Add Task"}
-                  </Button>
+              {canCreateTasks ? (
+                <form
+                  className="mt-4 rounded-lg border p-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    (async () => {
+                      try {
+                        setSavingTask(true);
+                        await withLoadingToast(createTask, { loading: "Creating task...", success: "Task created" });
+                        setTaskForm({ title: "", description: "", priority: "MEDIUM", dueDate: "", assignedToId: "" });
+                        router.refresh();
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : "Failed to create task");
+                      } finally {
+                        setSavingTask(false);
+                      }
+                    })();
+                  }}
+                >
+                  <div className="mb-3 text-sm font-semibold">Create Task</div>
+                  <div className="grid gap-3 md:grid-cols-6">
+                    <input
+                      className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
+                      placeholder="Task title"
+                      value={taskForm.title}
+                      onChange={(e) => setTaskForm((prev) => ({ ...prev, title: e.target.value }))}
+                      required
+                    />
+                    <input
+                      className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
+                      placeholder="Description (optional)"
+                      value={taskForm.description}
+                      onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))}
+                    />
+                    <select
+                      className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      value={taskForm.priority}
+                      onChange={(e) => setTaskForm((prev) => ({ ...prev, priority: e.target.value }))}
+                    >
+                      <option value="LOW">LOW</option>
+                      <option value="MEDIUM">MEDIUM</option>
+                      <option value="HIGH">HIGH</option>
+                      <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                    <input
+                      type="date"
+                      className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      value={taskForm.dueDate}
+                      onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+                    />
+                    <select
+                      className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
+                      value={taskForm.assignedToId}
+                      onChange={(e) => setTaskForm((prev) => ({ ...prev, assignedToId: e.target.value }))}
+                    >
+                      <option value="">Unassigned</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {(u.name || u.email) + (u.role ? ` (${u.role})` : "")}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="md:col-span-4" />
+                    <Button type="submit" size="sm" disabled={savingTask} className="md:col-span-2">
+                      {savingTask ? "Creating..." : "Add Task"}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
+                  Task creation is restricted for your role. You can still update tasks assigned to you.
                 </div>
-              </form>
+              )}
 
               <div className="mt-4 hidden overflow-x-auto md:block">
                 <table className="w-full text-sm">
@@ -1420,7 +1438,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                                   }
                                 })();
                               }}
-                              disabled={updatingTaskId === task.id}
+                              disabled={!canUpdateExecutionTasks || updatingTaskId === task.id}
                             >
                               <option value="TODO">TODO</option>
                               <option value="IN_PROGRESS">IN_PROGRESS</option>
@@ -1451,7 +1469,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                                   }
                                 })();
                               }}
-                              disabled={updatingTaskId === task.id}
+                              disabled={!canUpdateExecutionTasks || updatingTaskId === task.id}
                             />
                           </td>
                           <td className="py-2">
@@ -1472,7 +1490,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                                   }
                                 })();
                               }}
-                              disabled={updatingTaskId === task.id}
+                              disabled={!canManageTasks || updatingTaskId === task.id}
                             />
                           </td>
                         </tr>
@@ -1514,7 +1532,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                                 }
                               })();
                             }}
-                            disabled={updatingTaskId === task.id}
+                            disabled={!canUpdateExecutionTasks || updatingTaskId === task.id}
                           >
                             <option value="TODO">TODO</option>
                             <option value="IN_PROGRESS">IN_PROGRESS</option>
@@ -1544,7 +1562,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                                   }
                                 })();
                               }}
-                              disabled={updatingTaskId === task.id}
+                              disabled={!canUpdateExecutionTasks || updatingTaskId === task.id}
                             />
                             <input
                               type="date"
@@ -1563,7 +1581,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                                   }
                                 })();
                               }}
-                              disabled={updatingTaskId === task.id}
+                              disabled={!canManageTasks || updatingTaskId === task.id}
                             />
                           </div>
                         </div>

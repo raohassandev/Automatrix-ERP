@@ -92,6 +92,20 @@ This file is the running action list for closure, hardening, and go-live readine
   - Task module = execution engine; HRMS = profile/performance consumer.
   - Rationale: cross-functional operations scope, cleaner RBAC, better scale.
 
+- [~] Task module foundation execution (2026-03-10):
+  - [x] New `/tasks` workspace shipped (tasks lane + recurring templates lane).
+  - [x] Recurring template model + run endpoint delivered (`TaskTemplate`, `POST /api/tasks/recurrence/run`).
+  - [x] Project task review metadata delivered (`reviewScore/reviewNotes/reviewedBy/reviewedAt`).
+  - [x] Permission set baseline wired in code and nav:
+    - `tasks.view_all`
+    - `tasks.view_assigned`
+    - `tasks.manage`
+    - `tasks.update_assigned`
+    - `tasks.review`
+    - `tasks.templates_manage`
+  - [x] Project execution UI controls now permission-aware for task create/update paths.
+  - [ ] Staging role-by-role UAT evidence run and discrepancy burn-down for new task workspace.
+
 - [ ] Define and implement **Simple Employee Profile v1** (self-service first):
   - [ ] Personal/profile basics (name, role, manager, join date, service period).
   - [ ] HR summary (attendance, leave balances/requests, payroll snapshot, wallet snapshot).
@@ -132,17 +146,24 @@ This file is the running action list for closure, hardening, and go-live readine
     - audit trail for score edits and reviewer comments
 
 - [ ] Add new permission set for performance workflow before implementation:
-  - [ ] `tasks.manage`
-  - [ ] `tasks.assign`
-  - [ ] `tasks.view_team`
-  - [ ] `tasks.view_company`
-  - [ ] `tasks.verify`
-  - [ ] `tasks.close`
-  - [ ] `tasks.reopen`
-  - [ ] `tasks.attach_evidence`
-  - [ ] `tasks.verify_completion`
-  - [ ] `tasks.grade_completion`
-  - [ ] `tasks.view_team_performance`
-  - [ ] `tasks.view_company_performance`
+  - [x] Baseline keys implemented in current phase:
+    - `tasks.view_all`
+    - `tasks.view_assigned`
+    - `tasks.manage`
+    - `tasks.update_assigned`
+    - `tasks.review`
+    - `tasks.templates_manage`
+  - [ ] Next maturity permission keys (phase-2 of task program):
+    - `tasks.assign`
+    - `tasks.view_team`
+    - `tasks.view_company`
+    - `tasks.verify`
+    - `tasks.close`
+    - `tasks.reopen`
+    - `tasks.attach_evidence`
+    - `tasks.verify_completion`
+    - `tasks.grade_completion`
+    - `tasks.view_team_performance`
+    - `tasks.view_company_performance`
 
 - [ ] Keep this feature set in planned state until current go-live blockers (section 1) are closed.

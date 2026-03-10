@@ -51,6 +51,9 @@ model User {
   projectTasksAssigned ProjectTask[] @relation("ProjectTaskAssignedTo")
   projectTasksCreated  ProjectTask[] @relation("ProjectTaskCreatedBy")
   projectTasksUpdated  ProjectTask[] @relation("ProjectTaskUpdatedBy")
+  projectTasksReviewed ProjectTask[] @relation("ProjectTaskReviewedBy")
+  taskTemplatesAssigned TaskTemplate[] @relation("TaskTemplateAssignedTo")
+  taskTemplatesCreated  TaskTemplate[] @relation("TaskTemplateCreatedBy")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -273,6 +276,7 @@ model Project {
   client         Client   @relation(fields: [clientId], references: [id])
   assignments    ProjectAssignment[]
   tasks          ProjectTask[]
+  taskTemplates  TaskTemplate[]
   startDate      DateTime
   endDate        DateTime?
   status         String
@@ -298,6 +302,13 @@ model ProjectTask {
   dueDate       DateTime?
   progress      Int      @default(0)
   assignedToId  String?
+  templateId    String?
+  instanceDate  DateTime?
+  sourceType    String   @default("MANUAL") // MANUAL | RECURRING
+  reviewScore   Int?
+  reviewNotes   String?
+  reviewedAt    DateTime?
+  reviewedById  String?
   createdById   String
   updatedById   String?
   createdAt     DateTime @default(now())
@@ -305,12 +316,48 @@ model ProjectTask {
 
   project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   assignedTo    User?    @relation("ProjectTaskAssignedTo", fields: [assignedToId], references: [id])
+  template      TaskTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  reviewedBy    User?    @relation("ProjectTaskReviewedBy", fields: [reviewedById], references: [id])
   createdBy     User     @relation("ProjectTaskCreatedBy", fields: [createdById], references: [id])
   updatedBy     User?    @relation("ProjectTaskUpdatedBy", fields: [updatedById], references: [id])
 
   @@index([projectId, status, priority])
   @@index([assignedToId, status])
   @@index([dueDate, status])
+  @@index([templateId, instanceDate])
+  @@index([reviewedById, reviewedAt])
+  @@unique([templateId, instanceDate])
+}
+
+model TaskTemplate {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  priority      String   @default("MEDIUM")
+  intervalType  String   // DAILY | WEEKLY | MONTHLY
+  intervalValue Int      @default(1)
+  weekdays      String?  // Comma-separated day numbers (0=Sun..6=Sat) for WEEKLY
+  dayOfMonth    Int?     // 1..31 for MONTHLY
+  dueAfterDays  Int      @default(0)
+  startDate     DateTime
+  endDate       DateTime?
+  nextRunAt     DateTime
+  lastRunAt     DateTime?
+  isActive      Boolean  @default(true)
+  projectId     String
+  assignedToId  String?
+  createdById   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo    User?    @relation("TaskTemplateAssignedTo", fields: [assignedToId], references: [id])
+  createdBy     User     @relation("TaskTemplateCreatedBy", fields: [createdById], references: [id])
+  tasks         ProjectTask[]
+
+  @@index([projectId, isActive])
+  @@index([assignedToId, isActive])
+  @@index([nextRunAt, isActive])
 }
 
 model InventoryItem {

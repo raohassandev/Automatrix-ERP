@@ -34,11 +34,6 @@ export async function PATCH(
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canEdit = await requirePermission(session.user.id, "projects.edit");
-  if (!canEdit) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-  }
-
   const { id, taskId } = await context.params;
   const projectTaskClient = (prisma as unknown as {
     projectTask: {
@@ -54,6 +49,17 @@ export async function PATCH(
     return NextResponse.json({ success: false, error: "Task not found" }, { status: 404 });
   }
 
+  const [canProjectEdit, canTaskManage, canUpdateAssigned] = await Promise.all([
+    requirePermission(session.user.id, "projects.edit"),
+    requirePermission(session.user.id, "tasks.manage"),
+    requirePermission(session.user.id, "tasks.update_assigned"),
+  ]);
+  const canManage = canProjectEdit || canTaskManage;
+  const isAssignee = existing.assignedToId === session.user.id;
+  if (!canManage && !(canUpdateAssigned && isAssignee)) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
+
   const body = await req.json();
   const parsed = updateTaskSchema.safeParse(body);
   if (!parsed.success) {
@@ -64,34 +70,51 @@ export async function PATCH(
   }
 
   const data: Record<string, unknown> = {};
-  if (parsed.data.title !== undefined) data.title = parsed.data.title;
-  if (parsed.data.description !== undefined) data.description = parsed.data.description || null;
-  if (parsed.data.status !== undefined) data.status = parsed.data.status;
-  if (parsed.data.priority !== undefined) data.priority = parsed.data.priority;
-  if (parsed.data.progress !== undefined) data.progress = parsed.data.progress;
-  if (parsed.data.dueDate !== undefined) {
-    if (!parsed.data.dueDate) {
-      data.dueDate = null;
-    } else {
-      const dueDate = new Date(parsed.data.dueDate);
-      if (Number.isNaN(dueDate.getTime())) {
-        return NextResponse.json({ success: false, error: "Invalid due date" }, { status: 400 });
+  if (canManage) {
+    if (parsed.data.title !== undefined) data.title = parsed.data.title;
+    if (parsed.data.description !== undefined) data.description = parsed.data.description || null;
+    if (parsed.data.status !== undefined) data.status = parsed.data.status;
+    if (parsed.data.priority !== undefined) data.priority = parsed.data.priority;
+    if (parsed.data.progress !== undefined) data.progress = parsed.data.progress;
+    if (parsed.data.dueDate !== undefined) {
+      if (!parsed.data.dueDate) {
+        data.dueDate = null;
+      } else {
+        const dueDate = new Date(parsed.data.dueDate);
+        if (Number.isNaN(dueDate.getTime())) {
+          return NextResponse.json({ success: false, error: "Invalid due date" }, { status: 400 });
+        }
+        data.dueDate = dueDate;
       }
-      data.dueDate = dueDate;
     }
-  }
-  if (parsed.data.assignedToId !== undefined) {
-    if (parsed.data.assignedToId) {
-      const assignee = await prisma.user.findUnique({
-        where: { id: parsed.data.assignedToId },
-        select: { id: true },
-      });
-      if (!assignee) {
-        return NextResponse.json({ success: false, error: "Assigned user not found" }, { status: 400 });
+    if (parsed.data.assignedToId !== undefined) {
+      if (parsed.data.assignedToId) {
+        const assignee = await prisma.user.findUnique({
+          where: { id: parsed.data.assignedToId },
+          select: { id: true },
+        });
+        if (!assignee) {
+          return NextResponse.json({ success: false, error: "Assigned user not found" }, { status: 400 });
+        }
+        data.assignedToId = parsed.data.assignedToId;
+      } else {
+        data.assignedToId = null;
       }
-      data.assignedToId = parsed.data.assignedToId;
-    } else {
-      data.assignedToId = null;
+    }
+  } else {
+    if (parsed.data.status !== undefined) data.status = parsed.data.status;
+    if (parsed.data.progress !== undefined) data.progress = parsed.data.progress;
+    if (
+      parsed.data.title !== undefined ||
+      parsed.data.description !== undefined ||
+      parsed.data.priority !== undefined ||
+      parsed.data.dueDate !== undefined ||
+      parsed.data.assignedToId !== undefined
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Only status and progress are allowed for assigned task updates." },
+        { status: 403 },
+      );
     }
   }
   data.updatedById = session.user.id;

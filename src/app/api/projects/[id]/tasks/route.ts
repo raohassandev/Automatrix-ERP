@@ -27,14 +27,18 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canViewAll = await requirePermission(session.user.id, "projects.view_all");
-  const canViewAssigned = await requirePermission(session.user.id, "projects.view_assigned");
-  if (!canViewAll && !canViewAssigned) {
+  const [canViewAll, canViewAssigned, canViewAllTasks, canViewAssignedTasks] = await Promise.all([
+    requirePermission(session.user.id, "projects.view_all"),
+    requirePermission(session.user.id, "projects.view_assigned"),
+    requirePermission(session.user.id, "tasks.view_all"),
+    requirePermission(session.user.id, "tasks.view_assigned"),
+  ]);
+  if (!canViewAll && !canViewAssigned && !canViewAllTasks && !canViewAssignedTasks) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
   const { id } = await context.params;
-  if (!canViewAll) {
+  if (!canViewAll && !canViewAllTasks) {
     const assignment = await prisma.projectAssignment.findFirst({
       where: { projectId: id, userId: session.user.id },
       select: { id: true },
@@ -67,7 +71,9 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canEdit = await requirePermission(session.user.id, "projects.edit");
+  const canEdit =
+    (await requirePermission(session.user.id, "projects.edit")) ||
+    (await requirePermission(session.user.id, "tasks.manage"));
   if (!canEdit) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
