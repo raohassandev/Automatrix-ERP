@@ -1,7 +1,7 @@
 # Staging Deep Audit (Post-Deploy) — 2026-03-10
 
 - Environment: `https://erp-staging.automatrix.pk`
-- Deployed commit: `625d8b3`
+- Deployed commit: `cd05eb4`
 - Scope: implemented modules only (finance/accounting, inventory/store, procurement, projects, expense, approvals, employee/hrms/payroll, settings/rbac, overview UX).
 
 ## 1) Automated Audit Evidence
@@ -19,6 +19,18 @@
   - payroll settlement smoke (new)
   - procurement/inventory controls
   - staging deep audit
+
+### 1.1 Effective permission parity + rerun evidence
+
+- Command: `pnpm verify:staging:effective-permissions`
+- Initial result: mismatches found due stale built-in DB templates after new task permission baseline.
+- Corrective action (non-destructive): `POST /api/access-control/roles/sync`
+  - Response: `changedCount: 14`
+- Re-run result: `noOverrideMismatchCount: 0`
+- Then re-ran full critical suite:
+  - Command: `pnpm test:staging:critical:fast`
+  - Result: `41 passed / 0 failed`
+- Note: one intermediate run failed due staging login timeouts (`/login` timeout/502-window behavior). Health checks (`/api/health`) returned consistent `200` before final rerun.
 
 ## 2) New Payroll Flow Verification (Requested Items)
 
@@ -66,4 +78,3 @@
   3. mark one employee paid,
   4. verify wallet/expense/component/settlement cross-module effects,
   5. clean test artifact rows.
-
