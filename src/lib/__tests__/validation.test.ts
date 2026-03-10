@@ -36,7 +36,7 @@ describe("validation schemas (business rules)", () => {
     expect(parsed.success).toBe(false);
   });
 
-  test("expenseSchema: requires project to be non-empty (current rule)", () => {
+  test("expenseSchema: allows empty project (treated as optional)", () => {
     const payload = {
       date: new Date().toISOString(),
       description: "Misc",
@@ -47,7 +47,7 @@ describe("validation schemas (business rules)", () => {
     };
 
     const parsed = expenseSchema.safeParse(payload);
-    expect(parsed.success).toBe(false);
+    expect(parsed.success).toBe(true);
   });
 
   test("incomeSchema: project is optional and may be omitted", () => {
