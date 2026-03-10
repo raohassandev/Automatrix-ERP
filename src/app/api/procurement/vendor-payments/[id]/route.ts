@@ -125,12 +125,6 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       if (existing.status !== "DRAFT") {
         return NextResponse.json({ success: false, error: "Only DRAFT payments can be submitted." }, { status: 400 });
       }
-      if (!existing.projectRef) {
-        return NextResponse.json(
-          { success: false, error: "Project is required on Vendor Payments (Phase 1). Please set a project before submitting." },
-          { status: 400 }
-        );
-      }
       const updated = await prisma.vendorPayment.update({ where: { id }, data: { status: "SUBMITTED" } });
       await logAudit({
         action: "SUBMIT_VENDOR_PAYMENT",
@@ -185,9 +179,9 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       const billIds = Array.from(new Set(allocations.map((a) => a.vendorBillId)));
       if (billIds.length > 0) {
         const paymentProject = existing.projectRef ? await resolveProjectId(existing.projectRef) : null;
-        if (!paymentProject) {
+        if (existing.projectRef && !paymentProject) {
           return NextResponse.json(
-            { success: false, error: "Project is required on Vendor Payments (Phase 1)." },
+            { success: false, error: "Project on vendor payment could not be resolved." },
             { status: 400 }
           );
         }
@@ -216,9 +210,16 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
             );
           }
           const billProject = bill.projectRef ? await resolveProjectId(bill.projectRef) : null;
-          if (!billProject || billProject !== paymentProject) {
+          if (paymentProject) {
+            if (billProject !== paymentProject) {
+              return NextResponse.json(
+                { success: false, error: "Payment allocations must match the payment project." },
+                { status: 400 }
+              );
+            }
+          } else if (billProject) {
             return NextResponse.json(
-              { success: false, error: "Payment allocations must match the payment project (Phase 1)." },
+              { success: false, error: "Selected bill is project-linked. Select that project on payment." },
               { status: 400 }
             );
           }
@@ -349,9 +350,9 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
   const effectiveVendorId = parsed.data.vendorId ?? existing.vendorId;
   const effectiveProjectRefRaw = parsed.data.projectRef ?? existing.projectRef;
   const effectiveProjectRef = effectiveProjectRefRaw ? await resolveProjectId(effectiveProjectRefRaw) : null;
-  if (!effectiveProjectRef) {
+  if (effectiveProjectRefRaw && !effectiveProjectRef) {
     return NextResponse.json(
-      { success: false, error: "Project is required on Vendor Payments (Phase 1)." },
+      { success: false, error: "Project not found." },
       { status: 400 }
     );
   }
@@ -394,8 +395,15 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
           return NextResponse.json({ success: false, error: "Allocations are allowed only against POSTED bills." }, { status: 400 });
         }
         const billProject = bill.projectRef ? await resolveProjectId(bill.projectRef) : null;
-        if (!billProject || billProject !== effectiveProjectRef) {
-          return NextResponse.json({ success: false, error: "Allocations must match the payment project (Phase 1)." }, { status: 400 });
+        if (effectiveProjectRef) {
+          if (billProject !== effectiveProjectRef) {
+            return NextResponse.json({ success: false, error: "Allocations must match the payment project." }, { status: 400 });
+          }
+        } else if (billProject) {
+          return NextResponse.json(
+            { success: false, error: "Selected bill is project-linked. Select that project on payment." },
+            { status: 400 }
+          );
         }
       }
     }
@@ -422,7 +430,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
         data: {
           paymentNumber: parsed.data.paymentNumber,
           vendorId: parsed.data.vendorId,
-          projectRef: effectiveProjectRef,
+          projectRef: effectiveProjectRef || null,
           paymentDate: parsed.data.paymentDate ? new Date(parsed.data.paymentDate) : undefined,
           companyAccountId: parsed.data.companyAccountId,
           method: parsed.data.method,

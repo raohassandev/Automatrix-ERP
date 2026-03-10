@@ -112,21 +112,9 @@ export async function POST(req: Request) {
     }
   }
 
-  const effectiveProjectRefRaw = purchaseOrder
-    ? inferProjectRefFromPo(purchaseOrder)
-    : sanitized.projectRef;
-  if (!effectiveProjectRefRaw) {
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Project is required on Goods Receipts (Phase 1). Link a PO with a project, or select a project for direct GRNs.",
-      },
-      { status: 400 }
-    );
-  }
-  const effectiveProjectRef = await resolveProjectId(effectiveProjectRefRaw);
-  if (!effectiveProjectRef) {
+  const effectiveProjectRefRaw = purchaseOrder ? inferProjectRefFromPo(purchaseOrder) : sanitized.projectRef;
+  const effectiveProjectRef = effectiveProjectRefRaw ? await resolveProjectId(effectiveProjectRefRaw) : null;
+  if (effectiveProjectRefRaw && !effectiveProjectRef) {
     return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
   }
 
@@ -206,7 +194,7 @@ export async function POST(req: Request) {
       data: {
         grnNumber: sanitized.grnNumber,
         purchaseOrderId: sanitized.purchaseOrderId || null,
-        projectRef: effectiveProjectRef,
+        projectRef: effectiveProjectRef || null,
         receivedDate: new Date(sanitized.receivedDate),
         status: sanitized.status,
         notes: sanitized.notes,

@@ -257,8 +257,8 @@ export function VendorBillFormDialog({
   };
 
   async function submit() {
-    if (!form.billNumber || !form.vendorId || !form.projectRef || !form.billDate) {
-      toast.error("Bill number, vendor, project, and bill date are required.");
+    if (!form.billNumber || !form.vendorId || !form.billDate) {
+      toast.error("Bill number, vendor, and bill date are required.");
       return;
     }
     const billDate = new Date(form.billDate);
@@ -303,7 +303,7 @@ export function VendorBillFormDialog({
     const payload = {
       billNumber: form.billNumber.trim(),
       vendorId: form.vendorId,
-      projectRef: form.projectRef,
+      projectRef: form.projectRef || undefined,
       billDate: form.billDate,
       dueDate: dueDateValue,
       currency: form.currency || "PKR",
@@ -416,11 +416,11 @@ export function VendorBillFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Project (required)</Label>
+            <Label>Project (optional)</Label>
             <ProjectAutoComplete
               value={form.projectRef}
               onChange={(value) => setForm((prev) => ({ ...prev, projectRef: value }))}
-              placeholder="Select project..."
+              placeholder="Select project (optional)..."
             />
           </div>
 

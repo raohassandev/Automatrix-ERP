@@ -52,13 +52,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           { status: 400 }
         );
       }
-      const projectRef = existing.projectRef || inferProjectRefFromItems(existing.items);
-      if (!projectRef) {
-        return NextResponse.json(
-          { success: false, error: "Project is required on Purchase Orders (Phase 1). Please set the project before submitting." },
-          { status: 400 }
-        );
-      }
       const updated = await prisma.purchaseOrder.update({ where: { id }, data: { status: "SUBMITTED" } });
       await logAudit({
         action: "SUBMIT_PURCHASE_ORDER",
@@ -200,9 +193,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         inferProjectRefFromItems(existing.items);
 
       if (parsed.data.items && parsed.data.items.length > 0) {
-        if (!effectiveProjectRef) {
-          throw new Error("Project is required on Purchase Orders (Phase 1).");
-        }
         await tx.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: id } });
         const totalAmount = parsed.data.items.reduce(
           (sum, item) => sum + item.quantity * item.unitCost,
@@ -217,7 +207,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             quantity: new Prisma.Decimal(item.quantity),
             unitCost: new Prisma.Decimal(item.unitCost),
             total: new Prisma.Decimal(item.quantity * item.unitCost),
-            project: effectiveProjectRef,
+            project: effectiveProjectRef || null,
           })),
         });
       }
@@ -228,12 +218,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         include: { items: true },
       });
     });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed to update purchase order";
-    if (message.includes("Project is required on Purchase Orders")) {
-      return NextResponse.json({ success: false, error: message }, { status: 400 });
-    }
-    throw err;
+  } catch (_err: unknown) {
+    throw _err;
   }
 
   await logAudit({

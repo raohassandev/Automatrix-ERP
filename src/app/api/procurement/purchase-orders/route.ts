@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     vendorId: parsed.data.vendorId ? sanitizeString(parsed.data.vendorId) : undefined,
     vendorName: sanitizeString(parsed.data.vendorName),
     vendorContact: parsed.data.vendorContact ? sanitizeString(parsed.data.vendorContact) : undefined,
-    projectRef: sanitizeString(parsed.data.projectRef),
+    projectRef: parsed.data.projectRef ? sanitizeString(parsed.data.projectRef) : undefined,
     // Phase 1 lifecycle: create PO as DRAFT; submit/approve are explicit actions.
     status: "DRAFT",
     currency: parsed.data.currency ? sanitizeString(parsed.data.currency) : "PKR",
@@ -68,12 +68,14 @@ export async function POST(req: Request) {
     })),
   };
 
-  const resolvedProjectRef = await resolveProjectId(sanitized.projectRef);
-  if (!resolvedProjectRef) {
-    return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
+  if (sanitized.projectRef) {
+    const resolvedProjectRef = await resolveProjectId(sanitized.projectRef);
+    if (!resolvedProjectRef) {
+      return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
+    }
+    sanitized.projectRef = resolvedProjectRef;
   }
-  sanitized.projectRef = resolvedProjectRef;
-  sanitized.items = sanitized.items.map((item) => ({ ...item, project: sanitized.projectRef }));
+  sanitized.items = sanitized.items.map((item) => ({ ...item, project: sanitized.projectRef || undefined }));
 
   if (sanitized.vendorId) {
     const vendor = await prisma.vendor.findUnique({
@@ -100,7 +102,7 @@ export async function POST(req: Request) {
       vendorId: sanitized.vendorId,
       vendorName: sanitized.vendorName,
       vendorContact: sanitized.vendorContact,
-      projectRef: sanitized.projectRef,
+      projectRef: sanitized.projectRef || null,
       orderDate: new Date(sanitized.orderDate),
       expectedDate: sanitized.expectedDate ? new Date(sanitized.expectedDate) : null,
       status: sanitized.status,

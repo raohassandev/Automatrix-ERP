@@ -30,7 +30,7 @@ const billLineSchema = z
 const vendorBillCreateSchema = z.object({
   billNumber: z.string().trim().min(1),
   vendorId: z.string().trim().min(1),
-  projectRef: z.string().trim().min(1),
+  projectRef: z.string().trim().min(1).optional(),
   billDate: z.string().trim().min(1),
   dueDate: z.string().trim().optional(),
   currency: z.string().trim().min(1).default("PKR"),
@@ -41,7 +41,7 @@ const vendorBillCreateSchema = z.object({
 
 async function findPotentialDuplicateBill(args: {
   vendorId: string;
-  projectRef: string;
+  projectRef?: string | null;
   billDate: string;
   totalAmount: number;
 }) {
@@ -53,7 +53,7 @@ async function findPotentialDuplicateBill(args: {
   return prisma.vendorBill.findFirst({
     where: {
       vendorId: args.vendorId,
-      projectRef: args.projectRef,
+      projectRef: args.projectRef || null,
       billDate: { gte: start, lte: end },
       totalAmount: new Prisma.Decimal(args.totalAmount.toFixed(2)),
       status: { not: "VOID" },
@@ -151,8 +151,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-  const resolvedProjectRef = await resolveProjectId(parsed.data.projectRef);
-  if (!resolvedProjectRef) {
+  const resolvedProjectRef = parsed.data.projectRef ? await resolveProjectId(parsed.data.projectRef) : null;
+  if (parsed.data.projectRef && !resolvedProjectRef) {
     return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
   }
 
@@ -199,8 +199,15 @@ export async function POST(request: NextRequest) {
       }
       const grnProjectRaw = item.goodsReceipt.projectRef || item.goodsReceipt.purchaseOrder?.projectRef || null;
       const grnProject = grnProjectRaw ? await resolveProjectId(grnProjectRaw) : null;
-      if (!grnProject || grnProject !== resolvedProjectRef) {
-        return NextResponse.json({ success: false, error: "GRN project does not match Vendor Bill project (Phase 1)." }, { status: 400 });
+      if (resolvedProjectRef) {
+        if (grnProject !== resolvedProjectRef) {
+          return NextResponse.json({ success: false, error: "GRN project does not match Vendor Bill project." }, { status: 400 });
+        }
+      } else if (grnProject) {
+        return NextResponse.json(
+          { success: false, error: "This GRN is project-linked. Select that project on the vendor bill." },
+          { status: 400 }
+        );
       }
       const poVendorId = item.goodsReceipt.purchaseOrder?.vendorId;
       if (poVendorId && poVendorId !== parsed.data.vendorId) {
@@ -257,11 +264,11 @@ export async function POST(request: NextRequest) {
         userId: session.user.id,
         reason: "Potential duplicate vendor bill detected on create.",
         newValue: JSON.stringify({
-          duplicateBillNumber: duplicate.billNumber,
-          vendorId: parsed.data.vendorId,
-          projectRef: resolvedProjectRef,
-          billDate: parsed.data.billDate,
-          totalAmount,
+      duplicateBillNumber: duplicate.billNumber,
+      vendorId: parsed.data.vendorId,
+      projectRef: resolvedProjectRef || null,
+      billDate: parsed.data.billDate,
+      totalAmount,
         }),
       });
       return NextResponse.json(
@@ -280,7 +287,7 @@ export async function POST(request: NextRequest) {
       data: {
         billNumber: parsed.data.billNumber,
         vendorId: parsed.data.vendorId,
-        projectRef: resolvedProjectRef,
+        projectRef: resolvedProjectRef || null,
         billDate: new Date(parsed.data.billDate),
         dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined,
         currency: parsed.data.currency,
@@ -296,7 +303,7 @@ export async function POST(request: NextRequest) {
             unitCost: typeof line.unitCost === "number" ? new Prisma.Decimal(line.unitCost) : undefined,
             total: new Prisma.Decimal(line.total),
             // Phase 1 (locked): header-only project. Keep the line.project populated for legacy/backward compatibility.
-            project: resolvedProjectRef,
+            project: resolvedProjectRef || null,
             grnItemId: line.grnItemId || undefined,
           })),
         },

@@ -106,7 +106,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.remarks !== undefined) data.remarks = parsed.data.remarks;
   if (parsed.data.categoryRequest !== undefined) data.categoryRequest = parsed.data.categoryRequest;
 
-  const nextExpenseType = parsed.data.expenseType || expense.expenseType || "COMPANY";
   const nextPaymentSource = parsed.data.paymentSource || expense.paymentSource || "COMPANY_DIRECT";
   if (
     parsed.data.paymentSource &&
@@ -168,17 +167,6 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       }
     }
   }
-  const nextProject =
-    parsed.data.project !== undefined
-      ? parsed.data.project
-      : expense.project;
-  if (nextExpenseType !== "OWNER_PERSONAL" && (!nextProject || nextProject === "")) {
-    return NextResponse.json(
-      { success: false, error: "Project is required for company expenses" },
-      { status: 400 }
-    );
-  }
-
   const nextAmount = parsed.data.amount ?? Number(expense.amount);
 
   if (expense.paymentSource === "EMPLOYEE_WALLET") {

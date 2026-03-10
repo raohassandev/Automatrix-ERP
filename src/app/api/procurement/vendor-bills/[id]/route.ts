@@ -45,7 +45,7 @@ const vendorBillUpdateSchema = z.object({
 
 async function findPotentialDuplicateBill(args: {
   vendorId: string;
-  projectRef: string;
+  projectRef?: string | null;
   billDate: string;
   totalAmount: number;
   excludeId?: string;
@@ -59,7 +59,7 @@ async function findPotentialDuplicateBill(args: {
     where: {
       id: args.excludeId ? { not: args.excludeId } : undefined,
       vendorId: args.vendorId,
-      projectRef: args.projectRef,
+      projectRef: args.projectRef || null,
       billDate: { gte: start, lte: end },
       totalAmount: new Prisma.Decimal(args.totalAmount.toFixed(2)),
       status: { not: "VOID" },
@@ -173,12 +173,6 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       if (!canEdit) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
       if (existing.status !== "DRAFT") {
         return NextResponse.json({ success: false, error: "Only DRAFT bills can be submitted." }, { status: 400 });
-      }
-      if (!existing.projectRef) {
-        return NextResponse.json(
-          { success: false, error: "Project is required on Vendor Bills (Phase 1). Please set a project before submitting." },
-          { status: 400 }
-        );
       }
       const updated = await prisma.vendorBill.update({ where: { id }, data: { status: "SUBMITTED" } });
       await logAudit({
@@ -333,8 +327,8 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
 
   const effectiveProjectRefRaw = parsed.data.projectRef ?? existing.projectRef;
   const effectiveProjectRef = effectiveProjectRefRaw ? await resolveProjectId(effectiveProjectRefRaw) : null;
-  if (!effectiveProjectRef) {
-    return NextResponse.json({ success: false, error: "Project is required on Vendor Bills (Phase 1)." }, { status: 400 });
+  if (effectiveProjectRefRaw && !effectiveProjectRef) {
+    return NextResponse.json({ success: false, error: "Project not found." }, { status: 400 });
   }
 
   const nextLines = parsed.data.lines;
@@ -426,8 +420,15 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
           }
           const grnProjectRaw = item.goodsReceipt.projectRef || item.goodsReceipt.purchaseOrder?.projectRef || null;
           const grnProject = grnProjectRaw ? await resolveProjectId(grnProjectRaw) : null;
-          if (!grnProject || grnProject !== effectiveProjectRef) {
-            return NextResponse.json({ success: false, error: "GRN project does not match Vendor Bill project (Phase 1)." }, { status: 400 });
+          if (effectiveProjectRef) {
+            if (grnProject !== effectiveProjectRef) {
+              return NextResponse.json({ success: false, error: "GRN project does not match Vendor Bill project." }, { status: 400 });
+            }
+          } else if (grnProject) {
+            return NextResponse.json(
+              { success: false, error: "This GRN is project-linked. Select that project on the vendor bill." },
+              { status: 400 }
+            );
           }
           const poVendorId = item.goodsReceipt.purchaseOrder?.vendorId;
           if (poVendorId && poVendorId !== effectiveVendorId) {

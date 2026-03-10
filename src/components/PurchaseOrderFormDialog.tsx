@@ -127,8 +127,8 @@ function PurchaseOrderFormDialogInner({
     setItems((prev) => prev.filter((_, idx) => idx !== index));
 
   async function submit() {
-    if (!form.poNumber || !form.vendorName || !form.orderDate || !form.projectRef) {
-      toast.error("PO number, vendor name, project, and order date are required");
+    if (!form.poNumber || !form.vendorName || !form.orderDate) {
+      toast.error("PO number, vendor name, and order date are required");
       return;
     }
 
@@ -237,11 +237,11 @@ function PurchaseOrderFormDialogInner({
             />
           </div>
           <div className="space-y-2">
-            <Label>Project (required)</Label>
+            <Label>Project (optional)</Label>
             <ProjectAutoComplete
               value={form.projectRef}
               onChange={(value) => setForm({ ...form, projectRef: value })}
-              placeholder="Select project..."
+              placeholder="Select project (optional)..."
             />
           </div>
           <div className="space-y-2">

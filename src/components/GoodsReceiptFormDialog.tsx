@@ -89,10 +89,6 @@ function GoodsReceiptFormDialogInner({
       toast.error("GRN number and received date are required");
       return;
     }
-    if (!form.purchaseOrderId && !form.projectRef) {
-      toast.error("Project is required when GRN is not linked to a Purchase Order");
-      return;
-    }
 
     const cleanedItems = items
       .map((item) => ({
@@ -175,12 +171,11 @@ function GoodsReceiptFormDialogInner({
             </p>
           </div>
           <div className="space-y-2">
-            <Label>Project (required if no PO)</Label>
+            <Label>Project (optional)</Label>
             <ProjectAutoComplete
               value={form.projectRef}
               onChange={(value) => setForm({ ...form, projectRef: value })}
-              placeholder="Select project..."
-              disabled={Boolean(form.purchaseOrderId)}
+              placeholder="Select project (optional)..."
             />
           </div>
           <div className="space-y-2">

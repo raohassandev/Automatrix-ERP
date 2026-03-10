@@ -9,7 +9,10 @@ export const expenseSchema = z.object({
   paymentSource: z.enum(["EMPLOYEE_WALLET", "EMPLOYEE_POCKET", "COMPANY_DIRECT", "COMPANY_ACCOUNT"]).optional(),
   companyAccountId: z.string().min(1).optional(),
   expenseType: z.enum(["COMPANY", "OWNER_PERSONAL"]).optional(),
-  project: z.string().min(1).optional(),
+  project: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().min(1).optional()
+  ),
   receiptUrl: z.string().url().optional(),
   receiptFileId: z.string().optional(),
   remarks: z.string().optional(),
@@ -204,7 +207,10 @@ export const purchaseOrderSchema = z.object({
   vendorName: z.string().min(1),
   vendorContact: z.string().optional(),
   // Phase 1 (locked): one-project-per-document. Stored as Project.projectId reference.
-  projectRef: z.string().min(1),
+  projectRef: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().min(1).optional()
+  ),
   orderDate: z.string().min(1),
   expectedDate: z.string().optional(),
   status: z.string().optional(),

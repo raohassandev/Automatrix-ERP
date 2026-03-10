@@ -220,13 +220,6 @@ export async function POST(req: Request) {
     };
     const expenseType = parsed.data.expenseType || 'COMPANY';
 
-    if (expenseType !== 'OWNER_PERSONAL' && !sanitizedData.project) {
-      return NextResponse.json(
-        { success: false, error: 'Project is required for company expenses' },
-        { status: 400 },
-      );
-    }
-
     const category = await prisma.category.findFirst({
       where: { name: sanitizedData.category, type: 'expense' },
     });

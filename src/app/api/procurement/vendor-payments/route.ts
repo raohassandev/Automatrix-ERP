@@ -15,7 +15,7 @@ const allocationSchema = z.object({
 const vendorPaymentCreateSchema = z.object({
   paymentNumber: z.string().trim().min(1),
   vendorId: z.string().trim().min(1),
-  projectRef: z.string().trim().min(1),
+  projectRef: z.string().trim().min(1).optional(),
   paymentDate: z.string().trim().min(1),
   companyAccountId: z.string().trim().min(1),
   method: z.string().trim().optional(),
@@ -122,8 +122,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const resolvedProjectRef = await resolveProjectId(parsed.data.projectRef);
-    if (!resolvedProjectRef) {
+    const resolvedProjectRef = parsed.data.projectRef ? await resolveProjectId(parsed.data.projectRef) : null;
+    if (parsed.data.projectRef && !resolvedProjectRef) {
       return NextResponse.json({ success: false, error: "Project not found" }, { status: 400 });
     }
 
@@ -146,8 +146,15 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: false, error: "Allocations are allowed only against POSTED bills." }, { status: 400 });
         }
         const billProject = bill.projectRef ? await resolveProjectId(bill.projectRef) : null;
-        if (!billProject || billProject !== resolvedProjectRef) {
-          return NextResponse.json({ success: false, error: "Allocations must match the payment project (Phase 1)." }, { status: 400 });
+        if (resolvedProjectRef) {
+          if (billProject !== resolvedProjectRef) {
+            return NextResponse.json({ success: false, error: "Allocations must match the payment project." }, { status: 400 });
+          }
+        } else if (billProject) {
+          return NextResponse.json(
+            { success: false, error: "Selected bill is project-linked. Select that project on payment." },
+            { status: 400 }
+          );
         }
       }
     }
@@ -156,7 +163,7 @@ export async function POST(request: NextRequest) {
       data: {
         paymentNumber: parsed.data.paymentNumber,
         vendorId: parsed.data.vendorId,
-        projectRef: resolvedProjectRef,
+        projectRef: resolvedProjectRef || null,
         paymentDate: new Date(parsed.data.paymentDate),
         companyAccountId: parsed.data.companyAccountId,
         method: parsed.data.method,

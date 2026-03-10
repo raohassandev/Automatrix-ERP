@@ -132,10 +132,6 @@ export default function ExpenseForm() {
       toast.error("Amount must be greater than 0.");
       return;
     }
-    if (form.expenseType !== "OWNER_PERSONAL" && !form.project) {
-      toast.error("Project is required for company expenses.");
-      return;
-    }
     if (form.paymentSource === "COMPANY_ACCOUNT" && !form.companyAccountId) {
       toast.error("Select a company account when payment source is Company Paid (Account).");
       return;
@@ -165,7 +161,7 @@ export default function ExpenseForm() {
         paymentSource: form.paymentSource,
         companyAccountId: form.paymentSource === "COMPANY_ACCOUNT" ? form.companyAccountId : undefined,
         expenseType: form.expenseType,
-        project: form.project,
+        project: form.project || undefined,
         receiptUrl: form.receiptUrl || undefined,
         receiptFileId: form.receiptFileId || undefined,
         remarks: form.remarks || undefined,

@@ -117,7 +117,6 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
   );
   const parsedAmount = Number(form.amount);
   const isOwnerPersonal = form.expenseType === "OWNER_PERSONAL";
-  const needsProject = !isOwnerPersonal;
 
   async function submit(ignoreDuplicate = false) {
     if (!date) {
@@ -132,10 +131,6 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
       }
       if (!form.paymentMode) {
         toast.error("Please select a payment mode");
-        return;
-      }
-      if (!form.project && needsProject) {
-        toast.error("Project is required for company expenses");
         return;
       }
       if (form.paymentSource === "COMPANY_ACCOUNT" && !form.companyAccountId) {
@@ -163,7 +158,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
           paymentSource: form.paymentSource,
           companyAccountId: form.paymentSource === "COMPANY_ACCOUNT" ? form.companyAccountId : undefined,
           expenseType: form.expenseType,
-          project: form.project,
+          project: form.project || undefined,
           receiptUrl: form.receiptUrl || undefined,
           receiptFileId: form.receiptFileId || undefined,
           remarks: form.remarks || undefined,

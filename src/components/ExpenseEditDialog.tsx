@@ -120,7 +120,7 @@ export function ExpenseEditDialog({ open, onOpenChange, expense }: ExpenseEditDi
           paymentSource: form.paymentSource,
           companyAccountId: form.paymentSource === "COMPANY_ACCOUNT" ? form.companyAccountId : undefined,
           expenseType: form.expenseType,
-          project: form.project || null,
+          project: form.project || undefined,
           receiptUrl: form.receiptUrl || undefined,
           receiptFileId: form.receiptFileId || undefined,
           remarks: form.remarks || undefined,

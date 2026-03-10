@@ -265,32 +265,21 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       if (currentStatus !== "DRAFT") {
         return NextResponse.json({ success: false, error: "Only DRAFT GRNs can be submitted." }, { status: 400 });
       }
-      if (!existing.projectRef) {
-        if (existing.purchaseOrderId) {
-          const po = await prisma.purchaseOrder.findUnique({
-            where: { id: existing.purchaseOrderId },
-            include: { items: true },
-          });
-          if (po && !isReceivablePoStatus(po.status)) {
-            return NextResponse.json(
-              { success: false, error: "Linked PO is not receivable. Move PO to ORDERED before submitting GRN." },
-              { status: 400 }
-            );
-          }
-          const inferred = po?.projectRef || po?.items.find((i) => i.project)?.project || null;
-          const resolved = inferred ? await resolveProjectId(inferred) : null;
-          if (!resolved) {
-            return NextResponse.json(
-              { success: false, error: "Project is required on GRNs (Phase 1). Set project on PO or GRN before submitting." },
-              { status: 400 }
-            );
-          }
-          await prisma.goodsReceipt.update({ where: { id }, data: { projectRef: resolved } });
-        } else {
+      if (existing.purchaseOrderId) {
+        const po = await prisma.purchaseOrder.findUnique({
+          where: { id: existing.purchaseOrderId },
+          include: { items: true },
+        });
+        if (po && !isReceivablePoStatus(po.status)) {
           return NextResponse.json(
-            { success: false, error: "Project is required on GRNs (Phase 1). Select a project before submitting." },
+            { success: false, error: "Linked PO is not receivable. Move PO to ORDERED before submitting GRN." },
             { status: 400 }
           );
+        }
+        const inferred = po?.projectRef || po?.items.find((i) => i.project)?.project || null;
+        const resolved = inferred ? await resolveProjectId(inferred) : null;
+        if (resolved && !existing.projectRef) {
+          await prisma.goodsReceipt.update({ where: { id }, data: { projectRef: resolved } });
         }
       }
       const updated = await prisma.goodsReceipt.update({ where: { id }, data: { status: "SUBMITTED" } });
@@ -351,10 +340,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           receipt.purchaseOrder?.items.find((i) => i.project)?.project ||
           null;
         const resolvedProjectRef = effectiveProjectRef ? await resolveProjectId(effectiveProjectRef) : null;
-        if (!resolvedProjectRef) {
-          throw new Error("Project is required on GRNs (Phase 1).");
+        if (effectiveProjectRef && !resolvedProjectRef) {
+          throw new Error("Project on GRN could not be resolved.");
         }
-        if (!receipt.projectRef) {
+        if (resolvedProjectRef && !receipt.projectRef) {
           await tx.goodsReceipt.update({ where: { id }, data: { projectRef: resolvedProjectRef } });
         }
 
@@ -376,7 +365,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           receivedDate: receipt.receivedDate,
           userId: session.user.id,
           projectByPoItemId,
-          projectRef: resolvedProjectRef,
+          projectRef: resolvedProjectRef || null,
         });
 
         if (receipt.purchaseOrderId) {
@@ -387,10 +376,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         });
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Failed to post GRN";
-        if (
-          message.includes("Project is required on GRNs") ||
-          message.includes("already has inventory postings")
-        ) {
+        if (message.includes("Project on GRN could not be resolved.") || message.includes("already has inventory postings")) {
           return NextResponse.json({ success: false, error: message }, { status: 400 });
         }
         throw err;
@@ -493,28 +479,18 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     );
   }
 
-  // Phase 1 rule: one-project-per-document.
-  // - If linked to a PO: projectRef must match PO.projectRef (inferred if needed), and is not user-editable.
-  // - If direct GRN: projectRef is required and must resolve to a known project.
+  // If linked to a PO, inherit project when present. Direct GRNs can remain non-project.
   if (purchaseOrder) {
     const inferred = purchaseOrder.projectRef || purchaseOrder.items.find((i) => i.project)?.project || null;
     const resolved = inferred ? await resolveProjectId(inferred) : null;
-    if (!resolved) {
-      return NextResponse.json(
-        { success: false, error: "Linked PO has no project. Please set project on PO before editing this GRN." },
-        { status: 400 }
-      );
-    }
-    data.projectRef = resolved;
+    data.projectRef = resolved || null;
   } else if (data.projectRef !== undefined) {
     const raw = data.projectRef ? String(data.projectRef) : "";
     const resolved = raw ? await resolveProjectId(raw) : null;
-    if (!resolved) {
-      return NextResponse.json({ success: false, error: "Project is required on GRNs (Phase 1)." }, { status: 400 });
+    if (raw && !resolved) {
+      return NextResponse.json({ success: false, error: "Project not found." }, { status: 400 });
     }
-    data.projectRef = resolved;
-  } else if (!existing.projectRef) {
-    return NextResponse.json({ success: false, error: "Project is required on GRNs (Phase 1)." }, { status: 400 });
+    data.projectRef = resolved || null;
   }
 
   const sanitizedItems = parsed.data.items

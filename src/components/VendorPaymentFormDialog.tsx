@@ -149,7 +149,7 @@ export function VendorPaymentFormDialog({
 
   useEffect(() => {
     if (!open) return;
-    if (!form.vendorId || !form.projectRef) {
+    if (!form.vendorId) {
       setVendorBills([]);
       setAllocations([]);
       return;
@@ -162,7 +162,11 @@ export function VendorPaymentFormDialog({
         if (!data?.success || !Array.isArray(data.data)) return;
         const list = (data.data as VendorBillListApiRow[])
           .filter((row) => row?.vendor?.id === form.vendorId)
-          .filter((row) => String(row.projectRef || "").trim() === String(form.projectRef || "").trim())
+          .filter((row) => {
+            const selectedProject = String(form.projectRef || "").trim();
+            if (!selectedProject) return true;
+            return String(row.projectRef || "").trim() === selectedProject;
+          })
           .map((row) => ({
             id: row.id,
             billNumber: row.billNumber,
@@ -224,8 +228,8 @@ export function VendorPaymentFormDialog({
   };
 
   async function submit() {
-    if (!form.paymentNumber || !form.vendorId || !form.projectRef || !form.paymentDate || !form.companyAccountId) {
-      toast.error("Payment number, vendor, project, date, and account are required.");
+    if (!form.paymentNumber || !form.vendorId || !form.paymentDate || !form.companyAccountId) {
+      toast.error("Payment number, vendor, date, and account are required.");
       return;
     }
     if (Number(form.amount) <= 0) {
@@ -240,7 +244,7 @@ export function VendorPaymentFormDialog({
     const payload = {
       paymentNumber: form.paymentNumber.trim(),
       vendorId: form.vendorId,
-      projectRef: form.projectRef,
+      projectRef: form.projectRef || undefined,
       paymentDate: form.paymentDate,
       companyAccountId: form.companyAccountId,
       method: form.method?.trim() || undefined,
@@ -315,11 +319,11 @@ export function VendorPaymentFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Project (required)</Label>
+            <Label>Project (optional)</Label>
             <ProjectAutoComplete
               value={form.projectRef}
               onChange={(value) => setForm((prev) => ({ ...prev, projectRef: value }))}
-              placeholder="Select project..."
+              placeholder="Select project (optional)..."
             />
           </div>
 
