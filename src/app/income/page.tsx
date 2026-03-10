@@ -222,7 +222,11 @@ export default async function IncomePage({
               {entries.map((entry) => (
                 <tr key={entry.id} className="border-b">
                   <td className="py-2">{new Date(entry.date).toLocaleDateString()}</td>
-                  <td className="py-2">{entry.source}</td>
+                  <td className="py-2">
+                    <Link className="font-medium text-primary underline underline-offset-2" href={`/income/${entry.id}`}>
+                      {entry.source}
+                    </Link>
+                  </td>
                   <td className="py-2">{entry.category}</td>
                   <td className="py-2">{entry.project || "-"}</td>
                   <td className="py-2">{entry.companyAccountName || "-"}</td>
@@ -247,6 +251,7 @@ export default async function IncomePage({
               title={entry.source}
               subtitle={new Date(entry.date).toLocaleDateString()}
               fields={[
+                { label: "Detail", value: <Link href={`/income/${entry.id}`}>Open Entry</Link> },
                 { label: "Amount", value: formatMoney(Number(entry.amount)) },
                 { label: "Category", value: entry.category },
                 { label: "Project", value: entry.project || "-" },

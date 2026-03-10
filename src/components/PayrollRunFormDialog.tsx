@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { employeeCodeFromId } from "@/lib/employee-display";
 
-type EmployeeOption = { id: string; name: string; email: string };
+type EmployeeOption = { id: string; name: string; email: string; baseSalary?: number };
 
 type PayrollEntry = {
   employeeId: string;
@@ -67,7 +67,15 @@ const buildInitialEntries = (run: PayrollRun | null | undefined, employees: Empl
         deductions: String(entry.deductions || ""),
         deductionReason: String(entry.deductionReason || ""),
       }))
-    : [emptyEntry(employees[0]?.id)];
+    : [
+        {
+          ...emptyEntry(employees[0]?.id),
+          baseSalary:
+            employees[0] && Number(employees[0].baseSalary || 0) > 0
+              ? String(Number(employees[0].baseSalary || 0))
+              : "",
+        },
+      ];
 
 export function PayrollRunFormDialog(props: PayrollRunFormDialogProps) {
   const key = `${props.open ? "open" : "closed"}-${props.run?.id || "new"}`;
@@ -85,12 +93,43 @@ function PayrollRunFormDialogInner({
   const [policyLoading, setPolicyLoading] = useState(false);
   const [form, setForm] = useState(() => buildInitialForm(run));
   const [entries, setEntries] = useState<PayrollEntry[]>(() => buildInitialEntries(run, employees));
+  const salaryByEmployeeId = new Map(employees.map((e) => [e.id, Number(e.baseSalary || 0)]));
 
   const updateEntry = (index: number, key: keyof PayrollEntry, value: string) => {
-    setEntries((prev) => prev.map((entry, idx) => (idx === index ? { ...entry, [key]: value } : entry)));
+    setEntries((prev) =>
+      prev.map((entry, idx) => {
+        if (idx !== index) return entry;
+        if (key === "employeeId") {
+          const pickedSalary = salaryByEmployeeId.get(value) || 0;
+          const existingSalary = Number(entry.baseSalary || 0);
+          return {
+            ...entry,
+            employeeId: value,
+            baseSalary:
+              existingSalary > 0
+                ? entry.baseSalary
+                : pickedSalary > 0
+                ? String(pickedSalary)
+                : entry.baseSalary,
+          };
+        }
+        return { ...entry, [key]: value };
+      }),
+    );
   };
 
-  const addEntry = () => setEntries((prev) => [...prev, emptyEntry(employees[0]?.id)]);
+  const addEntry = () =>
+    setEntries((prev) => {
+      const employeeId = employees[0]?.id;
+      const firstSalary = employeeId ? Number(salaryByEmployeeId.get(employeeId) || 0) : 0;
+      return [
+        ...prev,
+        {
+          ...emptyEntry(employeeId),
+          baseSalary: firstSalary > 0 ? String(firstSalary) : "",
+        },
+      ];
+    });
   const removeEntry = (index: number) => setEntries((prev) => prev.filter((_, idx) => idx !== index));
 
   async function submit() {
@@ -200,6 +239,21 @@ function PayrollRunFormDialogInner({
     }
   }
 
+  function fillBaseSalariesFromProfile() {
+    setEntries((prev) =>
+      prev.map((entry) => {
+        const current = Number(entry.baseSalary || 0);
+        if (current > 0) return entry;
+        const fallback = Number(salaryByEmployeeId.get(entry.employeeId) || 0);
+        return {
+          ...entry,
+          baseSalary: fallback > 0 ? String(fallback) : entry.baseSalary,
+        };
+      }),
+    );
+    toast.success("Base salaries filled from employee compensation profile.");
+  }
+
   return (
     <FormDialog
       open={open}
@@ -254,6 +308,9 @@ function PayrollRunFormDialogInner({
             <div className="flex gap-2">
               <Button type="button" variant="outline" onClick={loadFromPolicy} disabled={policyLoading || pending}>
                 {policyLoading ? "Loading..." : "Auto-fill by Policy"}
+              </Button>
+              <Button type="button" variant="outline" onClick={fillBaseSalariesFromProfile} disabled={pending}>
+                Fill Base Salary
               </Button>
               <Button type="button" variant="outline" onClick={addEntry}>
                 Add Entry

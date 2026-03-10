@@ -6,7 +6,7 @@ import { DeleteButton } from "@/components/TableActions";
 import { PayrollRunFormDialog } from "@/components/PayrollRunFormDialog";
 import { toast } from "sonner";
 
-type EmployeeOption = { id: string; name: string; email: string };
+type EmployeeOption = { id: string; name: string; email: string; baseSalary?: number };
 
 type PayrollEntry = {
   employeeId: string;

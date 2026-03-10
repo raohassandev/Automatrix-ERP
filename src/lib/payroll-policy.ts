@@ -29,13 +29,18 @@ export async function buildPayrollEntriesByPolicy(
   );
   const policy = DEFAULT_POLICY;
 
-  const [employees, compensations, incentives, commissions, advances, attendance] = await Promise.all([
+  const [employees, compensations, previousPayrollBase, incentives, commissions, advances, attendance] = await Promise.all([
     prisma.employee.findMany({
       where: { status: "ACTIVE" },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
     prisma.employeeCompensation.findMany({
+      select: { employeeId: true, baseSalary: true },
+    }),
+    prisma.payrollEntry.findMany({
+      distinct: ["employeeId"],
+      orderBy: { createdAt: "desc" },
       select: { employeeId: true, baseSalary: true },
     }),
     prisma.incentiveEntry.findMany({
@@ -70,8 +75,11 @@ export async function buildPayrollEntriesByPolicy(
     }),
   ]);
 
-  const baseByEmployee = new Map(
+  const compensationByEmployee = new Map(
     compensations.map((row) => [row.employeeId, Number(row.baseSalary || 0)]),
+  );
+  const previousPayrollByEmployee = new Map(
+    previousPayrollBase.map((row) => [row.employeeId, Number(row.baseSalary || 0)]),
   );
   const incentiveByEmployee = incentives.reduce((map, row) => {
     const current = map.get(row.employeeId) || 0;
@@ -116,7 +124,9 @@ export async function buildPayrollEntriesByPolicy(
   }, new Map<string, { absent: number; halfDay: number; late: number }>());
 
   return employees.map((employee) => {
-    const baseSalary = Number((baseByEmployee.get(employee.id) || 0).toFixed(2));
+    const baseSalary = Number(
+      (compensationByEmployee.get(employee.id) || previousPayrollByEmployee.get(employee.id) || 0).toFixed(2),
+    );
     const dailyRate = baseSalary / daysInPeriod;
     const attendanceRow = attendanceAgg.get(employee.id) || { absent: 0, halfDay: 0, late: 0 };
 

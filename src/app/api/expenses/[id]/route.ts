@@ -16,6 +16,45 @@ const STOCK_KEYS_BLOCKED_IN_EXPENSES = [
   "inventoryUnitCost",
 ] as const;
 
+export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const canViewAll = await requirePermission(session.user.id, "expenses.view_all");
+  const canViewOwn = await requirePermission(session.user.id, "expenses.view_own");
+  if (!canViewAll && !canViewOwn) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await context.params;
+  const expense = await prisma.expense.findUnique({
+    where: { id },
+    include: {
+      submittedBy: { select: { id: true, name: true, email: true } },
+      approvedBy: { select: { id: true, name: true, email: true } },
+      companyAccount: { select: { id: true, name: true, type: true } },
+    },
+  });
+  if (!expense) {
+    return NextResponse.json({ success: false, error: "Expense not found" }, { status: 404 });
+  }
+
+  if (!canViewAll && expense.submittedById !== session.user.id) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      ...expense,
+      amount: Number(expense.amount),
+      approvedAmount: expense.approvedAmount ? Number(expense.approvedAmount) : null,
+    },
+  });
+}
+
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {

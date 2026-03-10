@@ -10,6 +10,43 @@ import { Prisma } from "@prisma/client";
 import { assertDateInOpenFiscalPeriod, postIncomeApprovalJournal } from "@/lib/accounting";
 import { assertInvoiceReceiptWithinOutstanding } from "@/lib/invoice-allocation";
 
+export async function GET(_req: Request, context: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const canViewAll = await requirePermission(session.user.id, "income.view_all");
+  const canViewOwn = await requirePermission(session.user.id, "income.view_own");
+  if (!canViewAll && !canViewOwn) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await context.params;
+  const income = await prisma.income.findUnique({
+    where: { id },
+    include: {
+      companyAccount: { select: { id: true, name: true, type: true } },
+      addedBy: { select: { id: true, name: true, email: true } },
+    },
+  });
+  if (!income) {
+    return NextResponse.json({ success: false, error: "Income not found" }, { status: 404 });
+  }
+
+  if (!canViewAll && income.addedById !== session.user.id) {
+    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+  }
+
+  return NextResponse.json({
+    success: true,
+    data: {
+      ...income,
+      amount: Number(income.amount),
+    },
+  });
+}
+
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {

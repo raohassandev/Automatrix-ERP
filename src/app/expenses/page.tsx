@@ -328,7 +328,11 @@ function ExpensesPageContent() {
                           : col.key === 'amount'
                           ? formatMoney(effectiveAmount(expense))
                           : col.key === 'description'
-                          ? expense.description
+                          ? (
+                              <Link className="font-medium text-primary underline underline-offset-2" href={`/expenses/${expense.id}`}>
+                                {expense.description}
+                              </Link>
+                            )
                           : col.key === 'category'
                           ? expense.category
                           : col.key === 'expenseType'
@@ -384,6 +388,7 @@ function ExpensesPageContent() {
               title={expense.description}
               subtitle={new Date(expense.date).toLocaleDateString()}
               fields={[
+                { label: "Detail", value: <Link href={`/expenses/${expense.id}`}>Open Entry</Link> },
                 { label: "Category", value: expense.category },
                 { label: "Type", value: expense.expenseType || "-" },
                 { label: "Category Request", value: expense.categoryRequest || "-" },

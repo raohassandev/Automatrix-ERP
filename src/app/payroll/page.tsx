@@ -47,7 +47,15 @@ export default async function PayrollPage({
       take,
     }),
     prisma.payrollRun.count(),
-    prisma.employee.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, email: true } }),
+    prisma.employee.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        compensation: { select: { baseSalary: true } },
+      },
+    }),
     prisma.incentiveEntry.aggregate({
       where: {
         payoutMode: "PAYROLL",
@@ -106,7 +114,16 @@ export default async function PayrollPage({
             <p className="mt-2 text-muted-foreground">Manage pay periods and wallet credits.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {canEdit ? <PayrollRunCreateButton employees={employees} /> : null}
+            {canEdit ? (
+              <PayrollRunCreateButton
+                employees={employees.map((employee) => ({
+                  id: employee.id,
+                  name: employee.name,
+                  email: employee.email,
+                  baseSalary: Number(employee.compensation?.baseSalary || 0),
+                }))}
+              />
+            ) : null}
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -227,7 +244,12 @@ export default async function PayrollPage({
                               deductionReason: entry.deductionReason || "",
                             })),
                           }}
-                          employees={employees}
+                          employees={employees.map((employee) => ({
+                            id: employee.id,
+                            name: employee.name,
+                            email: employee.email,
+                            baseSalary: Number(employee.compensation?.baseSalary || 0),
+                          }))}
                           canApprove={canApprove}
                         />
                       ) : null}
@@ -268,7 +290,12 @@ export default async function PayrollPage({
                           deductionReason: entry.deductionReason || "",
                         })),
                       }}
-                      employees={employees}
+                      employees={employees.map((employee) => ({
+                        id: employee.id,
+                        name: employee.name,
+                        email: employee.email,
+                        baseSalary: Number(employee.compensation?.baseSalary || 0),
+                      }))}
                       canApprove={canApprove}
                     />
                   ) : null

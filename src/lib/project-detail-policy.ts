@@ -661,7 +661,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
           })()
         : null,
       href: canViewExpenseNarrative
-        ? `/expenses?search=${encodeURIComponent(e.description.slice(0, 20))}`
+        ? `/expenses/${e.id}`
         : null,
     });
   }
@@ -672,7 +672,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
       label: `Income: ${i.source} (${i.category})`,
       status: i.status,
       amount: policy.canViewFinancialTotals ? Number(i.amount) : null,
-      href: `/income?search=${encodeURIComponent(i.source.slice(0, 20))}`,
+      href: `/income/${i.id}`,
     });
   }
   activity.sort((a, b) => (a.at < b.at ? 1 : -1));
