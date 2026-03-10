@@ -4,6 +4,9 @@ import { requirePermission } from "@/lib/rbac";
 import { getUserRoleName } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { formatMoney } from "@/lib/format";
+import { employeeCodeFromId } from "@/lib/employee-display";
+import { canManageEmployeeCompensation } from "@/lib/employee-compensation-access";
+import { EmployeeCompensationDialog } from "@/components/EmployeeCompensationDialog";
 
 export default async function EmployeeDetailPage({
   params,
@@ -15,8 +18,17 @@ export default async function EmployeeDetailPage({
     redirect("/login");
   }
 
-  const canView = await requirePermission(session.user.id, "employees.view_all");
-  if (!canView) {
+  const { id } = await params;
+  const canViewAll = await requirePermission(session.user.id, "employees.view_all");
+  const currentUserEmployee = session.user.email
+    ? await prisma.employee.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      })
+    : null;
+  const canViewOwn = currentUserEmployee?.id === id;
+
+  if (!canViewAll && !canViewOwn) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Employee</h1>
@@ -26,6 +38,7 @@ export default async function EmployeeDetailPage({
   }
 
   const role = await getUserRoleName(session.user.id);
+  const canEditCompensation = await canManageEmployeeCompensation(session.user.id);
   const canViewPII =
     role === "HR" ||
     role === "Admin" ||
@@ -35,7 +48,6 @@ export default async function EmployeeDetailPage({
     role === "Owner" ||
     role === "CEO";
 
-  const { id } = await params;
   const employee = await prisma.employee.findUnique({
     where: { id },
     include: { compensation: true },
@@ -116,6 +128,7 @@ export default async function EmployeeDetailPage({
           <div>
             <div className="text-sm text-muted-foreground">{employee.email}</div>
             <h2 className="mt-1 text-xl font-semibold">{employee.name}</h2>
+            <div className="mt-1 text-xs text-muted-foreground">{employeeCodeFromId(employee.id)}</div>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span>Department: {employee.department || "-"}</span>
               <span>Designation: {employee.designation || "-"}</span>
@@ -148,7 +161,18 @@ export default async function EmployeeDetailPage({
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Company Profile</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">Company Profile</h2>
+          <EmployeeCompensationDialog
+            employeeId={employee.id}
+            employeeName={employee.name}
+            canEdit={canEditCompensation}
+            baseSalary={employee.compensation ? Number(employee.compensation.baseSalary) : 0}
+            currency={employee.compensation?.currency || "PKR"}
+            effectiveFrom={employee.compensation?.effectiveFrom ? employee.compensation.effectiveFrom.toISOString().slice(0, 10) : ""}
+            notes={employee.compensation?.notes || ""}
+          />
+        </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <div className="text-xs text-muted-foreground">Phone</div>
@@ -167,6 +191,18 @@ export default async function EmployeeDetailPage({
           <div>
             <div className="text-xs text-muted-foreground">Comp Notes</div>
             <div className="mt-1">{employee.compensation?.notes || "-"}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Effective From</div>
+            <div className="mt-1">
+              {employee.compensation?.effectiveFrom
+                ? new Date(employee.compensation.effectiveFrom).toLocaleDateString()
+                : "-"}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Currency</div>
+            <div className="mt-1">{employee.compensation?.currency || "PKR"}</div>
           </div>
         </div>
       </div>

@@ -124,6 +124,12 @@ export default async function PayrollPage({
                 }))}
               />
             ) : null}
+            <a
+              href="/employees"
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              Employee Salary Profiles
+            </a>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -192,6 +198,7 @@ export default async function PayrollPage({
         <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 p-4">
           <div className="text-sm font-semibold text-foreground">How Payroll Flow Works</div>
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+            <li>Set each employee base salary from Employee Profile.</li>
             <li>Create incentive against project and get it approved.</li>
             <li>Open payroll run for previous month and click <span className="font-semibold text-foreground">Auto-fill by Policy</span>.</li>
             <li>Review per-employee base, incentive, deductions, and reasons.</li>

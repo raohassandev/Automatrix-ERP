@@ -100,7 +100,7 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
                 <td className="py-2 w-[240px]">
                   <div className="flex flex-wrap gap-2">
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`/employees/${employee.id}/dashboard-preview`}>Inspect</Link>
+                      <Link href={`/employees/${employee.id}`}>Profile</Link>
                     </Button>
                     <Button
                       size="sm"
@@ -146,7 +146,7 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
             actions={
               <>
                 <Button asChild size="sm" variant="outline">
-                  <Link href={`/employees/${employee.id}/dashboard-preview`}>Inspect</Link>
+                  <Link href={`/employees/${employee.id}`}>Profile</Link>
                 </Button>
                 <Button
                   size="sm"
