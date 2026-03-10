@@ -7,122 +7,12 @@ import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 
-type VariableComponent = {
-  sourceType: "INCENTIVE" | "COMMISSION";
-  sourceId: string;
-  projectRef: string | null;
-  description: string;
-  amount: number;
-};
-
 function getPreviousMonthRange(now: Date) {
   const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
   const month = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
   const start = new Date(year, month, 1);
   const end = new Date(year, month + 1, 0);
   return { start, end };
-}
-
-async function collectAndSettleVariablePay(params: {
-  tx: Prisma.TransactionClient;
-  payrollRunId: string;
-  payrollEntryId: string;
-  employeeId: string;
-  periodEnd: Date;
-}) {
-  const { tx, payrollRunId, payrollEntryId, employeeId, periodEnd } = params;
-  const now = new Date();
-
-  const [unsettledIncentives, settledIncentives, unsettledCommissions, settledCommissions] = await Promise.all([
-    tx.incentiveEntry.findMany({
-      where: {
-        employeeId,
-        status: "APPROVED",
-        payoutMode: "PAYROLL",
-        settlementStatus: "UNSETTLED",
-        createdAt: { lte: periodEnd },
-      },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, projectRef: true, amount: true, reason: true },
-    }),
-    tx.incentiveEntry.findMany({
-      where: {
-        employeeId,
-        settledInPayrollEntryId: payrollEntryId,
-        settlementStatus: "SETTLED",
-      },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, projectRef: true, amount: true, reason: true },
-    }),
-    tx.commissionEntry.findMany({
-      where: {
-        employeeId,
-        payeeType: "EMPLOYEE",
-        status: "APPROVED",
-        payoutMode: "PAYROLL",
-        settlementStatus: "UNSETTLED",
-        createdAt: { lte: periodEnd },
-      },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, projectRef: true, amount: true, reason: true },
-    }),
-    tx.commissionEntry.findMany({
-      where: {
-        employeeId,
-        settledInPayrollEntryId: payrollEntryId,
-        settlementStatus: "SETTLED",
-      },
-      orderBy: { createdAt: "asc" },
-      select: { id: true, projectRef: true, amount: true, reason: true },
-    }),
-  ]);
-
-  if (unsettledIncentives.length > 0) {
-    await tx.incentiveEntry.updateMany({
-      where: { id: { in: unsettledIncentives.map((row) => row.id) } },
-      data: {
-        settlementStatus: "SETTLED",
-        settledInPayrollRunId: payrollRunId,
-        settledInPayrollEntryId: payrollEntryId,
-        settledAt: now,
-      },
-    });
-  }
-
-  if (unsettledCommissions.length > 0) {
-    await tx.commissionEntry.updateMany({
-      where: { id: { in: unsettledCommissions.map((row) => row.id) } },
-      data: {
-        settlementStatus: "SETTLED",
-        settledInPayrollRunId: payrollRunId,
-        settledInPayrollEntryId: payrollEntryId,
-        settledAt: now,
-      },
-    });
-  }
-
-  const allIncentives = [...settledIncentives, ...unsettledIncentives];
-  const allCommissions = [...settledCommissions, ...unsettledCommissions];
-
-  const components: VariableComponent[] = [
-    ...allIncentives.map((row) => ({
-      sourceType: "INCENTIVE" as const,
-      sourceId: row.id,
-      projectRef: row.projectRef || null,
-      description: row.reason || `Project incentive (${row.projectRef || "No project"})`,
-      amount: Number(row.amount || 0),
-    })),
-    ...allCommissions.map((row) => ({
-      sourceType: "COMMISSION" as const,
-      sourceId: row.id,
-      projectRef: row.projectRef || null,
-      description: row.reason || `Commission (${row.projectRef || "No project"})`,
-      amount: Number(row.amount || 0),
-    })),
-  ].filter((row) => Number.isFinite(row.amount) && row.amount > 0);
-
-  const total = Number(components.reduce((sum, row) => sum + row.amount, 0).toFixed(2));
-  return { components, total };
 }
 
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
@@ -140,7 +30,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const { id } = await context.params;
   const existing = await prisma.payrollRun.findUnique({
     where: { id },
-    include: { entries: true },
+    include: { entries: { select: { id: true, status: true } } },
   });
   if (!existing) {
     return NextResponse.json({ success: false, error: "Payroll run not found" }, { status: 404 });
@@ -155,7 +45,19 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     );
   }
 
+  const hasPaidEntries = existing.entries.some((entry) => String(entry.status || "").toUpperCase() === "PAID");
+
   if (parsed.data.entries && parsed.data.entries.length > 0) {
+    if (!canEdit) {
+      return NextResponse.json({ success: false, error: "Edit permission required" }, { status: 403 });
+    }
+    if (existing.status !== "DRAFT") {
+      return NextResponse.json(
+        { success: false, error: "Only DRAFT payroll runs can edit entry rows." },
+        { status: 400 },
+      );
+    }
+
     const seen = new Set<string>();
     for (const row of parsed.data.entries) {
       const employeeId = sanitizeString(row.employeeId || "");
@@ -185,7 +87,14 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const data: Record<string, unknown> = {};
   if (parsed.data.periodStart) data.periodStart = new Date(parsed.data.periodStart);
   if (parsed.data.periodEnd) data.periodEnd = new Date(parsed.data.periodEnd);
+
   if (parsed.data.periodStart || parsed.data.periodEnd) {
+    if (existing.status !== "DRAFT") {
+      return NextResponse.json(
+        { success: false, error: "Only DRAFT payroll runs can change period dates." },
+        { status: 400 },
+      );
+    }
     const periodStart = parsed.data.periodStart ? new Date(parsed.data.periodStart) : existing.periodStart;
     const periodEnd = parsed.data.periodEnd ? new Date(parsed.data.periodEnd) : existing.periodEnd;
     const prev = getPreviousMonthRange(new Date());
@@ -200,11 +109,46 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.notes !== undefined) {
     data.notes = parsed.data.notes ? sanitizeString(parsed.data.notes) : null;
   }
+
   if (parsed.data.status) {
-    const nextStatus = sanitizeString(parsed.data.status);
+    const nextStatus = sanitizeString(parsed.data.status).toUpperCase();
+
     if (nextStatus === "APPROVED" && !canApprove) {
       return NextResponse.json({ success: false, error: "Approval permission required" }, { status: 403 });
     }
+
+    if (!["DRAFT", "APPROVED", "POSTED"].includes(nextStatus)) {
+      return NextResponse.json({ success: false, error: "Unsupported payroll run status." }, { status: 400 });
+    }
+
+    if (nextStatus === "POSTED") {
+      return NextResponse.json(
+        { success: false, error: "POSTED status is set automatically when all payroll entries are marked paid." },
+        { status: 400 },
+      );
+    }
+
+    if (existing.status === "POSTED" && nextStatus !== "POSTED") {
+      return NextResponse.json(
+        { success: false, error: "Posted payroll runs cannot be moved back." },
+        { status: 400 },
+      );
+    }
+
+    if (existing.status !== "DRAFT" && nextStatus === "DRAFT") {
+      return NextResponse.json(
+        { success: false, error: "Approved payroll runs cannot be moved back to draft." },
+        { status: 400 },
+      );
+    }
+
+    if (hasPaidEntries && nextStatus === "DRAFT") {
+      return NextResponse.json(
+        { success: false, error: "Payroll run with paid entries cannot be reverted." },
+        { status: 400 },
+      );
+    }
+
     data.status = nextStatus;
   }
 
@@ -239,180 +183,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
         });
       }
 
-      const run = await tx.payrollRun.update({
+      return tx.payrollRun.update({
         where: { id },
         data,
         include: { entries: true },
       });
-
-      if (run.status === "APPROVED") {
-        for (const entry of run.entries) {
-          const employee = await tx.employee.findUnique({ where: { id: entry.employeeId } });
-          if (!employee) continue;
-
-          const variablePay = await collectAndSettleVariablePay({
-            tx,
-            payrollRunId: run.id,
-            payrollEntryId: entry.id,
-            employeeId: entry.employeeId,
-            periodEnd: run.periodEnd,
-          });
-
-          const entryIncentive = Number(entry.incentiveTotal || 0);
-          if (entryIncentive + 0.01 < variablePay.total) {
-            throw new Error(
-              `Incentive total for ${employee.name} is lower than approved payroll-linked variable pay. Reload policy before approval.`,
-            );
-          }
-
-          const manualVariableAdjustment = Number((entryIncentive - variablePay.total).toFixed(2));
-          const payrollExpenseAmount = Number((Number(entry.netPay) - variablePay.total).toFixed(2));
-          if (payrollExpenseAmount < -0.01) {
-            throw new Error(`Payroll expense amount became negative for ${employee.name}.`);
-          }
-
-          let expenseId = entry.expenseId;
-          if (!expenseId && payrollExpenseAmount > 0) {
-            const periodLabel = `${run.periodStart.toISOString().slice(0, 10)} to ${run.periodEnd.toISOString().slice(0, 10)}`;
-            const expense = await tx.expense.create({
-              data: {
-                date: run.periodEnd,
-                description: `Salary for ${employee.name} (${periodLabel})`,
-                category: "Salary",
-                amount: new Prisma.Decimal(payrollExpenseAmount),
-                paymentMode: "Payroll Transfer",
-                paymentSource: "COMPANY_ACCOUNT",
-                expenseType: "COMPANY",
-                status: "APPROVED",
-                approvalLevel: "PAYROLL",
-                submittedById: session.user.id,
-                approvedById: session.user.id,
-                approvedAmount: new Prisma.Decimal(payrollExpenseAmount),
-                remarks:
-                  entry.deductionReason ||
-                  (variablePay.total > 0
-                    ? `Variable pay settled via payroll: ${variablePay.total.toFixed(2)}`
-                    : undefined),
-              },
-            });
-            expenseId = expense.id;
-          }
-
-          let walletLedgerId = entry.walletLedgerId;
-          if (!walletLedgerId) {
-            const newBalance = Number(employee.walletBalance) + Number(entry.netPay);
-            const ledger = await tx.walletLedger.create({
-              data: {
-                date: new Date(),
-                employeeId: entry.employeeId,
-                type: "CREDIT",
-                amount: new Prisma.Decimal(entry.netPay),
-                reference: `PAYROLL:${run.id}:${entry.id}`,
-                balance: new Prisma.Decimal(newBalance),
-                sourceType: "PAYROLL",
-                sourceId: entry.id,
-                postedById: session.user.id,
-                postedAt: new Date(),
-              },
-            });
-            walletLedgerId = ledger.id;
-            await tx.employee.update({
-              where: { id: entry.employeeId },
-              data: { walletBalance: new Prisma.Decimal(newBalance) },
-            });
-          }
-
-          await tx.payrollEntry.update({
-            where: { id: entry.id },
-            data: {
-              walletLedgerId,
-              expenseId: expenseId || null,
-              approvedById: entry.approvedById || session.user.id,
-              status: "PAID",
-            },
-          });
-
-          const componentRows: Array<{
-            payrollEntryId: string;
-            componentType: string;
-            sourceType?: string;
-            sourceId?: string;
-            projectRef?: string;
-            description: string;
-            amount: Prisma.Decimal;
-            metadataJson?: string;
-          }> = [];
-
-          componentRows.push({
-            payrollEntryId: entry.id,
-            componentType: "BASE",
-            description: "Base salary",
-            amount: new Prisma.Decimal(entry.baseSalary),
-          });
-
-          for (const variable of variablePay.components) {
-            componentRows.push({
-              payrollEntryId: entry.id,
-              componentType: variable.sourceType,
-              sourceType: variable.sourceType,
-              sourceId: variable.sourceId,
-              projectRef: variable.projectRef || undefined,
-              description: variable.description,
-              amount: new Prisma.Decimal(variable.amount),
-            });
-          }
-
-          if (manualVariableAdjustment > 0) {
-            componentRows.push({
-              payrollEntryId: entry.id,
-              componentType: "ADJUSTMENT",
-              description: "Manual incentive adjustment",
-              amount: new Prisma.Decimal(manualVariableAdjustment),
-            });
-          }
-
-          if (Number(entry.deductions) > 0) {
-            componentRows.push({
-              payrollEntryId: entry.id,
-              componentType: "DEDUCTION",
-              description: entry.deductionReason || "Deductions",
-              amount: new Prisma.Decimal(entry.deductions),
-              metadataJson: JSON.stringify({ direction: "DEBIT_FROM_EMPLOYEE" }),
-            });
-          }
-
-          await tx.payrollComponentLine.deleteMany({ where: { payrollEntryId: entry.id } });
-          if (componentRows.length > 0) {
-            await tx.payrollComponentLine.createMany({ data: componentRows });
-          }
-
-          if (Number(entry.deductions) > 0 && /advance/i.test(String(entry.deductionReason || ""))) {
-            const advances = await tx.salaryAdvance.findMany({
-              where: {
-                employeeId: entry.employeeId,
-                status: "PAID",
-                createdAt: { lte: run.periodEnd },
-              },
-              orderBy: { createdAt: "asc" },
-            });
-            const recoverable = Math.min(
-              Number(entry.deductions),
-              advances.reduce((sum, adv) => sum + Number(adv.amount || 0), 0),
-            );
-            let remaining = recoverable;
-            for (const adv of advances) {
-              if (remaining <= 0) break;
-              remaining -= Number(adv.amount || 0);
-              await tx.salaryAdvance.update({
-                where: { id: adv.id },
-                data: { status: "RECOVERED" },
-              });
-            }
-          }
-        }
-      }
-
-      return run;
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update payroll run.";
@@ -445,6 +220,16 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   const existing = await prisma.payrollRun.findUnique({ where: { id } });
   if (!existing) {
     return NextResponse.json({ success: false, error: "Payroll run not found" }, { status: 404 });
+  }
+
+  const paidCount = await prisma.payrollEntry.count({
+    where: { payrollRunId: id, status: "PAID" },
+  });
+  if (paidCount > 0) {
+    return NextResponse.json(
+      { success: false, error: "Cannot delete payroll run because one or more entries are already paid." },
+      { status: 400 },
+    );
   }
 
   await prisma.payrollComponentLine.deleteMany({ where: { payrollEntry: { payrollRunId: id } } });

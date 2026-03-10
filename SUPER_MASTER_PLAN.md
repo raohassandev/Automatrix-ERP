@@ -557,6 +557,58 @@ Latest discrepancy baseline (`docs/STAGING_POSTGREEN_AUDIT_2026-03-09.md`):
 - Navigation and onboarding:
   - new overview navigation entry added: `ERP Guide` (`/help`) for business-first process guidance.
 
+### 11.8 Contextual Feature Help System (2026-03-10)
+
+- Delivered route-aware contextual help launcher:
+  - new `How this works` action available on every page through shared layout integration (desktop + mobile).
+  - help drawer auto-detects current module and shows module-specific SOP, controls, and cross-module financial effects.
+- Delivered centralized help catalog:
+  - `src/lib/feature-help.ts` now defines standardized procedure documentation for implemented modules:
+    - dashboard
+    - my portal
+    - projects + project detail
+    - tasks
+    - expenses
+    - income
+    - procurement
+    - inventory
+    - approvals
+    - payroll
+    - incentives/commissions
+    - salary advances
+    - wallet ledger
+    - employees/compensation
+    - reports
+    - settings
+    - ceo dashboards
+- Delivered expanded ERP Guide:
+  - `/help` now includes a full feature procedure library with step-by-step flow, controls, effects, and quick links for each feature section.
+  - contextual drawer deep-link opens directly to the relevant guide section (`/help#feature-*`).
+
+### 11.9 Payroll Auto-Draft + Per-Employee Settlement (2026-03-10)
+
+- Scheduler-ready monthly draft generation:
+  - added `POST /api/payroll/runs/auto-draft`.
+  - creates previous-month payroll run in `DRAFT` on configured fixed day (`PAYROLL_AUTO_DRAFT_DAY`), or on forced trigger.
+  - supports secure token automation (`PAYROLL_AUTOMATION_TOKEN`) for cron integration.
+- Settlement model upgrade:
+  - payroll run `APPROVE` now authorizes/finalizes run state only (no bulk payment side effects).
+  - new per-employee payout endpoint:
+    - `POST /api/payroll/runs/[id]/entries/[entryId]/mark-paid`
+  - each entry settlement posts wallet credit + component lines + variable-pay settlement, and run auto-transitions to `POSTED` when all entries are paid.
+- UI/UX operator upgrade:
+  - payroll page now includes:
+    - `Auto-Create Draft` action
+    - `Settle Entries` dialog with employee-wise mark-paid controls
+    - paid/pending visibility in run list
+  - action loading states added for approval, draft generation, and per-entry payout posting.
+- Safety guards:
+  - only `DRAFT` runs can edit row entries/period.
+  - runs with paid entries cannot be deleted.
+  - posted runs cannot be reverted.
+- Operational runbook:
+  - `docs/PAYROLL_AUTOMATION_RUNBOOK_2026-03-10.md`
+
 ### 11.2 Owner-Critical Module Status (Requested)
 
 - Finance & Accounting Core (`14`): `[x]` Completed

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DeleteButton } from "@/components/TableActions";
 import { PayrollRunFormDialog } from "@/components/PayrollRunFormDialog";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 type EmployeeOption = { id: string; name: string; email: string; baseSalary?: number };
 
@@ -48,7 +49,7 @@ export function PayrollRunActions({
     if (!res.ok) {
       toast.error(data.error || "Failed to approve payroll");
     } else {
-      toast.success("Payroll approved and credited to wallets");
+      toast.success("Payroll run approved. Now settle each employee entry from Settle Entries.");
     }
     setApproving(false);
   }
@@ -56,12 +57,21 @@ export function PayrollRunActions({
   return (
     <>
       <div className="flex gap-2">
-        <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
-          Edit
-        </Button>
-        {canApprove && run.status !== "APPROVED" ? (
+        {run.status === "DRAFT" ? (
+          <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+            Edit
+          </Button>
+        ) : null}
+        {canApprove && run.status !== "APPROVED" && run.status !== "POSTED" ? (
           <Button size="sm" onClick={approve} disabled={approving}>
-            {approving ? "Approving..." : "Approve"}
+            {approving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Approving...
+              </>
+            ) : (
+              "Approve"
+            )}
           </Button>
         ) : null}
         <DeleteButton url={`/api/payroll/runs/${run.id}`} />

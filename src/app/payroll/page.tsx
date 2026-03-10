@@ -6,6 +6,8 @@ import { formatMoney } from "@/lib/format";
 import PaginationControls from "@/components/PaginationControls";
 import { PayrollRunCreateButton } from "@/components/PayrollRunCreateButton";
 import { PayrollRunActions } from "@/components/PayrollRunActions";
+import { PayrollAutoDraftButton } from "@/components/PayrollAutoDraftButton";
+import { PayrollEntrySettlementDialog } from "@/components/PayrollEntrySettlementDialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { MobileCard } from "@/components/MobileCard";
 import { employeeCodeFromId } from "@/lib/employee-display";
@@ -52,6 +54,10 @@ export default async function PayrollPage({
   const take = 20;
   const skip = (page - 1) * take;
   const previousRange = getPreviousMonthRange(new Date());
+  const autoDraftDayRaw = Number(process.env.PAYROLL_AUTO_DRAFT_DAY || "1");
+  const autoDraftDay = Number.isFinite(autoDraftDayRaw)
+    ? Math.min(28, Math.max(1, Math.floor(autoDraftDayRaw)))
+    : 1;
 
   const [
     runs,
@@ -162,6 +168,7 @@ export default async function PayrollPage({
                 }))}
               />
             ) : null}
+            {canEdit ? <PayrollAutoDraftButton /> : null}
             <Link
               href="/employees"
               className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
@@ -239,6 +246,11 @@ export default async function PayrollPage({
             <span className="font-semibold">Important:</span> Auto-fill policy now excludes future-created incentives from older payroll periods.
           </div>
         </div>
+        <div className="mt-3 rounded-lg border border-sky-300/35 bg-sky-500/10 p-3 text-xs text-sky-900 dark:text-sky-200">
+          Monthly auto-draft scheduler target day: <span className="font-semibold">day {autoDraftDay}</span>. You can still use
+          <span className="font-semibold"> Auto-Create Draft </span>
+          for manual trigger and then fine-tune values before approval.
+        </div>
         <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 p-4">
           <div className="text-sm font-semibold text-foreground">How Payroll Flow Works</div>
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
@@ -246,7 +258,9 @@ export default async function PayrollPage({
             <li>Create incentive against project and get it approved.</li>
             <li>Open payroll run for previous month and click <span className="font-semibold text-foreground">Auto-fill by Policy</span>.</li>
             <li>Review per-employee base, incentive, deductions, and reasons.</li>
-            <li>Approve payroll run; system posts wallet credits and settles approved payroll-linked incentives.</li>
+            <li>Approve payroll run to freeze period and authorize payouts.</li>
+            <li>Use <span className="font-semibold text-foreground">Settle Entries</span> to mark each employee paid after transfer confirmation.</li>
+            <li>Run auto-moves to <span className="font-semibold text-foreground">POSTED</span> when all entries are paid.</li>
             <li>Use Incentives page to verify settlement status and payroll page for monthly totals.</li>
           </ol>
         </div>
@@ -329,6 +343,7 @@ export default async function PayrollPage({
               <tr className="border-b text-left text-muted-foreground">
                 <th className="py-2">Period</th>
                 <th className="py-2">Entries</th>
+                <th className="py-2">Paid / Pending</th>
                 <th className="py-2">Total Net</th>
                 <th className="py-2">Status</th>
                 <th className="py-2">Actions</th>
@@ -337,6 +352,8 @@ export default async function PayrollPage({
             <tbody>
               {runs.map((run) => {
                 const totalNet = run.entries.reduce((sum, entry) => sum + Number(entry.netPay), 0);
+                const paidCount = run.entries.filter((entry) => String(entry.status || "").toUpperCase() === "PAID").length;
+                const pendingCount = run.entries.length - paidCount;
                 return (
                   <tr key={run.id} className="border-b">
                     <td className="py-2">
@@ -344,36 +361,58 @@ export default async function PayrollPage({
                       {new Date(run.periodEnd).toLocaleDateString()}
                     </td>
                     <td className="py-2">{run.entries.length}</td>
+                    <td className="py-2">
+                      <span className="font-medium">{paidCount}</span> / {pendingCount}
+                    </td>
                     <td className="py-2">{formatMoney(totalNet)}</td>
                     <td className="py-2">
                       <StatusBadge status={run.status} />
                     </td>
                     <td className="py-2">
-                      {canEdit ? (
-                        <PayrollRunActions
-                          run={{
-                            id: run.id,
-                            periodStart: run.periodStart.toISOString(),
-                            periodEnd: run.periodEnd.toISOString(),
-                            status: run.status,
-                            notes: run.notes,
-                            entries: run.entries.map((entry) => ({
+                      <div className="flex flex-wrap gap-2">
+                        {canEdit ? (
+                          <PayrollRunActions
+                            run={{
+                              id: run.id,
+                              periodStart: run.periodStart.toISOString(),
+                              periodEnd: run.periodEnd.toISOString(),
+                              status: run.status,
+                              notes: run.notes,
+                              entries: run.entries.map((entry) => ({
+                                employeeId: entry.employeeId,
+                                baseSalary: Number(entry.baseSalary),
+                                incentiveTotal: Number(entry.incentiveTotal),
+                                deductions: Number(entry.deductions),
+                                deductionReason: entry.deductionReason || "",
+                              })),
+                            }}
+                            employees={employees.map((employee) => ({
+                              id: employee.id,
+                              name: employee.name,
+                              email: employee.email,
+                              baseSalary: Number(employee.compensation?.baseSalary || 0),
+                            }))}
+                            canApprove={canApprove}
+                          />
+                        ) : null}
+                        {canApprove ? (
+                          <PayrollEntrySettlementDialog
+                            payrollRunId={run.id}
+                            runStatus={run.status}
+                            canApprove={canApprove}
+                            entries={run.entries.map((entry) => ({
+                              id: entry.id,
                               employeeId: entry.employeeId,
-                              baseSalary: Number(entry.baseSalary),
-                              incentiveTotal: Number(entry.incentiveTotal),
-                              deductions: Number(entry.deductions),
-                              deductionReason: entry.deductionReason || "",
-                            })),
-                          }}
-                          employees={employees.map((employee) => ({
-                            id: employee.id,
-                            name: employee.name,
-                            email: employee.email,
-                            baseSalary: Number(employee.compensation?.baseSalary || 0),
-                          }))}
-                          canApprove={canApprove}
-                        />
-                      ) : null}
+                              employeeName: entry.employee?.name || null,
+                              baseSalary: Number(entry.baseSalary || 0),
+                              incentiveTotal: Number(entry.incentiveTotal || 0),
+                              deductions: Number(entry.deductions || 0),
+                              netPay: Number(entry.netPay || 0),
+                              status: entry.status,
+                            }))}
+                          />
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -384,6 +423,8 @@ export default async function PayrollPage({
         <div className="space-y-3 md:hidden">
           {runs.map((run) => {
             const totalNet = run.entries.reduce((sum, entry) => sum + Number(entry.netPay), 0);
+            const paidCount = run.entries.filter((entry) => String(entry.status || "").toUpperCase() === "PAID").length;
+            const pendingCount = run.entries.length - paidCount;
             return (
               <MobileCard
                 key={run.id}
@@ -391,35 +432,55 @@ export default async function PayrollPage({
                 subtitle={run.notes || "Payroll run"}
                 fields={[
                   { label: "Entries", value: run.entries.length.toString() },
+                  { label: "Paid/Pending", value: `${paidCount}/${pendingCount}` },
                   { label: "Total Net", value: formatMoney(totalNet) },
                   { label: "Status", value: <StatusBadge status={run.status} /> },
                 ]}
                 actions={
-                  canEdit ? (
-                    <PayrollRunActions
-                      run={{
-                        id: run.id,
-                        periodStart: run.periodStart.toISOString(),
-                        periodEnd: run.periodEnd.toISOString(),
-                        status: run.status,
-                        notes: run.notes,
-                        entries: run.entries.map((entry) => ({
+                  <div className="flex flex-wrap gap-2">
+                    {canEdit ? (
+                      <PayrollRunActions
+                        run={{
+                          id: run.id,
+                          periodStart: run.periodStart.toISOString(),
+                          periodEnd: run.periodEnd.toISOString(),
+                          status: run.status,
+                          notes: run.notes,
+                          entries: run.entries.map((entry) => ({
+                            employeeId: entry.employeeId,
+                            baseSalary: Number(entry.baseSalary),
+                            incentiveTotal: Number(entry.incentiveTotal),
+                            deductions: Number(entry.deductions),
+                            deductionReason: entry.deductionReason || "",
+                          })),
+                        }}
+                        employees={employees.map((employee) => ({
+                          id: employee.id,
+                          name: employee.name,
+                          email: employee.email,
+                          baseSalary: Number(employee.compensation?.baseSalary || 0),
+                        }))}
+                        canApprove={canApprove}
+                      />
+                    ) : null}
+                    {canApprove ? (
+                      <PayrollEntrySettlementDialog
+                        payrollRunId={run.id}
+                        runStatus={run.status}
+                        canApprove={canApprove}
+                        entries={run.entries.map((entry) => ({
+                          id: entry.id,
                           employeeId: entry.employeeId,
-                          baseSalary: Number(entry.baseSalary),
-                          incentiveTotal: Number(entry.incentiveTotal),
-                          deductions: Number(entry.deductions),
-                          deductionReason: entry.deductionReason || "",
-                        })),
-                      }}
-                      employees={employees.map((employee) => ({
-                        id: employee.id,
-                        name: employee.name,
-                        email: employee.email,
-                        baseSalary: Number(employee.compensation?.baseSalary || 0),
-                      }))}
-                      canApprove={canApprove}
-                    />
-                  ) : null
+                          employeeName: entry.employee?.name || null,
+                          baseSalary: Number(entry.baseSalary || 0),
+                          incentiveTotal: Number(entry.incentiveTotal || 0),
+                          deductions: Number(entry.deductions || 0),
+                          netPay: Number(entry.netPay || 0),
+                          status: entry.status,
+                        }))}
+                      />
+                    ) : null}
+                  </div>
                 }
               />
             );

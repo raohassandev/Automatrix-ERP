@@ -9,6 +9,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { Sidebar } from "@/components/Sidebar";
 import { RouteLoadingIndicator } from "@/components/RouteLoadingIndicator";
 import MobileMenu from "@/components/MobileMenu";
+import { FeatureHelpLauncher } from "@/components/FeatureHelpLauncher";
 import { auth } from "@/lib/auth";
 
 const geistSans = Geist({
@@ -53,10 +54,18 @@ export default async function RootLayout({
               <header className="sticky top-0 z-40 border-b border-border bg-card/95 px-4 py-3 backdrop-blur md:hidden">
                 <div className="flex items-center justify-between">
                   <div className="text-base font-semibold">AutoMatrix ERP</div>
-                  <MobileMenu />
+                  <div className="flex items-center gap-2">
+                    <FeatureHelpLauncher compact />
+                    <MobileMenu />
+                  </div>
                 </div>
               </header>
-              <main className="min-w-0 overflow-x-hidden px-4 py-6 md:px-6 md:py-8">{children}</main>
+              <main className="min-w-0 overflow-x-hidden px-4 py-6 md:px-6 md:py-8">
+                <div className="mb-4 hidden justify-end md:flex">
+                  <FeatureHelpLauncher />
+                </div>
+                {children}
+              </main>
             </div>
 
             <FloatingActionButton />
