@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/StatusBadge";
 import { toast } from "sonner";
+import { employeeDisplayLabel } from "@/lib/employee-display";
 
 type EmployeeOption = {
   id: string;
@@ -108,7 +109,7 @@ export function AttendanceManager({
               >
                 {employees.map((employee) => (
                   <option key={employee.id} value={employee.id}>
-                    {employee.name} ({employee.email})
+                    {employeeDisplayLabel(employee)}
                   </option>
                 ))}
               </select>

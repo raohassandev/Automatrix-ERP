@@ -12,6 +12,7 @@ import {
   FileBarChart,
   Settings,
   Receipt,
+  BookOpen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -34,6 +35,7 @@ export const navGroups: NavGroup[] = [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permissions: ["dashboard.view"] },
       { name: "My Portal", href: "/me", icon: LayoutDashboard, permissions: ["employees.view_own", "employees.view_all"] },
       { name: "My Expenses", href: "/expenses", icon: CreditCard, permissions: ["expenses.view_own", "expenses.view_all"] },
+      { name: "ERP Guide", href: "/help", icon: BookOpen, permissions: ["dashboard.view"] },
       { name: "ERP Blueprint", href: "/ceo/blueprint", icon: FileBarChart, permissions: ["dashboard.view_all_metrics"] },
       { name: "CEO Dashboard", href: "/ceo/dashboard", icon: LayoutDashboard, permissions: ["dashboard.view_all_metrics"] },
       { name: "Notifications", href: "/notifications", icon: Bell, permissions: ["dashboard.view", "reports.view_all"] },

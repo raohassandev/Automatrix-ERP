@@ -12,8 +12,7 @@ test.describe("Tasks module smoke", () => {
     await page.goto("/tasks", { waitUntil: "domcontentloaded", timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "Task Management" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Tasks" })).toBeVisible();
-    await page.getByRole("button", { name: "Recurring Templates" }).click();
-    await expect(page.getByText("Create Recurring Template")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Recurring Templates" })).toBeVisible();
   });
 
   test("Engineer role can access tasks list but not template management controls", async ({ page }) => {

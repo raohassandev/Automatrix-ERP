@@ -542,6 +542,21 @@ Latest discrepancy baseline (`docs/STAGING_POSTGREEN_AUDIT_2026-03-09.md`):
   - SLA/escalation automation scheduler
   - calibration and performance analytics rollups into HR profile
 
+### 11.7 Payroll Integrity + Operator Guidance Hardening (2026-03-10)
+
+- Settlement safety fix:
+  - payroll policy preview and approval settlement now include only approved/unsettled payroll incentives and commissions created on or before the payroll run period end.
+  - this prevents future-created incentive rows from leaking into older payroll approvals.
+- Run-entry integrity controls:
+  - duplicate employee rows in payroll runs are blocked (create/update).
+  - unknown employee IDs in payroll runs are blocked (create/update).
+- Operator clarity upgrade:
+  - payroll page now shows incentive queue due for payroll period (employee/project/amount/status/aging).
+  - latest run breakdown now shows variable component line details, not only line counts.
+  - payroll flow now links to ERP guide (`/help#payroll-flow`) for step-by-step operating instructions.
+- Navigation and onboarding:
+  - new overview navigation entry added: `ERP Guide` (`/help`) for business-first process guidance.
+
 ### 11.2 Owner-Critical Module Status (Requested)
 
 - Finance & Accounting Core (`14`): `[x]` Completed

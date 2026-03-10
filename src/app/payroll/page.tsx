@@ -11,6 +11,20 @@ import { MobileCard } from "@/components/MobileCard";
 import { employeeCodeFromId } from "@/lib/employee-display";
 import Link from "next/link";
 
+function getPreviousMonthRange(now: Date) {
+  const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  const month = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+  const start = new Date(year, month, 1);
+  const end = new Date(year, month + 1, 0);
+  return { start, end };
+}
+
+function ageInDays(value: Date) {
+  const now = Date.now();
+  const diff = now - value.getTime();
+  return Math.max(0, Math.floor(diff / 86400000));
+}
+
 export default async function PayrollPage({
   searchParams,
 }: {
@@ -37,8 +51,18 @@ export default async function PayrollPage({
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 20;
   const skip = (page - 1) * take;
+  const previousRange = getPreviousMonthRange(new Date());
 
-  const [runs, total, employees, pendingApprovalIncentiveAgg, approvedUnsettledIncentiveAgg, settledIncentivePayrollAgg, openSalaryAdvanceAgg] =
+  const [
+    runs,
+    total,
+    employees,
+    pendingApprovalIncentiveAgg,
+    approvedUnsettledIncentiveAgg,
+    settledIncentivePayrollAgg,
+    openSalaryAdvanceAgg,
+    incentiveQueueRows,
+  ] =
     await Promise.all([
     prisma.payrollRun.findMany({
       orderBy: { periodStart: "desc" },
@@ -61,6 +85,7 @@ export default async function PayrollPage({
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
         status: "PENDING",
+        createdAt: { lte: previousRange.end },
       },
       _sum: { amount: true },
     }),
@@ -69,6 +94,7 @@ export default async function PayrollPage({
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
         status: "APPROVED",
+        createdAt: { lte: previousRange.end },
       },
       _sum: { amount: true },
     }),
@@ -84,6 +110,16 @@ export default async function PayrollPage({
       where: { status: "OPEN" },
       _sum: { amount: true },
       _count: { _all: true },
+    }),
+    prisma.incentiveEntry.findMany({
+      where: {
+        payoutMode: "PAYROLL",
+        settlementStatus: "UNSETTLED",
+        createdAt: { lte: previousRange.end },
+      },
+      include: { employee: { select: { id: true, name: true } } },
+      orderBy: [{ status: "asc" }, { createdAt: "asc" }],
+      take: 50,
     }),
   ]);
 
@@ -104,6 +140,8 @@ export default async function PayrollPage({
   const openSalaryAdvance = Number(openSalaryAdvanceAgg._sum.amount || 0);
   const openSalaryAdvanceCount = Number(openSalaryAdvanceAgg._count._all || 0);
   const latestRun = runs[0];
+  const approvedQueueRows = incentiveQueueRows.filter((row) => row.status === "APPROVED");
+  const pendingQueueRows = incentiveQueueRows.filter((row) => row.status !== "APPROVED");
 
   return (
     <div className="grid gap-6">
@@ -124,33 +162,39 @@ export default async function PayrollPage({
                 }))}
               />
             ) : null}
-            <a
+            <Link
               href="/employees"
               className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
             >
               Employee Salary Profiles
-            </a>
+            </Link>
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <a
+          <Link
             href="/incentives"
             className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
           >
             Incentives
-          </a>
-          <a
+          </Link>
+          <Link
             href="/salary-advances"
             className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
           >
             Salary Advances
-          </a>
-          <a
+          </Link>
+          <Link
             href="/reports/employee-expenses"
             className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
           >
             Employee Expense Report
-          </a>
+          </Link>
+          <Link
+            href="/help#payroll-flow"
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+          >
+            ERP Guide
+          </Link>
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
           <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-4 dark:border-sky-900/60 dark:bg-sky-950/30">
@@ -172,7 +216,7 @@ export default async function PayrollPage({
           <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-900/60 dark:bg-violet-950/30">
             <div className="text-sm text-violet-700 dark:text-violet-300">Incentive Ready for Payroll</div>
             <div className="text-xl font-semibold text-violet-800 dark:text-violet-100">{formatMoney(approvedUnsettledIncentive)}</div>
-            <div className="text-xs text-violet-700/80 dark:text-violet-300/80">Approved + unsettled</div>
+            <div className="text-xs text-violet-700/80 dark:text-violet-300/80">{approvedQueueRows.length} approved incentive line(s)</div>
           </div>
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
             <div className="text-sm text-emerald-700 dark:text-emerald-300">Incentive Settled (Payroll)</div>
@@ -189,10 +233,10 @@ export default async function PayrollPage({
             <span className="font-semibold">Pending incentives:</span> {formatMoney(pendingApprovalIncentive)} (not approved yet, excluded from payroll).
           </div>
           <div>
-            <span className="font-semibold">Ready incentives:</span> {formatMoney(approvedUnsettledIncentive)} (approved, will be settled on next payroll approval).
+            <span className="font-semibold">Ready incentives:</span> {formatMoney(approvedUnsettledIncentive)} (approved up to {previousRange.end.toLocaleDateString()}, settled on payroll approval).
           </div>
           <div>
-            <span className="font-semibold">Important:</span> Approve incentive first, then use payroll Auto-fill by Policy before approving run.
+            <span className="font-semibold">Important:</span> Auto-fill policy now excludes future-created incentives from older payroll periods.
           </div>
         </div>
         <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 p-4">
@@ -205,6 +249,76 @@ export default async function PayrollPage({
             <li>Approve payroll run; system posts wallet credits and settles approved payroll-linked incentives.</li>
             <li>Use Incentives page to verify settlement status and payroll page for monthly totals.</li>
           </ol>
+        </div>
+        <div className="mt-4 rounded-lg border border-indigo-300/35 bg-indigo-500/10 p-4 dark:border-indigo-900/60 dark:bg-indigo-950/25">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <div className="text-sm font-semibold">Payroll Incentive Queue (Due)</div>
+              <div className="text-xs text-muted-foreground">
+                Includes unsettled payroll incentives created on or before {previousRange.end.toLocaleDateString()}.
+              </div>
+            </div>
+            <Link href="/incentives" className="text-xs font-medium text-primary underline underline-offset-2">
+              Open Incentives Register
+            </Link>
+          </div>
+          {incentiveQueueRows.length === 0 ? (
+            <div className="text-xs text-muted-foreground">No incentive queue due for this payroll period.</div>
+          ) : (
+            <>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-2">Created</th>
+                      <th className="py-2">Employee</th>
+                      <th className="py-2">Project</th>
+                      <th className="py-2">Amount</th>
+                      <th className="py-2">Status</th>
+                      <th className="py-2">Aging</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incentiveQueueRows.map((row) => (
+                      <tr key={row.id} className="border-b">
+                        <td className="py-2">{new Date(row.createdAt).toLocaleDateString()}</td>
+                        <td className="py-2">
+                          <Link href={`/employees/${row.employeeId}`} className="font-medium text-primary underline underline-offset-2">
+                            {employeeCodeFromId(row.employeeId)} - {row.employee?.name || "Employee"}
+                          </Link>
+                        </td>
+                        <td className="py-2">{row.projectRef || "-"}</td>
+                        <td className="py-2">{formatMoney(Number(row.amount || 0))}</td>
+                        <td className="py-2">
+                          <StatusBadge status={row.status} />
+                        </td>
+                        <td className="py-2">{ageInDays(row.createdAt)} day(s)</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="space-y-2 md:hidden">
+                {incentiveQueueRows.map((row) => (
+                  <MobileCard
+                    key={row.id}
+                    title={`${employeeCodeFromId(row.employeeId)} - ${row.employee?.name || "Employee"}`}
+                    subtitle={new Date(row.createdAt).toLocaleDateString()}
+                    fields={[
+                      { label: "Project", value: row.projectRef || "-" },
+                      { label: "Amount", value: formatMoney(Number(row.amount || 0)) },
+                      { label: "Status", value: <StatusBadge status={row.status} /> },
+                      { label: "Aging", value: `${ageInDays(row.createdAt)} day(s)` },
+                    ]}
+                  />
+                ))}
+              </div>
+              <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-2">
+                <div>Approved queue lines: {approvedQueueRows.length}</div>
+                <div>Pending approval lines: {pendingQueueRows.length}</div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -333,12 +447,15 @@ export default async function PayrollPage({
                     <th className="py-2">Incentive</th>
                     <th className="py-2">Deductions</th>
                     <th className="py-2">Net</th>
-                    <th className="py-2">Variable Lines</th>
+                    <th className="py-2">Variable Components</th>
                   </tr>
                 </thead>
                 <tbody>
                   {latestRun.entries.map((entry) => {
-                    const variableLines = entry.components.filter((line) => line.componentType === "INCENTIVE" || line.componentType === "COMMISSION").length;
+                    const variableLines = entry.components.filter(
+                      (line) => line.componentType === "INCENTIVE" || line.componentType === "COMMISSION",
+                    );
+                    const variableTotal = variableLines.reduce((sum, line) => sum + Number(line.amount || 0), 0);
                     return (
                       <tr key={entry.id} className="border-b">
                         <td className="py-2">
@@ -350,7 +467,22 @@ export default async function PayrollPage({
                         <td className="py-2">{formatMoney(Number(entry.incentiveTotal || 0))}</td>
                         <td className="py-2">{formatMoney(Number(entry.deductions || 0))}</td>
                         <td className="py-2">{formatMoney(Number(entry.netPay || 0))}</td>
-                        <td className="py-2">{variableLines}</td>
+                        <td className="py-2">
+                          {variableLines.length === 0 ? (
+                            <span className="text-muted-foreground">-</span>
+                          ) : (
+                            <div className="space-y-1">
+                              {variableLines.map((line) => (
+                                <div key={line.id} className="text-xs">
+                                  <span className="font-medium">{line.componentType}</span>{" "}
+                                  <span className="text-muted-foreground">{line.projectRef || "No project"}</span>{" "}
+                                  <span>{formatMoney(Number(line.amount || 0))}</span>
+                                </div>
+                              ))}
+                              <div className="text-xs font-medium">Total: {formatMoney(variableTotal)}</div>
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     );
                   })}

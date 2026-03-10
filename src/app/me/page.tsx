@@ -228,16 +228,16 @@ export default async function MyDashboardPage() {
 
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Wallet Snapshot</div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
           <div className="text-sm text-emerald-700 dark:text-emerald-300">Wallet Available</div>
           <div className="mt-2 text-xl font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(walletAvailable)}</div>
           <div className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">Balance minus hold amount</div>
         </div>
-        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm dark:border-indigo-900/60 dark:bg-indigo-950/30">
           <div className="text-sm text-indigo-700 dark:text-indigo-300">Wallet Balance</div>
           <div className="mt-2 text-xl font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(walletBalance)}</div>
         </div>
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/30">
           <div className="text-sm text-amber-700 dark:text-amber-300">On Hold</div>
           <div className="mt-2 text-xl font-semibold text-amber-900 dark:text-amber-100">{formatMoney(walletHold)}</div>
         </div>
@@ -249,19 +249,19 @@ export default async function MyDashboardPage() {
 
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Advance and Reimbursement</div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm dark:border-indigo-900/60 dark:bg-indigo-950/30">
           <div className="text-sm text-indigo-700 dark:text-indigo-300">Pending Incentive (Payroll)</div>
           <div className="mt-2 text-xl font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(pendingPayrollIncentive)}</div>
         </div>
-        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm dark:border-sky-900/60 dark:bg-sky-950/30">
           <div className="text-sm text-sky-700 dark:text-sky-300">Company Advance Issued</div>
           <div className="mt-2 text-xl font-semibold text-sky-900 dark:text-sky-100">{formatMoney(advanceIssued)}</div>
         </div>
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/30">
           <div className="text-sm text-amber-700 dark:text-amber-300">Advance Outstanding</div>
           <div className="mt-2 text-xl font-semibold text-amber-900 dark:text-amber-100">{formatMoney(advanceOutstanding)}</div>
         </div>
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/30">
           <div className="text-sm text-rose-700 dark:text-rose-300">Own-Pocket Reimbursement Due</div>
           <div className="mt-2 text-xl font-semibold text-rose-900 dark:text-rose-100">{formatMoney(pocketPayable)}</div>
           <div className="mt-2 text-xs">
@@ -276,7 +276,7 @@ export default async function MyDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-6 shadow-sm dark:border-violet-900/60 dark:bg-violet-950/30">
           <div className="text-sm text-violet-700 dark:text-violet-300">Advance Used This Month</div>
           <div className="mt-2 text-xl font-semibold text-violet-900 dark:text-violet-100">{formatMoney(advanceUsedThisMonth)}</div>
           <div className="mt-2 text-xs">
@@ -288,7 +288,7 @@ export default async function MyDashboardPage() {
             </Link>
           </div>
         </div>
-        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-6 shadow-sm dark:border-cyan-900/60 dark:bg-cyan-950/30">
           <div className="text-sm text-cyan-700 dark:text-cyan-300">Reimbursement Paid This Month</div>
           <div className="mt-2 text-xl font-semibold text-cyan-900 dark:text-cyan-100">{formatMoney(reimbursementPaidThisMonth)}</div>
           <div className="mt-2 text-xs">
@@ -304,19 +304,19 @@ export default async function MyDashboardPage() {
 
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attendance Snapshot</div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
           <div className="text-sm text-emerald-700 dark:text-emerald-300">This Month Present</div>
           <div className="mt-2 text-xl font-semibold text-emerald-800 dark:text-emerald-300">{attendanceMap.get("PRESENT") || 0}</div>
         </div>
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/30">
           <div className="text-sm text-amber-700 dark:text-amber-300">This Month Late</div>
           <div className="mt-2 text-xl font-semibold text-amber-800 dark:text-amber-300">{attendanceMap.get("LATE") || 0}</div>
         </div>
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/30">
           <div className="text-sm text-rose-700 dark:text-rose-300">This Month Absent</div>
           <div className="mt-2 text-xl font-semibold text-rose-800 dark:text-rose-300">{attendanceMap.get("ABSENT") || 0}</div>
         </div>
-        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm dark:border-sky-900/60 dark:bg-sky-950/30">
           <div className="text-sm text-sky-700 dark:text-sky-300">Leave Requests</div>
           <div className="mt-2 text-xl font-semibold text-sky-800 dark:text-sky-300">{leaveRequests.length}</div>
         </div>

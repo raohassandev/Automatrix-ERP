@@ -15,6 +15,17 @@ function getPreviousMonthRange(now: Date) {
   return { start, end };
 }
 
+function findDuplicateEmployeeId(entries: Array<{ employeeId: string }>) {
+  const seen = new Set<string>();
+  for (const row of entries) {
+    const employeeId = sanitizeString(row.employeeId || "");
+    if (!employeeId) continue;
+    if (seen.has(employeeId)) return employeeId;
+    seen.add(employeeId);
+  }
+  return null;
+}
+
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -77,6 +88,28 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { success: false, error: "A payroll run already exists for this period." },
       { status: 400 }
+    );
+  }
+
+  const duplicateEmployeeId = findDuplicateEmployeeId(parsed.data.entries);
+  if (duplicateEmployeeId) {
+    return NextResponse.json(
+      { success: false, error: `Duplicate employee entry found in payroll run: ${duplicateEmployeeId}` },
+      { status: 400 },
+    );
+  }
+
+  const employeeIds = Array.from(
+    new Set(parsed.data.entries.map((row) => sanitizeString(row.employeeId)).filter(Boolean)),
+  );
+  const knownEmployees = await prisma.employee.findMany({
+    where: { id: { in: employeeIds } },
+    select: { id: true },
+  });
+  if (knownEmployees.length !== employeeIds.length) {
+    return NextResponse.json(
+      { success: false, error: "One or more payroll entries reference unknown employees." },
+      { status: 400 },
     );
   }
 

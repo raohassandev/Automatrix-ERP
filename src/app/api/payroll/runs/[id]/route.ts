@@ -28,8 +28,9 @@ async function collectAndSettleVariablePay(params: {
   payrollRunId: string;
   payrollEntryId: string;
   employeeId: string;
+  periodEnd: Date;
 }) {
-  const { tx, payrollRunId, payrollEntryId, employeeId } = params;
+  const { tx, payrollRunId, payrollEntryId, employeeId, periodEnd } = params;
   const now = new Date();
 
   const [unsettledIncentives, settledIncentives, unsettledCommissions, settledCommissions] = await Promise.all([
@@ -39,6 +40,7 @@ async function collectAndSettleVariablePay(params: {
         status: "APPROVED",
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
+        createdAt: { lte: periodEnd },
       },
       orderBy: { createdAt: "asc" },
       select: { id: true, projectRef: true, amount: true, reason: true },
@@ -59,6 +61,7 @@ async function collectAndSettleVariablePay(params: {
         status: "APPROVED",
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
+        createdAt: { lte: periodEnd },
       },
       orderBy: { createdAt: "asc" },
       select: { id: true, projectRef: true, amount: true, reason: true },
@@ -152,6 +155,33 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     );
   }
 
+  if (parsed.data.entries && parsed.data.entries.length > 0) {
+    const seen = new Set<string>();
+    for (const row of parsed.data.entries) {
+      const employeeId = sanitizeString(row.employeeId || "");
+      if (!employeeId) continue;
+      if (seen.has(employeeId)) {
+        return NextResponse.json(
+          { success: false, error: `Duplicate employee entry found in payroll run: ${employeeId}` },
+          { status: 400 },
+        );
+      }
+      seen.add(employeeId);
+    }
+
+    const employeeIds = Array.from(seen);
+    const knownEmployees = await prisma.employee.findMany({
+      where: { id: { in: employeeIds } },
+      select: { id: true },
+    });
+    if (knownEmployees.length !== employeeIds.length) {
+      return NextResponse.json(
+        { success: false, error: "One or more payroll entries reference unknown employees." },
+        { status: 400 },
+      );
+    }
+  }
+
   const data: Record<string, unknown> = {};
   if (parsed.data.periodStart) data.periodStart = new Date(parsed.data.periodStart);
   if (parsed.data.periodEnd) data.periodEnd = new Date(parsed.data.periodEnd);
@@ -225,6 +255,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
             payrollRunId: run.id,
             payrollEntryId: entry.id,
             employeeId: entry.employeeId,
+            periodEnd: run.periodEnd,
           });
 
           const entryIncentive = Number(entry.incentiveTotal || 0);

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { employeeCodeFromId } from "@/lib/employee-display";
+import { employeeDisplayLabel } from "@/lib/employee-display";
 
 type EmployeeOption = { id: string; name: string; email: string; baseSalary?: number };
 
@@ -154,6 +154,14 @@ function PayrollRunFormDialogInner({
     if (cleaned.length === 0) {
       toast.error("Add at least one valid payroll entry.");
       return;
+    }
+    const seen = new Set<string>();
+    for (const row of cleaned) {
+      if (seen.has(row.employeeId)) {
+        toast.error("Duplicate employee rows are not allowed in the same payroll run.");
+        return;
+      }
+      seen.add(row.employeeId);
     }
     const invalidNumbers = cleaned.some(
       (entry) =>
@@ -329,10 +337,17 @@ function PayrollRunFormDialogInner({
                   >
                     {employees.map((employee) => (
                       <option key={employee.id} value={employee.id}>
-                        {employeeCodeFromId(employee.id)} - {employee.name}
+                        {employeeDisplayLabel(employee)}
                       </option>
                     ))}
                   </select>
+                  <div className="text-xs text-muted-foreground">
+                    Profile salary:{" "}
+                    {Number(salaryByEmployeeId.get(entry.employeeId) || 0).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label>Base Salary</Label>

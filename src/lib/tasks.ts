@@ -94,7 +94,7 @@ export function computeNextTemplateRun(args: {
 
   const monthDiff =
     (fromMonth.getFullYear() - startMonth.getFullYear()) * 12 + (fromMonth.getMonth() - startMonth.getMonth());
-  let nextStep = Math.ceil(Math.max(0, monthDiff) / intervalValue) * intervalValue;
+  const nextStep = Math.ceil(Math.max(0, monthDiff) / intervalValue) * intervalValue;
 
   for (let i = 0; i < 120; i += 1) {
     const month = addMonths(startMonth, nextStep + i * intervalValue);

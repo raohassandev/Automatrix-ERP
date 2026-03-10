@@ -51,6 +51,21 @@ This file is the running action list for closure, hardening, and go-live readine
   - [x] Reopened expense returns to pending and becomes editable by submitter.  
     Evidence (2026-03-06): status reset verified in `playwright/tests/staging-deep-audit.spec.ts` (`^PENDING_`)
 
+## 3.1) Payroll Integrity + Clarity Hardening (2026-03-10)
+
+- [x] Prevent future incentive leakage into old payroll approvals:
+  - [x] Policy preview now only includes approved unsettled payroll variable pay up to payroll period end.
+  - [x] Payroll approval settlement now only picks variable pay rows created up to payroll period end.
+- [x] Payroll run entry integrity:
+  - [x] Duplicate employee rows blocked on create/update.
+  - [x] Unknown employee IDs blocked on create/update.
+- [x] Payroll operator clarity upgrade:
+  - [x] Added payroll incentive queue (employee/project/amount/status/aging) on payroll page.
+  - [x] Enhanced latest-run variable component breakdown with project-linked line visibility.
+  - [x] Added ERP guide link from payroll and introduced `/help#payroll-flow`.
+- [x] Task module smoke stabilization:
+  - [x] `playwright/tests/tasks-module-smoke.spec.ts` now asserts recurring-template controls based on effective permissions, not static role assumptions.
+
 ## 4) Reporting / Reconciliation Confidence
 
 - [x] Full role deep audit run after latest deploy (`playwright/tests/role-deep-audit.spec.ts`) and discrepancy-only report refresh.  

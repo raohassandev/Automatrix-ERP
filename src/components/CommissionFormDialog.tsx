@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { employeeDisplayLabel } from "@/lib/employee-display";
 
 type EmployeeOption = { id: string; name: string; email: string };
 type VendorOption = { id: string; name: string };
@@ -184,7 +185,7 @@ function CommissionFormDialogInner({
               >
                 {employees.map((employee) => (
                   <option key={employee.id} value={employee.id}>
-                    {employee.name} ({employee.email})
+                    {employeeDisplayLabel(employee)}
                   </option>
                 ))}
               </select>
