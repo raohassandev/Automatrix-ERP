@@ -197,7 +197,7 @@ export default async function PayrollPage({
             Employee Expense Report
           </Link>
           <Link
-            href="/help#payroll-flow"
+            href="/help#feature-payroll"
             className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
           >
             ERP Guide

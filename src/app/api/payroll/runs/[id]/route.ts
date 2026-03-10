@@ -205,7 +205,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   return NextResponse.json({ success: true, data: updated });
 }
 
-export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -217,19 +217,183 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   }
 
   const { id } = await context.params;
-  const existing = await prisma.payrollRun.findUnique({ where: { id } });
+  const url = new URL(req.url);
+  const forceDelete = ["1", "true", "yes"].includes(
+    String(url.searchParams.get("force") || "").toLowerCase(),
+  );
+  const confirmToken = String(url.searchParams.get("confirm") || "");
+
+  const existing = await prisma.payrollRun.findUnique({
+    where: { id },
+    include: {
+      entries: {
+        select: {
+          id: true,
+          employeeId: true,
+          status: true,
+          walletLedgerId: true,
+          expenseId: true,
+          deductions: true,
+          deductionReason: true,
+        },
+      },
+    },
+  });
   if (!existing) {
     return NextResponse.json({ success: false, error: "Payroll run not found" }, { status: 404 });
   }
 
-  const paidCount = await prisma.payrollEntry.count({
-    where: { payrollRunId: id, status: "PAID" },
-  });
-  if (paidCount > 0) {
+  const paidEntries = existing.entries.filter((entry) => String(entry.status || "").toUpperCase() === "PAID");
+
+  if (paidEntries.length > 0 && !forceDelete) {
     return NextResponse.json(
-      { success: false, error: "Cannot delete payroll run because one or more entries are already paid." },
+      {
+        success: false,
+        error:
+          "Cannot delete payroll run because one or more entries are already paid. Use force=1&confirm=FORCE_DELETE_PAYROLL with owner-level authority to reverse postings and delete.",
+      },
       { status: 400 },
     );
+  }
+
+  if (paidEntries.length > 0 && forceDelete) {
+    const [canApprove, canManageAccounting] = await Promise.all([
+      requirePermission(session.user.id, "payroll.approve"),
+      requirePermission(session.user.id, "accounting.manage"),
+    ]);
+
+    if (!canApprove || !canManageAccounting) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Force delete of paid payroll is restricted. payroll.approve + accounting.manage required.",
+        },
+        { status: 403 },
+      );
+    }
+
+    if (confirmToken !== "FORCE_DELETE_PAYROLL") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Force delete confirmation missing. Send confirm=FORCE_DELETE_PAYROLL.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const advanceRecoveryRows = paidEntries.filter((entry) => {
+      const deduction = Number(entry.deductions || 0);
+      if (deduction <= 0) return false;
+      return /advance/i.test(String(entry.deductionReason || ""));
+    });
+
+    if (advanceRecoveryRows.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Cannot force delete this payroll run because one or more paid entries include advance-recovery deductions. Reopen those recovery records first, then retry.",
+        },
+        { status: 400 },
+      );
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const entryIds = paidEntries.map((entry) => entry.id);
+
+        // Unsettle variable-pay records that were settled in this payroll run.
+        await tx.incentiveEntry.updateMany({
+          where: {
+            settledInPayrollRunId: id,
+            settledInPayrollEntryId: { in: entryIds },
+          },
+          data: {
+            settlementStatus: "UNSETTLED",
+            settledInPayrollRunId: null,
+            settledInPayrollEntryId: null,
+            settledAt: null,
+          },
+        });
+        await tx.commissionEntry.updateMany({
+          where: {
+            settledInPayrollRunId: id,
+            settledInPayrollEntryId: { in: entryIds },
+          },
+          data: {
+            settlementStatus: "UNSETTLED",
+            settledInPayrollRunId: null,
+            settledInPayrollEntryId: null,
+            settledAt: null,
+          },
+        });
+
+        for (const entry of paidEntries) {
+          const walletLedger =
+            entry.walletLedgerId
+              ? await tx.walletLedger.findUnique({
+                  where: { id: entry.walletLedgerId },
+                  select: { id: true, employeeId: true, amount: true },
+                })
+              : await tx.walletLedger.findFirst({
+                  where: { sourceType: "PAYROLL", sourceId: entry.id },
+                  select: { id: true, employeeId: true, amount: true },
+                });
+
+          if (walletLedger) {
+            const employee = await tx.employee.findUnique({
+              where: { id: walletLedger.employeeId },
+              select: { id: true, walletBalance: true },
+            });
+            if (!employee) {
+              throw new Error(`Employee not found for wallet reversal (${walletLedger.employeeId}).`);
+            }
+            const currentBalance = Number(employee.walletBalance || 0);
+            const rollbackAmount = Number(walletLedger.amount || 0);
+            if (currentBalance + 0.0001 < rollbackAmount) {
+              throw new Error(
+                `Cannot reverse payroll wallet posting for employee ${walletLedger.employeeId}: current wallet balance is lower than credited payroll amount.`,
+              );
+            }
+            await tx.employee.update({
+              where: { id: employee.id },
+              data: { walletBalance: new Prisma.Decimal(Number((currentBalance - rollbackAmount).toFixed(2))) },
+            });
+            await tx.walletLedger.delete({ where: { id: walletLedger.id } });
+          }
+
+          if (entry.expenseId) {
+            await tx.expense.deleteMany({
+              where: { id: entry.expenseId },
+            });
+          }
+        }
+
+        await tx.payrollComponentLine.deleteMany({ where: { payrollEntry: { payrollRunId: id } } });
+        await tx.payrollEntry.deleteMany({ where: { payrollRunId: id } });
+        await tx.payrollRun.delete({ where: { id } });
+      });
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: error instanceof Error ? error.message : "Failed to force-delete payroll run." },
+        { status: 400 },
+      );
+    }
+
+    await logAudit({
+      action: "FORCE_DELETE_PAYROLL_RUN",
+      entity: "PayrollRun",
+      entityId: id,
+      userId: session.user.id,
+      oldValue: JSON.stringify({
+        status: existing.status,
+        paidEntries: paidEntries.length,
+        forceDelete: true,
+      }),
+    });
+
+    return NextResponse.json({ success: true, forced: true, reversedEntries: paidEntries.length });
   }
 
   await prisma.payrollComponentLine.deleteMany({ where: { payrollEntry: { payrollRunId: id } } });

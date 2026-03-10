@@ -267,13 +267,15 @@ export const featureHelpCatalog: FeatureHelpDoc[] = [
   },
   {
     id: "payroll",
-    title: "Payroll",
+    title: "How Payroll Flow Works",
     summary: "Monthly payroll run for salary + variable pay + deductions with settlement posting.",
     procedure: [
       "Set base salary in each employee compensation profile.",
       "Create payroll run for previous month.",
       "Use Auto-fill by Policy, then fine-tune rows for special circumstances.",
-      "Approve run to post wallet credits and settle payroll-linked incentives.",
+      "Approve run to freeze/authorize payroll for that month.",
+      "Use Settle Entries to mark employees paid one-by-one after actual transfer.",
+      "Run moves to POSTED automatically when all entries are settled.",
     ],
     controls: [
       "Auto-fill policy pulls attendance, approved incentives/commissions, and advances.",
