@@ -90,8 +90,28 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     where: { department: existing.name },
   });
   if (employeeCount > 0) {
+    if (existing.isActive) {
+      const deactivated = await prisma.department.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      await logAudit({
+        action: "DEACTIVATE_DEPARTMENT_DELETE_BLOCKED",
+        entity: "Department",
+        entityId: existing.id,
+        oldValue: JSON.stringify(existing),
+        newValue: JSON.stringify({ isActive: false }),
+        reason: `Delete blocked due to ${employeeCount} linked employees.`,
+        userId: session.user.id,
+      });
+      return NextResponse.json({
+        success: true,
+        data: deactivated,
+        message: "Department has linked employees and was deactivated instead of deleted.",
+      });
+    }
     return NextResponse.json(
-      { success: false, error: "Department is assigned to employees. Update employees first." },
+      { success: false, error: "Department has linked employees and cannot be deleted. Keep it inactive." },
       { status: 400 }
     );
   }

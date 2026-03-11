@@ -90,8 +90,28 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     where: { designation: existing.name },
   });
   if (employeeCount > 0) {
+    if (existing.isActive) {
+      const deactivated = await prisma.designation.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      await logAudit({
+        action: "DEACTIVATE_DESIGNATION_DELETE_BLOCKED",
+        entity: "Designation",
+        entityId: existing.id,
+        oldValue: JSON.stringify(existing),
+        newValue: JSON.stringify({ isActive: false }),
+        reason: `Delete blocked due to ${employeeCount} linked employees.`,
+        userId: session.user.id,
+      });
+      return NextResponse.json({
+        success: true,
+        data: deactivated,
+        message: "Designation has linked employees and was deactivated instead of deleted.",
+      });
+    }
     return NextResponse.json(
-      { success: false, error: "Designation is assigned to employees. Update employees first." },
+      { success: false, error: "Designation has linked employees and cannot be deleted. Keep it inactive." },
       { status: 400 }
     );
   }
