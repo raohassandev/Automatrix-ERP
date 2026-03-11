@@ -19,6 +19,8 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { type RoleName } from "@/lib/permissions";
 import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
+import { CircleCheckBig, Download, ListFilter } from "lucide-react";
+import { TablePageSkeleton } from "@/components/PageSkeletons";
 
 const COLUMNS = [
   { key: 'date', label: 'Date', visible: true },
@@ -59,7 +61,7 @@ interface Expense {
 
 export default function ExpensesPage() {
   return (
-    <Suspense fallback={<div>Loading expenses...</div>}>
+    <Suspense fallback={<TablePageSkeleton />}>
       <ExpensesPageContent />
     </Suspense>
   );
@@ -216,14 +218,20 @@ function ExpensesPageContent() {
             <ColumnVisibilityToggle columns={columns} onVisibilityChange={setColumns} />
             <Link
               href={`/api/expenses/export?${searchParams.toString()}`}
-              className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+              title="Export CSV"
             >
-              Export CSV
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export CSV</span>
             </Link>
             {canCreate ? (
               <PageCreateButton label="Submit Expense" formType="expense" />
             ) : null}
           </div>
+        </div>
+        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <ListFilter className="h-3.5 w-3.5" />
+          Use filters to quickly separate pending approvals, own-pocket reimbursements, and paid items.
         </div>
         <div className="mt-6 grid gap-4 md:grid-cols-4">
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-4">
@@ -267,6 +275,7 @@ function ExpensesPageContent() {
                 }}
                 disabled={selectableApproved.length === 0}
               >
+                <CircleCheckBig className="mr-1 h-4 w-4" />
                 {allApprovedSelected ? "Clear Selected" : "Select All Eligible"}
               </Button>
               <Button

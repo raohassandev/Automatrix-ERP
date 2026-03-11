@@ -36,9 +36,8 @@
     "deploy:staging": "npm run typecheck && npm run build",
     "deploy:prod": "npm run typecheck && npm run test && npm run build",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:db:push": "prisma db push", 
-    "export:dev-zip": "mkdir -p exports && git archive --format=zip --output \"exports/AutomatrixERP-dev-$(date +%Y%m%d-%H%M%S).zip\" dev"
- 
+    "prisma:db:push": "prisma db push",
+"export:dev-zip": "mkdir -p exports && zip -r \"exports/AutomatrixERP-dev-$(date +%Y%m%d-%H%M%S).zip\" . -x \"node_modules/*\" \".git/*\" \"exports/*\" \".next/*\" \"dist/*\" \"build/*\" \".turbo/*\" \".cache/*\" \"*.log\"" 
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",

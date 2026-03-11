@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import Link from "next/link";
 import { MobileCard } from "@/components/MobileCard";
+import { BellRing, CalendarCheck2, CreditCard, HandCoins } from "lucide-react";
 
 function resolveExpenseAmount(expense: { status: string; amount: number | { toString(): string }; approvedAmount: number | { toString(): string } | null }) {
   if ((expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED" || expense.status === "PAID") && expense.approvedAmount) {
@@ -211,16 +212,32 @@ export default async function MyDashboardPage() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/expenses" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+          <Link
+            href="/expenses"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            <CreditCard className="h-4 w-4" />
             Submit Expense
           </Link>
-          <Link href="/wallets" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+          <Link
+            href="/wallets"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            <HandCoins className="h-4 w-4" />
             Wallet History
           </Link>
-          <Link href="/hrms/attendance" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+          <Link
+            href="/hrms/attendance"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            <CalendarCheck2 className="h-4 w-4" />
             Mark Attendance
           </Link>
-          <Link href="/hrms/leave" className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent">
+          <Link
+            href="/hrms/leave"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            <BellRing className="h-4 w-4" />
             Apply Leave
           </Link>
         </div>
