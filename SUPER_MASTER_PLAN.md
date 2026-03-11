@@ -424,7 +424,7 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
-### 11.1 Status Snapshot (As of 2026-03-11, updated after fast-track closure batch 18)
+### 11.1 Status Snapshot (As of 2026-03-11, updated after fast-track closure batch 23)
 
 Legend:
 - `[x]` Completed (target end-state achieved)
@@ -474,6 +474,11 @@ Snapshot note:
 - Fast-track closure batch 16 completed for implemented modules: approvals UX clarity (`Approved vs Paid`) and sticky action columns were hardened, project detail gained contract/recovery foreground strip, staging deep audits reran green, full postgreen gate reran green after test-harness stabilization, and staging test-artifact cleanup was re-executed with verification logs (`docs/STAGING_TEST_ARTIFACT_CLEANUP_20260309-100124.txt`).
 - Fast-track closure batch 17 completed for implemented modules: contextual flow help was embedded directly on Expenses, Incentives, and Project Detail pages (role-aware guidance + action-linked usage).
 - Fast-track closure batch 18 completed for implemented modules: project detail KPI duplication removed (single authoritative executive KPI strip), project switcher now supports in-place search filtering, and Project Financial dashboard color tokens were normalized for dark/light readability.
+- Fast-track closure batch 19 completed for implemented modules: immutable-delete hardening expanded (inventory item delete blocked when stock/history exists; employee delete converted to deactivate-first on linked history; salary-advance delete restricted to pending-only).
+- Fast-track closure batch 20 completed for implemented modules: project financial consistency verifier and reconciliation runbook commands were added (`verify:projects:financial-consistency`, `ops:projects:financials:dry`, `ops:projects:financials:apply`) with discrepancy evidence file for drift tracking.
+- Fast-track closure batch 21 completed for implemented modules: loading skeleton coverage expanded across finance/operations/people routes to reduce blank-wait states and improve perceived responsiveness on slow staging responses.
+- Fast-track closure batch 22 completed for implemented modules: vendor/client/commission deletion safeguards hardened further (vendor deactivate-first on linked records, client delete blocked on project/quotation links, commission delete restricted to pending-only).
+- Fast-track closure batch 23 completed for implemented modules: staging deep-audit/mobile-smoke Playwright specs switched to env-driven role credentials to eliminate stale hardcoded-login failures.
 - Remaining depth now continues under modules `19` and `20`.
 
 ### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05
