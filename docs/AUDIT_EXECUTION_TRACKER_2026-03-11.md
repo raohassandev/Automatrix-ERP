@@ -68,6 +68,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
   - 2026-03-11 progress: loading skeleton routes added for `wallets`, `incentives`, `salary-advances`, `company-accounts`, `approvals`, and `employees`.
   - 2026-03-11 progress: loading skeleton routes added for `income`, `invoices`, `inventory`, `procurement`, `vendors`, `clients`, `company-accounts/[id]`, and `employees/[id]`.
   - 2026-03-11 progress: loading skeleton routes added for `dashboard`, `settings`, `master-data`, `reports`, `audit`, `notifications`, `tasks`, `quotations`, `hrms/attendance`, and `hrms/leave`.
+  - 2026-03-12 progress: loading skeleton routes added across report sub-routes (`reports/accounting/*`, `reports/ap`, `reports/expenses`, `reports/projects`, `reports/procurement`, `reports/inventory`, `reports/wallets`, `reports/employee-expenses`, `reports/exceptions`, `reports/controls`).
 
 ### WS-6 Help and Procedure Layer (Major)
 - [x] Add contextual help button on payroll/incentives/expenses/projects pages.
