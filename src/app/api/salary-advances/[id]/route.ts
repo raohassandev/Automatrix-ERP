@@ -128,9 +128,10 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   if (!existing) {
     return NextResponse.json({ success: false, error: "Advance not found" }, { status: 404 });
   }
-  if (["PAID", "RECOVERED"].includes(String(existing.status || "").toUpperCase())) {
+  const status = String(existing.status || "").toUpperCase();
+  if (status !== "PENDING") {
     return NextResponse.json(
-      { success: false, error: "Paid or recovered advances cannot be deleted." },
+      { success: false, error: "Only PENDING advances can be deleted. Use recovery/adjustment workflow for approved or paid records." },
       { status: 400 },
     );
   }

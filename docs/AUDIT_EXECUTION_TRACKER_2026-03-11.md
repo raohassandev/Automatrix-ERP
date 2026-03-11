@@ -21,6 +21,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [~] Convert remaining destructive delete endpoints in implemented modules to reverse/void/close patterns.
   - 2026-03-11 progress: `inventory/[id] DELETE` now blocks deletion when stock exists or when any ledger/vendor-bill history exists.
   - 2026-03-11 progress: `employees/[id] DELETE` now enforces non-destructive behavior (auto-deactivate when linked records exist; delete only when orphan).
+  - 2026-03-11 progress: `salary-advances/[id] DELETE` now allows deletion only in `PENDING` state.
 - Evidence:
   - `src/app/api/payroll/runs/[id]/route.ts`
   - `src/app/api/invoices/[id]/route.ts`
