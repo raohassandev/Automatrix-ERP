@@ -59,6 +59,8 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [~] Fix contrast and card token consistency for dark/light themes.
 - [~] Normalize table/action alignment and overflow on desktop + mobile.
 - [~] Add loading states/skeletons for long-running forms/lists.
+  - 2026-03-11 progress: loading skeleton routes added for `wallets`, `incentives`, `salary-advances`, `company-accounts`, `approvals`, and `employees`.
+  - 2026-03-11 progress: loading skeleton routes added for `income`, `invoices`, `inventory`, `procurement`, `vendors`, `clients`, `company-accounts/[id]`, and `employees/[id]`.
 
 ### WS-6 Help and Procedure Layer (Major)
 - [x] Add contextual help button on payroll/incentives/expenses/projects pages.
