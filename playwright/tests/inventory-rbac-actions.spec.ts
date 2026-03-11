@@ -32,6 +32,7 @@ async function ensureStorageState(
 }
 
 test.describe.serial("Inventory RBAC actions", () => {
+  test.describe.configure({ timeout: 240_000 });
   test.setTimeout(180_000);
   let itemId = "";
   let itemName = "";

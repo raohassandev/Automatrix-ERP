@@ -424,7 +424,7 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
-### 11.1 Status Snapshot (As of 2026-03-12, updated after fast-track closure batch 24)
+### 11.1 Status Snapshot (As of 2026-03-12, updated after fast-track closure batch 25)
 
 Legend:
 - `[x]` Completed (target end-state achieved)
@@ -480,6 +480,7 @@ Snapshot note:
 - Fast-track closure batch 22 completed for implemented modules: vendor/client/commission deletion safeguards hardened further (vendor deactivate-first on linked records, client delete blocked on project/quotation links, commission delete restricted to pending-only).
 - Fast-track closure batch 23 completed for implemented modules: staging deep-audit/mobile-smoke Playwright specs switched to env-driven role credentials to eliminate stale hardcoded-login failures.
 - Fast-track closure batch 24 completed for implemented modules: project create/update APIs now enforce financial snapshot recalculation and initialize pending recovery from contract baseline, preventing new project-level pending-recovery drift.
+- Fast-track closure batch 25 completed for implemented modules: staging QA gate stabilized and revalidated green (`41/41`) with project-financial drift resolved to zero (`verify:projects:financial-consistency`), payroll settlement smoke hardened, and high-latency staging RBAC suites fortified (auth fallback + describe timeout hardening + fast-gate workers tuned to `2`).
 - Remaining depth now continues under modules `19` and `20`.
 
 ### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05

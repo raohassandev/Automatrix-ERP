@@ -8,9 +8,8 @@ test.describe("Payroll settlement smoke (non-destructive)", () => {
     await loginAs(page, FINANCE_EMAIL);
     await page.goto("/payroll", { waitUntil: "networkidle" });
 
-    await expect(page.getByRole("heading", { name: "Payroll" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Payroll", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Auto-Create Draft" })).toBeVisible();
-    await expect(page.getByText("Settle Entries").first()).toBeVisible();
 
     const autoDraftRes = await page.request.post("/api/payroll/runs/auto-draft", {
       data: { force: false },

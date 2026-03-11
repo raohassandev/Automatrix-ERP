@@ -37,6 +37,7 @@ async function ensureStorageState(
 }
 
 test.describe.serial("Project Work Hub actions (RBAC + mobile)", () => {
+  test.describe.configure({ timeout: 240_000 });
   test.setTimeout(180_000);
   let projectDbId = "";
   const states = {

@@ -53,6 +53,7 @@ async function ensureProjectUsersAssigned(
 }
 
 test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
+  test.describe.configure({ timeout: 240_000 });
   let vendorDbId = "";
   let vendorName = "";
   let itemDbId = "";
@@ -71,6 +72,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
   } as const;
 
   test.beforeAll(async ({ browser, baseURL }) => {
+    test.setTimeout(180_000);
     await ensureStorageState(browser, baseURL, ROLE_EMAILS.finance, states.finance);
     await ensureStorageState(browser, baseURL, ROLE_EMAILS.engineer, states.engineer);
     await ensureStorageState(browser, baseURL, ROLE_EMAILS.procurement, states.procurement);
@@ -158,7 +160,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto("/dashboard");
+      await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 30_000 });
       await expect(page.locator("aside").getByRole("link", { name: "Vendor Payments" })).toBeVisible();
       await ctx.close();
     }
@@ -167,7 +169,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     for (const role of ["procurement", "engineer", "store"] as const) {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
-      await page.goto("/dashboard");
+      await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 30_000 });
       await expect(page.locator("aside").getByRole("link", { name: "Vendor Payments" })).toHaveCount(0);
       await ctx.close();
     }
@@ -447,7 +449,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     for (const role of ["finance", "engineer", "sales", "store"] as const) {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
-      await page.goto("/me");
+      await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 30_000 });
       await expect(page).toHaveURL(/\/me/);
       await expect(page.locator("body")).toContainText(/my|wallet|leave|attendance|profile/i);
       await ctx.close();
@@ -457,7 +459,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     for (const role of ["engineer", "sales", "store"] as const) {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
-      await page.goto(`/employees/${otherUserId}`);
+      await page.goto(`/employees/${otherUserId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
       const denyText = page.getByText("You do not have access to employee details.").first();
       if (await denyText.count()) {
         await expect(denyText).toBeVisible();

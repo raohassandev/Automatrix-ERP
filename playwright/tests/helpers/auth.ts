@@ -29,11 +29,19 @@ export async function loginAs(page: Page, email: string, password = process.env.
     }
 
     const emailInput = page.getByPlaceholder("Email").first();
-    const passwordInput = page.getByPlaceholder("Password").first();
+    const passwordInput = page
+      .getByPlaceholder("Password")
+      .first()
+      .or(page.locator('input[type="password"]').first());
     const credentialsButton = page.getByRole("button", { name: /Sign in with Email|E2E Sign in/i }).first();
 
     await expect(emailInput).toBeVisible();
-    await expect(passwordInput).toBeVisible();
+    const hasPasswordField = await passwordInput.isVisible().catch(() => false);
+    if (!hasPasswordField) {
+      // Staging can intermittently render a partial login shell; retry auth loop instead of failing hard.
+      await page.waitForTimeout(400 * (authAttempt + 1));
+      continue;
+    }
     await expect(credentialsButton).toBeVisible();
     for (let attempt = 0; attempt < 6; attempt += 1) {
       await emailInput.click();

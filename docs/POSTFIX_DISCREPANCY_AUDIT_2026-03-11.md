@@ -1,36 +1,26 @@
 # Post-Fix Discrepancy Audit (Implemented Modules)
-Date: 2026-03-11
+Date: 2026-03-12
 Scope: Finance/Accounting, Inventory, Projects, Expense, Wallet/Advances, Payroll, Approvals, Settings/RBAC
+
+## Evidence Snapshot
+- `pnpm qa:staging:batch` result: `41/41` pass.
+- `pnpm verify:staging:effective-permissions`: `17 users`, `0 mismatch`.
+- `pnpm verify:projects:financial-consistency`: `drift 0`, `unresolved refs 0`.
+- Drift reconciliation executed once on legacy row: `pnpm ops:projects:financials:apply` (`AE-MON-CI-90` pending recovery baseline corrected).
 
 ## Open Discrepancies Only
 
-1. Major — Project financial cross-surface parity still needs full staging data verification
-- Areas: project list, project detail, project financial dashboard, reports exports.
-- Risk: totals can drift if real data uses mixed project aliases or legacy rows.
-- Required closure: run staging reconciliation checks on top projects and lock mismatch report to zero.
+1. Medium — Full destructive-endpoint closure is still partially open
+- Areas: remaining implemented-module `DELETE` surfaces that are operationally safe but still hard-delete in pending/non-posted states.
+- Risk: accidental historical cleanup outside intended reversal/void lifecycle.
+- Required closure: complete endpoint-by-endpoint conversion to deactivate/void/reopen patterns where business-critical history can exist.
 
-2. Major — UX consistency sweep is incomplete on overview pages
-- Areas: dashboard, my portal, expenses, financial dashboard card/table spacing and mobile overflow edge cases.
-- Risk: readability and action discoverability degrade for non-technical users.
-- Required closure: finish token standardization + mobile overflow normalization with screenshot evidence.
-
-3. Major — Loading states are not uniformly applied
-- Areas: long-running pages/forms (especially data-heavy list pages and reconciliation views).
-- Risk: users interpret slow state as broken state and retry actions.
-- Required closure: skeleton/loading indicators on all long-query pages and mutation submits.
-
-4. Medium — Remaining destructive patterns review not fully closed
-- Areas: implemented-module delete/void/reopen API surface.
-- Risk: accidental historical data loss in edge routes.
-- Required closure: complete endpoint inventory and convert all financial/posted delete paths to reversal or blocked policy.
-
-5. Medium — Automated deep audit local run currently blocked by stale test credential assumptions
-- Areas: Playwright bootstrap user (`finance1@automatrix.pk`) in local run profile.
-- Risk: false-negative CI/local audit confidence.
-- Required closure: align test credentials/env secrets or migrate specs to stable seeded account alias.
+2. Medium — Visual design consistency still needs one focused owner/portal polish pass
+- Areas: dashboard/portal card typography spacing and cross-theme emphasis hierarchy.
+- Risk: readability/comprehension debt for non-technical users.
+- Required closure: single UI token pass with screenshot signoff on owner + employee portal pages.
 
 ## Closed in this pass
-- Inline help flows: Expenses/Incentives/Project Detail.
-- Project Detail: removed duplicate KPI strip and added searchable project switcher.
-- Project Financial dashboard: dark/light token consistency improvements for summary and per-project cards.
-
+- Project financial drift reduced to zero and enforced in QA gate.
+- Payroll settlement smoke test stabilized (strict heading selector + deterministic assertions).
+- Staging RBAC/workhub suites hardened for real latency (auth fallback, describe-level timeout controls, lower-parallel fast suite worker model).

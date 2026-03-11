@@ -55,9 +55,10 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 ### WS-4 Project Financial Truthfulness (Major)
 - [~] Align project KPIs/list/details/reports for: contract, received, pending, cost-to-date, profit/margin.
   - 2026-03-12 progress: project create/update APIs now force snapshot recalculation; new projects initialize `pendingRecovery` from contract baseline to prevent zero-pending drift.
-- [~] Validate income/expense/project allocation links for real staging projects.
+- [x] Validate income/expense/project allocation links for real staging projects.
   - 2026-03-11 progress: added automated verifier `pnpm verify:projects:financial-consistency` to detect metric drift and unresolved project refs.
-  - Latest run: unresolved refs = `0`, drift candidates = `1` (`AE-MON-CI-90` pendingRecovery delta).
+  - 2026-03-12 progress: executed `pnpm ops:projects:financials:apply` to reconcile legacy drift candidate (`AE-MON-CI-90` pendingRecovery baseline).
+  - Latest run: unresolved refs = `0`, drift candidates = `0`.
   - Evidence snapshot: `docs/PROJECT_FINANCIAL_VERIFY_2026-03-11.md`.
   - 2026-03-12 progress: verifier is now part of `qa:staging:batch` (continuous check on every staging QA batch); strict fail mode available via `verify:projects:financial-consistency:strict`.
 - [x] Add missing budget/contract card in project executive summary (theme-safe).
@@ -70,6 +71,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
   - 2026-03-11 progress: loading skeleton routes added for `income`, `invoices`, `inventory`, `procurement`, `vendors`, `clients`, `company-accounts/[id]`, and `employees/[id]`.
   - 2026-03-11 progress: loading skeleton routes added for `dashboard`, `settings`, `master-data`, `reports`, `audit`, `notifications`, `tasks`, `quotations`, `hrms/attendance`, and `hrms/leave`.
   - 2026-03-12 progress: loading skeleton routes added across report sub-routes (`reports/accounting/*`, `reports/ap`, `reports/expenses`, `reports/projects`, `reports/procurement`, `reports/inventory`, `reports/wallets`, `reports/employee-expenses`, `reports/exceptions`, `reports/controls`).
+  - 2026-03-12 progress: staging-critical Playwright suite stability hardened for real staging latency (auth helper fallback, serial RBAC spec timeout tuning, lower-parallel worker mode in `test:staging:critical:fast`).
 
 ### WS-6 Help and Procedure Layer (Major)
 - [x] Add contextual help button on payroll/incentives/expenses/projects pages.
@@ -79,6 +81,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [x] Update `SUPER_MASTER_PLAN.md` snapshot with closed items and residuals.
 - [x] Publish discrepancy-only post-fix deep audit report.
   - 2026-03-11 progress: Playwright staging deep-audit/mobile-smoke specs switched to env-driven role credentials to avoid stale hardcoded login drift.
+  - 2026-03-12 progress: refreshed post-fix discrepancy audit with latest batch evidence and residual-only list.
 
 ## Current Batch (B1)
 Scope:

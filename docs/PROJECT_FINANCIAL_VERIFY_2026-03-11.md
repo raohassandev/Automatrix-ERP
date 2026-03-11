@@ -18,3 +18,11 @@ Command: `PROJECT_FINANCIAL_MAX=200 pnpm verify:projects:financial-consistency`
 1. Dry run: `pnpm ops:projects:financials:dry`
 2. Apply controlled update: `pnpm ops:projects:financials:apply`
 3. Re-verify: `pnpm verify:projects:financial-consistency`
+
+## Post-Reconciliation Verification (2026-03-12)
+- Command: `pnpm verify:projects:financial-consistency`
+- Result:
+  - projectCount: `5`
+  - driftCount: `0`
+  - unresolved income refs: `0`
+  - unresolved expense refs: `0`
