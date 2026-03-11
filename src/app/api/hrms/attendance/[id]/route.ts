@@ -75,12 +75,23 @@ export async function DELETE(_: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
   const { id } = await params;
-  await prisma.attendanceEntry.delete({ where: { id } });
+  const existing = await prisma.attendanceEntry.findUnique({ where: { id } });
+  if (!existing) {
+    return NextResponse.json({ success: false, error: "Attendance entry not found." }, { status: 404 });
+  }
+
   await logAudit({
-    action: "DELETE_ATTENDANCE",
+    action: "BLOCK_DELETE_ATTENDANCE_IMMUTABLE",
     entity: "AttendanceEntry",
     entityId: id,
+    reason: "Hard delete blocked. Use PATCH correction path to preserve HR audit trail.",
     userId: session.user.id,
   });
-  return NextResponse.json({ success: true });
+  return NextResponse.json(
+    {
+      success: false,
+      error: "Attendance entries are immutable. Use edit/correction instead of delete.",
+    },
+    { status: 400 },
+  );
 }
