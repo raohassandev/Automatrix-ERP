@@ -349,7 +349,7 @@ export async function POST(req: Request) {
     let approvedAmount: number | null = null;
 
     // Payment source governs accounting and payout lifecycle.
-    const paymentSource = sanitizedData.paymentSource || 'COMPANY_DIRECT';
+    const paymentSource = sanitizedData.paymentSource;
     let resolvedCompanyAccountId: string | null = null;
 
     // Owner personal expenses auto-approve and cannot use employee wallet.

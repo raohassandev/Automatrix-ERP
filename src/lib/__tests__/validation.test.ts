@@ -43,6 +43,7 @@ describe("validation schemas (business rules)", () => {
       category: "General",
       amount: 1,
       paymentMode: "Cash",
+      paymentSource: "COMPANY_DIRECT" as const,
       project: "",
     };
 

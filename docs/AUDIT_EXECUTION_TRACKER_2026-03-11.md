@@ -27,9 +27,10 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
   - `src/app/api/company-accounts/[id]/route.ts`
 
 ### WS-1 RBAC + Navigation Consistency (Critical)
-- [ ] Verify sidebar/mobile menu shows only permitted items for every active role template.
+- [x] Verify sidebar/mobile menu visibility by role matrix (`mobile-role-navigation`, `vendor-item-workhub-actions`).
+- [x] Verify effective permissions parity for active users (`verify:staging:effective-permissions`: 17 users, 0 mismatches).
 - [x] Ensure dashboard workspace/action links hide forbidden actions (avoid click-to-forbidden pattern).
-- [ ] Validate `/api/me/effective-permissions` parity with server route checks.
+- [x] Validate `/api/me/effective-permissions` parity with server route checks (no-override mismatch count: 0).
 
 ### WS-2 Payroll + Incentive Correctness (Critical)
 - [x] Reconcile payroll totals with approved + unsettled incentive entries (removed exclusion that hid entries by creation date cutoff).
@@ -38,7 +39,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [x] Make payout state auditable per employee and payroll run with settlement log trail on payroll page.
 
 ### WS-3 Wallet/Expense Source-of-Funds Integrity (Critical)
-- [ ] Enforce expense funding source (`COMPANY_ADVANCE` vs `OWN_POCKET`) as required.
+- [x] Enforce explicit expense funding source on every submission (no implicit fallback source).
 - [x] Block invalid own-pocket usage when wallet advance exists (with audit event on block).
 - [ ] Ensure approved vs paid reimbursement logic reflects correctly in dashboard + wallet ledger.
 
