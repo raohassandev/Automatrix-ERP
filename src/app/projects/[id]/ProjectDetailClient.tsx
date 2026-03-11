@@ -308,6 +308,14 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           </div>
           <div className="relative z-10 text-xs text-muted-foreground">
             Role: <span className="font-medium text-foreground">{detail.policy.role}</span>
+            <div className="mt-2">
+              <Link
+                href="/help#feature-projects"
+                className="inline-flex rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-accent"
+              >
+                Help
+              </Link>
+            </div>
             {detail.projectSwitcher.options.length > 1 ? (
               <div className="mt-3 w-full md:w-80">
                 <Label htmlFor="project-switcher" className="text-[11px] uppercase tracking-wide text-muted-foreground">

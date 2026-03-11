@@ -87,6 +87,12 @@ export default async function IncentivesPage({
             <div className="min-w-[220px]">
               <SearchInput placeholder="Search employee or project..." />
             </div>
+            <Link
+              href="/help#feature-incentives"
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              Help
+            </Link>
             {canEdit ? <IncentiveCreateButton employees={employees} /> : null}
           </div>
         </div>

@@ -55,7 +55,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [ ] Add loading states/skeletons for long-running forms/lists.
 
 ### WS-6 Help and Procedure Layer (Major)
-- [ ] Add contextual help button on payroll/incentives/expenses/projects pages.
+- [x] Add contextual help button on payroll/incentives/expenses/projects pages.
 - [ ] Provide concise “how this flow works” guidance, role aware and action linked.
 
 ### WS-7 Master Plan and Audit Sync (Major)

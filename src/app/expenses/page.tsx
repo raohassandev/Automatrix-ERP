@@ -224,6 +224,12 @@ function ExpensesPageContent() {
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Export CSV</span>
             </Link>
+            <Link
+              href="/help#feature-expenses"
+              className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+            >
+              Help
+            </Link>
             {canCreate ? (
               <PageCreateButton label="Submit Expense" formType="expense" />
             ) : null}
