@@ -17,11 +17,11 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [x] Disable destructive delete endpoint for project linked-record cleanup; allow only reversal/adjustment policy path.
 - [x] Restrict incentive deletion to `PENDING` only (no delete after approval).
 - [x] Block company-account deletion when any transactional references exist (deactivate-only policy).
-- [ ] Convert remaining destructive delete endpoints in implemented modules to reverse/void/close patterns.
 - [~] Convert remaining destructive delete endpoints in implemented modules to reverse/void/close patterns.
   - 2026-03-11 progress: `inventory/[id] DELETE` now blocks deletion when stock exists or when any ledger/vendor-bill history exists.
   - 2026-03-11 progress: `employees/[id] DELETE` now enforces non-destructive behavior (auto-deactivate when linked records exist; delete only when orphan).
   - 2026-03-11 progress: `salary-advances/[id] DELETE` now allows deletion only in `PENDING` state.
+  - 2026-03-11 progress: `commissions/[id] DELETE` now allows deletion only in `PENDING` state.
 - Evidence:
   - `src/app/api/payroll/runs/[id]/route.ts`
   - `src/app/api/invoices/[id]/route.ts`
@@ -50,7 +50,9 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 
 ### WS-4 Project Financial Truthfulness (Major)
 - [~] Align project KPIs/list/details/reports for: contract, received, pending, cost-to-date, profit/margin.
-- [ ] Validate income/expense/project allocation links for real staging projects.
+- [~] Validate income/expense/project allocation links for real staging projects.
+  - 2026-03-11 progress: added automated verifier `pnpm verify:projects:financial-consistency` to detect per-project metric drift and unresolved project refs in income/expense records.
+  - Latest run (local env sample): unresolved refs = `0`, drift candidates = `1` (`AE-MON-CI-90` pendingRecovery delta).
 - [x] Add missing budget/contract card in project executive summary (theme-safe).
 
 ### WS-5 UX/UI and Theme Sweep (Major)

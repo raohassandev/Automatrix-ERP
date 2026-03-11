@@ -444,6 +444,21 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ success: false, error: "Commission not found" }, { status: 404 });
   }
 
+  const status = String(existing.status || "").toUpperCase();
+  if (status !== "PENDING") {
+    await logAudit({
+      action: "BLOCK_DELETE_COMMISSION_NON_PENDING",
+      entity: "CommissionEntry",
+      entityId: id,
+      reason: `Delete blocked for status=${existing.status}`,
+      userId: session.user.id,
+    });
+    return NextResponse.json(
+      { success: false, error: "Only PENDING commissions can be deleted. Use correction workflow for approved entries." },
+      { status: 400 },
+    );
+  }
+
   if ((existing.settlementStatus || "UNSETTLED") === "SETTLED") {
     return NextResponse.json(
       { success: false, error: "Settled commissions cannot be deleted." },
