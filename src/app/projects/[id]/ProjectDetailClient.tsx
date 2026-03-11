@@ -388,6 +388,22 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
         </div>
       </div>
 
+      <details className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-primary">
+          Help: Project Flow
+        </summary>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+          <li>Use Switch Project to keep context while reviewing executive and execution details.</li>
+          <li>Executive cards summarize contract, cash in/out, recovery, and outstanding vendor pressure.</li>
+          <li>Activity tab shows chronological audited events for finance and operations.</li>
+          {workhubActions.create_po || workhubActions.receive_grn || workhubActions.create_vendor_bill ? (
+            <li>Use Actions menu for procurement flow only when role access is granted.</li>
+          ) : null}
+          {workhubActions.assign_people ? <li>Use Assign People to keep project scope and approvals role-safe.</li> : null}
+          <li>Use tabs to validate cross-module impact: activity, costs, inventory, people, execution, and documents.</li>
+        </ol>
+      </details>
+
       {detail.costs ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">

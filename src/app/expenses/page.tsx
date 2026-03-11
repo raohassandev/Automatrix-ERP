@@ -239,6 +239,18 @@ function ExpensesPageContent() {
           <ListFilter className="h-3.5 w-3.5" />
           Use filters to quickly separate pending approvals, own-pocket reimbursements, and paid items.
         </div>
+        <details className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-primary">
+            Help: Expense Flow
+          </summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+            <li>Select payment source first: company direct, company account, employee wallet, or own pocket.</li>
+            <li>Own-pocket expenses become reimbursement payable after approval, then move to paid when reimbursed.</li>
+            <li>Employee wallet expenses use issued advance and cannot be paid twice.</li>
+            <li>Use status + source filters to review pending approvals and reimbursement queues.</li>
+            {canMarkPaid ? <li>Use bulk reimburse paid only for approved payable entries.</li> : null}
+          </ol>
+        </details>
         <div className="mt-6 grid gap-4 md:grid-cols-4">
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-4">
             <div className="text-sm text-sky-700 dark:text-sky-300">Total (Page)</div>

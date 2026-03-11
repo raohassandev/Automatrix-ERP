@@ -99,6 +99,18 @@ export default async function IncentivesPage({
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <details className="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-primary">
+            Help: Incentive Flow
+          </summary>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+            <li>Create incentive against completed project with amount or formula basis.</li>
+            <li>Approve incentive after commercial confirmation.</li>
+            <li>`PAYROLL` payout remains unsettled until payroll settlement marks it paid.</li>
+            <li>`WALLET` payout settles on approval through wallet credit flow.</li>
+            <li>Use employee and project filters to verify due and settled variable pay.</li>
+          </ol>
+        </details>
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>

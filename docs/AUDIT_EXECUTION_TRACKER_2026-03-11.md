@@ -56,7 +56,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 
 ### WS-6 Help and Procedure Layer (Major)
 - [x] Add contextual help button on payroll/incentives/expenses/projects pages.
-- [ ] Provide concise “how this flow works” guidance, role aware and action linked.
+- [x] Provide concise “how this flow works” guidance, role aware and action linked.
 
 ### WS-7 Master Plan and Audit Sync (Major)
 - [ ] Update `SUPER_MASTER_PLAN.md` snapshot with closed items and residuals.
