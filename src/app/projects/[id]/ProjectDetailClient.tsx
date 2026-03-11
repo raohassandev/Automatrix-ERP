@@ -71,6 +71,7 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   const [incentiveDialogOpen, setIncentiveDialogOpen] = React.useState(false);
   const [incentiveBusyId, setIncentiveBusyId] = React.useState<string | null>(null);
   const [incentives, setIncentives] = React.useState(detail.incentives?.rows || []);
+  const [projectSwitchSearch, setProjectSwitchSearch] = React.useState("");
   const [projectSwitching, setProjectSwitching] = React.useState(false);
   const [taskForm, setTaskForm] = React.useState({
     title: "",
@@ -111,14 +112,14 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
   const canManageTasks = executionPermissions.canManage;
   const canUpdateExecutionTasks = executionPermissions.canManage || executionPermissions.canUpdateAssigned;
   const canReviewTasks = executionPermissions.canReview;
-  const recoveryRatePct =
-    detail.costs && detail.costs.contractValue > 0
-      ? (detail.costs.receivedAmount / detail.costs.contractValue) * 100
-      : 0;
-  const pendingRatePct =
-    detail.costs && detail.costs.contractValue > 0
-      ? (detail.costs.pendingRecovery / detail.costs.contractValue) * 100
-      : 0;
+  const projectSwitchOptions = React.useMemo(() => {
+    const query = projectSwitchSearch.trim().toLowerCase();
+    if (!query) return detail.projectSwitcher.options;
+    return detail.projectSwitcher.options.filter((row) => {
+      const haystack = `${row.projectId} ${row.name}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [detail.projectSwitcher.options, projectSwitchSearch]);
 
   async function updateIncentiveStatus(incentiveId: string, status: "APPROVED" | "REJECTED") {
     try {
@@ -321,6 +322,12 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 <Label htmlFor="project-switcher" className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Switch Project
                 </Label>
+                <Input
+                  value={projectSwitchSearch}
+                  onChange={(e) => setProjectSwitchSearch(e.target.value)}
+                  placeholder="Search project id or name..."
+                  className="mt-1 h-8 text-xs"
+                />
                 <select
                   id="project-switcher"
                   className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
@@ -333,12 +340,15 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                   }}
                   disabled={projectSwitching}
                 >
-                  {detail.projectSwitcher.options.map((row) => (
+                  {projectSwitchOptions.map((row) => (
                     <option key={row.id} value={row.id}>
                       {row.projectId} - {row.name}
                     </option>
                   ))}
                 </select>
+                {projectSwitchOptions.length === 0 ? (
+                  <p className="mt-1 text-[11px] text-muted-foreground">No matching project found for this filter.</p>
+                ) : null}
               </div>
             ) : null}
           </div>
@@ -403,32 +413,6 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           <li>Use tabs to validate cross-module impact: activity, costs, inventory, people, execution, and documents.</li>
         </ol>
       </details>
-
-      {detail.costs ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg border border-primary/30 bg-primary/10 p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-primary">Contract Amount</div>
-            <div className="mt-1 text-lg font-semibold text-foreground">{formatMoney(detail.costs.contractValue)}</div>
-          </div>
-          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Received</div>
-            <div className="mt-1 text-lg font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(detail.costs.receivedAmount)}</div>
-            <div className="text-xs text-emerald-700 dark:text-emerald-300">{recoveryRatePct.toFixed(1)}% of contract</div>
-          </div>
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200">Pending Recovery</div>
-            <div className="mt-1 text-lg font-semibold text-amber-900 dark:text-amber-100">{formatMoney(detail.costs.pendingRecovery)}</div>
-            <div className="text-xs text-amber-800 dark:text-amber-200">{pendingRatePct.toFixed(1)}% of contract</div>
-          </div>
-          <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">Recovery Health</div>
-            <div className="mt-1 text-lg font-semibold text-sky-900 dark:text-sky-100">
-              {(100 - Math.min(100, pendingRatePct)).toFixed(1)}%
-            </div>
-            <div className="text-xs text-sky-700 dark:text-sky-300">Lower pending ratio means stronger cash recovery</div>
-          </div>
-        </div>
-      ) : null}
 
       {detail.costs ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">

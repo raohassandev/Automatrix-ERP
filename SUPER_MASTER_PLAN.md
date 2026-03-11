@@ -424,7 +424,7 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
-### 11.1 Status Snapshot (As of 2026-03-09, updated after fast-track closure batch 16)
+### 11.1 Status Snapshot (As of 2026-03-11, updated after fast-track closure batch 18)
 
 Legend:
 - `[x]` Completed (target end-state achieved)
@@ -472,6 +472,8 @@ Snapshot note:
 - Fast-track closure batch 14 completed for implemented modules: staging test-artifact cleanup automation added/executed, wallet-balance re-sync guard added after cleanup, full postgreen regression rerun passed, and readiness audit published (`docs/STAGING_READINESS_AUDIT_2026-03-08.md`) with one legacy project reconciliation exception (`PV-89`).
 - Fast-track closure batch 15 completed for implemented modules: dashboard + my-portal UX was upgraded with executive cash-signal context, trend deltas vs last month, role-safe quick actions, and mobile-safe readability improvements.
 - Fast-track closure batch 16 completed for implemented modules: approvals UX clarity (`Approved vs Paid`) and sticky action columns were hardened, project detail gained contract/recovery foreground strip, staging deep audits reran green, full postgreen gate reran green after test-harness stabilization, and staging test-artifact cleanup was re-executed with verification logs (`docs/STAGING_TEST_ARTIFACT_CLEANUP_20260309-100124.txt`).
+- Fast-track closure batch 17 completed for implemented modules: contextual flow help was embedded directly on Expenses, Incentives, and Project Detail pages (role-aware guidance + action-linked usage).
+- Fast-track closure batch 18 completed for implemented modules: project detail KPI duplication removed (single authoritative executive KPI strip), project switcher now supports in-place search filtering, and Project Financial dashboard color tokens were normalized for dark/light readability.
 - Remaining depth now continues under modules `19` and `20`.
 
 ### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05

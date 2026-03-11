@@ -45,12 +45,12 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [x] Ensure approved vs paid reimbursement logic reflects correctly in dashboard cards via row-wise expense-state resolver.
 
 ### WS-4 Project Financial Truthfulness (Major)
-- [ ] Align project KPIs/list/details/reports for: contract, received, pending, cost-to-date, profit/margin.
+- [~] Align project KPIs/list/details/reports for: contract, received, pending, cost-to-date, profit/margin.
 - [ ] Validate income/expense/project allocation links for real staging projects.
-- [ ] Add missing budget/contract card in project executive summary (theme-safe).
+- [x] Add missing budget/contract card in project executive summary (theme-safe).
 
 ### WS-5 UX/UI and Theme Sweep (Major)
-- [ ] Fix contrast and card token consistency for dark/light themes.
+- [~] Fix contrast and card token consistency for dark/light themes.
 - [ ] Normalize table/action alignment and overflow on desktop + mobile.
 - [ ] Add loading states/skeletons for long-running forms/lists.
 

@@ -164,11 +164,11 @@ export default async function ProjectFinancialPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-sky-200/70 bg-gradient-to-br from-sky-50 via-white to-emerald-50 p-8 shadow-sm">
+      <div className="rounded-xl border border-primary/25 bg-gradient-to-br from-primary/10 via-card to-emerald-500/10 p-8 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Project Financial Dashboard</h1>
-            <p className="mt-2 text-slate-600">Live view of project cash in, cash out, recoveries, and risk signals.</p>
+            <p className="mt-2 text-muted-foreground">Live view of project cash in, cash out, recoveries, and risk signals.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="min-w-[220px]">
@@ -183,50 +183,56 @@ export default async function ProjectFinancialPage({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-7">
-        <Card className="border-emerald-200 bg-emerald-50/70">
+        <Card className="border-emerald-500/30 bg-emerald-500/10 dark:border-emerald-900/60 dark:bg-emerald-950/30">
           <CardHeader>
             <CardTitle>Total Contract Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600">{formatMoney(totalContractValue)}</p>
+            <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{formatMoney(totalContractValue)}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-rose-200 bg-rose-50/70">
+        <Card className="border-rose-500/30 bg-rose-500/10 dark:border-rose-900/60 dark:bg-rose-950/30">
           <CardHeader>
             <CardTitle>Total Costs</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-red-600">{formatMoney(totalCostToDate)}</p>
+            <p className="text-2xl font-bold text-rose-900 dark:text-rose-100">{formatMoney(totalCostToDate)}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-sky-200 bg-sky-50/70">
+        <Card className="border-sky-500/30 bg-sky-500/10 dark:border-sky-900/60 dark:bg-sky-950/30">
           <CardHeader>
             <CardTitle>Money In</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-blue-600">{formatMoney(totalReceived)}</p>
+            <p className="text-2xl font-bold text-sky-900 dark:text-sky-100">{formatMoney(totalReceived)}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-amber-200 bg-amber-50/70">
+        <Card className="border-amber-500/30 bg-amber-500/10 dark:border-amber-900/60 dark:bg-amber-950/30">
           <CardHeader>
             <CardTitle>Pending Recovery</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${totalPendingRecovery > 0 ? "text-amber-600" : "text-foreground"}`}>
+            <p className={`text-2xl font-bold ${totalPendingRecovery > 0 ? "text-amber-900 dark:text-amber-100" : "text-foreground"}`}>
               {formatMoney(totalPendingRecovery)}
             </p>
           </CardContent>
         </Card>
 
-        <Card className={totalGrossMargin >= 0 ? "border-emerald-200 bg-emerald-50/70" : "border-red-200 bg-red-50/70"}>
+        <Card
+          className={
+            totalGrossMargin >= 0
+              ? "border-emerald-500/30 bg-emerald-500/10 dark:border-emerald-900/60 dark:bg-emerald-950/30"
+              : "border-rose-500/30 bg-rose-500/10 dark:border-rose-900/60 dark:bg-rose-950/30"
+          }
+        >
           <CardHeader>
             <CardTitle>Current Profit</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${totalGrossMargin >= 0 ? "text-green-600" : "text-red-600"}`}>
+            <p className={`text-2xl font-bold ${totalGrossMargin >= 0 ? "text-emerald-900 dark:text-emerald-100" : "text-rose-900 dark:text-rose-100"}`}>
               {formatMoney(totalGrossMargin)}
             </p>
             <p className="text-sm text-muted-foreground">
@@ -234,22 +240,22 @@ export default async function ProjectFinancialPage({
             </p>
           </CardContent>
         </Card>
-        <Card className={totalOverdueRecovery > 0 ? "border-red-200 bg-red-50/70" : "border-slate-200 bg-slate-50/60"}>
+        <Card className={totalOverdueRecovery > 0 ? "border-rose-500/30 bg-rose-500/10 dark:border-rose-900/60 dark:bg-rose-950/30" : "border-border bg-muted/30"}>
           <CardHeader>
             <CardTitle>Overdue Recovery</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${totalOverdueRecovery > 0 ? "text-red-600" : "text-foreground"}`}>
+            <p className={`text-2xl font-bold ${totalOverdueRecovery > 0 ? "text-rose-900 dark:text-rose-100" : "text-foreground"}`}>
               {formatMoney(totalOverdueRecovery)}
             </p>
           </CardContent>
         </Card>
-        <Card className={highRiskCount > 0 ? "border-red-200 bg-red-50/70" : "border-slate-200 bg-slate-50/60"}>
+        <Card className={highRiskCount > 0 ? "border-rose-500/30 bg-rose-500/10 dark:border-rose-900/60 dark:bg-rose-950/30" : "border-border bg-muted/30"}>
           <CardHeader>
             <CardTitle>Cash Risk Projects</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${highRiskCount > 0 ? "text-red-600" : "text-foreground"}`}>
+            <p className={`text-2xl font-bold ${highRiskCount > 0 ? "text-rose-900 dark:text-rose-100" : "text-foreground"}`}>
               {highRiskCount}
             </p>
           </CardContent>
@@ -265,16 +271,23 @@ export default async function ProjectFinancialPage({
             project.invoicedAmount > 0 ? Math.min((project.receivedAmount / project.invoicedAmount) * 100, 100) : 0;
 
           return (
-            <Card key={project.id} className={isOverBudget ? "border-red-200 bg-red-50/10" : "border-slate-200"}>
+            <Card
+              key={project.id}
+              className={
+                isOverBudget
+                  ? "border-rose-500/30 bg-rose-500/10 dark:border-rose-900/60 dark:bg-rose-950/20"
+                  : "border-border bg-card/95"
+              }
+            >
               <CardHeader>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <CardTitle className="text-lg">{project.name}</CardTitle>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       {project.projectId} • {project.clientName || "Unknown client"}
                     </p>
                   </div>
-                  <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                  <span className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground">
                     {project.status.replaceAll("_", " ")}
                   </span>
                   <div className="text-right">
@@ -294,64 +307,64 @@ export default async function ProjectFinancialPage({
                     </span>
                   </div>
                   {project.contractValue > 0 ? (
-                    <Progress value={costPercentage} className={isOverBudget ? "bg-red-100" : ""} />
+                    <Progress value={costPercentage} className={isOverBudget ? "bg-rose-500/20" : ""} />
                   ) : (
-                    <div className="bg-gray-100 h-2 rounded">
+                    <div className="h-2 rounded bg-muted/40">
                       <div className="text-xs text-center text-muted-foreground pt-0.5">No budget set</div>
                     </div>
                   )}
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{costPercentage.toFixed(1)}% spent</span>
-                    {isOverBudget ? <span className="text-red-600 font-medium">Over Budget!</span> : null}
+                    {isOverBudget ? <span className="font-medium text-rose-700 dark:text-rose-300">Over Budget!</span> : null}
                   </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5 text-sm">
-                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
-                    <p className="text-xs text-emerald-800">Contract</p>
-                    <p className="font-semibold text-emerald-900">{formatMoney(project.contractValue)}</p>
+                  <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300">Contract</p>
+                    <p className="font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(project.contractValue)}</p>
                   </div>
-                  <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3">
-                    <p className="text-xs text-rose-800">Cost to date</p>
-                    <p className="font-semibold text-rose-900">{formatMoney(project.costToDate)}</p>
+                  <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 dark:border-rose-900/60 dark:bg-rose-950/30">
+                    <p className="text-xs text-rose-700 dark:text-rose-300">Cost to date</p>
+                    <p className="font-semibold text-rose-900 dark:text-rose-100">{formatMoney(project.costToDate)}</p>
                   </div>
-                  <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-3">
-                    <p className="text-xs text-sky-800">Money in</p>
-                    <p className="font-semibold text-sky-900">{formatMoney(project.receivedAmount)}</p>
+                  <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 dark:border-sky-900/60 dark:bg-sky-950/30">
+                    <p className="text-xs text-sky-700 dark:text-sky-300">Money in</p>
+                    <p className="font-semibold text-sky-900 dark:text-sky-100">{formatMoney(project.receivedAmount)}</p>
                   </div>
-                  <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
-                    <p className="text-xs text-amber-800">Pending recovery</p>
-                    <p className="font-semibold text-amber-900">{formatMoney(project.pendingRecovery)}</p>
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 dark:border-amber-900/60 dark:bg-amber-950/30">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">Pending recovery</p>
+                    <p className="font-semibold text-amber-900 dark:text-amber-100">{formatMoney(project.pendingRecovery)}</p>
                   </div>
                   <div
                     className={`rounded-lg border p-3 ${
                       project.grossMargin >= 0
-                        ? "border-emerald-200 bg-emerald-50/60"
-                        : "border-red-200 bg-red-50/70"
+                        ? "border-emerald-500/30 bg-emerald-500/10 dark:border-emerald-900/60 dark:bg-emerald-950/30"
+                        : "border-rose-500/30 bg-rose-500/10 dark:border-rose-900/60 dark:bg-rose-950/30"
                     }`}
                   >
-                    <p className="text-xs text-slate-700">Current profit</p>
-                    <p className="font-semibold">{formatMoney(project.grossMargin)}</p>
-                    <p className="text-xs text-slate-600">{project.marginPercent.toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground">Current profit</p>
+                    <p className="font-semibold text-foreground">{formatMoney(project.grossMargin)}</p>
+                    <p className="text-xs text-muted-foreground">{project.marginPercent.toFixed(1)}%</p>
                   </div>
                 </div>
 
                   {(project.negativeMargin || project.overdueRecoveryAmount > 0 || project.highVendorExposure) ? (
-                    <div className="rounded-md border border-amber-200 bg-amber-50/70 p-3">
-                      <div className="text-xs font-semibold text-amber-900">Cash Risk Signals</div>
+                    <div className="rounded-md border border-amber-500/35 bg-amber-500/10 p-3 dark:border-amber-900/60 dark:bg-amber-950/30">
+                      <div className="text-xs font-semibold text-amber-900 dark:text-amber-100">Cash Risk Signals</div>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
                         {project.negativeMargin ? (
-                          <span className="rounded-full bg-red-100 px-2 py-1 font-medium text-red-700">
+                          <span className="rounded-full bg-rose-500/15 px-2 py-1 font-medium text-rose-700 dark:text-rose-300">
                             Negative margin
                           </span>
                         ) : null}
                         {project.overdueRecoveryAmount > 0 ? (
-                          <span className="rounded-full bg-amber-100 px-2 py-1 font-medium text-amber-800">
+                          <span className="rounded-full bg-amber-500/15 px-2 py-1 font-medium text-amber-800 dark:text-amber-200">
                             Overdue recovery {formatMoney(project.overdueRecoveryAmount)} ({project.overdueInvoiceCount} invoice)
                           </span>
                         ) : null}
                         {project.highVendorExposure ? (
-                          <span className="rounded-full bg-orange-100 px-2 py-1 font-medium text-orange-800">
+                          <span className="rounded-full bg-orange-500/15 px-2 py-1 font-medium text-orange-800 dark:text-orange-200">
                             Vendor exposure high
                           </span>
                         ) : null}
@@ -369,13 +382,13 @@ export default async function ProjectFinancialPage({
                   {project.invoicedAmount > 0 ? (
                     <Progress value={recoveryPercent} />
                   ) : (
-                    <div className="bg-gray-100 h-2 rounded">
+                    <div className="h-2 rounded bg-muted/40">
                       <div className="text-xs text-center text-muted-foreground pt-0.5">No invoices yet</div>
                     </div>
                   )}
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{recoveryPercent.toFixed(1)}% recovered</span>
-                    {project.pendingRecovery > 0 ? <span className="text-amber-600 font-medium">Pending recovery</span> : null}
+                    {project.pendingRecovery > 0 ? <span className="font-medium text-amber-700 dark:text-amber-300">Pending recovery</span> : null}
                   </div>
                 </div>
 
