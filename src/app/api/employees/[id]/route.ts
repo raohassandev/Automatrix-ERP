@@ -93,6 +93,69 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   }
 
   const { id } = await context.params;
+  const employee = await prisma.employee.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      status: true,
+      _count: {
+        select: {
+          wallets: true,
+          incentives: true,
+          commissions: true,
+          payrollEntries: true,
+          salaryAdvances: true,
+          attendanceEntries: true,
+          leaveRequests: true,
+          journalLines: true,
+        },
+      },
+    },
+  });
+  if (!employee) {
+    return NextResponse.json({ success: false, error: "Employee not found" }, { status: 404 });
+  }
+
+  const linkedCount =
+    employee._count.wallets +
+    employee._count.incentives +
+    employee._count.commissions +
+    employee._count.payrollEntries +
+    employee._count.salaryAdvances +
+    employee._count.attendanceEntries +
+    employee._count.leaveRequests +
+    employee._count.journalLines;
+
+  if (linkedCount > 0) {
+    if ((employee.status || "").toUpperCase() !== "INACTIVE") {
+      await prisma.employee.update({
+        where: { id: employee.id },
+        data: { status: "INACTIVE" },
+      });
+      await logAudit({
+        action: "DEACTIVATE_EMPLOYEE_DELETE_BLOCKED",
+        entity: "Employee",
+        entityId: id,
+        reason: `Delete blocked due to linked records (${linkedCount}); employee deactivated instead.`,
+        userId: session.user.id,
+      });
+      return NextResponse.json({
+        success: true,
+        data: { deactivated: true },
+        message: "Employee has linked records and was deactivated instead of deleted.",
+      });
+    }
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Employee has linked records and cannot be deleted. Keep as INACTIVE.",
+      },
+      { status: 400 },
+    );
+  }
+
   await prisma.employee.delete({ where: { id } });
 
   await logAudit({
