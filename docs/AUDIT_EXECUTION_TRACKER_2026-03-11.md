@@ -53,16 +53,16 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 
 ### WS-5 UX/UI and Theme Sweep (Major)
 - [~] Fix contrast and card token consistency for dark/light themes.
-- [ ] Normalize table/action alignment and overflow on desktop + mobile.
-- [ ] Add loading states/skeletons for long-running forms/lists.
+- [~] Normalize table/action alignment and overflow on desktop + mobile.
+- [~] Add loading states/skeletons for long-running forms/lists.
 
 ### WS-6 Help and Procedure Layer (Major)
 - [x] Add contextual help button on payroll/incentives/expenses/projects pages.
 - [x] Provide concise “how this flow works” guidance, role aware and action linked.
 
 ### WS-7 Master Plan and Audit Sync (Major)
-- [ ] Update `SUPER_MASTER_PLAN.md` snapshot with closed items and residuals.
-- [ ] Publish discrepancy-only post-fix deep audit report.
+- [x] Update `SUPER_MASTER_PLAN.md` snapshot with closed items and residuals.
+- [x] Publish discrepancy-only post-fix deep audit report.
 
 ## Current Batch (B1)
 Scope:
