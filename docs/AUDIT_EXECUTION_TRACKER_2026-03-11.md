@@ -82,6 +82,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [x] Publish discrepancy-only post-fix deep audit report.
   - 2026-03-11 progress: Playwright staging deep-audit/mobile-smoke specs switched to env-driven role credentials to avoid stale hardcoded login drift.
   - 2026-03-12 progress: refreshed post-fix discrepancy audit with latest batch evidence and residual-only list.
+  - 2026-03-12 progress: published final implemented-scope auditor handoff report (`docs/IMPLEMENTED_MODULES_FINAL_AUDIT_2026-03-12.md`).
 
 ## Current Batch (B1)
 Scope:
