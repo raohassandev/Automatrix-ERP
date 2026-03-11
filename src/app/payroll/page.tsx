@@ -13,14 +13,6 @@ import { MobileCard } from "@/components/MobileCard";
 import { employeeCodeFromId } from "@/lib/employee-display";
 import Link from "next/link";
 
-function getPreviousMonthRange(now: Date) {
-  const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  const month = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
-  const start = new Date(year, month, 1);
-  const end = new Date(year, month + 1, 0);
-  return { start, end };
-}
-
 function ageInDays(value: Date) {
   const now = Date.now();
   const diff = now - value.getTime();
@@ -53,7 +45,6 @@ export default async function PayrollPage({
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 20;
   const skip = (page - 1) * take;
-  const previousRange = getPreviousMonthRange(new Date());
   const autoDraftDayRaw = Number(process.env.PAYROLL_AUTO_DRAFT_DAY || "1");
   const autoDraftDay = Number.isFinite(autoDraftDayRaw)
     ? Math.min(28, Math.max(1, Math.floor(autoDraftDayRaw)))
@@ -68,6 +59,8 @@ export default async function PayrollPage({
     settledIncentivePayrollAgg,
     openSalaryAdvanceAgg,
     incentiveQueueRows,
+    unpaidPayrollRows,
+    settlementAuditRows,
   ] =
     await Promise.all([
     prisma.payrollRun.findMany({
@@ -91,7 +84,6 @@ export default async function PayrollPage({
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
         status: "PENDING",
-        createdAt: { lte: previousRange.end },
       },
       _sum: { amount: true },
     }),
@@ -100,7 +92,6 @@ export default async function PayrollPage({
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
         status: "APPROVED",
-        createdAt: { lte: previousRange.end },
       },
       _sum: { amount: true },
     }),
@@ -121,11 +112,31 @@ export default async function PayrollPage({
       where: {
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
-        createdAt: { lte: previousRange.end },
       },
       include: { employee: { select: { id: true, name: true } } },
       orderBy: [{ status: "asc" }, { createdAt: "asc" }],
       take: 50,
+    }),
+    prisma.payrollEntry.findMany({
+      where: {
+        status: { not: "PAID" },
+        payrollRun: { status: { in: ["APPROVED", "POSTED"] } },
+      },
+      select: {
+        employeeId: true,
+        netPay: true,
+        payrollRun: { select: { periodStart: true, periodEnd: true } },
+        employee: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.auditLog.findMany({
+      where: {
+        action: {
+          in: ["MARK_PAYROLL_ENTRY_PAID", "CREATE_PAYROLL_RUN", "UPDATE_PAYROLL_RUN"],
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 80,
     }),
   ]);
 
@@ -148,6 +159,73 @@ export default async function PayrollPage({
   const latestRun = runs[0];
   const approvedQueueRows = incentiveQueueRows.filter((row) => row.status === "APPROVED");
   const pendingQueueRows = incentiveQueueRows.filter((row) => row.status !== "APPROVED");
+  const approvedUnsettledIncentiveByEmployee = approvedQueueRows.reduce(
+    (map, row) => {
+      const current = map.get(row.employeeId) || 0;
+      map.set(row.employeeId, current + Number(row.amount || 0));
+      return map;
+    },
+    new Map<string, number>(),
+  );
+  const payrollPayableByEmployee = unpaidPayrollRows.reduce(
+    (map, row) => {
+      const current = map.get(row.employeeId) || 0;
+      map.set(row.employeeId, current + Number(row.netPay || 0));
+      return map;
+    },
+    new Map<string, number>(),
+  );
+  const employeeIdsInPayable = Array.from(
+    new Set([...approvedUnsettledIncentiveByEmployee.keys(), ...payrollPayableByEmployee.keys()]),
+  );
+  const payableRows = employeeIdsInPayable
+    .map((employeeId) => {
+      const payrollDue = Number(payrollPayableByEmployee.get(employeeId) || 0);
+      const incentiveDue = Number(approvedUnsettledIncentiveByEmployee.get(employeeId) || 0);
+      const latestUnpaid = unpaidPayrollRows.find((row) => row.employeeId === employeeId);
+      const employeeName = latestUnpaid?.employee?.name || approvedQueueRows.find((row) => row.employeeId === employeeId)?.employee?.name || "Employee";
+      const oldestIncentive = approvedQueueRows
+        .filter((row) => row.employeeId === employeeId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+      const oldestAgeDays = oldestIncentive ? ageInDays(oldestIncentive.createdAt) : 0;
+      return {
+        employeeId,
+        employeeName,
+        payrollDue,
+        incentiveDue,
+        totalDue: Number((payrollDue + incentiveDue).toFixed(2)),
+        unpaidPayrollCount: unpaidPayrollRows.filter((row) => row.employeeId === employeeId).length,
+        approvedIncentiveCount: approvedQueueRows.filter((row) => row.employeeId === employeeId).length,
+        oldestIncentiveAgeDays: oldestAgeDays,
+      };
+    })
+    .filter((row) => row.totalDue > 0)
+    .sort((a, b) => b.totalDue - a.totalDue);
+  const settleLogs = settlementAuditRows.filter((row) => row.action === "MARK_PAYROLL_ENTRY_PAID");
+  const settleEntryIds = Array.from(new Set(settleLogs.map((row) => row.entityId).filter(Boolean)));
+  const settleActorIds = Array.from(new Set(settleLogs.map((row) => row.userId).filter(Boolean))) as string[];
+  const [settledEntries, settleActors] = await Promise.all([
+    settleEntryIds.length > 0
+      ? prisma.payrollEntry.findMany({
+          where: { id: { in: settleEntryIds } },
+          select: {
+            id: true,
+            employeeId: true,
+            employee: { select: { name: true } },
+            payrollRun: { select: { id: true, periodStart: true, periodEnd: true } },
+            netPay: true,
+          },
+        })
+      : Promise.resolve([]),
+    settleActorIds.length > 0
+      ? prisma.user.findMany({
+          where: { id: { in: settleActorIds } },
+          select: { id: true, name: true, email: true },
+        })
+      : Promise.resolve([]),
+  ]);
+  const settledEntryMap = new Map(settledEntries.map((row) => [row.id, row]));
+  const settleActorMap = new Map(settleActors.map((row) => [row.id, row]));
 
   return (
     <div className="grid gap-6">
@@ -240,10 +318,10 @@ export default async function PayrollPage({
             <span className="font-semibold">Pending incentives:</span> {formatMoney(pendingApprovalIncentive)} (not approved yet, excluded from payroll).
           </div>
           <div>
-            <span className="font-semibold">Ready incentives:</span> {formatMoney(approvedUnsettledIncentive)} (approved up to {previousRange.end.toLocaleDateString()}, settled on payroll approval).
+            <span className="font-semibold">Ready incentives:</span> {formatMoney(approvedUnsettledIncentive)} (all approved + unsettled payroll incentives).
           </div>
           <div>
-            <span className="font-semibold">Important:</span> Auto-fill policy now excludes future-created incentives from older payroll periods.
+            <span className="font-semibold">Important:</span> Auto-fill policy includes all approved unsettled incentives until they are settled.
           </div>
         </div>
         <div className="mt-3 rounded-lg border border-sky-300/35 bg-sky-500/10 p-3 text-xs text-sky-900 dark:text-sky-200">
@@ -251,8 +329,10 @@ export default async function PayrollPage({
           <span className="font-semibold"> Auto-Create Draft </span>
           for manual trigger and then fine-tune values before approval.
         </div>
-        <div className="mt-4 rounded-lg border border-primary/25 bg-primary/5 p-4">
-          <div className="text-sm font-semibold text-foreground">How Payroll Flow Works</div>
+        <details className="mt-4 rounded-lg border border-primary/25 bg-primary/5 p-4">
+          <summary className="cursor-pointer list-none text-sm font-semibold text-foreground">
+            Help: How Payroll Flow Works
+          </summary>
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
             <li>Set each employee base salary from Employee Profile.</li>
             <li>Create incentive against project and get it approved.</li>
@@ -263,13 +343,13 @@ export default async function PayrollPage({
             <li>Run auto-moves to <span className="font-semibold text-foreground">POSTED</span> when all entries are paid.</li>
             <li>Use Incentives page to verify settlement status and payroll page for monthly totals.</li>
           </ol>
-        </div>
+        </details>
         <div className="mt-4 rounded-lg border border-indigo-300/35 bg-indigo-500/10 p-4 dark:border-indigo-900/60 dark:bg-indigo-950/25">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div>
               <div className="text-sm font-semibold">Payroll Incentive Queue (Due)</div>
               <div className="text-xs text-muted-foreground">
-                Includes unsettled payroll incentives created on or before {previousRange.end.toLocaleDateString()}.
+                Includes all unsettled payroll incentives waiting for payroll settlement.
               </div>
             </div>
             <Link href="/incentives" className="text-xs font-medium text-primary underline underline-offset-2">
@@ -334,6 +414,145 @@ export default async function PayrollPage({
             </>
           )}
         </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Employee Payable Snapshot</h2>
+          <div className="text-xs text-muted-foreground">
+            Salary pending in approved/posted payroll + approved unsettled payroll incentives
+          </div>
+        </div>
+        {payableRows.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No open payroll/incentive payable found.</div>
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="py-2">Employee</th>
+                    <th className="py-2">Payroll Due</th>
+                    <th className="py-2">Incentive Due</th>
+                    <th className="py-2">Total Due</th>
+                    <th className="py-2">Unpaid Payroll Rows</th>
+                    <th className="py-2">Approved Incentives</th>
+                    <th className="py-2">Oldest Incentive Aging</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payableRows.map((row) => (
+                    <tr key={row.employeeId} className="border-b">
+                      <td className="py-2">
+                        <Link href={`/employees/${row.employeeId}`} className="font-medium text-primary underline underline-offset-2">
+                          {employeeCodeFromId(row.employeeId)} - {row.employeeName}
+                        </Link>
+                      </td>
+                      <td className="py-2">{formatMoney(row.payrollDue)}</td>
+                      <td className="py-2">{formatMoney(row.incentiveDue)}</td>
+                      <td className="py-2 font-semibold">{formatMoney(row.totalDue)}</td>
+                      <td className="py-2">{row.unpaidPayrollCount}</td>
+                      <td className="py-2">{row.approvedIncentiveCount}</td>
+                      <td className="py-2">{row.oldestIncentiveAgeDays} day(s)</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="space-y-2 md:hidden">
+              {payableRows.map((row) => (
+                <MobileCard
+                  key={row.employeeId}
+                  title={`${employeeCodeFromId(row.employeeId)} - ${row.employeeName}`}
+                  fields={[
+                    { label: "Payroll Due", value: formatMoney(row.payrollDue) },
+                    { label: "Incentive Due", value: formatMoney(row.incentiveDue) },
+                    { label: "Total Due", value: formatMoney(row.totalDue) },
+                    { label: "Unpaid Payroll Rows", value: row.unpaidPayrollCount.toString() },
+                    { label: "Approved Incentives", value: row.approvedIncentiveCount.toString() },
+                    { label: "Oldest Incentive", value: `${row.oldestIncentiveAgeDays} day(s)` },
+                  ]}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Payroll Settlement Audit Trail</h2>
+          <div className="text-xs text-muted-foreground">Latest employee-level payroll payment postings</div>
+        </div>
+        {settleLogs.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No payroll settlement logs found yet.</div>
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="py-2">Time</th>
+                    <th className="py-2">Employee</th>
+                    <th className="py-2">Run Period</th>
+                    <th className="py-2">Net Pay</th>
+                    <th className="py-2">Action By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {settleLogs.slice(0, 20).map((log) => {
+                    const row = settledEntryMap.get(log.entityId);
+                    const actor = log.userId ? settleActorMap.get(log.userId) : null;
+                    return (
+                      <tr key={log.id} className="border-b">
+                        <td className="py-2">{new Date(log.createdAt).toLocaleString()}</td>
+                        <td className="py-2">
+                          {row ? (
+                            <Link href={`/employees/${row.employeeId}`} className="font-medium text-primary underline underline-offset-2">
+                              {employeeCodeFromId(row.employeeId)} - {row.employee?.name || "Employee"}
+                            </Link>
+                          ) : (
+                            "Employee"
+                          )}
+                        </td>
+                        <td className="py-2">
+                          {row?.payrollRun
+                            ? `${new Date(row.payrollRun.periodStart).toLocaleDateString()} - ${new Date(row.payrollRun.periodEnd).toLocaleDateString()}`
+                            : "-"}
+                        </td>
+                        <td className="py-2">{row ? formatMoney(Number(row.netPay || 0)) : "-"}</td>
+                        <td className="py-2">{actor?.name || actor?.email || "User"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="space-y-2 md:hidden">
+              {settleLogs.slice(0, 20).map((log) => {
+                const row = settledEntryMap.get(log.entityId);
+                const actor = log.userId ? settleActorMap.get(log.userId) : null;
+                return (
+                  <MobileCard
+                    key={log.id}
+                    title={row ? `${employeeCodeFromId(row.employeeId)} - ${row.employee?.name || "Employee"}` : "Employee"}
+                    subtitle={new Date(log.createdAt).toLocaleString()}
+                    fields={[
+                      {
+                        label: "Run",
+                        value: row?.payrollRun
+                          ? `${new Date(row.payrollRun.periodStart).toLocaleDateString()} - ${new Date(row.payrollRun.periodEnd).toLocaleDateString()}`
+                          : "-",
+                      },
+                      { label: "Net Pay", value: row ? formatMoney(Number(row.netPay || 0)) : "-" },
+                      { label: "Action By", value: actor?.name || actor?.email || "User" },
+                    ]}
+                  />
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">

@@ -82,10 +82,21 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
   }
 
-  const inUse = await prisma.vendorPayment.count({ where: { companyAccountId: id } });
-  if (inUse > 0) {
+  const [vendorPaymentCount, incomeCount, expenseCount, walletEntryCount] = await Promise.all([
+    prisma.vendorPayment.count({ where: { companyAccountId: id } }),
+    prisma.income.count({ where: { companyAccountId: id } }),
+    prisma.expense.count({ where: { companyAccountId: id } }),
+    prisma.walletLedger.count({ where: { companyAccountId: id } }),
+  ]);
+  const totalReferences = vendorPaymentCount + incomeCount + expenseCount + walletEntryCount;
+
+  if (totalReferences > 0) {
     return NextResponse.json(
-      { success: false, error: "Cannot delete: account is referenced by vendor payments." },
+      {
+        success: false,
+        error:
+          "Cannot delete: account has transactional references. Deactivate it instead to preserve accounting history.",
+      },
       { status: 400 }
     );
   }
@@ -102,4 +113,3 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
 
   return NextResponse.json({ success: true });
 }
-

@@ -331,6 +331,20 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ success: false, error: "Incentive not found" }, { status: 404 });
   }
 
+  if (String(existing.status || "").toUpperCase() !== "PENDING") {
+    await logAudit({
+      action: "BLOCK_DELETE_INCENTIVE_NON_PENDING",
+      entity: "IncentiveEntry",
+      entityId: id,
+      reason: `Delete blocked for status=${existing.status}`,
+      userId: session.user.id,
+    });
+    return NextResponse.json(
+      { success: false, error: "Only PENDING incentives can be deleted. Use correction workflow for approved entries." },
+      { status: 400 },
+    );
+  }
+
   if ((existing.settlementStatus || "UNSETTLED") === "SETTLED") {
     return NextResponse.json(
       { success: false, error: "Settled incentives cannot be deleted." },

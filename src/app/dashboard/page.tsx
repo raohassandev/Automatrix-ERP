@@ -11,26 +11,63 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const canViewCeo = await requirePermission(session.user.id, "dashboard.view_all_metrics");
-  const canManageCompanyAccounts = await requirePermission(session.user.id, "company_accounts.manage");
-  const canViewProcurement = await requirePermission(session.user.id, "procurement.view_all");
-  const canEditProcurement = await requirePermission(session.user.id, "procurement.edit");
-  const canViewInventory = await requirePermission(session.user.id, "inventory.view");
-  const canViewApprovals = await requirePermission(session.user.id, "approvals.view_pending");
-  const canViewAllApprovals = await requirePermission(session.user.id, "approvals.view_all");
-  const canViewAudit = await requirePermission(session.user.id, "audit.view");
-  const canViewReportsOwn = await requirePermission(session.user.id, "reports.view_own");
-  const canViewReportsTeam = await requirePermission(session.user.id, "reports.view_team");
-  const canViewReportsAll = await requirePermission(session.user.id, "reports.view_all");
-  const canViewAccounting = await requirePermission(session.user.id, "accounting.view");
-  const canManageAccounting = await requirePermission(session.user.id, "accounting.manage");
-  const canViewOwnEmployees = await requirePermission(session.user.id, "employees.view_own");
-  const canViewAllEmployees = await requirePermission(session.user.id, "employees.view_all");
-  const canSubmitExpense = await requirePermission(session.user.id, "expenses.submit");
+  const [
+    canViewCeo,
+    canManageCompanyAccounts,
+    canViewProcurement,
+    canEditProcurement,
+    canViewInventory,
+    canViewApprovals,
+    canViewAllApprovals,
+    canViewAudit,
+    canViewReportsOwn,
+    canViewReportsTeam,
+    canViewReportsAll,
+    canViewAccounting,
+    canManageAccounting,
+    canViewOwnEmployees,
+    canViewAllEmployees,
+    canSubmitExpense,
+    canViewExpensesOwn,
+    canViewExpensesAll,
+    canEditWallet,
+    canViewPayroll,
+    canEditPayroll,
+    canApprovePayroll,
+    canViewTeamEmployees,
+  ] = await Promise.all([
+    requirePermission(session.user.id, "dashboard.view_all_metrics"),
+    requirePermission(session.user.id, "company_accounts.manage"),
+    requirePermission(session.user.id, "procurement.view_all"),
+    requirePermission(session.user.id, "procurement.edit"),
+    requirePermission(session.user.id, "inventory.view"),
+    requirePermission(session.user.id, "approvals.view_pending"),
+    requirePermission(session.user.id, "approvals.view_all"),
+    requirePermission(session.user.id, "audit.view"),
+    requirePermission(session.user.id, "reports.view_own"),
+    requirePermission(session.user.id, "reports.view_team"),
+    requirePermission(session.user.id, "reports.view_all"),
+    requirePermission(session.user.id, "accounting.view"),
+    requirePermission(session.user.id, "accounting.manage"),
+    requirePermission(session.user.id, "employees.view_own"),
+    requirePermission(session.user.id, "employees.view_all"),
+    requirePermission(session.user.id, "expenses.submit"),
+    requirePermission(session.user.id, "expenses.view_own"),
+    requirePermission(session.user.id, "expenses.view_all"),
+    requirePermission(session.user.id, "employees.edit_wallet"),
+    requirePermission(session.user.id, "payroll.view_all"),
+    requirePermission(session.user.id, "payroll.edit"),
+    requirePermission(session.user.id, "payroll.approve"),
+    requirePermission(session.user.id, "employees.view_team"),
+  ]);
 
   const canViewReports = canViewReportsOwn || canViewReportsTeam || canViewReportsAll;
   const canViewControls = canViewApprovals || canViewAllApprovals || canViewAudit;
   const canViewWorkspace = canViewOwnEmployees || canViewAllEmployees || canSubmitExpense;
+  const canOpenExpenses = canViewExpensesOwn || canViewExpensesAll;
+  const canOpenWallets = canViewOwnEmployees || canViewAllEmployees || canEditWallet;
+  const canOpenPayroll = canViewPayroll || canEditPayroll || canApprovePayroll;
+  const canOpenAttendance = canViewOwnEmployees || canViewTeamEmployees || canViewAllEmployees;
   const dashboardMetrics = await getDashboardDataEnhanced("THIS_MONTH");
   const netPositive = (dashboardMetrics?.netProfit || 0) >= 0;
   const pendingRisk = (dashboardMetrics?.pendingApprovals || 0) > 0 || (dashboardMetrics?.pendingRecovery || 0) > 0;
@@ -185,9 +222,11 @@ export default async function DashboardPage() {
                   Vendor Payments
                 </Link>
               ) : null}
-              <Link className="underline underline-offset-2" href="/reports/procurement">
-                Procurement Report
-              </Link>
+              {canViewReports ? (
+                <Link className="underline underline-offset-2" href="/reports/procurement">
+                  Procurement Report
+                </Link>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -202,9 +241,11 @@ export default async function DashboardPage() {
               <Link className="underline underline-offset-2" href="/inventory/ledger">
                 Stock Ledger
               </Link>
-              <Link className="underline underline-offset-2" href="/reports/inventory">
-                Inventory Report
-              </Link>
+              {canViewReports ? (
+                <Link className="underline underline-offset-2" href="/reports/inventory">
+                  Inventory Report
+                </Link>
+              ) : null}
               <Link className="underline underline-offset-2" href="/inventory/warehouses">
                 Warehouses
               </Link>
@@ -226,9 +267,11 @@ export default async function DashboardPage() {
                   Audit Log
                 </Link>
               ) : null}
-              <Link className="underline underline-offset-2" href="/reports/controls">
-                Exceptions Report
-              </Link>
+              {canViewReports ? (
+                <Link className="underline underline-offset-2" href="/reports/controls">
+                  Exceptions Report
+                </Link>
+              ) : null}
             </div>
           </div>
         ) : null}
@@ -266,18 +309,26 @@ export default async function DashboardPage() {
               <Link className="underline underline-offset-2" href="/me">
                 My Dashboard
               </Link>
-              <Link className="underline underline-offset-2" href="/wallets">
-                Wallets
-              </Link>
-              <Link className="underline underline-offset-2" href="/expenses">
-                Expenses
-              </Link>
-              <Link className="underline underline-offset-2" href="/payroll">
-                Payroll
-              </Link>
-              <Link className="underline underline-offset-2" href="/hrms/attendance">
-                HR Attendance
-              </Link>
+              {canOpenWallets ? (
+                <Link className="underline underline-offset-2" href="/wallets">
+                  Wallets
+                </Link>
+              ) : null}
+              {canOpenExpenses ? (
+                <Link className="underline underline-offset-2" href="/expenses">
+                  Expenses
+                </Link>
+              ) : null}
+              {canOpenPayroll ? (
+                <Link className="underline underline-offset-2" href="/payroll">
+                  Payroll
+                </Link>
+              ) : null}
+              {canOpenAttendance ? (
+                <Link className="underline underline-offset-2" href="/hrms/attendance">
+                  HR Attendance
+                </Link>
+              ) : null}
             </div>
           </div>
         ) : null}

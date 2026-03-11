@@ -195,6 +195,18 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       if (employee) {
         const availableAdvance = Number(employee.walletBalance) - Number(employee.walletHold || 0);
         if (availableAdvance > 0) {
+          await logAudit({
+            action: "BLOCK_EXPENSE_OWN_POCKET_WITH_ADVANCE",
+            entity: "Expense",
+            entityId: id,
+            reason: `Blocked own-pocket source update while available advance exists: ${availableAdvance}`,
+            userId: session.user.id,
+            newValue: JSON.stringify({
+              from: expense.paymentSource,
+              to: nextPaymentSource,
+              availableAdvance,
+            }),
+          });
           return NextResponse.json(
             {
               success: false,

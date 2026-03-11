@@ -108,6 +108,35 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ success: false, error: "Invoice not found" }, { status: 404 });
   }
 
+  if (String(existing.status || "").toUpperCase() !== "DRAFT") {
+    await logAudit({
+      action: "BLOCK_DELETE_INVOICE_POSTED",
+      entity: "Invoice",
+      entityId: id,
+      reason: `Delete blocked for non-draft invoice status=${existing.status}`,
+      userId: session.user.id,
+    });
+    return NextResponse.json(
+      { success: false, error: "Only DRAFT invoices can be deleted. Use reversal for issued/posted invoices." },
+      { status: 400 },
+    );
+  }
+
+  const linkedIncomeCount = await prisma.income.count({ where: { invoiceId: id } });
+  if (linkedIncomeCount > 0) {
+    await logAudit({
+      action: "BLOCK_DELETE_INVOICE_LINKED_RECEIPTS",
+      entity: "Invoice",
+      entityId: id,
+      reason: `Delete blocked due to ${linkedIncomeCount} linked receipt/income entries`,
+      userId: session.user.id,
+    });
+    return NextResponse.json(
+      { success: false, error: "Cannot delete invoice because receipts are linked. Use reversal workflow." },
+      { status: 400 },
+    );
+  }
+
   await prisma.invoice.delete({ where: { id } });
 
   await logAudit({

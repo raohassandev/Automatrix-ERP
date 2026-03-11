@@ -436,7 +436,6 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   const { id } = await context.params;
   const requestUrl = new URL(_req.url);
   const onConflict = requestUrl.searchParams.get("onConflict");
-  const confirmToken = (requestUrl.searchParams.get("confirm") || "").trim().toUpperCase();
   const project = await prisma.project.findUnique({
     where: { id },
     select: { id: true, projectId: true, name: true, status: true, endDate: true },
@@ -498,78 +497,21 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     }
 
     if (onConflict === "hard") {
-      const actingUser = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { role: { select: { name: true } } },
-      });
-      const sessionRole = normalizeRoleName((session.user as { role?: string | null }).role);
-      const roleName = normalizeRoleName(actingUser?.role?.name || sessionRole);
-      if (!isOwnerOrCeo(roleName)) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Only CEO/Owner can perform permanent hard delete for linked projects.",
-          },
-          { status: 403 },
-        );
-      }
-      if (confirmToken !== "DELETE_FOREVER") {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Hard delete confirmation missing. Send confirm=DELETE_FOREVER.",
-          },
-          { status: 400 },
-        );
-      }
-
-      let summary: HardDeleteSummary;
-      try {
-        summary = await prisma.$transaction((tx) =>
-          hardDeleteProjectCascade(
-            tx,
-            {
-              id: project.id,
-              projectId: project.projectId,
-              name: project.name,
-              status: project.status,
-              endDate: project.endDate,
-            },
-            aliases,
-          ),
-        );
-      } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-          return NextResponse.json(
-            {
-              success: false,
-              error:
-                "Hard delete failed due to linked records that are still protected. Contact system admin for cleanup.",
-            },
-            { status: 409 },
-          );
-        }
-        throw error;
-      }
-
       await logAudit({
-        action: "HARD_DELETE_PROJECT",
+        action: "BLOCK_HARD_DELETE_PROJECT",
         entity: "Project",
         entityId: id,
-        reason: `Hard deleted by ${roleName || "unknown role"} with ${linkedRecords} linked records`,
-        newValue: JSON.stringify(summary),
+        reason: `Hard delete disabled for linked projects (linkedRecords=${linkedRecords})`,
         userId: session.user.id,
       });
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          id,
-          action: "HARD_DELETED",
-          linkedRecords,
-          summary,
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Hard delete is disabled for linked projects. Close/archive the project and use reversal workflows for corrections.",
         },
-      });
+        { status: 400 },
+      );
     }
 
     await logAudit({
@@ -583,7 +525,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
       {
         success: false,
         error:
-          "Project cannot be deleted because it has linked records. Close it, or hard delete permanently (CEO/Owner only).",
+          "Project cannot be deleted because it has linked records. Close/archive it and use reversal workflows for corrections.",
       },
       { status: 409 },
     );
@@ -601,7 +543,7 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
         {
           success: false,
           error:
-            "Project has linked records and cannot be deleted. Close it, or hard delete permanently (CEO/Owner only).",
+            "Project has linked records and cannot be deleted. Close/archive it and use reversal workflows for corrections.",
         },
         { status: 409 },
       );

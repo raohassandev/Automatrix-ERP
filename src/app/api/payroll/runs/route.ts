@@ -26,6 +26,27 @@ function findDuplicateEmployeeId(entries: Array<{ employeeId: string }>) {
   return null;
 }
 
+function collectBaseSalaryOverrides(args: {
+  entries: Array<{ employeeId: string; baseSalary: number }>;
+  profileBaseByEmployee: Map<string, number>;
+}) {
+  const overrides: Array<{ employeeId: string; profileBase: number; enteredBase: number; delta: number }> = [];
+  for (const row of args.entries) {
+    const profileBase = Number(args.profileBaseByEmployee.get(row.employeeId) || 0);
+    const enteredBase = Number(row.baseSalary || 0);
+    const delta = Number((enteredBase - profileBase).toFixed(2));
+    if (Math.abs(delta) > 0.01) {
+      overrides.push({
+        employeeId: row.employeeId,
+        profileBase,
+        enteredBase,
+        delta,
+      });
+    }
+  }
+  return overrides;
+}
+
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -112,6 +133,20 @@ export async function POST(req: Request) {
       { status: 400 },
     );
   }
+  const compensationRows = await prisma.employeeCompensation.findMany({
+    where: { employeeId: { in: employeeIds } },
+    select: { employeeId: true, baseSalary: true },
+  });
+  const profileBaseByEmployee = new Map(
+    compensationRows.map((row) => [row.employeeId, Number(row.baseSalary || 0)]),
+  );
+  const baseSalaryOverrides = collectBaseSalaryOverrides({
+    entries: parsed.data.entries.map((entry) => ({
+      employeeId: sanitizeString(entry.employeeId),
+      baseSalary: Number(entry.baseSalary || 0),
+    })),
+    profileBaseByEmployee,
+  });
 
   let created;
   try {
@@ -154,7 +189,14 @@ export async function POST(req: Request) {
     action: "CREATE_PAYROLL_RUN",
     entity: "PayrollRun",
     entityId: created.id,
-    newValue: JSON.stringify(parsed.data),
+    newValue: JSON.stringify({
+      ...parsed.data,
+      baseSalaryOverrides,
+    }),
+    reason:
+      baseSalaryOverrides.length > 0
+        ? `Base salary overridden for ${baseSalaryOverrides.length} employee(s) compared to compensation profile`
+        : "Base salaries matched compensation profile",
     userId: session.user.id,
   });
 

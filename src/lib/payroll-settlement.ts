@@ -15,9 +15,8 @@ export async function collectAndSettleVariablePay(params: {
   payrollRunId: string;
   payrollEntryId: string;
   employeeId: string;
-  periodEnd: Date;
 }) {
-  const { tx, payrollRunId, payrollEntryId, employeeId, periodEnd } = params;
+  const { tx, payrollRunId, payrollEntryId, employeeId } = params;
   const now = new Date();
 
   const [unsettledIncentives, settledIncentives, unsettledCommissions, settledCommissions] = await Promise.all([
@@ -27,7 +26,6 @@ export async function collectAndSettleVariablePay(params: {
         status: "APPROVED",
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
-        createdAt: { lte: periodEnd },
       },
       orderBy: { createdAt: "asc" },
       select: { id: true, projectRef: true, amount: true, reason: true },
@@ -48,7 +46,6 @@ export async function collectAndSettleVariablePay(params: {
         status: "APPROVED",
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
-        createdAt: { lte: periodEnd },
       },
       orderBy: { createdAt: "asc" },
       select: { id: true, projectRef: true, amount: true, reason: true },
@@ -164,7 +161,6 @@ export async function settlePayrollEntry(params: {
     payrollRunId: run.id,
     payrollEntryId: entry.id,
     employeeId: entry.employeeId,
-    periodEnd: run.periodEnd,
   });
 
   const entryIncentive = Number(entry.incentiveTotal || 0);
@@ -332,4 +328,3 @@ export async function settlePayrollEntry(params: {
 
   return { entry: updatedEntry, runStatus };
 }
-

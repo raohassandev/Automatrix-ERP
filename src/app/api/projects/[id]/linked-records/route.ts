@@ -499,7 +499,7 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
     return NextResponse.json(
       {
         success: false,
-        error: "Only CEO/Owner can permanently delete linked records for a project.",
+        error: "Only CEO/Owner can manage linked-record correction workflows for a project.",
       },
       { status: 403 },
     );
@@ -508,246 +508,30 @@ export async function DELETE(req: Request, context: { params: Promise<{ id: stri
   const { id } = await context.params;
   const project = await prisma.project.findUnique({
     where: { id },
-    select: { id: true, projectId: true, name: true },
+    select: { id: true, projectId: true },
   });
   if (!project) {
     return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
   }
-  const aliases = buildProjectAliases(project);
 
   const body = await req.json().catch(() => ({}));
-  const type = String((body as { type?: string }).type || "").trim() as LinkedRecordType;
-  const recordId = String((body as { recordId?: string }).recordId || "").trim();
-  if (!type || !recordId) {
-    return NextResponse.json({ success: false, error: "type and recordId are required." }, { status: 400 });
-  }
-
-  let didFinancialMutation = false;
-
-  try {
-    await prisma.$transaction(async (tx) => {
-      switch (type) {
-        case "expense": {
-          const record = await tx.expense.findFirst({
-            where: { id: recordId, project: { in: aliases } },
-            select: { id: true, inventoryLedgerId: true, project: true },
-          });
-          if (!record) throw new Error("Linked expense not found for this project.");
-          await tx.approval.deleteMany({ where: { expenseId: record.id } });
-          await deleteJournalEntriesBySource(tx, "EXPENSE", record.id);
-          await tx.attachment.deleteMany({ where: { recordId: record.id } });
-          await tx.expense.delete({ where: { id: record.id } });
-          if (record.inventoryLedgerId) {
-            const ledger = await tx.inventoryLedger.findUnique({
-              where: { id: record.inventoryLedgerId },
-              select: { id: true, itemId: true },
-            });
-            await tx.expense.updateMany({
-              where: { inventoryLedgerId: record.inventoryLedgerId },
-              data: { inventoryLedgerId: null },
-            });
-            if (ledger) {
-              await tx.inventoryLedger.delete({ where: { id: ledger.id } });
-              await recalcInventoryItemFromLedger(tx, ledger.itemId);
-            }
-          }
-          didFinancialMutation = true;
-          break;
-        }
-        case "income": {
-          const record = await tx.income.findFirst({
-            where: { id: recordId, project: { in: aliases } },
-            select: { id: true },
-          });
-          if (!record) throw new Error("Linked income not found for this project.");
-          await tx.approval.deleteMany({ where: { incomeId: record.id } });
-          await deleteJournalEntriesBySource(tx, "INCOME", record.id);
-          await tx.attachment.deleteMany({ where: { recordId: record.id } });
-          await tx.income.delete({ where: { id: record.id } });
-          didFinancialMutation = true;
-          break;
-        }
-        case "invoice": {
-          const record = await tx.invoice.findFirst({
-            where: { id: recordId, projectId: { in: aliases } },
-            select: { id: true },
-          });
-          if (!record) throw new Error("Linked invoice not found for this project.");
-          await deleteJournalEntriesBySource(tx, "INVOICE", record.id);
-          await tx.attachment.deleteMany({ where: { recordId: record.id } });
-          await tx.invoice.delete({ where: { id: record.id } });
-          didFinancialMutation = true;
-          break;
-        }
-        case "purchaseOrder": {
-          const record = await tx.purchaseOrder.findFirst({
-            where: { id: recordId, projectRef: { in: aliases } },
-            select: { id: true },
-          });
-          if (!record) throw new Error("Linked purchase order not found for this project.");
-          const grnCount = await tx.goodsReceipt.count({ where: { purchaseOrderId: record.id } });
-          if (grnCount > 0) {
-            throw new Error("Delete linked GRNs for this PO first.");
-          }
-          await tx.purchaseOrderItem.deleteMany({ where: { purchaseOrderId: record.id } });
-          await tx.attachment.deleteMany({ where: { recordId: record.id } });
-          await tx.purchaseOrder.delete({ where: { id: record.id } });
-          didFinancialMutation = true;
-          break;
-        }
-        case "goodsReceipt": {
-          const record = await tx.goodsReceipt.findFirst({
-            where: {
-              id: recordId,
-              OR: [{ projectRef: { in: aliases } }, { purchaseOrder: { projectRef: { in: aliases } } }],
-            },
-            select: {
-              id: true,
-              items: { select: { id: true } },
-            },
-          });
-          if (!record) throw new Error("Linked goods receipt not found for this project.");
-          const grnItemIds = record.items.map((item) => item.id);
-          if (grnItemIds.length > 0) {
-            const linkedBillLines = await tx.vendorBillLine.count({ where: { grnItemId: { in: grnItemIds } } });
-            if (linkedBillLines > 0) {
-              throw new Error("Delete linked vendor bill lines (or bills) before deleting this GRN.");
-            }
-          }
-          const stockRows = await tx.inventoryLedger.findMany({
-            where: { sourceType: "GRN", sourceId: record.id },
-            select: { id: true, itemId: true },
-          });
-          if (stockRows.length > 0) {
-            await tx.inventoryLedger.deleteMany({
-              where: { id: { in: stockRows.map((row) => row.id) } },
-            });
-            for (const row of stockRows) {
-              await recalcInventoryItemFromLedger(tx, row.itemId);
-            }
-          }
-          await tx.goodsReceiptItem.deleteMany({ where: { goodsReceiptId: record.id } });
-          await tx.attachment.deleteMany({ where: { recordId: record.id } });
-          await tx.goodsReceipt.delete({ where: { id: record.id } });
-          didFinancialMutation = true;
-          break;
-        }
-        case "vendorBill": {
-          const record = await tx.vendorBill.findFirst({
-            where: { id: recordId, projectRef: { in: aliases } },
-            select: { id: true },
-          });
-          if (!record) throw new Error("Linked vendor bill not found for this project.");
-          const allocCount = await tx.vendorPaymentAllocation.count({ where: { vendorBillId: record.id } });
-          if (allocCount > 0) {
-            throw new Error("Delete linked vendor payment allocations first.");
-          }
-          await deleteJournalEntriesBySource(tx, "VENDOR_BILL", record.id);
-          await tx.vendorBillLine.deleteMany({ where: { vendorBillId: record.id } });
-          await tx.attachment.deleteMany({ where: { recordId: record.id } });
-          await tx.vendorBill.delete({ where: { id: record.id } });
-          didFinancialMutation = true;
-          break;
-        }
-        case "vendorPayment": {
-          const record = await tx.vendorPayment.findFirst({
-            where: { id: recordId, projectRef: { in: aliases } },
-            select: { id: true },
-          });
-          if (!record) throw new Error("Linked vendor payment not found for this project.");
-          await tx.vendorPaymentAllocation.deleteMany({ where: { vendorPaymentId: record.id } });
-          await deleteJournalEntriesBySource(tx, "VENDOR_PAYMENT", record.id);
-          await tx.attachment.deleteMany({ where: { recordId: record.id } });
-          await tx.vendorPayment.delete({ where: { id: record.id } });
-          didFinancialMutation = true;
-          break;
-        }
-        case "inventoryLedger": {
-          const record = await tx.inventoryLedger.findFirst({
-            where: { id: recordId, project: { in: aliases } },
-            select: { id: true, itemId: true },
-          });
-          if (!record) throw new Error("Linked inventory ledger entry not found for this project.");
-          await tx.expense.updateMany({
-            where: { inventoryLedgerId: record.id },
-            data: { inventoryLedgerId: null },
-          });
-          await tx.inventoryLedger.delete({ where: { id: record.id } });
-          await recalcInventoryItemFromLedger(tx, record.itemId);
-          didFinancialMutation = true;
-          break;
-        }
-        case "manualJournalLine": {
-          const record = await tx.journalLine.findFirst({
-            where: { id: recordId, projectId: project.id },
-            select: { id: true },
-          });
-          if (!record) throw new Error("Linked manual journal line not found for this project.");
-          await tx.journalLine.update({
-            where: { id: record.id },
-            data: { projectId: null },
-          });
-          didFinancialMutation = true;
-          break;
-        }
-        case "quotation": {
-          const record = await tx.quotation.findFirst({
-            where: { id: recordId, projectRef: { in: aliases } },
-            select: { id: true },
-          });
-          if (!record) throw new Error("Linked quotation not found for this project.");
-          await tx.quotationLineItem.deleteMany({ where: { quotationId: record.id } });
-          await tx.attachment.deleteMany({ where: { recordId: record.id } });
-          await tx.quotation.delete({ where: { id: record.id } });
-          break;
-        }
-        case "incentive": {
-          const record = await tx.incentiveEntry.findFirst({
-            where: { id: recordId, projectRef: { in: aliases } },
-            select: { id: true },
-          });
-          if (!record) throw new Error("Linked incentive not found for this project.");
-          await tx.incentiveEntry.delete({ where: { id: record.id } });
-          didFinancialMutation = true;
-          break;
-        }
-        case "commission": {
-          const record = await tx.commissionEntry.findFirst({
-            where: { id: recordId, projectRef: { in: aliases } },
-            select: { id: true },
-          });
-          if (!record) throw new Error("Linked commission not found for this project.");
-          await tx.commissionEntry.delete({ where: { id: record.id } });
-          didFinancialMutation = true;
-          break;
-        }
-        default:
-          throw new Error("Unsupported linked record type.");
-      }
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to delete linked record";
-    return NextResponse.json({ success: false, error: message }, { status: 400 });
-  }
-
-  if (didFinancialMutation) {
-    await recalculateProjectFinancials(project.projectId);
-  }
+  const type = String((body as { type?: string }).type || "").trim() || "UNKNOWN";
+  const recordId = String((body as { recordId?: string }).recordId || "").trim() || "UNKNOWN";
 
   await logAudit({
-    action: "DELETE_LINKED_PROJECT_RECORD",
+    action: "BLOCK_DELETE_LINKED_PROJECT_RECORD",
     entity: "Project",
     entityId: project.id,
-    reason: `Deleted linked record ${type}:${recordId}`,
+    reason: `Blocked destructive delete request for linked record ${type}:${recordId}`,
     userId: session.user.id,
   });
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      type,
-      recordId,
-      deleted: true,
+  return NextResponse.json(
+    {
+      success: false,
+      error:
+        "Permanent delete of linked project records is disabled by policy. Use reversal/void/adjustment workflows to correct data.",
     },
-  });
+    { status: 400 },
+  );
 }

@@ -429,6 +429,18 @@ export async function POST(req: Request) {
       }
     }
     if (paymentSource === "EMPLOYEE_POCKET" && availableAdvance > 0) {
+      await logAudit({
+        action: "BLOCK_EXPENSE_OWN_POCKET_WITH_ADVANCE",
+        entity: "Expense",
+        entityId: "NEW",
+        reason: `Blocked own-pocket expense while available advance exists: ${availableAdvance}`,
+        userId: session.user.id,
+        newValue: JSON.stringify({
+          paymentSource,
+          availableAdvance,
+          amount: sanitizedData.amount,
+        }),
+      });
       return NextResponse.json(
         {
           success: false,
