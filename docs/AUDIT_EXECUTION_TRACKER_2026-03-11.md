@@ -23,6 +23,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
   - 2026-03-11 progress: `salary-advances/[id] DELETE` now allows deletion only in `PENDING` state.
   - 2026-03-11 progress: `commissions/[id] DELETE` now allows deletion only in `PENDING` state.
   - 2026-03-11 progress: `vendors/[id] DELETE` now auto-deactivates when linked records exist; hard-delete only when orphan.
+  - 2026-03-11 progress: `clients/[id] DELETE` now blocks deletion when linked projects or quotations exist.
 - Evidence:
   - `src/app/api/payroll/runs/[id]/route.ts`
   - `src/app/api/invoices/[id]/route.ts`

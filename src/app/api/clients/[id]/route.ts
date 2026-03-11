@@ -67,10 +67,17 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   }
 
   const { id } = await context.params;
-  const projectCount = await prisma.project.count({ where: { clientId: id } });
-  if (projectCount > 0) {
+  const [projectCount, quotationCount] = await Promise.all([
+    prisma.project.count({ where: { clientId: id } }),
+    prisma.quotation.count({ where: { clientId: id } }),
+  ]);
+  if (projectCount > 0 || quotationCount > 0) {
     return NextResponse.json(
-      { success: false, error: "Client has active projects. Reassign or delete projects first." },
+      {
+        success: false,
+        error:
+          "Client has linked records (projects or quotations). Reassign/archive linked records first.",
+      },
       { status: 400 }
     );
   }
