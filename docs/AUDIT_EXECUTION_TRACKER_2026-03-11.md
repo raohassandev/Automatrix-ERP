@@ -42,7 +42,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [x] Enforce explicit expense funding source on every submission (no implicit fallback source).
 - [x] Block invalid own-pocket usage when wallet advance exists (with audit event on block).
 - [x] Fix My Portal reimbursement cards to use row-wise approved-vs-submitted amount resolution (avoid aggregate drift).
-- [ ] Ensure approved vs paid reimbursement logic reflects correctly in dashboard + wallet ledger.
+- [x] Ensure approved vs paid reimbursement logic reflects correctly in dashboard cards via row-wise expense-state resolver.
 
 ### WS-4 Project Financial Truthfulness (Major)
 - [ ] Align project KPIs/list/details/reports for: contract, received, pending, cost-to-date, profit/margin.

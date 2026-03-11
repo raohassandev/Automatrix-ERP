@@ -25,6 +25,22 @@ async function getDashboardAccess() {
   };
 }
 
+function resolveExpenseMetricAmount(expense: {
+  status: string;
+  amount: number | { toString(): string };
+  approvedAmount: number | { toString(): string } | null;
+}) {
+  if (
+    (expense.status === "APPROVED" ||
+      expense.status === "PARTIALLY_APPROVED" ||
+      expense.status === "PAID") &&
+    expense.approvedAmount
+  ) {
+    return Number(expense.approvedAmount);
+  }
+  return Number(expense.amount);
+}
+
 export async function getChartData() {
   const access = await getDashboardAccess();
   if (!access) return [];
@@ -173,6 +189,8 @@ export async function getDashboardDataEnhanced(
     incomeCount,
     prevMonthIncomeSum,
     prevMonthExpenseSum,
+    pocketReimbursementDueRows,
+    pocketReimbursementPaidRows,
   ] = await Promise.all([
     prisma.expense.aggregate({ 
       _sum: { amount: true },
@@ -237,6 +255,24 @@ export async function getDashboardDataEnhanced(
         ...expenseWhere,
       },
     }),
+    prisma.expense.findMany({
+      where: {
+        ...dateFilter,
+        ...expenseWhere,
+        paymentSource: "EMPLOYEE_POCKET",
+        status: { in: ["APPROVED", "PARTIALLY_APPROVED"] },
+      },
+      select: { amount: true, approvedAmount: true, status: true },
+    }),
+    prisma.expense.findMany({
+      where: {
+        ...dateFilter,
+        ...expenseWhere,
+        paymentSource: "EMPLOYEE_POCKET",
+        status: "PAID",
+      },
+      select: { amount: true, approvedAmount: true, status: true },
+    }),
   ]);
 
   const totalExpenses = Number(expenseSum._sum.amount || 0);
@@ -255,6 +291,14 @@ export async function getDashboardDataEnhanced(
   const walletBalance = Number(employee?.walletBalance || 0);
   const walletHold = Number(employee?.walletHold || 0);
   const walletAvailable = walletBalance - walletHold;
+  const reimbursementDue = pocketReimbursementDueRows.reduce(
+    (sum, row) => sum + resolveExpenseMetricAmount(row),
+    0,
+  );
+  const reimbursementPaid = pocketReimbursementPaidRows.reduce(
+    (sum, row) => sum + resolveExpenseMetricAmount(row),
+    0,
+  );
 
 
   return {
@@ -272,6 +316,8 @@ export async function getDashboardDataEnhanced(
     walletBalance,
     walletHold,
     walletAvailable,
+    reimbursementDue,
+    reimbursementPaid,
     prevMonthIncome,
     prevMonthExpenses,
     prevMonthNet,

@@ -146,6 +146,24 @@ export default async function DashboardPage() {
               Hold: {formatMoney(dashboardMetrics.walletHold)}
             </div>
           </div>
+          <div className="rounded-xl border border-rose-500/35 bg-rose-500/10 p-5 shadow-sm">
+            <div className="text-sm text-rose-700 dark:text-rose-300">Reimbursement Due</div>
+            <div className="mt-2 text-2xl font-semibold text-rose-900 dark:text-rose-100">
+              {formatMoney(dashboardMetrics.reimbursementDue || 0)}
+            </div>
+            <div className="mt-1 text-xs text-rose-700/80 dark:text-rose-300/80">
+              Approved own-pocket expenses pending payment
+            </div>
+          </div>
+          <div className="rounded-xl border border-cyan-500/35 bg-cyan-500/10 p-5 shadow-sm">
+            <div className="text-sm text-cyan-700 dark:text-cyan-300">Reimbursement Paid</div>
+            <div className="mt-2 text-2xl font-semibold text-cyan-900 dark:text-cyan-100">
+              {formatMoney(dashboardMetrics.reimbursementPaid || 0)}
+            </div>
+            <div className="mt-1 text-xs text-cyan-700/80 dark:text-cyan-300/80">
+              Paid own-pocket reimbursements in selected range
+            </div>
+          </div>
         </div>
       ) : (
         <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-5 text-sm text-amber-800 shadow-sm dark:text-amber-300">
