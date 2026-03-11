@@ -41,6 +41,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 ### WS-3 Wallet/Expense Source-of-Funds Integrity (Critical)
 - [x] Enforce explicit expense funding source on every submission (no implicit fallback source).
 - [x] Block invalid own-pocket usage when wallet advance exists (with audit event on block).
+- [x] Fix My Portal reimbursement cards to use row-wise approved-vs-submitted amount resolution (avoid aggregate drift).
 - [ ] Ensure approved vs paid reimbursement logic reflects correctly in dashboard + wallet ledger.
 
 ### WS-4 Project Financial Truthfulness (Major)

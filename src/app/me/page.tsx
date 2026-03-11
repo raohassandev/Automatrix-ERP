@@ -69,7 +69,7 @@ export default async function MyDashboardPage() {
   const monthStartStr = monthStart.toISOString().slice(0, 10);
   const monthEndStr = monthEnd.toISOString().slice(0, 10);
 
-  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg, pocketPayableAgg, advanceUsedThisMonthAgg, reimbursementPaidThisMonthRows] = await Promise.all([
+  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg, pocketPayableRows, advanceUsedThisMonthAgg, reimbursementPaidThisMonthRows] = await Promise.all([
     prisma.projectAssignment.findMany({
       where: { userId: session.user.id },
       select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
@@ -145,13 +145,13 @@ export default async function MyDashboardPage() {
       where: { employeeId: employee.id, type: "DEBIT", sourceType: { in: ["COMPANY_ADVANCE_ADJUSTMENT", "EXPENSE_SETTLEMENT"] } },
       _sum: { amount: true },
     }),
-    prisma.expense.aggregate({
+    prisma.expense.findMany({
       where: {
         submittedById: session.user.id,
         paymentSource: "EMPLOYEE_POCKET",
         status: { in: ["APPROVED", "PARTIALLY_APPROVED"] },
       },
-      _sum: { approvedAmount: true, amount: true },
+      select: { amount: true, approvedAmount: true, status: true },
     }),
     prisma.walletLedger.aggregate({
       where: {
@@ -169,7 +169,7 @@ export default async function MyDashboardPage() {
         status: "PAID",
         updatedAt: { gte: monthStart, lte: monthEnd },
       },
-      select: { amount: true, approvedAmount: true },
+      select: { amount: true, approvedAmount: true, status: true },
     }),
   ]);
 
@@ -180,13 +180,9 @@ export default async function MyDashboardPage() {
   const advanceIssued = Number(advanceIssueAgg._sum.amount || 0);
   const advanceSettled = Number(advanceSettlementAgg._sum.amount || 0);
   const advanceOutstanding = Math.max(0, advanceIssued - advanceSettled);
-  const pocketPayable = Number(pocketPayableAgg._sum.approvedAmount || pocketPayableAgg._sum.amount || 0);
+  const pocketPayable = pocketPayableRows.reduce((sum, row) => sum + resolveExpenseAmount(row), 0);
   const advanceUsedThisMonth = Number(advanceUsedThisMonthAgg._sum.amount || 0);
-  const reimbursementPaidThisMonth = reimbursementPaidThisMonthRows.reduce((sum, row) => {
-    const approved = Number(row.approvedAmount || 0);
-    const submitted = Number(row.amount || 0);
-    return sum + (approved > 0 ? approved : submitted);
-  }, 0);
+  const reimbursementPaidThisMonth = reimbursementPaidThisMonthRows.reduce((sum, row) => sum + resolveExpenseAmount(row), 0);
   const latestSalary = Number(payrollEntries[0]?.netPay || 0);
   const expenseStatusMap = new Map(expenseCounts.map((row) => [row.status, row._count._all]));
   const assignedProjects = assignments.map((a) => a.project);
