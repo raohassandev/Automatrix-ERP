@@ -50,6 +50,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 
 ### WS-4 Project Financial Truthfulness (Major)
 - [~] Align project KPIs/list/details/reports for: contract, received, pending, cost-to-date, profit/margin.
+  - 2026-03-11 progress: added reconciliation utility scripts `pnpm ops:projects:financials:dry` and `pnpm ops:projects:financials:apply` to realign stored project snapshot fields with computed truth in controlled batches.
 - [~] Validate income/expense/project allocation links for real staging projects.
   - 2026-03-11 progress: added automated verifier `pnpm verify:projects:financial-consistency` to detect per-project metric drift and unresolved project refs in income/expense records.
   - Latest run (local env sample): unresolved refs = `0`, drift candidates = `1` (`AE-MON-CI-90` pendingRecovery delta).
