@@ -1,9 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 
+const FINANCE_EMAIL = process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk";
+
 test.describe("Dashboard + Approvals mobile smoke", () => {
   test("finance user sees KPI cards on dashboard", async ({ page }) => {
-    await loginAs(page, "finance1@automatrix.pk");
+    await loginAs(page, FINANCE_EMAIL);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
@@ -16,7 +18,7 @@ test.describe("Dashboard + Approvals mobile smoke", () => {
   test("approvals actions remain visible and clickable on mobile width", async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await context.newPage();
-    await loginAs(page, "finance1@automatrix.pk");
+    await loginAs(page, FINANCE_EMAIL);
     await page.goto("/approvals", { waitUntil: "domcontentloaded" });
 
     await expect(page.getByRole("heading", { name: "Pending Approvals" })).toBeVisible();

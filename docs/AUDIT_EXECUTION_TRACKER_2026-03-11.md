@@ -69,6 +69,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 ### WS-7 Master Plan and Audit Sync (Major)
 - [x] Update `SUPER_MASTER_PLAN.md` snapshot with closed items and residuals.
 - [x] Publish discrepancy-only post-fix deep audit report.
+  - 2026-03-11 progress: Playwright staging deep-audit/mobile-smoke specs switched to env-driven role credentials to avoid stale hardcoded login drift.
 
 ## Current Batch (B1)
 Scope:

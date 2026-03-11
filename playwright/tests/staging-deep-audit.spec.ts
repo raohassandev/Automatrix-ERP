@@ -2,9 +2,18 @@ import { test, expect, request } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 
 const USERS = {
-  finance: { email: "finance1@automatrix.pk", password: "e2e" },
-  engineer: { email: "engineer1@automatrix.pk", password: "e2e" },
-  store: { email: "store1@automatrix.pk", password: "e2e" },
+  finance: {
+    email: process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk",
+    password: process.env.E2E_FINANCE_PASSWORD || process.env.E2E_TEST_PASSWORD || "e2e",
+  },
+  engineer: {
+    email: process.env.E2E_ENGINEER_EMAIL || "engineer1@automatrix.pk",
+    password: process.env.E2E_ENGINEER_PASSWORD || process.env.E2E_TEST_PASSWORD || "e2e",
+  },
+  store: {
+    email: process.env.E2E_STORE_EMAIL || "store1@automatrix.pk",
+    password: process.env.E2E_STORE_PASSWORD || process.env.E2E_TEST_PASSWORD || "e2e",
+  },
 };
 
 const states = {
