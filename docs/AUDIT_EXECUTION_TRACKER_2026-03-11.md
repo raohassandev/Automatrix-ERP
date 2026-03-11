@@ -22,6 +22,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
   - 2026-03-11 progress: `employees/[id] DELETE` now enforces non-destructive behavior (auto-deactivate when linked records exist; delete only when orphan).
   - 2026-03-11 progress: `salary-advances/[id] DELETE` now allows deletion only in `PENDING` state.
   - 2026-03-11 progress: `commissions/[id] DELETE` now allows deletion only in `PENDING` state.
+  - 2026-03-11 progress: `vendors/[id] DELETE` now auto-deactivates when linked records exist; hard-delete only when orphan.
 - Evidence:
   - `src/app/api/payroll/runs/[id]/route.ts`
   - `src/app/api/invoices/[id]/route.ts`
@@ -50,17 +51,13 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 
 ### WS-4 Project Financial Truthfulness (Major)
 - [~] Align project KPIs/list/details/reports for: contract, received, pending, cost-to-date, profit/margin.
-  - 2026-03-11 progress: added reconciliation utility scripts `pnpm ops:projects:financials:dry` and `pnpm ops:projects:financials:apply` to realign stored project snapshot fields with computed truth in controlled batches.
-- [~] Validate income/expense/project allocation links for real staging projects.
-  - 2026-03-11 progress: added automated verifier `pnpm verify:projects:financial-consistency` to detect per-project metric drift and unresolved project refs in income/expense records.
-  - Latest run (local env sample): unresolved refs = `0`, drift candidates = `1` (`AE-MON-CI-90` pendingRecovery delta).
+- [ ] Validate income/expense/project allocation links for real staging projects.
 - [x] Add missing budget/contract card in project executive summary (theme-safe).
 
 ### WS-5 UX/UI and Theme Sweep (Major)
 - [~] Fix contrast and card token consistency for dark/light themes.
 - [~] Normalize table/action alignment and overflow on desktop + mobile.
 - [~] Add loading states/skeletons for long-running forms/lists.
-  - 2026-03-11 progress: loading skeleton routes added for `wallets`, `incentives`, `salary-advances`, `company-accounts`, `approvals`, and `employees`.
 
 ### WS-6 Help and Procedure Layer (Major)
 - [x] Add contextual help button on payroll/incentives/expenses/projects pages.

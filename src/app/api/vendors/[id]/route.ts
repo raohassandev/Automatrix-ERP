@@ -68,9 +68,49 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   }
 
   const { id } = await context.params;
-  const existing = await prisma.vendor.findUnique({ where: { id } });
+  const existing = await prisma.vendor.findUnique({
+    where: { id },
+    include: {
+      bills: { select: { id: true }, take: 1 },
+      payments: { select: { id: true }, take: 1 },
+      commissions: { select: { id: true }, take: 1 },
+      purchaseOrders: { select: { id: true }, take: 1 },
+    },
+  });
   if (!existing) {
     return NextResponse.json({ success: false, error: "Vendor not found" }, { status: 404 });
+  }
+
+  const hasHistory =
+    existing.bills.length > 0 ||
+    existing.payments.length > 0 ||
+    existing.commissions.length > 0 ||
+    existing.purchaseOrders.length > 0;
+
+  if (hasHistory) {
+    if (String(existing.status || "").toUpperCase() !== "INACTIVE") {
+      await prisma.vendor.update({
+        where: { id },
+        data: { status: "INACTIVE" },
+      });
+      await logAudit({
+        action: "DEACTIVATE_VENDOR_DELETE_BLOCKED",
+        entity: "Vendor",
+        entityId: id,
+        reason: "Vendor has linked procurement/finance records; deactivated instead of deleted.",
+        userId: session.user.id,
+      });
+      return NextResponse.json({
+        success: true,
+        data: { deactivated: true },
+        message: "Vendor has linked records and was deactivated instead of deleted.",
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Vendor has linked records and cannot be deleted. Keep as INACTIVE." },
+      { status: 400 },
+    );
   }
 
   await prisma.vendor.delete({ where: { id } });
