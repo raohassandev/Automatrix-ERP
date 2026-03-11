@@ -53,6 +53,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 
 ### WS-4 Project Financial Truthfulness (Major)
 - [~] Align project KPIs/list/details/reports for: contract, received, pending, cost-to-date, profit/margin.
+  - 2026-03-12 progress: project create/update APIs now force snapshot recalculation; new projects initialize `pendingRecovery` from contract baseline to prevent zero-pending drift.
 - [~] Validate income/expense/project allocation links for real staging projects.
   - 2026-03-11 progress: added automated verifier `pnpm verify:projects:financial-consistency` to detect metric drift and unresolved project refs.
   - Latest run: unresolved refs = `0`, drift candidates = `1` (`AE-MON-CI-90` pendingRecovery delta).

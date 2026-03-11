@@ -5,7 +5,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
-import { buildProjectAliases } from "@/lib/projects";
+import { buildProjectAliases, recalculateProjectFinancials } from "@/lib/projects";
 
 type ProjectDeleteTarget = {
   id: string;
@@ -411,6 +411,8 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (body.contractValue !== undefined) data.contractValue = new Prisma.Decimal(body.contractValue);
 
   const updated = await prisma.project.update({ where: { id }, data });
+  await recalculateProjectFinancials(updated.id);
+  const refreshed = await prisma.project.findUnique({ where: { id: updated.id } });
 
   await logAudit({
     action: "UPDATE_PROJECT",
@@ -420,7 +422,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     userId: session.user.id,
   });
 
-  return NextResponse.json({ success: true, data: updated });
+  return NextResponse.json({ success: true, data: refreshed ?? updated });
 }
 
 export async function DELETE(_req: Request, context: { params: Promise<{ id: string }> }) {

@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { recalculateProjectFinancials } from "@/lib/projects";
 
 export async function GET() {
   const session = await auth();
@@ -106,12 +107,16 @@ export async function POST(req: Request) {
       contractValue: new Prisma.Decimal(sanitizedData.contractValue),
       invoicedAmount: new Prisma.Decimal(0),
       receivedAmount: new Prisma.Decimal(0),
-      pendingRecovery: new Prisma.Decimal(0),
+      // Keep commercial baseline truthful from day one: pending starts at contract value.
+      pendingRecovery: new Prisma.Decimal(sanitizedData.contractValue),
       costToDate: new Prisma.Decimal(0),
       grossMargin: new Prisma.Decimal(0),
       marginPercent: new Prisma.Decimal(0),
     },
   });
+
+  // Enforce canonical snapshot after create so list/detail/report surfaces stay in sync.
+  await recalculateProjectFinancials(created.id);
 
   await logAudit({
     action: "CREATE_PROJECT",
