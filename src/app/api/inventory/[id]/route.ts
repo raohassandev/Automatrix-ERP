@@ -140,12 +140,48 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   }
 
   const { id } = await context.params;
+  const item = await prisma.inventoryItem.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      quantity: true,
+      ledger: { select: { id: true }, take: 1 },
+      vendorBillLines: { select: { id: true }, take: 1 },
+    },
+  });
+  if (!item) {
+    return NextResponse.json({ success: false, error: "Inventory item not found" }, { status: 404 });
+  }
+
+  const qty = Number(item.quantity || 0);
+  if (Math.abs(qty) > 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Item has stock balance. Set quantity to zero through stock movements before deletion.",
+      },
+      { status: 400 },
+    );
+  }
+  if (item.ledger.length > 0 || item.vendorBillLines.length > 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Item has historical transactions (ledger/vendor bills). Deletion is blocked to preserve inventory audit trail.",
+      },
+      { status: 400 },
+    );
+  }
+
   await prisma.inventoryItem.delete({ where: { id } });
 
   await logAudit({
     action: "DELETE_INVENTORY_ITEM",
     entity: "InventoryItem",
     entityId: id,
+    oldValue: JSON.stringify({ name: item.name }),
     userId: session.user.id,
   });
 

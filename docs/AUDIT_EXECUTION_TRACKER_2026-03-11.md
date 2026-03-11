@@ -18,6 +18,8 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
 - [x] Restrict incentive deletion to `PENDING` only (no delete after approval).
 - [x] Block company-account deletion when any transactional references exist (deactivate-only policy).
 - [ ] Convert remaining destructive delete endpoints in implemented modules to reverse/void/close patterns.
+- [~] Convert remaining destructive delete endpoints in implemented modules to reverse/void/close patterns.
+  - 2026-03-11 progress: `inventory/[id] DELETE` now blocks deletion when stock exists or when any ledger/vendor-bill history exists.
 - Evidence:
   - `src/app/api/payroll/runs/[id]/route.ts`
   - `src/app/api/invoices/[id]/route.ts`

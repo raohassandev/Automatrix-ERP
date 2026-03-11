@@ -392,24 +392,24 @@ export default async function ProjectFinancialPage({
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   <Link href={`/expenses/by-project?project=${encodeURIComponent(project.projectId)}`}>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
                       View Expenses
                     </Button>
                   </Link>
                   <Link href={`/income?search=${encodeURIComponent(project.projectId)}`}>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
                       View Income
                     </Button>
                   </Link>
                   <Link href={`/procurement/vendor-bills?search=${encodeURIComponent(project.projectId)}`}>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
                       Vendor Bills
                     </Button>
                   </Link>
                   <Link href={`/projects/${project.id}`}>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
                       Project Details
                     </Button>
                   </Link>
