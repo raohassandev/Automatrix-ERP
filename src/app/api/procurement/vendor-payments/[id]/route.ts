@@ -24,12 +24,68 @@ const vendorPaymentUpdateSchema = z.object({
   amount: z.number().finite().nonnegative().optional(),
   notes: z.string().trim().optional(),
   allocations: z.array(allocationSchema).optional(),
-  action: z.enum(["SUBMIT", "APPROVE", "POST", "VOID"]).optional(),
+  action: z.enum(["SUBMIT", "APPROVE", "POST", "VOID", "REVERSE"]).optional(),
   reason: z.string().trim().optional(),
 });
 
 function isEditableStatus(status: string) {
   return status === "DRAFT";
+}
+
+async function reverseVendorPaymentPosting(params: {
+  paymentId: string;
+  postedById: string;
+  reason?: string | null;
+}) {
+  const { paymentId, postedById, reason } = params;
+  return prisma.$transaction(async (tx) => {
+    const payment = await tx.vendorPayment.findUnique({ where: { id: paymentId } });
+    if (!payment) throw new Error("Vendor payment not found.");
+    if (payment.status !== "POSTED") throw new Error("Only POSTED payments can be reversed.");
+
+    const sourceJournal = await tx.journalEntry.findFirst({
+      where: { sourceType: "VENDOR_PAYMENT", sourceId: paymentId, status: "POSTED" },
+      include: { lines: { include: { glAccount: { select: { code: true } } } } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!sourceJournal) {
+      throw new Error("Posted vendor payment journal not found for reversal.");
+    }
+
+    await createPostedJournal(tx, {
+      sourceType: "VENDOR_PAYMENT_REVERSAL",
+      sourceId: paymentId,
+      documentDate: new Date(),
+      postingDate: new Date(),
+      createdById: postedById,
+      postedById,
+      voucherPrefix: "VPR",
+      memo: `Reversal of Vendor Payment ${payment.paymentNumber}${reason ? `: ${reason}` : ""}`,
+      lines: sourceJournal.lines.map((line) => ({
+        glCode: line.glAccount.code,
+        debit: Number(line.credit || 0),
+        credit: Number(line.debit || 0),
+        projectId: line.projectId || null,
+        partyId: line.partyId || null,
+        employeeId: line.employeeId || null,
+        memo: `Reversal for journal ${sourceJournal.voucherNo}`,
+      })),
+    });
+
+    await tx.journalEntry.update({
+      where: { id: sourceJournal.id },
+      data: { status: "REVERSED" },
+    });
+    await tx.postingBatch.updateMany({
+      where: { sourceType: "VENDOR_PAYMENT", sourceId: paymentId, status: "POSTED" },
+      data: { status: "REVERSED" },
+    });
+
+    return tx.vendorPayment.update({
+      where: { id: paymentId },
+      data: { status: "VOID" },
+    });
+  });
 }
 
 export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -313,10 +369,26 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (action === "VOID") {
       if (!canApproveAny) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
       if (existing.status === "POSTED") {
-        return NextResponse.json(
-          { success: false, error: "Posted payments cannot be voided (use reversal later)." },
-          { status: 400 }
-        );
+        try {
+          const reversed = await reverseVendorPaymentPosting({
+            paymentId: id,
+            postedById: session.user.id,
+            reason: parsed.data.reason || null,
+          });
+          await logAudit({
+            action: "REVERSE_VENDOR_PAYMENT",
+            entity: "VendorPayment",
+            entityId: id,
+            oldValue: existing.status,
+            newValue: reversed.status,
+            reason: parsed.data.reason || null,
+            userId: session.user.id,
+          });
+          return NextResponse.json({ success: true, data: reversed });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Failed to reverse vendor payment.";
+          return NextResponse.json({ success: false, error: message }, { status: 400 });
+        }
       }
       const updated = await prisma.vendorPayment.update({ where: { id }, data: { status: "VOID" } });
       await logAudit({
@@ -329,6 +401,30 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
         userId: session.user.id,
       });
       return NextResponse.json({ success: true, data: updated });
+    }
+
+    if (action === "REVERSE") {
+      if (!canApproveAny) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      try {
+        const reversed = await reverseVendorPaymentPosting({
+          paymentId: id,
+          postedById: session.user.id,
+          reason: parsed.data.reason || null,
+        });
+        await logAudit({
+          action: "REVERSE_VENDOR_PAYMENT",
+          entity: "VendorPayment",
+          entityId: id,
+          oldValue: existing.status,
+          newValue: reversed.status,
+          reason: parsed.data.reason || null,
+          userId: session.user.id,
+        });
+        return NextResponse.json({ success: true, data: reversed });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to reverse vendor payment.";
+        return NextResponse.json({ success: false, error: message }, { status: 400 });
+      }
     }
   }
 

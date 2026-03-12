@@ -38,7 +38,7 @@ const vendorBillUpdateSchema = z.object({
   currency: z.string().trim().min(1).optional(),
   notes: z.string().trim().optional(),
   lines: z.array(billLineSchema).min(1).optional(),
-  action: z.enum(["SUBMIT", "APPROVE", "POST", "VOID"]).optional(),
+  action: z.enum(["SUBMIT", "APPROVE", "POST", "VOID", "REVERSE"]).optional(),
   reason: z.string().trim().optional(),
   ignoreDuplicate: z.boolean().optional(),
 });
@@ -70,6 +70,72 @@ async function findPotentialDuplicateBill(args: {
 
 function isEditableStatus(status: string) {
   return status === "DRAFT";
+}
+
+async function reverseVendorBillPosting(params: {
+  billId: string;
+  postedById: string;
+  reason?: string | null;
+}) {
+  const { billId, postedById, reason } = params;
+  return prisma.$transaction(async (tx) => {
+    const bill = await tx.vendorBill.findUnique({
+      where: { id: billId },
+      include: { allocations: { include: { vendorPayment: { select: { status: true } } } } },
+    });
+    if (!bill) throw new Error("Vendor bill not found.");
+    if (bill.status !== "POSTED") throw new Error("Only POSTED bills can be reversed.");
+
+    const postedAllocations = bill.allocations.filter(
+      (row) => String(row.vendorPayment?.status || "").toUpperCase() === "POSTED",
+    );
+    if (postedAllocations.length > 0) {
+      throw new Error("Reverse linked posted vendor payments first, then reverse this bill.");
+    }
+
+    const sourceJournal = await tx.journalEntry.findFirst({
+      where: { sourceType: "VENDOR_BILL", sourceId: billId, status: "POSTED" },
+      include: { lines: { include: { glAccount: { select: { code: true } } } } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!sourceJournal) {
+      throw new Error("Posted vendor bill journal not found for reversal.");
+    }
+
+    await createPostedJournal(tx, {
+      sourceType: "VENDOR_BILL_REVERSAL",
+      sourceId: billId,
+      documentDate: new Date(),
+      postingDate: new Date(),
+      createdById: postedById,
+      postedById,
+      voucherPrefix: "VBR",
+      memo: `Reversal of Vendor Bill ${bill.billNumber}${reason ? `: ${reason}` : ""}`,
+      lines: sourceJournal.lines.map((line) => ({
+        glCode: line.glAccount.code,
+        debit: Number(line.credit || 0),
+        credit: Number(line.debit || 0),
+        projectId: line.projectId || null,
+        partyId: line.partyId || null,
+        employeeId: line.employeeId || null,
+        memo: `Reversal for journal ${sourceJournal.voucherNo}`,
+      })),
+    });
+
+    await tx.journalEntry.update({
+      where: { id: sourceJournal.id },
+      data: { status: "REVERSED" },
+    });
+    await tx.postingBatch.updateMany({
+      where: { sourceType: "VENDOR_BILL", sourceId: billId, status: "POSTED" },
+      data: { status: "REVERSED" },
+    });
+
+    return tx.vendorBill.update({
+      where: { id: billId },
+      data: { status: "VOID" },
+    });
+  });
 }
 
 export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -294,7 +360,29 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     if (action === "VOID") {
       if (!canApproveAny) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
       if (existing.status === "POSTED") {
-        return NextResponse.json({ success: false, error: "Posted bills cannot be voided (use reversal later)." }, { status: 400 });
+        try {
+          const reversed = await reverseVendorBillPosting({
+            billId: id,
+            postedById: session.user.id,
+            reason: parsed.data.reason || null,
+          });
+          if (reversed.projectRef) {
+            await recalculateProjectFinancials(reversed.projectRef);
+          }
+          await logAudit({
+            action: "REVERSE_VENDOR_BILL",
+            entity: "VendorBill",
+            entityId: id,
+            oldValue: existing.status,
+            newValue: reversed.status,
+            reason: parsed.data.reason || null,
+            userId: session.user.id,
+          });
+          return NextResponse.json({ success: true, data: reversed });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Failed to reverse vendor bill.";
+          return NextResponse.json({ success: false, error: message }, { status: 400 });
+        }
       }
       const updated = await prisma.vendorBill.update({ where: { id }, data: { status: "VOID" } });
       await logAudit({
@@ -307,6 +395,33 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
         userId: session.user.id,
       });
       return NextResponse.json({ success: true, data: updated });
+    }
+
+    if (action === "REVERSE") {
+      if (!canApproveAny) return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+      try {
+        const reversed = await reverseVendorBillPosting({
+          billId: id,
+          postedById: session.user.id,
+          reason: parsed.data.reason || null,
+        });
+        if (reversed.projectRef) {
+          await recalculateProjectFinancials(reversed.projectRef);
+        }
+        await logAudit({
+          action: "REVERSE_VENDOR_BILL",
+          entity: "VendorBill",
+          entityId: id,
+          oldValue: existing.status,
+          newValue: reversed.status,
+          reason: parsed.data.reason || null,
+          userId: session.user.id,
+        });
+        return NextResponse.json({ success: true, data: reversed });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to reverse vendor bill.";
+        return NextResponse.json({ success: false, error: message }, { status: 400 });
+      }
     }
   }
 

@@ -230,6 +230,126 @@ async function applyInventoryStockIn(
   }
 }
 
+async function reversePostedGrn(params: {
+  grnId: string;
+  postedById: string;
+  reason?: string | null;
+}) {
+  const { grnId, postedById, reason } = params;
+  return prisma.$transaction(async (tx) => {
+    const receipt = await tx.goodsReceipt.findUnique({
+      where: { id: grnId },
+      select: { id: true, status: true, purchaseOrderId: true, notes: true },
+    });
+    if (!receipt) throw new Error("Goods receipt not found.");
+    if (!isPostedStatus(receipt.status)) throw new Error("Only posted GRNs can be reversed.");
+
+    const alreadyReversed = await tx.inventoryLedger.count({
+      where: { sourceType: "GRN_REVERSAL", sourceId: grnId },
+    });
+    if (alreadyReversed > 0) {
+      throw new Error("This GRN is already reversed.");
+    }
+
+    let sourceRows = await tx.inventoryLedger.findMany({
+      where: { sourceType: "GRN", sourceId: grnId },
+      select: {
+        id: true,
+        date: true,
+        itemId: true,
+        warehouseId: true,
+        quantity: true,
+        unitCost: true,
+        total: true,
+        reference: true,
+        project: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    if (sourceRows.length === 0) {
+      sourceRows = await tx.inventoryLedger.findMany({
+        where: { reference: `GRN:${grnId}` },
+        select: {
+          id: true,
+          date: true,
+          itemId: true,
+          warehouseId: true,
+          quantity: true,
+          unitCost: true,
+          total: true,
+          reference: true,
+          project: true,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+    }
+    if (sourceRows.length === 0) {
+      throw new Error("No posted inventory rows found for this GRN.");
+    }
+
+    for (const row of sourceRows) {
+      const item = await tx.inventoryItem.findUnique({
+        where: { id: row.itemId },
+        select: { id: true, quantity: true, unitCost: true, reservedQty: true },
+      });
+      if (!item) continue;
+
+      const reverseQty = -Math.abs(Number(row.quantity || 0));
+      const nextQty = Number(item.quantity || 0) + reverseQty;
+      if (nextQty < -0.00001) {
+        throw new Error("Cannot reverse GRN because stock has already been consumed. Do adjustment workflow first.");
+      }
+      const avgCost = Number(item.unitCost || 0);
+      const unitCost = Number(row.unitCost || avgCost || 0);
+      const total = Number((Math.abs(reverseQty) * unitCost * -1).toFixed(2));
+
+      await tx.inventoryLedger.create({
+        data: {
+          date: new Date(),
+          itemId: row.itemId,
+          warehouseId: row.warehouseId || null,
+          type: "REVERSAL",
+          quantity: new Prisma.Decimal(reverseQty),
+          unitCost: new Prisma.Decimal(unitCost),
+          total: new Prisma.Decimal(total),
+          reference: `GRN_REVERSAL:${grnId}`,
+          project: row.project || null,
+          userId: postedById,
+          runningBalance: new Prisma.Decimal(Number(nextQty.toFixed(6))),
+          sourceType: "GRN_REVERSAL",
+          sourceId: grnId,
+          postedById,
+          postedAt: new Date(),
+        },
+      });
+
+      const reserved = Number(item.reservedQty || 0);
+      await tx.inventoryItem.update({
+        where: { id: item.id },
+        data: {
+          quantity: new Prisma.Decimal(Number(nextQty.toFixed(6))),
+          availableQty: new Prisma.Decimal(Number((nextQty - reserved).toFixed(6))),
+          totalValue: new Prisma.Decimal(Number((nextQty * avgCost).toFixed(2))),
+          lastUpdated: new Date(),
+        },
+      });
+    }
+
+    if (receipt.purchaseOrderId) {
+      await recalcPurchaseOrderReceipts(tx, receipt.purchaseOrderId);
+    }
+
+    const noteLine = `Reversed on ${new Date().toISOString()}${reason ? `: ${reason}` : ""}`;
+    return tx.goodsReceipt.update({
+      where: { id: grnId },
+      data: {
+        status: "VOID",
+        notes: receipt.notes ? `${receipt.notes}\n${noteLine}` : noteLine,
+      },
+    });
+  });
+}
+
 export async function PATCH(req: Request, context: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -255,7 +375,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
 
   // Lifecycle actions (Phase 1 locked).
   if (action) {
-    if (!["SUBMIT", "APPROVE", "POST", "VOID"].includes(action)) {
+    if (!["SUBMIT", "APPROVE", "POST", "VOID", "REVERSE"].includes(action)) {
       return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });
     }
 
@@ -395,12 +515,51 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       return NextResponse.json({ success: true, data: posted });
     }
 
+    if (action === "REVERSE") {
+      try {
+        const reversed = await reversePostedGrn({
+          grnId: id,
+          postedById: session.user.id,
+          reason: typeof body?.reason === "string" ? body.reason : null,
+        });
+        await logAudit({
+          action: "REVERSE_GOODS_RECEIPT",
+          entity: "GoodsReceipt",
+          entityId: id,
+          oldValue: existing.status,
+          newValue: reversed.status,
+          reason: typeof body?.reason === "string" ? body.reason : null,
+          userId: session.user.id,
+        });
+        return NextResponse.json({ success: true, data: reversed });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to reverse GRN.";
+        return NextResponse.json({ success: false, error: message }, { status: 400 });
+      }
+    }
+
     // VOID
     if (isPostedStatus(existing.status)) {
-      return NextResponse.json(
-        { success: false, error: "Posted GRNs cannot be voided (use reversal later)." },
-        { status: 400 }
-      );
+      try {
+        const reversed = await reversePostedGrn({
+          grnId: id,
+          postedById: session.user.id,
+          reason: typeof body?.reason === "string" ? body.reason : null,
+        });
+        await logAudit({
+          action: "REVERSE_GOODS_RECEIPT",
+          entity: "GoodsReceipt",
+          entityId: id,
+          oldValue: existing.status,
+          newValue: reversed.status,
+          reason: typeof body?.reason === "string" ? body.reason : null,
+          userId: session.user.id,
+        });
+        return NextResponse.json({ success: true, data: reversed });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to reverse GRN.";
+        return NextResponse.json({ success: false, error: message }, { status: 400 });
+      }
     }
     const updated = await prisma.goodsReceipt.update({ where: { id }, data: { status: "VOID" } });
     await logAudit({
