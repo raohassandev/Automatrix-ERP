@@ -196,7 +196,9 @@ export const salaryAdvanceSchema = z.object({
   employeeId: z.string().min(1),
   amount: z.number().positive(),
   reason: z.string().min(1),
-  status: z.enum(["PENDING", "APPROVED", "PAID", "REJECTED", "RECOVERED"]).optional(),
+  recoveryMode: z.enum(["FULL_NEXT_PAYROLL", "INSTALLMENT", "MANUAL"]).optional(),
+  installmentAmount: z.number().positive().optional(),
+  status: z.enum(["PENDING", "APPROVED", "PAID", "PARTIALLY_RECOVERED", "REJECTED", "RECOVERED"]).optional(),
 });
 
 export const salaryAdvanceUpdateSchema = salaryAdvanceSchema.partial();

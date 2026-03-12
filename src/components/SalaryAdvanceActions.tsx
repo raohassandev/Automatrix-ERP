@@ -13,6 +13,8 @@ type SalaryAdvance = {
   employeeId: string;
   amount: number | string;
   reason: string;
+  recoveryMode?: string | null;
+  installmentAmount?: number | string | null;
   status?: string | null;
 };
 

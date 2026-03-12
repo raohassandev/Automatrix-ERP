@@ -7,7 +7,6 @@ import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { computeProjectFinancialSnapshot, recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
-import { createPostedJournal, GL_CODES } from "@/lib/accounting";
 
 type ResolvedCommissionAmount = {
   amount: number;
@@ -121,6 +120,10 @@ async function applyCommissionApproval(
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);
 
+    if (String(commission.payoutMode || "AP").toUpperCase() !== "AP") {
+      throw new Error("Middleman commission must use AP payout mode.");
+    }
+
     const bill = await tx.vendorBill.create({
       data: {
         billNumber,
@@ -128,7 +131,7 @@ async function applyCommissionApproval(
         projectRef,
         billDate,
         dueDate,
-        status: "POSTED",
+        status: "SUBMITTED",
         currency: "PKR",
         totalAmount: new Prisma.Decimal(commission.amount),
         notes: commission.reason || "Middleman commission payable",
@@ -143,38 +146,6 @@ async function applyCommissionApproval(
         },
       },
       include: { lines: true },
-    });
-
-    const projectDb = await tx.project.findFirst({
-      where: {
-        OR: [{ id: projectRef }, { projectId: projectRef }, { name: projectRef }],
-      },
-      select: { id: true },
-    });
-
-    await createPostedJournal(tx, {
-      sourceType: "MIDDLEMAN_COMMISSION",
-      sourceId: bill.id,
-      documentDate: billDate,
-      postingDate: billDate,
-      createdById: approvedById,
-      postedById: approvedById,
-      voucherPrefix: "MC",
-      memo: `Middleman commission ${bill.billNumber}`,
-      lines: [
-        {
-          glCode: GL_CODES.OPERATING_EXPENSE,
-          debit: Number(commission.amount),
-          projectId: projectDb?.id || null,
-          partyId: commission.vendorId,
-        },
-        {
-          glCode: GL_CODES.AP_CONTROL,
-          credit: Number(commission.amount),
-          projectId: projectDb?.id || null,
-          partyId: commission.vendorId,
-        },
-      ],
     });
 
     return {
@@ -192,31 +163,17 @@ async function applyCommissionApproval(
 
   let expenseId = commission.expenseId || null;
   let walletLedgerId = commission.walletLedgerId || null;
-
-  if (!expenseId) {
-    const projectRef = commission.projectRef || null;
-    const expense = await tx.expense.create({
-      data: {
-        date: new Date(),
-        description: `Commission for ${projectRef || "sales"}`,
-        category: "Commission",
-        amount: new Prisma.Decimal(commission.amount),
-        paymentMode: commission.payoutMode === "WALLET" ? "Wallet Credit" : "Payroll Settlement",
-        paymentSource: "COMPANY_ACCOUNT",
-        expenseType: "COMPANY",
-        project: projectRef || undefined,
-        status: "APPROVED",
-        approvalLevel: "COMMISSION",
-        submittedById: approvedById,
-        approvedById,
-        approvedAmount: new Prisma.Decimal(commission.amount),
-        remarks: commission.reason || undefined,
-      },
-    });
-    expenseId = expense.id;
+  const payoutMode = String(commission.payoutMode || "PAYROLL").toUpperCase();
+  if (payoutMode === "PAYROLL") {
+    return {
+      expenseId: expenseId || null,
+      walletLedgerId: walletLedgerId || null,
+      payableBillId: null,
+      settlementStatus: "UNSETTLED",
+      settledAt: null,
+    };
   }
-
-  if (commission.payoutMode === "WALLET" && !walletLedgerId) {
+  if (payoutMode === "WALLET" && !walletLedgerId) {
     const employee = await tx.employee.findUnique({ where: { id: commission.employeeId } });
     if (!employee) {
       throw new Error("Employee not found");
@@ -243,8 +200,7 @@ async function applyCommissionApproval(
     });
     walletLedgerId = ledger.id;
   }
-
-  const settled = commission.payoutMode === "WALLET" || Boolean(walletLedgerId);
+  const settled = payoutMode === "WALLET" || Boolean(walletLedgerId);
   return {
     expenseId,
     walletLedgerId,
@@ -312,9 +268,21 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     if (!employeeId) {
       return NextResponse.json({ success: false, error: "Employee is required for employee commission" }, { status: 400 });
     }
+    if (payoutMode === "AP") {
+      return NextResponse.json(
+        { success: false, error: "Employee commission cannot use AP payout mode." },
+        { status: 400 },
+      );
+    }
   }
 
   if (payeeType === "MIDDLEMAN") {
+    if (payoutMode !== "AP") {
+      return NextResponse.json(
+        { success: false, error: "Middleman commission must use AP payout mode." },
+        { status: 400 },
+      );
+    }
     const vendorId = parsed.data.vendorId !== undefined ? parsed.data.vendorId : existing.vendorId;
     if (!vendorId) {
       return NextResponse.json({ success: false, error: "Middleman vendor is required" }, { status: 400 });

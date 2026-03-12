@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { postPayrollDisbursementJournal } from "@/lib/accounting";
 
 type TransactionClient = Prisma.TransactionClient;
 
@@ -114,8 +115,14 @@ export async function settlePayrollEntry(params: {
   payrollRunId: string;
   payrollEntryId: string;
   postedById: string;
+  paymentMode?: string | null;
+  companyAccountId?: string | null;
+  paymentReference?: string | null;
 }) {
   const { tx, payrollRunId, payrollEntryId, postedById } = params;
+  const paymentMode = String(params.paymentMode || "BANK_TRANSFER").trim().toUpperCase();
+  const companyAccountId = params.companyAccountId ? String(params.companyAccountId).trim() : null;
+  const paymentReference = params.paymentReference ? String(params.paymentReference).trim() : null;
 
   const run = await tx.payrollRun.findUnique({
     where: { id: payrollRunId },
@@ -137,6 +144,9 @@ export async function settlePayrollEntry(params: {
       netPay: true,
       walletLedgerId: true,
       expenseId: true,
+      companyAccountId: true,
+      paidById: true,
+      paidAt: true,
       approvedById: true,
       status: true,
     },
@@ -150,7 +160,7 @@ export async function settlePayrollEntry(params: {
 
   const employee = await tx.employee.findUnique({
     where: { id: entry.employeeId },
-    select: { id: true, name: true, walletBalance: true },
+    select: { id: true, name: true },
   });
   if (!employee) {
     throw new Error("Employee not found for payroll entry.");
@@ -176,6 +186,17 @@ export async function settlePayrollEntry(params: {
     throw new Error(`Payroll expense amount became negative for ${employee.name}.`);
   }
 
+  if (!companyAccountId) {
+    throw new Error("Company account is required to settle payroll payment.");
+  }
+  const account = await tx.companyAccount.findUnique({
+    where: { id: companyAccountId },
+    select: { id: true, isActive: true },
+  });
+  if (!account || !account.isActive) {
+    throw new Error("Invalid or inactive company account for payroll payment.");
+  }
+
   let expenseId = entry.expenseId;
   if (!expenseId && payrollExpenseAmount > 0) {
     const periodLabel = `${run.periodStart.toISOString().slice(0, 10)} to ${run.periodEnd.toISOString().slice(0, 10)}`;
@@ -185,8 +206,9 @@ export async function settlePayrollEntry(params: {
         description: `Salary for ${employee.name} (${periodLabel})`,
         category: "Salary",
         amount: new Prisma.Decimal(payrollExpenseAmount),
-        paymentMode: "Payroll Transfer",
+        paymentMode,
         paymentSource: "COMPANY_ACCOUNT",
+        companyAccountId,
         expenseType: "COMPANY",
         status: "APPROVED",
         approvalLevel: "PAYROLL",
@@ -203,36 +225,25 @@ export async function settlePayrollEntry(params: {
     expenseId = expense.id;
   }
 
-  let walletLedgerId = entry.walletLedgerId;
-  if (!walletLedgerId) {
-    const newBalance = Number(employee.walletBalance) + Number(entry.netPay);
-    const ledger = await tx.walletLedger.create({
-      data: {
-        date: new Date(),
-        employeeId: entry.employeeId,
-        type: "CREDIT",
-        amount: new Prisma.Decimal(entry.netPay),
-        reference: `PAYROLL:${run.id}:${entry.id}`,
-        balance: new Prisma.Decimal(newBalance),
-        sourceType: "PAYROLL",
-        sourceId: entry.id,
-        postedById,
-        postedAt: new Date(),
-      },
-    });
-    walletLedgerId = ledger.id;
-    await tx.employee.update({
-      where: { id: entry.employeeId },
-      data: { walletBalance: new Prisma.Decimal(newBalance) },
-    });
-  }
+  await postPayrollDisbursementJournal(tx, {
+    payrollEntryId: entry.id,
+    amount: Number(entry.netPay),
+    paymentDate: new Date(),
+    companyAccountId,
+    userId: postedById,
+    memo: paymentReference ? `Payroll payment ref: ${paymentReference}` : undefined,
+  });
 
   const updatedEntry = await tx.payrollEntry.update({
     where: { id: entry.id },
     data: {
-      walletLedgerId,
+      companyAccountId,
+      paymentMode,
+      paymentReference,
       expenseId: expenseId || null,
       approvedById: entry.approvedById || postedById,
+      paidById: postedById,
+      paidAt: new Date(),
       status: "PAID",
     },
   });
@@ -295,23 +306,52 @@ export async function settlePayrollEntry(params: {
     const advances = await tx.salaryAdvance.findMany({
       where: {
         employeeId: entry.employeeId,
-        status: "PAID",
-        createdAt: { lte: run.periodEnd },
+        status: { in: ["PAID", "PARTIALLY_RECOVERED"] },
+        OR: [{ paidAt: { lte: run.periodEnd } }, { paidAt: null, createdAt: { lte: run.periodEnd } }],
       },
       orderBy: { createdAt: "asc" },
     });
-    const recoverable = Math.min(
-      Number(entry.deductions),
-      advances.reduce((sum, adv) => sum + Number(adv.amount || 0), 0),
-    );
-    let remaining = recoverable;
+    let remaining = Number(entry.deductions);
     for (const adv of advances) {
       if (remaining <= 0) break;
-      remaining -= Number(adv.amount || 0);
+      const issuedAmount = Number(adv.issuedAmount || adv.amount || 0);
+      const recoveredAmount = Number(adv.recoveredAmount || 0);
+      const storedOutstanding = Number(adv.outstandingAmount || 0);
+      const derivedOutstanding = Number((issuedAmount - recoveredAmount).toFixed(2));
+      const outstanding = Math.max(0, storedOutstanding > 0 ? storedOutstanding : derivedOutstanding);
+      if (outstanding <= 0.01) continue;
+
+      let cap = outstanding;
+      if (String(adv.recoveryMode || "FULL_NEXT_PAYROLL").toUpperCase() === "INSTALLMENT") {
+        const installment = Number(adv.installmentAmount || 0);
+        if (installment > 0) cap = Math.min(cap, installment);
+      }
+      const recoveryAmount = Number(Math.min(remaining, cap).toFixed(2));
+      if (recoveryAmount <= 0.01) continue;
+
+      const nextRecovered = Number((recoveredAmount + recoveryAmount).toFixed(2));
+      const nextOutstanding = Number(Math.max(0, issuedAmount - nextRecovered).toFixed(2));
+      const nextStatus = nextOutstanding <= 0.01 ? "RECOVERED" : "PARTIALLY_RECOVERED";
+
+      await tx.salaryAdvanceRecovery.create({
+        data: {
+          salaryAdvanceId: adv.id,
+          payrollEntryId: entry.id,
+          amount: new Prisma.Decimal(recoveryAmount),
+          postedById,
+          note: `Recovered in payroll run ${run.id}`,
+        },
+      });
       await tx.salaryAdvance.update({
         where: { id: adv.id },
-        data: { status: "RECOVERED" },
+        data: {
+          recoveredAmount: new Prisma.Decimal(nextRecovered),
+          outstandingAmount: new Prisma.Decimal(nextOutstanding),
+          status: nextStatus,
+          closedAt: nextStatus === "RECOVERED" ? new Date() : null,
+        },
       });
+      remaining = Number((remaining - recoveryAmount).toFixed(2));
     }
   }
 

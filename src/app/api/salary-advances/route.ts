@@ -67,6 +67,14 @@ export async function POST(req: Request) {
     data: {
       employeeId: sanitizeString(parsed.data.employeeId),
       amount: new Prisma.Decimal(parsed.data.amount),
+      issuedAmount: new Prisma.Decimal(parsed.data.amount),
+      recoveredAmount: new Prisma.Decimal(0),
+      outstandingAmount: new Prisma.Decimal(parsed.data.amount),
+      recoveryMode: parsed.data.recoveryMode || "FULL_NEXT_PAYROLL",
+      installmentAmount:
+        parsed.data.recoveryMode === "INSTALLMENT" && parsed.data.installmentAmount
+          ? new Prisma.Decimal(parsed.data.installmentAmount)
+          : null,
       reason: sanitizeString(parsed.data.reason),
       status: "PENDING",
     },

@@ -34,7 +34,9 @@ model User {
   incentiveApprovals IncentiveEntry[] @relation("IncentiveApprovedBy")
   commissionApprovals CommissionEntry[] @relation("CommissionApprovedBy")
   payrollApprovals  PayrollEntry[] @relation("PayrollApprovedBy")
+  payrollPayments   PayrollEntry[] @relation("PayrollPaidBy")
   salaryAdvanceApprovals SalaryAdvance[]
+  salaryAdvanceRecoveries SalaryAdvanceRecovery[] @relation("SalaryAdvanceRecoveryPostedBy")
   inventoryLedgerPosts InventoryLedger[] @relation("InventoryLedgerPostedBy")
   walletLedgerPosts    WalletLedger[]    @relation("WalletLedgerPostedBy")
   vendorPaymentAllocationPosts VendorPaymentAllocation[] @relation("VendorPaymentAllocationPostedBy")
@@ -540,6 +542,11 @@ model PayrollEntry {
   netPay        Decimal
   status        String   @default("PENDING")
   approvedById  String?
+  paidById      String?
+  paidAt        DateTime?
+  paymentMode   String?
+  paymentReference String?
+  companyAccountId String?
   walletLedgerId String?
   expenseId     String?
   createdAt     DateTime @default(now())
@@ -548,7 +555,13 @@ model PayrollEntry {
   payrollRun    PayrollRun @relation(fields: [payrollRunId], references: [id])
   employee      Employee   @relation(fields: [employeeId], references: [id])
   approvedBy    User?      @relation("PayrollApprovedBy", fields: [approvedById], references: [id])
+  paidBy        User?      @relation("PayrollPaidBy", fields: [paidById], references: [id])
+  companyAccount CompanyAccount? @relation(fields: [companyAccountId], references: [id])
   components    PayrollComponentLine[]
+  advanceRecoveries SalaryAdvanceRecovery[]
+
+  @@index([paidById])
+  @@index([companyAccountId])
 }
 
 model PayrollComponentLine {
@@ -573,15 +586,41 @@ model SalaryAdvance {
   id            String   @id @default(cuid())
   employeeId    String
   amount        Decimal
+  issuedAmount  Decimal  @default(0)
+  recoveredAmount Decimal @default(0)
+  outstandingAmount Decimal @default(0)
+  recoveryMode  String   @default("FULL_NEXT_PAYROLL") // FULL_NEXT_PAYROLL | INSTALLMENT | MANUAL
+  installmentAmount Decimal?
   reason        String
   status        String   @default("PENDING")
   approvedById  String?
   walletLedgerId String?
+  approvedAt    DateTime?
+  paidAt        DateTime?
+  closedAt      DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   employee      Employee @relation(fields: [employeeId], references: [id])
   approvedBy    User?    @relation(fields: [approvedById], references: [id])
+  recoveries    SalaryAdvanceRecovery[]
+}
+
+model SalaryAdvanceRecovery {
+  id              String   @id @default(cuid())
+  salaryAdvanceId String
+  payrollEntryId  String
+  amount          Decimal
+  note            String?
+  postedById      String?
+  createdAt       DateTime @default(now())
+
+  salaryAdvance   SalaryAdvance @relation(fields: [salaryAdvanceId], references: [id], onDelete: Cascade)
+  payrollEntry    PayrollEntry  @relation(fields: [payrollEntryId], references: [id], onDelete: Cascade)
+  postedBy        User?         @relation("SalaryAdvanceRecoveryPostedBy", fields: [postedById], references: [id])
+
+  @@index([salaryAdvanceId, createdAt])
+  @@index([payrollEntryId])
 }
 
 model AttendanceEntry {
@@ -806,6 +845,7 @@ model CompanyAccount {
   walletLedgerEntries WalletLedger[]
   bankReconciliationSnapshots BankReconciliationSnapshot[]
   bankStatementLines BankStatementLine[]
+  payrollEntries PayrollEntry[]
 }
 
 // Double-entry accounting backbone (Phase 2+), isolated from auth Account/Session tables.

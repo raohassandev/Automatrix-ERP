@@ -388,3 +388,38 @@ export async function postExpenseReimbursementPaymentJournal(
     ],
   });
 }
+
+export async function postPayrollDisbursementJournal(
+  tx: Tx,
+  input: {
+    payrollEntryId: string;
+    amount: number;
+    paymentDate: Date;
+    companyAccountId?: string | null;
+    userId?: string | null;
+    memo?: string | null;
+  },
+) {
+  const amount = round2(Number(input.amount || 0));
+  if (amount <= 0) {
+    throw new Error("Payroll payment amount must be greater than zero.");
+  }
+  const cashCode = input.companyAccountId
+    ? await resolveCompanyAccountCashCode(tx, input.companyAccountId)
+    : GL_CODES.CASH_ON_HAND;
+
+  return createPostedJournal(tx, {
+    sourceType: "PAYROLL_PAYMENT",
+    sourceId: input.payrollEntryId,
+    documentDate: input.paymentDate,
+    postingDate: input.paymentDate,
+    createdById: input.userId || null,
+    postedById: input.userId || null,
+    voucherPrefix: "PAY",
+    memo: input.memo || "Payroll disbursement posting",
+    lines: [
+      { glCode: GL_CODES.PAYROLL_PAYABLE, debit: amount },
+      { glCode: cashCode, credit: amount },
+    ],
+  });
+}

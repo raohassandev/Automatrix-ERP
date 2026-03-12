@@ -26,6 +26,7 @@ type PayrollEntrySettlementDialogProps = {
   runStatus: string;
   entries: PayrollEntryRow[];
   canApprove: boolean;
+  companyAccounts: Array<{ id: string; name: string; type: string }>;
 };
 
 export function PayrollEntrySettlementDialog({
@@ -33,10 +34,14 @@ export function PayrollEntrySettlementDialog({
   runStatus,
   entries,
   canApprove,
+  companyAccounts,
 }: PayrollEntrySettlementDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
+  const [paymentMode, setPaymentMode] = useState("BANK_TRANSFER");
+  const [companyAccountId, setCompanyAccountId] = useState(companyAccounts[0]?.id || "");
+  const [paymentReference, setPaymentReference] = useState("");
   const [pending, startTransition] = useTransition();
 
   const canSettle = canApprove && (runStatus === "APPROVED" || runStatus === "POSTED");
@@ -51,10 +56,20 @@ export function PayrollEntrySettlementDialog({
       toast.error("Approve payroll run before settling individual employee payment.");
       return;
     }
+    if (!companyAccountId) {
+      toast.error("Select company account for payroll disbursement.");
+      return;
+    }
     setPendingEntryId(entryId);
     try {
       const res = await fetch(`/api/payroll/runs/${payrollRunId}/entries/${entryId}/mark-paid`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentMode,
+          companyAccountId,
+          paymentReference: paymentReference.trim() || null,
+        }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -94,7 +109,7 @@ export function PayrollEntrySettlementDialog({
         className="max-w-5xl"
       >
         <div className="space-y-4">
-          <div className="grid gap-3 rounded-md border border-primary/20 bg-primary/5 p-3 md:grid-cols-3">
+        <div className="grid gap-3 rounded-md border border-primary/20 bg-primary/5 p-3 md:grid-cols-3">
             <div className="text-sm">
               <span className="text-muted-foreground">Run status:</span>{" "}
               <span className="font-semibold">{runStatus}</span>
@@ -167,9 +182,46 @@ export function PayrollEntrySettlementDialog({
               </tbody>
             </table>
           </div>
+          <div className="md:col-span-3 grid gap-3 md:grid-cols-3">
+            <label className="text-xs text-muted-foreground">
+              Payment mode
+              <select
+                className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground"
+                value={paymentMode}
+                onChange={(event) => setPaymentMode(event.target.value)}
+              >
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CASH">Cash</option>
+                <option value="CHEQUE">Cheque</option>
+                <option value="ONLINE">Online</option>
+              </select>
+            </label>
+            <label className="text-xs text-muted-foreground">
+              Company account
+              <select
+                className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground"
+                value={companyAccountId}
+                onChange={(event) => setCompanyAccountId(event.target.value)}
+              >
+                {companyAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} ({account.type})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs text-muted-foreground">
+              Payment reference
+              <input
+                className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-sm text-foreground"
+                value={paymentReference}
+                onChange={(event) => setPaymentReference(event.target.value)}
+                placeholder="Txn/cheque/reference no."
+              />
+            </label>
+          </div>
         </div>
       </FormDialog>
     </>
   );
 }
-

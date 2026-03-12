@@ -6,7 +6,7 @@ import { requirePermission } from "@/lib/rbac";
 import { settlePayrollEntry } from "@/lib/payroll-settlement";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   context: { params: Promise<{ id: string; entryId: string }> },
 ) {
   const session = await auth();
@@ -20,6 +20,10 @@ export async function POST(
   }
 
   const { id: payrollRunId, entryId } = await context.params;
+  const body = await req.json().catch(() => ({}));
+  const paymentMode = String((body as { paymentMode?: string }).paymentMode || "BANK_TRANSFER").trim();
+  const companyAccountId = String((body as { companyAccountId?: string }).companyAccountId || "").trim();
+  const paymentReference = String((body as { paymentReference?: string }).paymentReference || "").trim();
 
   const run = await prisma.payrollRun.findUnique({
     where: { id: payrollRunId },
@@ -42,6 +46,9 @@ export async function POST(
         payrollRunId,
         payrollEntryId: entryId,
         postedById: session.user.id,
+        paymentMode,
+        companyAccountId: companyAccountId || null,
+        paymentReference: paymentReference || null,
       });
     });
 
@@ -50,7 +57,7 @@ export async function POST(
       entity: "PayrollEntry",
       entityId: entryId,
       userId: session.user.id,
-      newValue: JSON.stringify({ payrollRunId, runStatus: result.runStatus }),
+      newValue: JSON.stringify({ payrollRunId, runStatus: result.runStatus, paymentMode, companyAccountId }),
     });
 
     return NextResponse.json({ success: true, data: result });
@@ -63,4 +70,3 @@ export async function POST(
     return NextResponse.json({ success: false, error: message }, { status });
   }
 }
-

@@ -24,9 +24,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (!existing) {
     return NextResponse.json({ success: false, error: "Advance not found" }, { status: 404 });
   }
-  if (["PAID", "RECOVERED"].includes(String(existing.status || "").toUpperCase())) {
+  if (["PAID", "PARTIALLY_RECOVERED", "RECOVERED"].includes(String(existing.status || "").toUpperCase())) {
     return NextResponse.json(
-      { success: false, error: "Paid or recovered advances are locked and cannot be edited." },
+      { success: false, error: "Issued/recovered advances are locked and cannot be edited." },
       { status: 400 },
     );
   }
@@ -43,6 +43,20 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   const data: Record<string, unknown> = {};
   if (parsed.data.employeeId) data.employeeId = sanitizeString(parsed.data.employeeId);
   if (parsed.data.amount !== undefined) data.amount = new Prisma.Decimal(parsed.data.amount);
+  if (parsed.data.amount !== undefined) {
+    data.issuedAmount = new Prisma.Decimal(parsed.data.amount);
+    data.outstandingAmount = new Prisma.Decimal(parsed.data.amount);
+    data.recoveredAmount = new Prisma.Decimal(0);
+  }
+  if (parsed.data.recoveryMode !== undefined) {
+    data.recoveryMode = sanitizeString(parsed.data.recoveryMode).toUpperCase();
+  }
+  if (parsed.data.installmentAmount !== undefined) {
+    data.installmentAmount =
+      parsed.data.installmentAmount && parsed.data.installmentAmount > 0
+        ? new Prisma.Decimal(parsed.data.installmentAmount)
+        : null;
+  }
   if (parsed.data.reason !== undefined) {
     data.reason = parsed.data.reason ? sanitizeString(parsed.data.reason) : null;
   }
@@ -59,6 +73,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     }
     data.status = nextStatus;
     data.approvedById = nextStatus === "APPROVED" ? session.user.id : null;
+    data.approvedAt = nextStatus === "APPROVED" ? new Date() : null;
   }
 
   let updated = await prisma.salaryAdvance.update({
@@ -96,7 +111,12 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     });
     updated = await prisma.salaryAdvance.update({
       where: { id },
-      data: { walletLedgerId: result.id, status: "PAID" },
+      data: {
+        walletLedgerId: result.id,
+        status: "PAID",
+        approvedAt: updated.approvedAt || new Date(),
+        paidAt: new Date(),
+      },
       include: { employee: true },
     });
   }

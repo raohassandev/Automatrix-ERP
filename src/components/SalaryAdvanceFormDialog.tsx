@@ -16,6 +16,8 @@ type SalaryAdvance = {
   employeeId: string;
   amount: number | string;
   reason: string;
+  recoveryMode?: string | null;
+  installmentAmount?: number | string | null;
   status?: string | null;
 };
 
@@ -30,6 +32,11 @@ const buildInitialForm = (advance: SalaryAdvance | null | undefined, employees: 
   employeeId: advance?.employeeId || employees[0]?.id || "",
   amount: advance?.amount !== null && advance?.amount !== undefined ? String(advance.amount) : "",
   reason: advance?.reason || "",
+  recoveryMode: advance?.recoveryMode || "FULL_NEXT_PAYROLL",
+  installmentAmount:
+    advance?.installmentAmount !== null && advance?.installmentAmount !== undefined
+      ? String(advance.installmentAmount)
+      : "",
 });
 
 export function SalaryAdvanceFormDialog(props: SalaryAdvanceFormDialogProps) {
@@ -56,10 +63,20 @@ function SalaryAdvanceFormDialogInner({
       toast.error("Amount must be greater than 0.");
       return;
     }
+    if (
+      form.recoveryMode === "INSTALLMENT" &&
+      (!form.installmentAmount || Number(form.installmentAmount) <= 0)
+    ) {
+      toast.error("Installment amount is required for installment recovery mode.");
+      return;
+    }
     const payload = {
       employeeId: form.employeeId,
       amount: Number(form.amount),
       reason: form.reason.trim(),
+      recoveryMode: form.recoveryMode,
+      installmentAmount:
+        form.recoveryMode === "INSTALLMENT" ? Number(form.installmentAmount || 0) : undefined,
     };
     const url = advance ? `/api/salary-advances/${advance.id}` : "/api/salary-advances";
     const method = advance ? "PATCH" : "POST";
@@ -131,6 +148,33 @@ function SalaryAdvanceFormDialogInner({
             placeholder="Advance request reason"
             required
           />
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="recovery-mode">Recovery Mode</Label>
+            <select
+              id="recovery-mode"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-foreground"
+              value={form.recoveryMode}
+              onChange={(e) => setForm({ ...form, recoveryMode: e.target.value })}
+            >
+              <option value="FULL_NEXT_PAYROLL">Full in next payroll</option>
+              <option value="INSTALLMENT">Installment</option>
+              <option value="MANUAL">Manual</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="installment-amount">Installment Amount</Label>
+            <Input
+              id="installment-amount"
+              type="number"
+              min={0}
+              disabled={form.recoveryMode !== "INSTALLMENT"}
+              value={form.installmentAmount}
+              onChange={(e) => setForm({ ...form, installmentAmount: e.target.value })}
+              placeholder="Required when mode is Installment"
+            />
+          </div>
         </div>
         <div className="flex justify-end gap-3 pt-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>

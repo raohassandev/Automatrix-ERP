@@ -108,30 +108,17 @@ async function applyIncentiveApproval(
   let expenseId = incentive.expenseId || null;
   let walletLedgerId = incentive.walletLedgerId || null;
 
-  if (!expenseId) {
-    const projectRef = incentive.projectRef || null;
-    const expense = await tx.expense.create({
-      data: {
-        date: new Date(),
-        description: `Incentive for ${projectRef || "project"}`,
-        category: "Incentive",
-        amount: new Prisma.Decimal(incentive.amount),
-        paymentMode: incentive.payoutMode === "WALLET" ? "Wallet Credit" : "Payroll Settlement",
-        paymentSource: "COMPANY_ACCOUNT",
-        expenseType: "COMPANY",
-        project: projectRef || undefined,
-        status: "APPROVED",
-        approvalLevel: "INCENTIVE",
-        submittedById: approvedById,
-        approvedById,
-        approvedAmount: new Prisma.Decimal(incentive.amount),
-        remarks: incentive.reason || undefined,
-      },
-    });
-    expenseId = expense.id;
+  const payoutMode = String(incentive.payoutMode || "PAYROLL").toUpperCase();
+  if (payoutMode === "PAYROLL") {
+    return {
+      expenseId: expenseId || null,
+      walletLedgerId: walletLedgerId || null,
+      settlementStatus: "UNSETTLED",
+      settledAt: null,
+    };
   }
 
-  if (incentive.payoutMode === "WALLET" && !walletLedgerId) {
+  if (payoutMode === "WALLET" && !walletLedgerId) {
     const employee = await tx.employee.findUnique({ where: { id: incentive.employeeId } });
     if (!employee) {
       throw new Error("Employee not found");
@@ -159,7 +146,7 @@ async function applyIncentiveApproval(
     walletLedgerId = ledger.id;
   }
 
-  const settled = incentive.payoutMode === "WALLET" || Boolean(walletLedgerId);
+  const settled = payoutMode === "WALLET" || Boolean(walletLedgerId);
   return {
     expenseId,
     walletLedgerId,

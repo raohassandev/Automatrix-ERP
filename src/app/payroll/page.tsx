@@ -58,6 +58,7 @@ export default async function PayrollPage({
     approvedUnsettledIncentiveAgg,
     settledIncentivePayrollAgg,
     openSalaryAdvanceAgg,
+    companyAccounts,
     incentiveQueueRows,
     unpaidPayrollRows,
     settlementAuditRows,
@@ -104,9 +105,14 @@ export default async function PayrollPage({
       _sum: { amount: true },
     }),
     prisma.salaryAdvance.aggregate({
-      where: { status: "OPEN" },
-      _sum: { amount: true },
+      where: { status: { in: ["PAID", "PARTIALLY_RECOVERED"] } },
+      _sum: { outstandingAmount: true },
       _count: { _all: true },
+    }),
+    prisma.companyAccount.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, type: true },
     }),
     prisma.incentiveEntry.findMany({
       where: {
@@ -154,7 +160,7 @@ export default async function PayrollPage({
   const pendingApprovalIncentive = Number(pendingApprovalIncentiveAgg._sum.amount || 0);
   const approvedUnsettledIncentive = Number(approvedUnsettledIncentiveAgg._sum.amount || 0);
   const settledIncentivePayroll = Number(settledIncentivePayrollAgg._sum.amount || 0);
-  const openSalaryAdvance = Number(openSalaryAdvanceAgg._sum.amount || 0);
+  const openSalaryAdvance = Number(openSalaryAdvanceAgg._sum.outstandingAmount || 0);
   const openSalaryAdvanceCount = Number(openSalaryAdvanceAgg._count._all || 0);
   const latestRun = runs[0];
   const approvedQueueRows = incentiveQueueRows.filter((row) => row.status === "APPROVED");
@@ -233,7 +239,7 @@ export default async function PayrollPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Payroll</h1>
-            <p className="mt-2 text-muted-foreground">Manage pay periods and wallet credits.</p>
+            <p className="mt-2 text-muted-foreground">Manage pay periods and salary disbursements.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {canEdit ? (
@@ -619,6 +625,7 @@ export default async function PayrollPage({
                             payrollRunId={run.id}
                             runStatus={run.status}
                             canApprove={canApprove}
+                            companyAccounts={companyAccounts}
                             entries={run.entries.map((entry) => ({
                               id: entry.id,
                               employeeId: entry.employeeId,
@@ -687,6 +694,7 @@ export default async function PayrollPage({
                         payrollRunId={run.id}
                         runStatus={run.status}
                         canApprove={canApprove}
+                        companyAccounts={companyAccounts}
                         entries={run.entries.map((entry) => ({
                           id: entry.id,
                           employeeId: entry.employeeId,

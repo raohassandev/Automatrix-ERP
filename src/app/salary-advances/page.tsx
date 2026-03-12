@@ -99,6 +99,7 @@ export default async function SalaryAdvancesPage({
                 <th className="py-2">Date</th>
                 <th className="py-2">Employee</th>
                 <th className="py-2">Amount</th>
+                <th className="py-2">Outstanding</th>
                 <th className="py-2">Reason</th>
                 <th className="py-2">Status</th>
                 <th className="py-2">Actions</th>
@@ -110,6 +111,7 @@ export default async function SalaryAdvancesPage({
                   <td className="py-2">{new Date(row.createdAt).toLocaleDateString()}</td>
                   <td className="py-2">{row.employee?.name || row.employee?.email || "-"}</td>
                   <td className="py-2">{formatMoney(Number(row.amount))}</td>
+                  <td className="py-2">{formatMoney(Number(row.outstandingAmount || 0))}</td>
                   <td className="py-2">{row.reason}</td>
                   <td className="py-2">
                     <StatusBadge status={row.status} />
@@ -121,6 +123,8 @@ export default async function SalaryAdvancesPage({
                           id: row.id,
                           employeeId: row.employeeId,
                           amount: Number(row.amount),
+                          recoveryMode: row.recoveryMode,
+                          installmentAmount: row.installmentAmount ? Number(row.installmentAmount) : null,
                           reason: row.reason,
                           status: row.status,
                         }}
@@ -143,6 +147,7 @@ export default async function SalaryAdvancesPage({
               fields={[
                 { label: "Date", value: new Date(row.createdAt).toLocaleDateString() },
                 { label: "Amount", value: formatMoney(Number(row.amount)) },
+                { label: "Outstanding", value: formatMoney(Number(row.outstandingAmount || 0)) },
                 { label: "Status", value: <StatusBadge status={row.status} /> },
               ]}
               actions={
@@ -152,6 +157,8 @@ export default async function SalaryAdvancesPage({
                       id: row.id,
                       employeeId: row.employeeId,
                       amount: Number(row.amount),
+                      recoveryMode: row.recoveryMode,
+                      installmentAmount: row.installmentAmount ? Number(row.installmentAmount) : null,
                       reason: row.reason,
                       status: row.status,
                     }}

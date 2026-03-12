@@ -8,6 +8,11 @@ export type PayrollPolicyEntry = {
   deductionReason: string;
 };
 
+type AdvanceDeductionSummary = {
+  total: number;
+  lines: Array<{ id: string; amount: number; mode: string }>;
+};
+
 type AttendancePolicy = {
   latePenalty: number;
   halfDayFactor: number;
@@ -17,6 +22,49 @@ const DEFAULT_POLICY: AttendancePolicy = {
   latePenalty: 500,
   halfDayFactor: 0.5,
 };
+
+function computeAdvanceOutstanding(row: {
+  amount: unknown;
+  issuedAmount: unknown;
+  recoveredAmount: unknown;
+  outstandingAmount: unknown;
+}) {
+  const amount = Number(row.amount || 0);
+  const issued = Number(row.issuedAmount || amount || 0);
+  const recovered = Number(row.recoveredAmount || 0);
+  const storedOutstanding = Number(row.outstandingAmount || 0);
+  const derivedOutstanding = Number((issued - recovered).toFixed(2));
+  const outstanding = storedOutstanding > 0 ? storedOutstanding : derivedOutstanding;
+  return Math.max(0, Number(outstanding.toFixed(2)));
+}
+
+function computeAdvanceDeduction(rows: Array<{
+  id: string;
+  amount: unknown;
+  issuedAmount: unknown;
+  recoveredAmount: unknown;
+  outstandingAmount: unknown;
+  recoveryMode: string | null;
+  installmentAmount: unknown;
+}>): AdvanceDeductionSummary {
+  const lines: Array<{ id: string; amount: number; mode: string }> = [];
+  let total = 0;
+  for (const row of rows) {
+    const mode = String(row.recoveryMode || "FULL_NEXT_PAYROLL").toUpperCase();
+    const outstanding = computeAdvanceOutstanding(row);
+    if (outstanding <= 0.01) continue;
+    let recoverable = outstanding;
+    if (mode === "INSTALLMENT") {
+      const installment = Number(row.installmentAmount || 0);
+      if (installment > 0) recoverable = Math.min(outstanding, installment);
+    }
+    recoverable = Number(recoverable.toFixed(2));
+    if (recoverable <= 0.01) continue;
+    lines.push({ id: row.id, amount: recoverable, mode });
+    total += recoverable;
+  }
+  return { total: Number(total.toFixed(2)), lines };
+}
 
 export async function buildPayrollEntriesByPolicy(
   prisma: PrismaClient,
@@ -62,10 +110,19 @@ export async function buildPayrollEntriesByPolicy(
     }),
     prisma.salaryAdvance.findMany({
       where: {
-        status: "PAID",
-        createdAt: { lte: periodEnd },
+        status: { in: ["PAID", "PARTIALLY_RECOVERED"] },
+        OR: [{ paidAt: { lte: periodEnd } }, { paidAt: null, createdAt: { lte: periodEnd } }],
       },
-      select: { employeeId: true, amount: true },
+      select: {
+        id: true,
+        employeeId: true,
+        amount: true,
+        issuedAmount: true,
+        recoveredAmount: true,
+        outstandingAmount: true,
+        recoveryMode: true,
+        installmentAmount: true,
+      },
     }),
     prisma.attendanceEntry.findMany({
       where: {
@@ -107,10 +164,11 @@ export async function buildPayrollEntriesByPolicy(
     return map;
   }, new Map<string, number>());
   const advanceByEmployee = advances.reduce((map, row) => {
-    const current = map.get(row.employeeId) || 0;
-    map.set(row.employeeId, current + Number(row.amount || 0));
+    const current = map.get(row.employeeId) || [];
+    current.push(row);
+    map.set(row.employeeId, current);
     return map;
-  }, new Map<string, number>());
+  }, new Map<string, Array<(typeof advances)[number]>>());
 
   const attendanceAgg = attendance.reduce((map, row) => {
     const key = row.employeeId;
@@ -133,7 +191,9 @@ export async function buildPayrollEntriesByPolicy(
     const absenceDeduction = dailyRate * attendanceRow.absent;
     const halfDayDeduction = dailyRate * policy.halfDayFactor * attendanceRow.halfDay;
     const lateDeduction = policy.latePenalty * attendanceRow.late;
-    const advanceDeduction = advanceByEmployee.get(employee.id) || 0;
+    const advanceRows = advanceByEmployee.get(employee.id) || [];
+    const advanceSummary = computeAdvanceDeduction(advanceRows);
+    const advanceDeduction = advanceSummary.total;
     const deductions = Number(
       (absenceDeduction + halfDayDeduction + lateDeduction + advanceDeduction).toFixed(2),
     );
@@ -145,7 +205,7 @@ export async function buildPayrollEntriesByPolicy(
     if (attendanceRow.absent > 0) reasons.push(`Absent: ${attendanceRow.absent} day(s)`);
     if (attendanceRow.halfDay > 0) reasons.push(`Half-day: ${attendanceRow.halfDay}`);
     if (attendanceRow.late > 0) reasons.push(`Late: ${attendanceRow.late}`);
-    if (advanceDeduction > 0) reasons.push(`Salary advance recovery`);
+    if (advanceDeduction > 0) reasons.push(`Salary advance recovery: ${advanceSummary.lines.length} line(s)`);
     const incentiveCount = incentiveCountByEmployee.get(employee.id) || 0;
     if (incentiveCount > 0) reasons.push(`Project incentives: ${incentiveCount}`);
     const commissionCount = commissionCountByEmployee.get(employee.id) || 0;
