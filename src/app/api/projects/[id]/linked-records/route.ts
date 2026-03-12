@@ -312,7 +312,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "expense",
       label: "Expenses",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: expenses.map((row) => ({
         id: row.id,
         title: row.description,
@@ -325,7 +325,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "income",
       label: "Income",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: incomes.map((row) => ({
         id: row.id,
         title: row.source,
@@ -338,7 +338,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "invoice",
       label: "Invoices",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: invoices.map((row) => ({
         id: row.id,
         title: row.invoiceNo,
@@ -351,7 +351,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "purchaseOrder",
       label: "Purchase Orders",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: purchaseOrders.map((row) => ({
         id: row.id,
         title: row.poNumber,
@@ -364,7 +364,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "goodsReceipt",
       label: "Goods Receipts",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: goodsReceipts.map((row) => ({
         id: row.id,
         title: row.grnNumber,
@@ -376,7 +376,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "vendorBill",
       label: "Vendor Bills",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: vendorBills.map((row) => ({
         id: row.id,
         title: row.billNumber,
@@ -389,7 +389,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "vendorPayment",
       label: "Vendor Payments",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: vendorPayments.map((row) => ({
         id: row.id,
         title: row.paymentNumber,
@@ -402,7 +402,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "inventoryLedger",
       label: "Inventory Ledger",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: inventoryLedger.map((row) => ({
         id: row.id,
         title: row.reference || `Ledger ${row.id.slice(0, 8)}`,
@@ -428,7 +428,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "quotation",
       label: "Quotations",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: quotations.map((row) => ({
         id: row.id,
         title: row.quoteNumber,
@@ -441,7 +441,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "incentive",
       label: "Incentives",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: incentives.map((row) => ({
         id: row.id,
         title: row.employee?.name || "Employee incentive",
@@ -454,7 +454,7 @@ export async function GET(_req: Request, context: { params: Promise<{ id: string
     {
       key: "commission",
       label: "Commissions",
-      actionLabel: "Delete",
+      actionLabel: "Review",
       items: commissions.map((row) => ({
         id: row.id,
         title: row.employee?.name || "Employee commission",

@@ -30,11 +30,11 @@ Confirm implemented modules are auditable, role-safe, and transaction-consistent
 3. Hardened payroll settlement smoke checks to deterministic selectors/assertions.
 4. Synced tracker + master-plan status to current batch state.
 
-## 5) Open Discrepancies (Residual, Non-Critical)
-1. Medium: complete final destructive-endpoint conversion where pending/non-posted hard-delete still exists in implemented modules; target policy is `void/reopen/deactivate` over delete.
-2. Medium: one final visual polish pass for owner/employee overview card hierarchy (typography spacing and emphasis consistency across light/dark themes).
-
-No open critical discrepancies in implemented scope from this final pass.
+## 5) Open Discrepancies (Residual)
+1. Critical: payroll/advance/incentive lifecycle still needs structural redesign for full ERP-grade correctness (partial advance recovery model, payroll disbursement model, single-channel variable-pay settlement model).
+2. High: posted-document correction lifecycle still needs complete reversal/adjustment flows (`GRN`, `Vendor Bill`, `Vendor Payment`, paid-payroll correction path).
+3. Medium: complete final destructive-endpoint conversion where pending/non-posted hard-delete still exists in implemented modules; target policy is `void/reopen/deactivate` over delete.
+4. Medium: one final visual polish pass for owner/employee overview card hierarchy (typography spacing and emphasis consistency across light/dark themes).
 
 ## 6) Auditor Re-Verification Checklist
 1. Re-run `pnpm qa:staging:batch` and confirm green.
@@ -47,5 +47,5 @@ No open critical discrepancies in implemented scope from this final pass.
 4. Confirm no real staging data was deleted during this pass.
 
 ## 7) Go/No-Go Recommendation (Implemented Scope)
-- Status: `GO with residual medium actions tracked`
-- Condition: execute residual items in next hardening batch before production cutover signoff.
+- Status: `CONDITIONAL GO for controlled hardening phase only`
+- Condition: close critical/high lifecycle gaps before production cutover signoff.

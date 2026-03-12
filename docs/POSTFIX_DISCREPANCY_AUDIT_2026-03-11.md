@@ -10,12 +10,22 @@ Scope: Finance/Accounting, Inventory, Projects, Expense, Wallet/Advances, Payrol
 
 ## Open Discrepancies Only
 
-1. Medium — Full destructive-endpoint closure is still partially open
+1. Critical — Payroll/Advance/Variable-Pay lifecycle still not fully ERP-grade
+- Areas: salary advance recovery model, payroll disbursement model, incentive/commission single-channel settlement.
+- Risk: deduction/recovery/payment truth can drift in real operations.
+- Required closure: redesign lifecycle per posted-payable/payment channel with partial recovery tracking.
+
+2. High — Posted correction workflows are still incomplete
+- Areas: posted procurement documents (`GRN`, `Vendor Bill`, `Vendor Payment`) and paid payroll correction path.
+- Risk: users can be blocked from correcting posted mistakes safely.
+- Required closure: implement reversal/adjustment flows and remove placeholder “use reversal later” gaps.
+
+3. Medium — Full destructive-endpoint closure is still partially open
 - Areas: remaining implemented-module `DELETE` surfaces that are operationally safe but still hard-delete in pending/non-posted states.
 - Risk: accidental historical cleanup outside intended reversal/void lifecycle.
 - Required closure: complete endpoint-by-endpoint conversion to deactivate/void/reopen patterns where business-critical history can exist.
 
-2. Medium — Visual design consistency still needs one focused owner/portal polish pass
+4. Medium — Visual design consistency still needs one focused owner/portal polish pass
 - Areas: dashboard/portal card typography spacing and cross-theme emphasis hierarchy.
 - Risk: readability/comprehension debt for non-technical users.
 - Required closure: single UI token pass with screenshot signoff on owner + employee portal pages.

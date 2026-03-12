@@ -26,6 +26,8 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
   - 2026-03-11 progress: `clients/[id] DELETE` now blocks deletion when linked projects or quotations exist.
   - 2026-03-11 progress: `departments/[id]` and `designations/[id]` delete now auto-deactivate when linked employees exist.
   - 2026-03-12 progress: `hrms/attendance/[id] DELETE` now blocked (immutable HR records; correction via PATCH only).
+  - 2026-03-12 progress: `commissions/[id] DELETE` now restricted to `PENDING` only (code/doc parity restored).
+  - 2026-03-12 progress: legacy `hardDeleteProjectCascade()` removed from `projects/[id]/route.ts` to prevent accidental revival of destructive project cascades.
 - Evidence:
   - `src/app/api/payroll/runs/[id]/route.ts`
   - `src/app/api/invoices/[id]/route.ts`
@@ -83,6 +85,7 @@ Purpose: execute `report.md` recommendations in controlled batches (no tiny depl
   - 2026-03-11 progress: Playwright staging deep-audit/mobile-smoke specs switched to env-driven role credentials to avoid stale hardcoded login drift.
   - 2026-03-12 progress: refreshed post-fix discrepancy audit with latest batch evidence and residual-only list.
   - 2026-03-12 progress: published final implemented-scope auditor handoff report (`docs/IMPLEMENTED_MODULES_FINAL_AUDIT_2026-03-12.md`).
+  - 2026-03-12 progress: published explicit implemented-scope delete/correction policy note (`docs/IMPLEMENTED_DELETE_POLICY_2026-03-12.md`).
 
 ## Current Batch (B1)
 Scope:

@@ -444,6 +444,13 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
     return NextResponse.json({ success: false, error: "Commission not found" }, { status: 404 });
   }
 
+  if (String(existing.status || "").toUpperCase() !== "PENDING") {
+    return NextResponse.json(
+      { success: false, error: "Only pending commissions can be deleted." },
+      { status: 400 },
+    );
+  }
+
   if ((existing.settlementStatus || "UNSETTLED") === "SETTLED") {
     return NextResponse.json(
       { success: false, error: "Settled commissions cannot be deleted." },
