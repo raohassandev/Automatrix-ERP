@@ -179,16 +179,17 @@ This file is the running action list for closure, hardening, and go-live readine
     - `tasks.review`
     - `tasks.templates_manage`
   - [ ] Next maturity permission keys (phase-2 of task program):
-    - `tasks.assign`
-    - `tasks.view_team`
-    - `tasks.view_company`
-    - `tasks.verify`
-    - `tasks.close`
-    - `tasks.reopen`
-    - `tasks.attach_evidence`
-    - `tasks.verify_completion`
-    - `tasks.grade_completion`
-    - `tasks.view_team_performance`
-    - `tasks.view_company_performance`
+    - [x] `tasks.assign`
+    - [x] `tasks.view_team`
+    - [x] `tasks.view_company`
+    - [x] `tasks.verify`
+    - [x] `tasks.close`
+    - [x] `tasks.reopen`
+    - [x] `tasks.attach_evidence`
+    - [x] `tasks.verify_completion`
+    - [x] `tasks.grade_completion`
+    - [x] `tasks.view_team_performance`
+    - [x] `tasks.view_company_performance`
+    Evidence (2026-03-13): permission catalog expanded in `src/lib/permissions.ts`; task assignment endpoints now enforce `tasks.assign` on assign/reassign paths (`/api/tasks`, `/api/tasks/[id]`, `/api/projects/[id]/tasks`).
 
 - [ ] Keep this feature set in planned state until current go-live blockers (section 1) are closed.

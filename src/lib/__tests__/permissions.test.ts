@@ -23,4 +23,10 @@ describe("permissions (RBAC) business rules", () => {
   test("Defensive: non-string permission returns false", () => {
     expect(hasPermission("Staff", 123 as unknown as string)).toBe(false);
   });
+
+  test("Phase-2 task permissions are present on manager and admin baselines", () => {
+    expect(hasPermission("Manager", "tasks.assign")).toBe(true);
+    expect(hasPermission("Manager", "tasks.view_team_performance")).toBe(true);
+    expect(hasPermission("Admin", "tasks.view_company_performance")).toBe(true);
+  });
 });

@@ -116,7 +116,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const canManage = (await requirePermission(session.user.id, "tasks.manage")) || (await requirePermission(session.user.id, "projects.edit"));
+  const [canManage, canAssign] = await Promise.all([
+    (await requirePermission(session.user.id, "tasks.manage")) || (await requirePermission(session.user.id, "projects.edit")),
+    requirePermission(session.user.id, "tasks.assign"),
+  ]);
   if (!canManage) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
@@ -139,6 +142,10 @@ export async function POST(req: Request) {
   }
 
   if (parsed.data.assignedToId) {
+    const assigningOtherUser = parsed.data.assignedToId !== session.user.id;
+    if (assigningOtherUser && !canAssign) {
+      return NextResponse.json({ success: false, error: "Task assign permission required" }, { status: 403 });
+    }
     const assignee = await prisma.user.findUnique({
       where: { id: parsed.data.assignedToId },
       select: { id: true },

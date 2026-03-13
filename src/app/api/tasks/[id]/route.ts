@@ -41,10 +41,11 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     return NextResponse.json({ success: false, error: "Task not found" }, { status: 404 });
   }
 
-  const [canManage, canUpdateAssigned, canReview] = await Promise.all([
+  const [canManage, canUpdateAssigned, canReview, canAssign] = await Promise.all([
     requirePermission(session.user.id, "tasks.manage"),
     requirePermission(session.user.id, "tasks.update_assigned"),
     requirePermission(session.user.id, "tasks.review"),
+    requirePermission(session.user.id, "tasks.assign"),
   ]);
   const isAssignee = existing.assignedToId === session.user.id;
 
@@ -93,6 +94,10 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     }
     if (payload.assignedToId !== undefined) {
       if (payload.assignedToId) {
+        const assigningOtherUser = payload.assignedToId !== session.user.id;
+        if (assigningOtherUser && !canAssign) {
+          return NextResponse.json({ success: false, error: "Task assign permission required" }, { status: 403 });
+        }
         const assignee = await prisma.user.findUnique({
           where: { id: payload.assignedToId },
           select: { id: true },
