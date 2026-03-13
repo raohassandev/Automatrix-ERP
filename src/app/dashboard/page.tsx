@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import { getDashboardDataEnhanced } from "@/lib/dashboard";
 import { getControlRegistersSummary } from "@/lib/control-registers";
+import { prisma } from "@/lib/prisma";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -84,6 +85,18 @@ export default async function DashboardPage() {
   const netDelta = (dashboardMetrics?.netProfit || 0) - (dashboardMetrics?.prevMonthNet || 0);
   const formatDelta = (value: number) => `${value >= 0 ? "+" : "-"}${formatMoney(Math.abs(value))}`;
   const controlSummary = canViewReports ? await getControlRegistersSummary() : null;
+  const financeQueues = canViewFinanceWorkspace
+    ? await (async () => {
+        const now = new Date();
+        const [openPeriods, overdueOpenPeriods, unreconciledSnapshots, unmatchedStatementLines] = await Promise.all([
+          prisma.fiscalPeriod.count({ where: { status: "OPEN" } }),
+          prisma.fiscalPeriod.count({ where: { status: "OPEN", endDate: { lt: now } } }),
+          prisma.bankReconciliationSnapshot.count({ where: { status: { in: ["UNRECONCILED", "REVIEW"] } } }),
+          prisma.bankStatementLine.count({ where: { status: "UNMATCHED" } }),
+        ]);
+        return { openPeriods, overdueOpenPeriods, unreconciledSnapshots, unmatchedStatementLines };
+      })()
+    : null;
 
   return (
     <div className="grid gap-6">
@@ -455,6 +468,13 @@ export default async function DashboardPage() {
               <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-3 py-2">
                 Payroll overdue: <span className="font-semibold">{controlSummary?.payroll.totalOverdue ?? 0}</span>
               </div>
+              <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-3 py-2">
+                Period-close pressure: <span className="font-semibold">{financeQueues?.overdueOpenPeriods ?? 0}</span> overdue open period(s)
+              </div>
+              <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-3 py-2">
+                Bank reconciliation queue: <span className="font-semibold">{financeQueues?.unreconciledSnapshots ?? 0}</span> snapshot(s),{" "}
+                <span className="font-semibold">{financeQueues?.unmatchedStatementLines ?? 0}</span> unmatched line(s)
+              </div>
               {canOpenPayroll ? (
                 <Link className="underline underline-offset-2" href="/payroll">
                   Payroll Runs
@@ -468,6 +488,16 @@ export default async function DashboardPage() {
               {canViewAccounting || canManageAccounting ? (
                 <Link className="underline underline-offset-2" href="/reports/accounting/cash-position">
                   Cash Position
+                </Link>
+              ) : null}
+              {canViewAccounting || canManageAccounting ? (
+                <Link className="underline underline-offset-2" href="/accounting/fiscal-periods">
+                  Fiscal Period Close Queue ({financeQueues?.openPeriods ?? 0} open)
+                </Link>
+              ) : null}
+              {canViewAccounting || canManageAccounting ? (
+                <Link className="underline underline-offset-2" href="/reports/accounting/bank-reconciliation">
+                  Bank Reconciliation
                 </Link>
               ) : null}
             </div>

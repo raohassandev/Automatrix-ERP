@@ -55,7 +55,7 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 
 - [~] My Workspace action queues
 - [~] Manager Workspace delays/approvals exceptions
-- [~] Finance Workspace due/reconciliation/period-close queues
+- [x] Finance Workspace due/reconciliation/period-close queues
 - [~] CEO Workspace cash, recovery, bottleneck exception queues
 
 ### Block 5 (Hardening + UAT + Go/No-Go)
