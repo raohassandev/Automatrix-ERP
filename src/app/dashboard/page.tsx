@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import { getDashboardDataEnhanced } from "@/lib/dashboard";
+import { getControlRegistersSummary } from "@/lib/control-registers";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -75,6 +76,7 @@ export default async function DashboardPage() {
   const expenseDelta = (dashboardMetrics?.totalExpenses || 0) - (dashboardMetrics?.prevMonthExpenses || 0);
   const netDelta = (dashboardMetrics?.netProfit || 0) - (dashboardMetrics?.prevMonthNet || 0);
   const formatDelta = (value: number) => `${value >= 0 ? "+" : "-"}${formatMoney(Math.abs(value))}`;
+  const controlSummary = canViewReports ? await getControlRegistersSummary() : null;
 
   return (
     <div className="grid gap-6">
@@ -216,6 +218,64 @@ export default async function DashboardPage() {
             <div className="rounded-lg border border-sky-500/20 bg-sky-500/10 p-3 text-sm">
               <div className="text-sky-700 dark:text-sky-300">Wallet available</div>
               <div className="mt-1 font-semibold">{formatMoney(dashboardMetrics.walletAvailable)}</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {controlSummary ? (
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold">Control Register Snapshot</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Real-time control totals across payroll, variable pay, settlements, and procurement.
+              </p>
+            </div>
+            <Link className="text-sm underline underline-offset-2" href="/reports/controls">
+              Open control report
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 p-3 text-sm">
+              <div className="text-sky-700 dark:text-sky-300">Payroll</div>
+              <div className="mt-1 font-semibold">{controlSummary.payroll.count} entries</div>
+              <div className="text-xs text-muted-foreground">
+                Net: {formatMoney(controlSummary.payroll.totalNetPay)} • Overdue: {controlSummary.payroll.totalOverdue}
+              </div>
+            </div>
+            <div className="rounded-lg border border-indigo-500/25 bg-indigo-500/10 p-3 text-sm">
+              <div className="text-indigo-700 dark:text-indigo-300">Variable Pay</div>
+              <div className="mt-1 font-semibold">{controlSummary.variablePay.count} rows</div>
+              <div className="text-xs text-muted-foreground">
+                Unsettled: {formatMoney(controlSummary.variablePay.unsettledAmount)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm">
+              <div className="text-emerald-700 dark:text-emerald-300">Employee Settlements</div>
+              <div className="mt-1 font-semibold">{controlSummary.settlements.employees} employees</div>
+              <div className="text-xs text-muted-foreground">
+                Net payable: {formatMoney(controlSummary.settlements.netCompanyPayable)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-sm">
+              <div className="text-amber-700 dark:text-amber-300">Projects</div>
+              <div className="mt-1 font-semibold">{controlSummary.projects.count} projects</div>
+              <div className="text-xs text-muted-foreground">
+                Pending recovery: {formatMoney(controlSummary.projects.pendingRecovery)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-rose-500/25 bg-rose-500/10 p-3 text-sm">
+              <div className="text-rose-700 dark:text-rose-300">Procurement / AP</div>
+              <div className="mt-1 font-semibold">{controlSummary.procurement.rows} vendor rows</div>
+              <div className="text-xs text-muted-foreground">
+                Outstanding: {formatMoney(controlSummary.procurement.outstanding)} • Blocked: {controlSummary.procurement.blocked}
+              </div>
+            </div>
+            <div className="rounded-lg border border-violet-500/25 bg-violet-500/10 p-3 text-sm">
+              <div className="text-violet-700 dark:text-violet-300">Tasks & Approvals</div>
+              <div className="mt-1 font-semibold">{controlSummary.taskApprovals.items} items</div>
+              <div className="text-xs text-muted-foreground">Overdue: {controlSummary.taskApprovals.overdue}</div>
             </div>
           </div>
         </div>

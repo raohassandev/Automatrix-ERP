@@ -21,15 +21,22 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
   Evidence: `src/lib/control-registers.ts`
 - [x] Added summary API endpoint for control-register snapshot  
   Evidence: `src/app/api/reports/control-registers/summary/route.ts`
-- [ ] Wire register rows into role workspaces (My / Manager / Finance / CEO)
+- [~] Wire register rows into role workspaces (My / Manager / Finance / CEO)
+  - [x] Dashboard (`/dashboard`) control register snapshot cards
+  - [x] CEO Dashboard (`/ceo/dashboard`) control register snapshot cards
+  - [ ] Remaining role workspaces: My / Manager / Finance direct queue blocks
 - [ ] Add field-level permission masking in register responses where required
-- [ ] Add focused tests for register math and month-boundary behavior
+- [x] Add focused tests for register math and month-boundary behavior
+  - `src/lib/__tests__/payroll-policy.test.ts`
+  - `src/lib/__tests__/payroll-settlement.test.ts`
 
-### Block 2 (Employee Settlement + Variable Pay + Payroll control)
+### Block 2 (Employee Settlement + Variable Pay + Payroll control) — In progress
 
-- [ ] Employee Settlement Register maturity (advance/reimbursement/payroll due with monthly trace)
-- [ ] Variable Pay Register month-aware scheduling/settlement references
-- [ ] Payroll Control Register full lifecycle and overdue logic hardening
+- [~] Employee Settlement Register maturity (advance/reimbursement/payroll due with monthly trace)
+  - [x] Include current-month due logic for payroll-linked variable pay (`scheduledPayrollMonth <= current month` for due view)
+  - [ ] Add explicit month drilldowns on employee settlement pages
+- [x] Variable Pay Register month-aware scheduling/settlement references
+- [x] Payroll Control Register full lifecycle and overdue logic hardening
 
 ### Block 3 (Procurement/AP + Project truth)
 
@@ -55,4 +62,3 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 - `pnpm vitest run ...` (targeted + changed areas)
 - `pnpm build`
 - staging Playwright critical subset for affected flows
-

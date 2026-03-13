@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { formatMoney } from "@/lib/format";
+import { getControlRegistersSummary } from "@/lib/control-registers";
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -168,6 +169,7 @@ export default async function CeoDashboardPage() {
       createdAt: { gte: monthStart, lte: monthEnd },
     },
   });
+  const controlSummary = await getControlRegistersSummary();
 
   return (
     <div className="grid gap-6">
@@ -313,6 +315,58 @@ export default async function CeoDashboardPage() {
             <Link className="text-sm underline" href="/approvals">
               Go to approvals
             </Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-lg font-semibold">Control Register Snapshot</div>
+            <div className="text-sm text-muted-foreground">
+              Cross-module truth snapshot for payroll, variable pay, settlements, projects, and AP.
+            </div>
+          </div>
+          <Link className="text-sm underline" href="/reports/controls">
+            Controls report
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-lg border border-sky-500/20 bg-sky-500/10 p-3 text-sm">
+            <div className="text-sky-700 dark:text-sky-300">Payroll net</div>
+            <div className="mt-1 font-semibold">{formatMoney(controlSummary.payroll.totalNetPay)}</div>
+            <div className="text-xs text-muted-foreground">
+              {controlSummary.payroll.count} entries • Overdue {controlSummary.payroll.totalOverdue}
+            </div>
+          </div>
+          <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/10 p-3 text-sm">
+            <div className="text-indigo-700 dark:text-indigo-300">Variable pay unsettled</div>
+            <div className="mt-1 font-semibold">{formatMoney(controlSummary.variablePay.unsettledAmount)}</div>
+            <div className="text-xs text-muted-foreground">{controlSummary.variablePay.count} rows tracked</div>
+          </div>
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm">
+            <div className="text-emerald-700 dark:text-emerald-300">Employee net payable</div>
+            <div className="mt-1 font-semibold">{formatMoney(controlSummary.settlements.netCompanyPayable)}</div>
+            <div className="text-xs text-muted-foreground">
+              Reimburse due: {formatMoney(controlSummary.settlements.reimbursementDue)}
+            </div>
+          </div>
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm">
+            <div className="text-amber-700 dark:text-amber-300">Project pending recovery</div>
+            <div className="mt-1 font-semibold">{formatMoney(controlSummary.projects.pendingRecovery)}</div>
+            <div className="text-xs text-muted-foreground">{controlSummary.projects.count} projects in register</div>
+          </div>
+          <div className="rounded-lg border border-rose-500/20 bg-rose-500/10 p-3 text-sm">
+            <div className="text-rose-700 dark:text-rose-300">AP outstanding</div>
+            <div className="mt-1 font-semibold">{formatMoney(controlSummary.procurement.outstanding)}</div>
+            <div className="text-xs text-muted-foreground">
+              {controlSummary.procurement.rows} vendor rows • Blocked {controlSummary.procurement.blocked}
+            </div>
+          </div>
+          <div className="rounded-lg border border-violet-500/20 bg-violet-500/10 p-3 text-sm">
+            <div className="text-violet-700 dark:text-violet-300">Tasks & approvals overdue</div>
+            <div className="mt-1 font-semibold">{controlSummary.taskApprovals.overdue}</div>
+            <div className="text-xs text-muted-foreground">{controlSummary.taskApprovals.items} tracked items</div>
           </div>
         </div>
       </div>
