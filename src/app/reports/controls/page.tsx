@@ -3,7 +3,12 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/rbac";
 import { formatMoney } from "@/lib/format";
-import { getControlRegistersSummary, maskControlRegistersSummary } from "@/lib/control-registers";
+import {
+  getControlRegistersSummary,
+  getProcurementApRegister,
+  getProjectFinancialRegister,
+  maskControlRegistersSummary,
+} from "@/lib/control-registers";
 
 function withinDays(days: number) {
   const d = new Date();
@@ -59,7 +64,20 @@ export default async function ControlsReportPage() {
     (await requirePermission(session.user.id, "accounting.manage")) ||
     (await requirePermission(session.user.id, "projects.view_financials")) ||
     (await requirePermission(session.user.id, "company_accounts.manage"));
-  const controlSummary = maskControlRegistersSummary(await getControlRegistersSummary(), canViewFinancials);
+  const [summaryRaw, procurementRegister, projectRegister] = await Promise.all([
+    getControlRegistersSummary(),
+    getProcurementApRegister({ take: 20 }),
+    getProjectFinancialRegister({ take: 20 }),
+  ]);
+  const controlSummary = maskControlRegistersSummary(summaryRaw, canViewFinancials);
+  const topProcurementRows = procurementRegister
+    .filter((row) => row.outstandingValue > 0 || row.blockedByMatching)
+    .sort((a, b) => b.outstandingValue - a.outstandingValue)
+    .slice(0, 10);
+  const topRecoveryProjects = projectRegister
+    .filter((row) => row.pendingRecovery > 0)
+    .sort((a, b) => b.pendingRecovery - a.pendingRecovery)
+    .slice(0, 10);
 
   const [poSubmitted, grnSubmitted, billSubmitted, paymentSubmitted] = submittedProcurement;
   const totalQueue = pendingExpense + pendingIncome + poSubmitted + grnSubmitted + billSubmitted + paymentSubmitted;
@@ -142,6 +160,88 @@ export default async function ControlsReportPage() {
 
       <div className="rounded-xl border bg-card p-6 shadow-sm text-sm">
         Successful sign-ins in last 30 days: <span className="font-semibold">{authSuccess30}</span>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Procurement and AP Register (Top Open Rows)</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Vendor-wise ordered/received/billed/paid/outstanding with matching block flags.
+        </p>
+        {topProcurementRows.length === 0 ? (
+          <div className="mt-4 text-sm text-muted-foreground">No open procurement/AP rows.</div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Vendor</th>
+                  <th className="py-2">Project</th>
+                  <th className="py-2">Ordered</th>
+                  <th className="py-2">Billed</th>
+                  <th className="py-2">Paid</th>
+                  <th className="py-2">Outstanding</th>
+                  <th className="py-2">Blocked</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topProcurementRows.map((row) => (
+                  <tr key={`${row.vendorId}-${row.projectRef || "none"}`} className="border-b">
+                    <td className="py-2">{row.vendorName}</td>
+                    <td className="py-2">{row.projectRef || "-"}</td>
+                    <td className="py-2">{canViewFinancials ? formatMoney(row.orderedValue) : "Masked"}</td>
+                    <td className="py-2">{canViewFinancials ? formatMoney(row.billedValue) : "Masked"}</td>
+                    <td className="py-2">{canViewFinancials ? formatMoney(row.paidValue) : "Masked"}</td>
+                    <td className="py-2 font-medium">{canViewFinancials ? formatMoney(row.outstandingValue) : "Masked"}</td>
+                    <td className="py-2">{row.blockedByMatching ? "YES" : "NO"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Project Financial Register (Recovery Focus)</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Project-level pending recovery and cost/profit signal for management action.
+        </p>
+        {topRecoveryProjects.length === 0 ? (
+          <div className="mt-4 text-sm text-muted-foreground">No projects with pending recovery.</div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Project</th>
+                  <th className="py-2">Status</th>
+                  <th className="py-2">Contract</th>
+                  <th className="py-2">Received</th>
+                  <th className="py-2">Cost To Date</th>
+                  <th className="py-2">Pending Recovery</th>
+                  <th className="py-2">Margin %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topRecoveryProjects.map((row) => (
+                  <tr key={row.projectId} className="border-b">
+                    <td className="py-2">
+                      <a className="underline underline-offset-2" href={`/projects/${row.projectId}`}>
+                        {row.projectRef}
+                      </a>
+                    </td>
+                    <td className="py-2">{row.status}</td>
+                    <td className="py-2">{canViewFinancials ? formatMoney(row.contractValue) : "Masked"}</td>
+                    <td className="py-2">{canViewFinancials ? formatMoney(row.receivedAmount) : "Masked"}</td>
+                    <td className="py-2">{canViewFinancials ? formatMoney(row.costToDate) : "Masked"}</td>
+                    <td className="py-2 font-medium">{canViewFinancials ? formatMoney(row.pendingRecovery) : "Masked"}</td>
+                    <td className="py-2">{canViewFinancials ? `${row.marginPercent.toFixed(1)}%` : "Masked"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
