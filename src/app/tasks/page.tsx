@@ -10,7 +10,7 @@ export default async function TasksPage() {
     redirect("/login");
   }
 
-  const [canViewAll, canViewAssigned, canManage, canUpdateAssigned, canReview, canManageTemplates] =
+  const [canViewAll, canViewAssigned, canManage, canUpdateAssigned, canReview, canManageTemplates, canAssign] =
     await Promise.all([
       requirePermission(session.user.id, "tasks.view_all"),
       requirePermission(session.user.id, "tasks.view_assigned"),
@@ -18,6 +18,7 @@ export default async function TasksPage() {
       requirePermission(session.user.id, "tasks.update_assigned"),
       requirePermission(session.user.id, "tasks.review"),
       requirePermission(session.user.id, "tasks.templates_manage"),
+      requirePermission(session.user.id, "tasks.assign"),
     ]);
 
   if (!canViewAll && !canViewAssigned && !canManage && !canUpdateAssigned && !canReview) {
@@ -93,6 +94,7 @@ export default async function TasksPage() {
       currentUserId={session.user.id}
       canViewAll={canViewAll}
       canManage={canManage}
+      canAssign={canAssign}
       canUpdateAssigned={canUpdateAssigned}
       canReview={canReview}
       canManageTemplates={canManageTemplates}

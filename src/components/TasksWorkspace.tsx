@@ -66,6 +66,7 @@ type TasksWorkspaceProps = {
   currentUserId: string;
   canViewAll: boolean;
   canManage: boolean;
+  canAssign: boolean;
   canUpdateAssigned: boolean;
   canReview: boolean;
   canManageTemplates: boolean;
@@ -112,6 +113,7 @@ export function TasksWorkspace({
   currentUserId,
   canViewAll,
   canManage,
+  canAssign,
   canUpdateAssigned,
   canReview,
   canManageTemplates,
@@ -267,7 +269,7 @@ export function TasksWorkspace({
           description: taskForm.description.trim() || undefined,
           priority: taskForm.priority,
           dueDate: taskForm.dueDate || undefined,
-          assignedToId: taskForm.assignedToId || undefined,
+          assignedToId: canAssign ? taskForm.assignedToId || undefined : undefined,
         }),
       });
       const data = await res.json();
@@ -327,7 +329,7 @@ export function TasksWorkspace({
           dueAfterDays: Number(templateForm.dueAfterDays || 0),
           startDate: templateForm.startDate,
           endDate: templateForm.endDate || undefined,
-          assignedToId: templateForm.assignedToId || undefined,
+          assignedToId: canAssign ? templateForm.assignedToId || undefined : undefined,
           isActive: true,
         }),
       });
@@ -534,21 +536,30 @@ export function TasksWorkspace({
                   <Label>Description</Label>
                   <Textarea rows={3} value={taskForm.description} onChange={(e) => setTaskForm((prev) => ({ ...prev, description: e.target.value }))} />
                 </div>
-                <div className="space-y-1 md:col-span-2">
-                  <Label>Assignee</Label>
-                  <select
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    value={taskForm.assignedToId}
-                    onChange={(e) => setTaskForm((prev) => ({ ...prev, assignedToId: e.target.value }))}
-                  >
-                    <option value="">Unassigned</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {(u.name || u.email) + " - " + u.email}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {canAssign ? (
+                  <div className="space-y-1 md:col-span-2">
+                    <Label>Assignee</Label>
+                    <select
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      value={taskForm.assignedToId}
+                      onChange={(e) => setTaskForm((prev) => ({ ...prev, assignedToId: e.target.value }))}
+                    >
+                      <option value="">Unassigned</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {(u.name || u.email) + " - " + u.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-1 md:col-span-2">
+                    <Label>Assignee</Label>
+                    <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                      Assignment is restricted by your role.
+                    </div>
+                  </div>
+                )}
                 <div className="md:col-span-6 flex justify-end">
                   <Button onClick={createTask} disabled={creatingTask}>
                     {creatingTask ? "Creating..." : "Create Task"}
@@ -797,21 +808,30 @@ export function TasksWorkspace({
                     ))}
                   </select>
                 </div>
-                <div className="space-y-1">
-                  <Label>Assignee</Label>
-                  <select
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    value={templateForm.assignedToId}
-                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, assignedToId: e.target.value }))}
-                  >
-                    <option value="">Unassigned</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {(u.name || u.email) + " - " + u.email}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {canAssign ? (
+                  <div className="space-y-1">
+                    <Label>Assignee</Label>
+                    <select
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      value={templateForm.assignedToId}
+                      onChange={(e) => setTemplateForm((prev) => ({ ...prev, assignedToId: e.target.value }))}
+                    >
+                      <option value="">Unassigned</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {(u.name || u.email) + " - " + u.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Label>Assignee</Label>
+                    <div className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                      Assignment is restricted by your role.
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-1 md:col-span-3">
                   <Label>Description</Label>
                   <Textarea rows={3} value={templateForm.description} onChange={(e) => setTemplateForm((prev) => ({ ...prev, description: e.target.value }))} />
