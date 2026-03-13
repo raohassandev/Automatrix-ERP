@@ -75,6 +75,8 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 
 - `pnpm verify:staging:effective-permissions` -> pass (0 mismatches)
 - `pnpm verify:projects:financial-consistency` -> pass (0 drift)
-- `pnpm qa:staging:batch` -> pass on rerun after deploy stabilization; one minor flaky timeout remains tracked
+- `pnpm qa:staging:batch` -> pass on rerun after deploy stabilization
+- `pnpm qa:staging:postgreen` -> pass (critical + RC + single-worker stability subsets)
+- residual flaky timeout closed by navigation hardening in `playwright/tests/inventory-rbac-actions.spec.ts`
 - Discrepancy report: `docs/STAGING_DISCREPANCY_CLOSURE_2026-03-13.md`
 - Cutover checklist: `docs/PRODUCTION_CUTOVER_CHECKLIST_2026-03-13.md`

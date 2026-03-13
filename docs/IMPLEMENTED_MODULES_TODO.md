@@ -121,7 +121,8 @@ This file is the running action list for closure, hardening, and go-live readine
     - `tasks.review`
     - `tasks.templates_manage`
   - [x] Project execution UI controls now permission-aware for task create/update paths.
-  - [ ] Staging role-by-role UAT evidence run and discrepancy burn-down for new task workspace.
+  - [x] Staging role-by-role UAT evidence run and discrepancy burn-down for new task workspace.  
+    Evidence (2026-03-13): `playwright/tests/tasks-module-smoke.spec.ts` (finance templates access allowed, engineer template management controls blocked), plus postgreen gate coverage in `playwright/tests/vendor-item-workhub-actions.spec.ts` and `playwright/tests/mobile-role-navigation.spec.ts`.
 
 - [ ] Define and implement **Simple Employee Profile v1** (self-service first):
   - [ ] Personal/profile basics (name, role, manager, join date, service period).

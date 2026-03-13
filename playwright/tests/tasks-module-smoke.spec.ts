@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 
 const ROLE_EMAILS = {
-  finance: "finance1@automatrix.pk",
-  engineer: "engineer1@automatrix.pk",
+  finance: process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk",
+  engineer: process.env.E2E_ENGINEER_EMAIL || "engineer1@automatrix.pk",
 } as const;
 
 test.describe("Tasks module smoke", () => {
