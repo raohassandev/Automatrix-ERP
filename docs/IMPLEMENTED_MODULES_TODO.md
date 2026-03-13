@@ -126,9 +126,12 @@ This file is the running action list for closure, hardening, and go-live readine
     Evidence (2026-03-13): `playwright/tests/tasks-module-smoke.spec.ts` (finance templates access allowed, engineer template management controls blocked), plus postgreen gate coverage in `playwright/tests/vendor-item-workhub-actions.spec.ts` and `playwright/tests/mobile-role-navigation.spec.ts`.
 
 - [ ] Define and implement **Simple Employee Profile v1** (self-service first):
-  - [ ] Personal/profile basics (name, role, manager, join date, service period).
-  - [ ] HR summary (attendance, leave balances/requests, payroll snapshot, wallet snapshot).
-  - [ ] Achievements placeholder section (manual/admin entries in v1).
+  - [x] Personal/profile basics (name, role, manager, join date, service period).  
+    Evidence (2026-03-13): profile snapshot section added in `/me` with employee ID label, reporting line, service-period calculation, department/designation, and employment status.
+  - [x] HR summary (attendance, leave balances/requests, payroll snapshot, wallet snapshot).  
+    Evidence (2026-03-13): `/me` sections already wired and validated with profile snapshot rollout (`Wallet Snapshot`, `Advance/Reimbursement`, `Attendance Snapshot`, salary/incentive/advance histories).
+  - [x] Achievements placeholder section (manual/admin entries in v1).  
+    Evidence (2026-03-13): `Achievements (Profile v1)` placeholder block added in `/me`.
   - [ ] Role-based visibility matrix:
     - employee sees self
     - immediate manager sees direct reports

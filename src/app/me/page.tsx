@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { formatMoney } from "@/lib/format";
+import { employeeCodeFromId } from "@/lib/employee-display";
 import Link from "next/link";
 import { MobileCard } from "@/components/MobileCard";
 import { BellRing, CalendarCheck2, CreditCard, HandCoins } from "lucide-react";
@@ -20,6 +21,19 @@ function getStatusPillClass(status: string) {
   if (normalized.includes("PENDING")) return "border-amber-500/35 bg-amber-500/15 text-amber-800 dark:text-amber-300";
   if (normalized === "REJECTED") return "border-rose-500/35 bg-rose-500/15 text-rose-800 dark:text-rose-300";
   return "border-slate-400/35 bg-slate-500/10 text-slate-700 dark:text-slate-300";
+}
+
+function formatServicePeriod(joinDate?: Date | null) {
+  if (!joinDate) return "Not set";
+  const now = new Date();
+  const start = new Date(joinDate);
+  if (Number.isNaN(start.getTime()) || start > now) return "Not available";
+  const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+  const years = Math.floor(months / 12);
+  const remMonths = months % 12;
+  if (years <= 0) return `${Math.max(remMonths, 0)} month(s)`;
+  if (remMonths <= 0) return `${years} year(s)`;
+  return `${years} year(s), ${remMonths} month(s)`;
 }
 
 export default async function MyDashboardPage() {
@@ -50,6 +64,20 @@ export default async function MyDashboardPage() {
 
   const employee = await prisma.employee.findUnique({
     where: { email: session.user.email },
+    include: {
+      reportingOfficer: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      compensation: {
+        select: {
+          baseSalary: true,
+          currency: true,
+        },
+      },
+    },
   });
   if (!employee) {
     return (
@@ -192,6 +220,10 @@ export default async function MyDashboardPage() {
   const pendingExpenseCount = Number(expenseStatusMap.get("PENDING") || 0) + Number(expenseStatusMap.get("PENDING_L1") || 0) + Number(expenseStatusMap.get("PENDING_L2") || 0) + Number(expenseStatusMap.get("PENDING_L3") || 0);
   const pendingLeaveCount = leaveRequests.filter((row) => String(row.status || "").toUpperCase().startsWith("PENDING")).length;
   const payrollPendingCount = payrollEntries.filter((row) => String(row.status || "").toUpperCase() !== "PAID").length;
+  const employeeCode = employeeCodeFromId(employee.id);
+  const servicePeriod = formatServicePeriod(employee.joinDate);
+  const profileSalary = Number(employee.compensation?.baseSalary || 0);
+  const profileCurrency = employee.compensation?.currency || "PKR";
 
   return (
     <div className="grid gap-6">
@@ -241,6 +273,61 @@ export default async function MyDashboardPage() {
             <BellRing className="h-4 w-4" />
             Apply Leave
           </Link>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Profile Snapshot</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Personal identity and reporting details used by payroll and HR workflows.
+            </p>
+          </div>
+          <Link
+            href={`/employees/${employee.id}`}
+            className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            Open Full Profile
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 p-3 text-sm">
+            <div className="text-sky-700 dark:text-sky-300">Employee ID</div>
+            <div className="mt-1 font-semibold">{employeeCode}</div>
+            <div className="text-xs text-muted-foreground">{employee.name}</div>
+          </div>
+          <div className="rounded-lg border border-indigo-500/25 bg-indigo-500/10 p-3 text-sm">
+            <div className="text-indigo-700 dark:text-indigo-300">Role & Reporting</div>
+            <div className="mt-1 font-semibold">{employee.role || "-"}</div>
+            <div className="text-xs text-muted-foreground">
+              Manager: {employee.reportingOfficer?.name || "Not assigned"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm">
+            <div className="text-emerald-700 dark:text-emerald-300">Service Period</div>
+            <div className="mt-1 font-semibold">{servicePeriod}</div>
+            <div className="text-xs text-muted-foreground">
+              Join date: {employee.joinDate ? new Date(employee.joinDate).toLocaleDateString() : "Not set"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-sm">
+            <div className="text-amber-700 dark:text-amber-300">Department</div>
+            <div className="mt-1 font-semibold">{employee.department || "-"}</div>
+            <div className="text-xs text-muted-foreground">Designation: {employee.designation || "-"}</div>
+          </div>
+          <div className="rounded-lg border border-violet-500/25 bg-violet-500/10 p-3 text-sm">
+            <div className="text-violet-700 dark:text-violet-300">Base Salary (Profile)</div>
+            <div className="mt-1 font-semibold">
+              {profileCurrency} {profileSalary.toLocaleString()}
+            </div>
+            <div className="text-xs text-muted-foreground">Used as payroll draft baseline</div>
+          </div>
+          <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 text-sm">
+            <div className="text-cyan-700 dark:text-cyan-300">Employment Status</div>
+            <div className="mt-1 font-semibold">{employee.status || "ACTIVE"}</div>
+            <div className="text-xs text-muted-foreground">{employee.email}</div>
+          </div>
         </div>
       </div>
 
@@ -360,6 +447,16 @@ export default async function MyDashboardPage() {
         <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm dark:border-sky-900/60 dark:bg-sky-950/30">
           <div className="text-sm text-sky-700 dark:text-sky-300">Leave Requests</div>
           <div className="mt-2 text-xl font-semibold text-sky-800 dark:text-sky-300">{leaveRequests.length}</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Achievements (Profile v1)</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manual/admin achievements feed is now reserved in profile. Structured scoring timeline will follow in Task Performance phase.
+        </p>
+        <div className="mt-4 rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+          No achievements added yet.
         </div>
       </div>
 
