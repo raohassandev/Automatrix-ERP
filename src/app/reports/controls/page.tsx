@@ -202,9 +202,9 @@ export default async function ControlsReportPage() {
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">Project Financial Register (Recovery Focus)</h2>
+        <h2 className="text-lg font-semibold">Project Financial Register (Parity: Committed vs Posted vs Cash)</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Project-level pending recovery and cost/profit signal for management action.
+          Side-by-side project truth for committed procurement, posted cost, and settled cash outflow.
         </p>
         {topRecoveryProjects.length === 0 ? (
           <div className="mt-4 text-sm text-muted-foreground">No projects with pending recovery.</div>
@@ -217,7 +217,9 @@ export default async function ControlsReportPage() {
                   <th className="py-2">Status</th>
                   <th className="py-2">Contract</th>
                   <th className="py-2">Received</th>
-                  <th className="py-2">Cost To Date</th>
+                  <th className="py-2">Committed</th>
+                  <th className="py-2">Posted Cost</th>
+                  <th className="py-2">Cash Outflow</th>
                   <th className="py-2">Pending Recovery</th>
                   <th className="py-2">Margin %</th>
                 </tr>
@@ -233,7 +235,9 @@ export default async function ControlsReportPage() {
                     <td className="py-2">{row.status}</td>
                     <td className="py-2">{canViewFinancials ? formatMoney(row.contractValue) : "Masked"}</td>
                     <td className="py-2">{canViewFinancials ? formatMoney(row.receivedAmount) : "Masked"}</td>
-                    <td className="py-2">{canViewFinancials ? formatMoney(row.costToDate) : "Masked"}</td>
+                    <td className="py-2">{canViewFinancials ? formatMoney(row.committedProcurement) : "Masked"}</td>
+                    <td className="py-2">{canViewFinancials ? formatMoney(row.actualPostedCost) : "Masked"}</td>
+                    <td className="py-2">{canViewFinancials ? formatMoney(row.cashSettledOutflow) : "Masked"}</td>
                     <td className="py-2 font-medium">{canViewFinancials ? formatMoney(row.pendingRecovery) : "Masked"}</td>
                     <td className="py-2">{canViewFinancials ? `${row.marginPercent.toFixed(1)}%` : "Masked"}</td>
                   </tr>

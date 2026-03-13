@@ -47,8 +47,9 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 
 ### Block 3 (Procurement/AP + Project truth)
 
-- [ ] Procurement/AP register (ordered/received/billed/paid/outstanding by vendor/project)
-- [ ] Project Financial Register drill-down parity checks (committed vs posted vs cash)
+- [x] Procurement/AP register (ordered/received/billed/paid/outstanding by vendor/project)
+- [x] Project Financial Register drill-down parity checks (committed vs posted vs cash)
+  - Controls report now shows committed vs posted cost vs settled cash outflow per project
 
 ### Block 4 (Role workspaces + exception dashboards)
 

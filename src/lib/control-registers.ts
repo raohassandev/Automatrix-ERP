@@ -79,6 +79,13 @@ export type ProjectFinancialRegisterRow = {
   invoicedAmount: number;
   receivedAmount: number;
   pendingRecovery: number;
+  committedProcurement: number;
+  postedVendorBilled: number;
+  postedVendorPaid: number;
+  postedEmployeeExpense: number;
+  postedPayrollAllocation: number;
+  actualPostedCost: number;
+  cashSettledOutflow: number;
   costToDate: number;
   grossMargin: number;
   marginPercent: number;
@@ -429,7 +436,101 @@ export async function getProjectFinancialRegister(args?: { db?: DbClient; take?:
     },
   });
 
+  const projectRefs = projects.map((p) => p.projectId).filter(Boolean);
+  const [purchaseOrders, postedVendorBills, postedVendorPaymentAllocations, projectExpenses, payrollComponents] =
+    projectRefs.length === 0
+      ? [[], [], [], [], []]
+      : await Promise.all([
+          db.purchaseOrder.findMany({
+            where: {
+              projectRef: { in: projectRefs },
+              status: { in: ["SUBMITTED", "APPROVED", "ORDERED", "PARTIAL", "PARTIALLY_RECEIVED", "RECEIVED"] },
+            },
+            select: { projectRef: true, totalAmount: true },
+          }),
+          db.vendorBill.findMany({
+            where: { projectRef: { in: projectRefs }, status: "POSTED" },
+            select: { projectRef: true, totalAmount: true },
+          }),
+          db.vendorPaymentAllocation.findMany({
+            where: {
+              vendorPayment: { status: "POSTED" },
+              vendorBill: { projectRef: { in: projectRefs } },
+            },
+            select: { amount: true, vendorBill: { select: { projectRef: true } } },
+          }),
+          db.expense.findMany({
+            where: {
+              project: { in: projectRefs },
+              status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+            },
+            select: { project: true, status: true, amount: true, approvedAmount: true },
+          }),
+          db.payrollComponentLine.findMany({
+            where: {
+              projectRef: { in: projectRefs },
+              payrollEntry: { status: "PAID" },
+            },
+            select: { projectRef: true, amount: true },
+          }),
+        ]);
+
+  const committedByProject = new Map<string, number>();
+  purchaseOrders.forEach((row) => {
+    const key = String(row.projectRef || "");
+    if (!key) return;
+    committedByProject.set(key, asMoney((committedByProject.get(key) || 0) + asMoney(row.totalAmount)));
+  });
+
+  const billedByProject = new Map<string, number>();
+  postedVendorBills.forEach((row) => {
+    const key = String(row.projectRef || "");
+    if (!key) return;
+    billedByProject.set(key, asMoney((billedByProject.get(key) || 0) + asMoney(row.totalAmount)));
+  });
+
+  const paidByProject = new Map<string, number>();
+  postedVendorPaymentAllocations.forEach((row) => {
+    const key = String(row.vendorBill?.projectRef || "");
+    if (!key) return;
+    paidByProject.set(key, asMoney((paidByProject.get(key) || 0) + asMoney(row.amount)));
+  });
+
+  const postedExpenseByProject = new Map<string, number>();
+  const paidExpenseByProject = new Map<string, number>();
+  projectExpenses.forEach((row) => {
+    const key = String(row.project || "");
+    if (!key) return;
+    const amount = asMoney(row.approvedAmount ?? row.amount);
+    postedExpenseByProject.set(key, asMoney((postedExpenseByProject.get(key) || 0) + amount));
+    if (String(row.status || "").toUpperCase() === "PAID") {
+      paidExpenseByProject.set(key, asMoney((paidExpenseByProject.get(key) || 0) + amount));
+    }
+  });
+
+  const payrollAllocByProject = new Map<string, number>();
+  payrollComponents.forEach((row) => {
+    const key = String(row.projectRef || "");
+    if (!key) return;
+    payrollAllocByProject.set(key, asMoney((payrollAllocByProject.get(key) || 0) + asMoney(row.amount)));
+  });
+
   return projects.map((p) => ({
+    committedProcurement: asMoney(committedByProject.get(p.projectId) || 0),
+    postedVendorBilled: asMoney(billedByProject.get(p.projectId) || 0),
+    postedVendorPaid: asMoney(paidByProject.get(p.projectId) || 0),
+    postedEmployeeExpense: asMoney(postedExpenseByProject.get(p.projectId) || 0),
+    postedPayrollAllocation: asMoney(payrollAllocByProject.get(p.projectId) || 0),
+    actualPostedCost: asMoney(
+      (billedByProject.get(p.projectId) || 0) +
+        (postedExpenseByProject.get(p.projectId) || 0) +
+        (payrollAllocByProject.get(p.projectId) || 0),
+    ),
+    cashSettledOutflow: asMoney(
+      (paidByProject.get(p.projectId) || 0) +
+        (paidExpenseByProject.get(p.projectId) || 0) +
+        (payrollAllocByProject.get(p.projectId) || 0),
+    ),
     projectId: p.id,
     projectRef: p.projectId,
     projectName: p.name,
