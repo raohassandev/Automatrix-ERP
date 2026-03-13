@@ -53,10 +53,10 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 
 ### Block 4 (Role workspaces + exception dashboards)
 
-- [~] My Workspace action queues
-- [~] Manager Workspace delays/approvals exceptions
+- [x] My Workspace action queues
+- [x] Manager Workspace delays/approvals exceptions
 - [x] Finance Workspace due/reconciliation/period-close queues
-- [~] CEO Workspace cash, recovery, bottleneck exception queues
+- [x] CEO Workspace cash, recovery, bottleneck exception queues
 
 ### Block 5 (Hardening + UAT + Go/No-Go)
 

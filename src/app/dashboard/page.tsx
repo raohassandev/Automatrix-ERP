@@ -77,6 +77,8 @@ export default async function DashboardPage() {
   const canViewManagerWorkspace = canViewTeamEmployees || canViewApprovals || canViewAllApprovals;
   const canOpenTasks = canViewTasksAll || canViewTasksAssigned;
   const canViewFinanceWorkspace = canManageCompanyAccounts || canViewAccounting || canManageAccounting || canEditPayroll || canApprovePayroll;
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const dashboardMetrics = await getDashboardDataEnhanced("THIS_MONTH");
   const netPositive = (dashboardMetrics?.netProfit || 0) >= 0;
   const pendingRisk = (dashboardMetrics?.pendingApprovals || 0) > 0 || (dashboardMetrics?.pendingRecovery || 0) > 0;
@@ -85,9 +87,73 @@ export default async function DashboardPage() {
   const netDelta = (dashboardMetrics?.netProfit || 0) - (dashboardMetrics?.prevMonthNet || 0);
   const formatDelta = (value: number) => `${value >= 0 ? "+" : "-"}${formatMoney(Math.abs(value))}`;
   const controlSummary = canViewReports ? await getControlRegistersSummary() : null;
+  const managerQueues = canViewManagerWorkspace
+    ? await (async () => {
+        const [overdueTasks, pendingTeamExpenses, pendingApprovalsQueue] = await Promise.all([
+          prisma.projectTask.count({
+            where: {
+              status: { notIn: ["DONE", "CANCELLED"] },
+              dueDate: { lt: now },
+            },
+          }),
+          prisma.expense.count({
+            where: {
+              submittedById: { not: session.user.id },
+              status: { in: ["PENDING", "PENDING_L1", "PENDING_L2", "PENDING_L3"] },
+            },
+          }),
+          prisma.approval.count({ where: { status: { in: ["PENDING", "PENDING_L1", "PENDING_L2", "PENDING_L3"] } } }),
+        ]);
+        return { overdueTasks, pendingTeamExpenses, pendingApprovalsQueue };
+      })()
+    : null;
+  const myQueues = canViewWorkspace
+    ? await (async () => {
+        const [pendingMyExpenses, pendingMyLeaves, myOpenTasks] = await Promise.all([
+          prisma.expense.count({
+            where: {
+              submittedById: session.user.id,
+              status: { in: ["PENDING", "PENDING_L1", "PENDING_L2", "PENDING_L3"] },
+            },
+          }),
+          prisma.leaveRequest.count({
+            where: {
+              employee: { email: session.user.email || undefined },
+              status: "PENDING",
+            },
+          }),
+          prisma.projectTask.count({
+            where: {
+              assignedToId: session.user.id,
+              status: { notIn: ["DONE", "CANCELLED"] },
+            },
+          }),
+        ]);
+        return { pendingMyExpenses, pendingMyLeaves, myOpenTasks };
+      })()
+    : null;
+  const ceoQueues = canViewCeo
+    ? await (async () => {
+        const [blockedActions7d, pendingIncomeApprovals, overdueVendorBills] = await Promise.all([
+          prisma.auditLog.count({
+            where: {
+              action: { startsWith: "BLOCK_" },
+              createdAt: { gte: sevenDaysAgo },
+            },
+          }),
+          prisma.income.count({ where: { status: { in: ["PENDING", "PENDING_L1", "PENDING_L2", "PENDING_L3"] } } }),
+          prisma.vendorBill.count({
+            where: {
+              status: "POSTED",
+              dueDate: { lt: new Date() },
+            },
+          }),
+        ]);
+        return { blockedActions7d, pendingIncomeApprovals, overdueVendorBills };
+      })()
+    : null;
   const financeQueues = canViewFinanceWorkspace
     ? await (async () => {
-        const now = new Date();
         const [openPeriods, overdueOpenPeriods, unreconciledSnapshots, unmatchedStatementLines] = await Promise.all([
           prisma.fiscalPeriod.count({ where: { status: "OPEN" } }),
           prisma.fiscalPeriod.count({ where: { status: "OPEN", endDate: { lt: now } } }),
@@ -404,6 +470,15 @@ export default async function DashboardPage() {
           <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-6 shadow-sm">
             <div className="text-sm font-medium text-muted-foreground">My Workspace</div>
             <div className="mt-3 grid gap-2 text-sm">
+              <div className="rounded-md border border-violet-500/20 bg-violet-500/10 px-3 py-2">
+                My pending expenses: <span className="font-semibold">{myQueues?.pendingMyExpenses ?? 0}</span>
+              </div>
+              <div className="rounded-md border border-violet-500/20 bg-violet-500/10 px-3 py-2">
+                My pending leaves: <span className="font-semibold">{myQueues?.pendingMyLeaves ?? 0}</span>
+              </div>
+              <div className="rounded-md border border-violet-500/20 bg-violet-500/10 px-3 py-2">
+                My open tasks: <span className="font-semibold">{myQueues?.myOpenTasks ?? 0}</span>
+              </div>
               <Link className="underline underline-offset-2" href="/me">
                 My Dashboard
               </Link>
@@ -436,10 +511,13 @@ export default async function DashboardPage() {
             <div className="text-sm font-medium text-muted-foreground">Manager Workspace</div>
             <div className="mt-3 grid gap-2 text-sm">
               <div className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-3 py-2">
-                Team queue overdue: <span className="font-semibold">{controlSummary?.taskApprovals.overdue ?? 0}</span>
+                Team tasks overdue: <span className="font-semibold">{managerQueues?.overdueTasks ?? controlSummary?.taskApprovals.overdue ?? 0}</span>
               </div>
               <div className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-3 py-2">
-                Pending approvals: <span className="font-semibold">{dashboardMetrics?.pendingApprovals ?? 0}</span>
+                Team pending expenses: <span className="font-semibold">{managerQueues?.pendingTeamExpenses ?? 0}</span>
+              </div>
+              <div className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-3 py-2">
+                Pending approvals queue: <span className="font-semibold">{managerQueues?.pendingApprovalsQueue ?? dashboardMetrics?.pendingApprovals ?? 0}</span>
               </div>
               {canOpenTasks ? (
                 <Link className="underline underline-offset-2" href="/tasks">
@@ -500,6 +578,35 @@ export default async function DashboardPage() {
                   Bank Reconciliation
                 </Link>
               ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {canViewCeo ? (
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-6 shadow-sm">
+            <div className="text-sm font-medium text-muted-foreground">CEO Workspace</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+                Cash to recover: <span className="font-semibold">{formatMoney(controlSummary?.projects.pendingRecovery ?? 0)}</span>
+              </div>
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+                Overdue vendor bills: <span className="font-semibold">{ceoQueues?.overdueVendorBills ?? 0}</span>
+              </div>
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+                Income approvals pending: <span className="font-semibold">{ceoQueues?.pendingIncomeApprovals ?? 0}</span>
+              </div>
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2">
+                Blocked actions (7d): <span className="font-semibold">{ceoQueues?.blockedActions7d ?? 0}</span>
+              </div>
+              <Link className="underline underline-offset-2" href="/ceo/dashboard">
+                Executive dashboard
+              </Link>
+              <Link className="underline underline-offset-2" href="/reports/projects">
+                Project recovery report
+              </Link>
+              <Link className="underline underline-offset-2" href="/audit">
+                Blocked actions audit
+              </Link>
             </div>
           </div>
         ) : null}
