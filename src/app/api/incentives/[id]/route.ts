@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { computeProjectFinancialSnapshot, recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
+import { toMonthKey } from "@/lib/lifecycle";
 
 type ResolvedIncentiveAmount = {
   amount: number;
@@ -105,7 +106,7 @@ async function applyIncentiveApproval(
   },
   approvedById: string,
 ) {
-  let expenseId = incentive.expenseId || null;
+  const expenseId = incentive.expenseId || null;
   let walletLedgerId = incentive.walletLedgerId || null;
 
   const payoutMode = String(incentive.payoutMode || "PAYROLL").toUpperCase();
@@ -115,6 +116,7 @@ async function applyIncentiveApproval(
       walletLedgerId: walletLedgerId || null,
       settlementStatus: "UNSETTLED",
       settledAt: null,
+      settledMonth: null,
     };
   }
 
@@ -152,6 +154,7 @@ async function applyIncentiveApproval(
     walletLedgerId,
     settlementStatus: settled ? "SETTLED" : "UNSETTLED",
     settledAt: settled ? new Date() : null,
+    settledMonth: settled ? toMonthKey(new Date()) : null,
   };
 }
 
@@ -213,8 +216,34 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   if (parsed.data.reason !== undefined) {
     data.reason = parsed.data.reason ? sanitizeString(parsed.data.reason) : null;
   }
+  if (parsed.data.earningDate !== undefined) {
+    const value = parsed.data.earningDate ? new Date(parsed.data.earningDate) : null;
+    if (value && Number.isNaN(value.getTime())) {
+      return NextResponse.json({ success: false, error: "Invalid earning date" }, { status: 400 });
+    }
+    data.earningDate = value;
+  }
   if (parsed.data.payoutMode !== undefined) {
-    data.payoutMode = sanitizeString(parsed.data.payoutMode);
+    data.payoutMode = sanitizeString(parsed.data.payoutMode).toUpperCase();
+  }
+  const nextPayoutMode = String((data.payoutMode as string | undefined) || existing.payoutMode || "PAYROLL").toUpperCase();
+  const nextEarningDate =
+    (data.earningDate as Date | null | undefined) || existing.earningDate || new Date(existing.createdAt);
+
+  if (nextPayoutMode === "PAYROLL") {
+    data.scheduledPayrollMonth = parsed.data.scheduledPayrollMonth || existing.scheduledPayrollMonth || toMonthKey(nextEarningDate);
+    data.dueDate = null;
+  } else {
+    data.scheduledPayrollMonth = null;
+    if (parsed.data.dueDate !== undefined) {
+      const due = parsed.data.dueDate ? new Date(parsed.data.dueDate) : null;
+      if (due && Number.isNaN(due.getTime())) {
+        return NextResponse.json({ success: false, error: "Invalid due date" }, { status: 400 });
+      }
+      data.dueDate = due;
+    } else if (existing.payoutMode !== nextPayoutMode) {
+      data.dueDate = null;
+    }
   }
 
   const amountInput = parsed.data.amount !== undefined ? parsed.data.amount : Number(existing.amount || 0);
@@ -254,12 +283,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   data.percent = amountResolved.percent !== null ? new Prisma.Decimal(amountResolved.percent) : null;
 
   if (parsed.data.status) {
-    const nextStatus = sanitizeString(parsed.data.status);
+    const nextStatus = sanitizeString(parsed.data.status).toUpperCase();
     if (nextStatus === "APPROVED" && !canApprove) {
       return NextResponse.json({ success: false, error: "Approval permission required" }, { status: 403 });
     }
     data.status = nextStatus;
     data.approvedById = nextStatus === "APPROVED" ? session.user.id : null;
+    data.approvedAt = nextStatus === "APPROVED" ? new Date() : null;
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -277,6 +307,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           expenseId: approval.expenseId,
           walletLedgerId: approval.walletLedgerId,
           settlementStatus: approval.settlementStatus,
+          settledMonth: approval.settledMonth,
           settledAt: approval.settledAt,
         },
         include: { employee: true },

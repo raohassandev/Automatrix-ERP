@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { computeProjectFinancialSnapshot, recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
+import { toMonthKey } from "@/lib/lifecycle";
 
 type ResolvedCommissionAmount = {
   amount: number;
@@ -107,6 +108,7 @@ async function applyCommissionApproval(
         payableBillId: commission.payableBillId,
         settlementStatus: "UNSETTLED",
         settledAt: null,
+        settledMonth: null,
       };
     }
 
@@ -154,6 +156,7 @@ async function applyCommissionApproval(
       payableBillId: bill.id,
       settlementStatus: "UNSETTLED",
       settledAt: null,
+      settledMonth: null,
     };
   }
 
@@ -161,7 +164,7 @@ async function applyCommissionApproval(
     throw new Error("Employee is required for employee commission.");
   }
 
-  let expenseId = commission.expenseId || null;
+  const expenseId = commission.expenseId || null;
   let walletLedgerId = commission.walletLedgerId || null;
   const payoutMode = String(commission.payoutMode || "PAYROLL").toUpperCase();
   if (payoutMode === "PAYROLL") {
@@ -171,6 +174,7 @@ async function applyCommissionApproval(
       payableBillId: null,
       settlementStatus: "UNSETTLED",
       settledAt: null,
+      settledMonth: null,
     };
   }
   if (payoutMode === "WALLET" && !walletLedgerId) {
@@ -207,6 +211,7 @@ async function applyCommissionApproval(
     payableBillId: null,
     settlementStatus: settled ? "SETTLED" : "UNSETTLED",
     settledAt: settled ? new Date() : null,
+    settledMonth: settled ? toMonthKey(new Date()) : null,
   };
 }
 
@@ -256,12 +261,18 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   const payeeType = parsed.data.payeeType
-    ? sanitizeString(parsed.data.payeeType)
+    ? sanitizeString(parsed.data.payeeType).toUpperCase()
     : existing.payeeType || "EMPLOYEE";
   const payoutMode =
     parsed.data.payoutMode !== undefined
-      ? sanitizeString(parsed.data.payoutMode)
+      ? sanitizeString(parsed.data.payoutMode).toUpperCase()
       : existing.payoutMode || (payeeType === "MIDDLEMAN" ? "AP" : "PAYROLL");
+  const nextEarningDate = parsed.data.earningDate
+    ? new Date(parsed.data.earningDate)
+    : existing.earningDate || new Date(existing.createdAt);
+  if (Number.isNaN(nextEarningDate.getTime())) {
+    return NextResponse.json({ success: false, error: "Invalid earning date" }, { status: 400 });
+  }
 
   if (payeeType === "EMPLOYEE") {
     const employeeId = parsed.data.employeeId !== undefined ? parsed.data.employeeId : existing.employeeId;
@@ -328,11 +339,28 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
     payeeType,
     payoutMode,
     projectRef: resolvedProject,
+    earningDate: nextEarningDate,
     basisType: amountResolved.basisType,
     basisAmount: amountResolved.basisAmount !== null ? new Prisma.Decimal(amountResolved.basisAmount) : null,
     percent: amountResolved.percent !== null ? new Prisma.Decimal(amountResolved.percent) : null,
     amount: new Prisma.Decimal(amountResolved.amount),
   };
+  if (payoutMode === "PAYROLL") {
+    data.scheduledPayrollMonth =
+      parsed.data.scheduledPayrollMonth || existing.scheduledPayrollMonth || toMonthKey(nextEarningDate);
+    data.dueDate = null;
+  } else {
+    data.scheduledPayrollMonth = null;
+    if (parsed.data.dueDate !== undefined) {
+      const due = parsed.data.dueDate ? new Date(parsed.data.dueDate) : null;
+      if (due && Number.isNaN(due.getTime())) {
+        return NextResponse.json({ success: false, error: "Invalid due date" }, { status: 400 });
+      }
+      data.dueDate = due;
+    } else if (existing.payoutMode !== payoutMode) {
+      data.dueDate = null;
+    }
+  }
 
   if (payeeType === "EMPLOYEE") {
     data.employeeId = sanitizeString((parsed.data.employeeId || existing.employeeId || "") as string);
@@ -347,12 +375,13 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
   }
 
   if (parsed.data.status) {
-    const nextStatus = sanitizeString(parsed.data.status);
+    const nextStatus = sanitizeString(parsed.data.status).toUpperCase();
     if (nextStatus === "APPROVED" && !canApprove) {
       return NextResponse.json({ success: false, error: "Approval permission required" }, { status: 403 });
     }
     data.status = nextStatus;
     data.approvedById = nextStatus === "APPROVED" ? session.user.id : null;
+    data.approvedAt = nextStatus === "APPROVED" ? new Date() : null;
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -371,6 +400,7 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           walletLedgerId: approval.walletLedgerId,
           payableBillId: approval.payableBillId,
           settlementStatus: approval.settlementStatus,
+          settledMonth: approval.settledMonth,
           settledAt: approval.settledAt,
         },
         include: { employee: true, vendor: true },

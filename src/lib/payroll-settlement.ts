@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { postPayrollDisbursementJournal } from "@/lib/accounting";
+import { toMonthKey } from "@/lib/lifecycle";
 
 type TransactionClient = Prisma.TransactionClient;
 
@@ -16,8 +17,11 @@ export async function collectAndSettleVariablePay(params: {
   payrollRunId: string;
   payrollEntryId: string;
   employeeId: string;
+  payrollMonthKey: string;
+  runPeriodStart: Date;
+  runPeriodEnd: Date;
 }) {
-  const { tx, payrollRunId, payrollEntryId, employeeId } = params;
+  const { tx, payrollRunId, payrollEntryId, employeeId, payrollMonthKey, runPeriodStart, runPeriodEnd } = params;
   const now = new Date();
 
   const [unsettledIncentives, settledIncentives, unsettledCommissions, settledCommissions] = await Promise.all([
@@ -27,6 +31,11 @@ export async function collectAndSettleVariablePay(params: {
         status: "APPROVED",
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
+        OR: [
+          { scheduledPayrollMonth: payrollMonthKey },
+          { scheduledPayrollMonth: null, earningDate: { gte: runPeriodStart, lte: runPeriodEnd } },
+          { scheduledPayrollMonth: null, earningDate: null, createdAt: { gte: runPeriodStart, lte: runPeriodEnd } },
+        ],
       },
       orderBy: { createdAt: "asc" },
       select: { id: true, projectRef: true, amount: true, reason: true },
@@ -47,6 +56,11 @@ export async function collectAndSettleVariablePay(params: {
         status: "APPROVED",
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
+        OR: [
+          { scheduledPayrollMonth: payrollMonthKey },
+          { scheduledPayrollMonth: null, earningDate: { gte: runPeriodStart, lte: runPeriodEnd } },
+          { scheduledPayrollMonth: null, earningDate: null, createdAt: { gte: runPeriodStart, lte: runPeriodEnd } },
+        ],
       },
       orderBy: { createdAt: "asc" },
       select: { id: true, projectRef: true, amount: true, reason: true },
@@ -70,6 +84,7 @@ export async function collectAndSettleVariablePay(params: {
         settledInPayrollRunId: payrollRunId,
         settledInPayrollEntryId: payrollEntryId,
         settledAt: now,
+        settledMonth: payrollMonthKey,
       },
     });
   }
@@ -82,6 +97,7 @@ export async function collectAndSettleVariablePay(params: {
         settledInPayrollRunId: payrollRunId,
         settledInPayrollEntryId: payrollEntryId,
         settledAt: now,
+        settledMonth: payrollMonthKey,
       },
     });
   }
@@ -171,6 +187,9 @@ export async function settlePayrollEntry(params: {
     payrollRunId: run.id,
     payrollEntryId: entry.id,
     employeeId: entry.employeeId,
+    payrollMonthKey: toMonthKey(run.periodEnd),
+    runPeriodStart: run.periodStart,
+    runPeriodEnd: run.periodEnd,
   });
 
   const entryIncentive = Number(entry.incentiveTotal || 0);

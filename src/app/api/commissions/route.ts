@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { computeProjectFinancialSnapshot, recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
+import { toMonthKey } from "@/lib/lifecycle";
 
 type ResolvedCommissionAmount = {
   amount: number;
@@ -107,6 +108,7 @@ async function applyCommissionApproval(
         payableBillId: commission.payableBillId,
         settlementStatus: "UNSETTLED",
         settledAt: null,
+        settledMonth: null,
       };
     }
 
@@ -154,6 +156,7 @@ async function applyCommissionApproval(
       payableBillId: bill.id,
       settlementStatus: "UNSETTLED",
       settledAt: null,
+      settledMonth: null,
     };
   }
 
@@ -161,7 +164,7 @@ async function applyCommissionApproval(
     throw new Error("Employee is required for employee commission.");
   }
 
-  let expenseId = commission.expenseId || null;
+  const expenseId = commission.expenseId || null;
   let walletLedgerId = commission.walletLedgerId || null;
   const payoutMode = String(commission.payoutMode || "PAYROLL").toUpperCase();
   if (payoutMode === "PAYROLL") {
@@ -171,6 +174,7 @@ async function applyCommissionApproval(
       payableBillId: null,
       settlementStatus: "UNSETTLED",
       settledAt: null,
+      settledMonth: null,
     };
   }
   if (payoutMode === "WALLET" && !walletLedgerId) {
@@ -207,6 +211,7 @@ async function applyCommissionApproval(
     payableBillId: null,
     settlementStatus: settled ? "SETTLED" : "UNSETTLED",
     settledAt: settled ? new Date() : null,
+    settledMonth: settled ? toMonthKey(new Date()) : null,
   };
 }
 
@@ -282,13 +287,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "Project not found" }, { status: 404 });
   }
 
-  const payeeType = parsed.data.payeeType ? sanitizeString(parsed.data.payeeType) : "EMPLOYEE";
+  const payeeType = parsed.data.payeeType ? sanitizeString(parsed.data.payeeType).toUpperCase() : "EMPLOYEE";
   const payoutMode =
     parsed.data.payoutMode
-      ? sanitizeString(parsed.data.payoutMode)
+      ? sanitizeString(parsed.data.payoutMode).toUpperCase()
       : payeeType === "MIDDLEMAN"
       ? "AP"
       : "PAYROLL";
+  const status = parsed.data.status ? sanitizeString(parsed.data.status).toUpperCase() : "PENDING";
+  const earningDate = parsed.data.earningDate ? new Date(parsed.data.earningDate) : new Date();
+  if (Number.isNaN(earningDate.getTime())) {
+    return NextResponse.json({ success: false, error: "Invalid earning date" }, { status: 400 });
+  }
+  const scheduledPayrollMonth =
+    payoutMode === "PAYROLL"
+      ? parsed.data.scheduledPayrollMonth || toMonthKey(earningDate)
+      : null;
+  const dueDate =
+    payoutMode !== "PAYROLL" && parsed.data.dueDate
+      ? new Date(parsed.data.dueDate)
+      : null;
+  if (dueDate && Number.isNaN(dueDate.getTime())) {
+    return NextResponse.json({ success: false, error: "Invalid due date" }, { status: 400 });
+  }
 
   if (payeeType === "EMPLOYEE" && !parsed.data.employeeId) {
     return NextResponse.json({ success: false, error: "Employee is required for employee commission" }, { status: 400 });
@@ -325,8 +346,6 @@ export async function POST(req: Request) {
     );
   }
 
-  const status = parsed.data.status ? sanitizeString(parsed.data.status) : "PENDING";
-
   const created = await prisma.$transaction(async (tx) => {
     const entry = await tx.commissionEntry.create({
       data: {
@@ -339,11 +358,15 @@ export async function POST(req: Request) {
           amountResolved.basisAmount !== null ? new Prisma.Decimal(amountResolved.basisAmount) : null,
         percent: amountResolved.percent !== null ? new Prisma.Decimal(amountResolved.percent) : null,
         payoutMode,
+        earningDate,
+        scheduledPayrollMonth,
+        dueDate,
         amount: new Prisma.Decimal(amountResolved.amount),
         settlementStatus: "UNSETTLED",
         status: status === "APPROVED" && canApprove ? "APPROVED" : "PENDING",
         reason: parsed.data.reason ? sanitizeString(parsed.data.reason) : null,
         approvedById: status === "APPROVED" && canApprove ? session.user.id : null,
+        approvedAt: status === "APPROVED" && canApprove ? new Date() : null,
       },
       include: { employee: true, vendor: true },
     });
@@ -357,6 +380,7 @@ export async function POST(req: Request) {
           walletLedgerId: approval.walletLedgerId,
           payableBillId: approval.payableBillId,
           settlementStatus: approval.settlementStatus,
+          settledMonth: approval.settledMonth,
           settledAt: approval.settledAt,
         },
         include: { employee: true, vendor: true },

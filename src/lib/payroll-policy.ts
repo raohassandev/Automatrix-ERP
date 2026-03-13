@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { toMonthKey } from "@/lib/lifecycle";
 
 export type PayrollPolicyEntry = {
   employeeId: string;
@@ -70,7 +71,9 @@ export async function buildPayrollEntriesByPolicy(
   prisma: PrismaClient,
   periodStart: Date,
   periodEnd: Date,
+  options?: { payrollMonthKey?: string },
 ): Promise<PayrollPolicyEntry[]> {
+  const payrollMonthKey = options?.payrollMonthKey || toMonthKey(periodEnd);
   const daysInPeriod = Math.max(
     1,
     Math.floor((periodEnd.getTime() - periodStart.getTime()) / 86400000) + 1,
@@ -96,6 +99,11 @@ export async function buildPayrollEntriesByPolicy(
         status: "APPROVED",
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
+        OR: [
+          { scheduledPayrollMonth: payrollMonthKey },
+          { scheduledPayrollMonth: null, earningDate: { gte: periodStart, lte: periodEnd } },
+          { scheduledPayrollMonth: null, earningDate: null, createdAt: { gte: periodStart, lte: periodEnd } },
+        ],
       },
       select: { employeeId: true, amount: true, projectRef: true },
     }),
@@ -105,6 +113,11 @@ export async function buildPayrollEntriesByPolicy(
         status: "APPROVED",
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
+        OR: [
+          { scheduledPayrollMonth: payrollMonthKey },
+          { scheduledPayrollMonth: null, earningDate: { gte: periodStart, lte: periodEnd } },
+          { scheduledPayrollMonth: null, earningDate: null, createdAt: { gte: periodStart, lte: periodEnd } },
+        ],
       },
       select: { employeeId: true, amount: true, projectRef: true },
     }),

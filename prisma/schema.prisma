@@ -498,18 +498,23 @@ model IncentiveEntry {
   id           String   @id @default(cuid())
   employeeId   String
   projectRef   String?
+  earningDate  DateTime?
   amount       Decimal
   formulaType  String?  // FIXED | PERCENT_PROFIT | PERCENT_AMOUNT
   basisAmount  Decimal?
   percent      Decimal?
   payoutMode   String   @default("PAYROLL") // PAYROLL | WALLET
+  scheduledPayrollMonth String?
+  dueDate      DateTime?
   settlementStatus String @default("UNSETTLED") // UNSETTLED | SETTLED
   settledInPayrollRunId String?
   settledInPayrollEntryId String?
+  settledMonth String?
   settledAt    DateTime?
   status       String   @default("PENDING")
   reason       String?
   approvedById String?
+  approvedAt   DateTime?
   expenseId    String?
   walletLedgerId String?
   createdAt    DateTime @default(now())
@@ -1035,19 +1040,24 @@ model CommissionEntry {
   vendorId      String?
   payeeType     String   @default("EMPLOYEE") // EMPLOYEE | MIDDLEMAN
   projectRef    String?
+  earningDate   DateTime?
   basisType     String?
   basisAmount   Decimal?
   percent       Decimal?
   amount        Decimal
   payoutMode    String   @default("PAYROLL") // PAYROLL | WALLET | AP
+  scheduledPayrollMonth String?
+  dueDate       DateTime?
   settlementStatus String @default("UNSETTLED") // UNSETTLED | SETTLED
   settledInPayrollRunId String?
   settledInPayrollEntryId String?
   payableBillId String?
+  settledMonth  String?
   settledAt     DateTime?
   status        String   @default("PENDING")
   reason        String?
   approvedById  String?
+  approvedAt    DateTime?
   expenseId     String?
   walletLedgerId String?
   createdAt     DateTime @default(now())

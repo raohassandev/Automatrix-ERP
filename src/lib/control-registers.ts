@@ -211,14 +211,17 @@ export async function getVariablePayRegister(args?: {
     vendorId: null,
     vendorName: null,
     projectRef: row.projectRef || null,
-    earningMonth: toMonthKey(row.createdAt),
-    approvedMonth: toMonthKey(row.updatedAt),
+    earningMonth: toMonthKey(row.earningDate || row.createdAt),
+    approvedMonth: toMonthKey(row.approvedAt || row.updatedAt),
     approvedAmount: asMoney(row.amount),
     payoutMode: row.payoutMode || "PAYROLL",
     settlementStatus: row.settlementStatus || "UNSETTLED",
-    scheduledPayrollMonth: row.payoutMode === "PAYROLL" ? toMonthKey(row.createdAt) : null,
+    scheduledPayrollMonth:
+      row.payoutMode === "PAYROLL"
+        ? row.scheduledPayrollMonth || toMonthKey(row.earningDate || row.createdAt)
+        : null,
     settledAt: row.settledAt ? row.settledAt.toISOString() : null,
-    settledMonth: toMonthKey(row.settledAt),
+    settledMonth: row.settledMonth || toMonthKey(row.settledAt),
   }));
 
   const commissionRows: VariablePayRegisterRow[] = commissions.map((row) => ({
@@ -230,14 +233,17 @@ export async function getVariablePayRegister(args?: {
     vendorId: row.vendorId || null,
     vendorName: row.vendor?.name || null,
     projectRef: row.projectRef || null,
-    earningMonth: toMonthKey(row.createdAt),
-    approvedMonth: toMonthKey(row.updatedAt),
+    earningMonth: toMonthKey(row.earningDate || row.createdAt),
+    approvedMonth: toMonthKey(row.approvedAt || row.updatedAt),
     approvedAmount: asMoney(row.amount),
     payoutMode: row.payoutMode || "PAYROLL",
     settlementStatus: row.settlementStatus || "UNSETTLED",
-    scheduledPayrollMonth: row.payoutMode === "PAYROLL" ? toMonthKey(row.createdAt) : null,
+    scheduledPayrollMonth:
+      row.payoutMode === "PAYROLL"
+        ? row.scheduledPayrollMonth || toMonthKey(row.earningDate || row.createdAt)
+        : null,
     settledAt: row.settledAt ? row.settledAt.toISOString() : null,
-    settledMonth: toMonthKey(row.settledAt),
+    settledMonth: row.settledMonth || toMonthKey(row.settledAt),
   }));
 
   return [...incentiveRows, ...commissionRows].sort((a, b) => (a.settledAt || "").localeCompare(b.settledAt || ""));
@@ -245,6 +251,7 @@ export async function getVariablePayRegister(args?: {
 
 export async function getEmployeeSettlementRegister(args?: { db?: DbClient; take?: number }) {
   const db = args?.db || prisma;
+  const currentMonth = toMonthKey(new Date());
   const [employees, advances, expensesDue, payrollDue, incentives, commissions] = await Promise.all([
     db.employee.findMany({
       where: { status: "ACTIVE" },
@@ -268,7 +275,12 @@ export async function getEmployeeSettlementRegister(args?: { db?: DbClient; take
       select: { employeeId: true, netPay: true },
     }),
     db.incentiveEntry.findMany({
-      where: { payoutMode: "PAYROLL", settlementStatus: "UNSETTLED", status: "APPROVED" },
+      where: {
+        payoutMode: "PAYROLL",
+        settlementStatus: "UNSETTLED",
+        status: "APPROVED",
+        OR: [{ scheduledPayrollMonth: null }, { scheduledPayrollMonth: { lte: currentMonth } }],
+      },
       select: { employeeId: true, amount: true },
     }),
     db.commissionEntry.findMany({
@@ -277,6 +289,7 @@ export async function getEmployeeSettlementRegister(args?: { db?: DbClient; take
         settlementStatus: "UNSETTLED",
         status: "APPROVED",
         payeeType: "EMPLOYEE",
+        OR: [{ scheduledPayrollMonth: null }, { scheduledPayrollMonth: { lte: currentMonth } }],
       },
       select: { employeeId: true, amount: true },
     }),

@@ -7,6 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { computeProjectFinancialSnapshot, recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
+import { toMonthKey } from "@/lib/lifecycle";
 
 type ResolvedIncentiveAmount = {
   amount: number;
@@ -105,7 +106,7 @@ async function applyIncentiveApproval(
   },
   approvedById: string,
 ) {
-  let expenseId = incentive.expenseId || null;
+  const expenseId = incentive.expenseId || null;
   let walletLedgerId = incentive.walletLedgerId || null;
 
   const payoutMode = String(incentive.payoutMode || "PAYROLL").toUpperCase();
@@ -115,6 +116,7 @@ async function applyIncentiveApproval(
       walletLedgerId: walletLedgerId || null,
       settlementStatus: "UNSETTLED",
       settledAt: null,
+      settledMonth: null,
     };
   }
 
@@ -152,6 +154,7 @@ async function applyIncentiveApproval(
     walletLedgerId,
     settlementStatus: settled ? "SETTLED" : "UNSETTLED",
     settledAt: settled ? new Date() : null,
+    settledMonth: settled ? toMonthKey(new Date()) : null,
   };
 }
 
@@ -211,8 +214,23 @@ export async function POST(req: Request) {
     );
   }
 
-  const status = parsed.data.status ? sanitizeString(parsed.data.status) : "PENDING";
-  const payoutMode = parsed.data.payoutMode ? sanitizeString(parsed.data.payoutMode) : "PAYROLL";
+  const status = parsed.data.status ? sanitizeString(parsed.data.status).toUpperCase() : "PENDING";
+  const payoutMode = parsed.data.payoutMode ? sanitizeString(parsed.data.payoutMode).toUpperCase() : "PAYROLL";
+  const earningDate = parsed.data.earningDate ? new Date(parsed.data.earningDate) : new Date();
+  if (Number.isNaN(earningDate.getTime())) {
+    return NextResponse.json({ success: false, error: "Invalid earning date" }, { status: 400 });
+  }
+  const scheduledPayrollMonth =
+    payoutMode === "PAYROLL"
+      ? parsed.data.scheduledPayrollMonth || toMonthKey(earningDate)
+      : null;
+  const dueDate =
+    payoutMode === "WALLET" && parsed.data.dueDate
+      ? new Date(parsed.data.dueDate)
+      : null;
+  if (dueDate && Number.isNaN(dueDate.getTime())) {
+    return NextResponse.json({ success: false, error: "Invalid due date" }, { status: 400 });
+  }
   const canApprove = await requirePermission(session.user.id, "incentives.approve");
 
   const projectRefRaw = sanitizeString(parsed.data.projectRef);
@@ -261,10 +279,14 @@ export async function POST(req: Request) {
           amountResolved.basisAmount !== null ? new Prisma.Decimal(amountResolved.basisAmount) : null,
         percent: amountResolved.percent !== null ? new Prisma.Decimal(amountResolved.percent) : null,
         payoutMode,
+        earningDate,
+        scheduledPayrollMonth,
+        dueDate,
         settlementStatus: "UNSETTLED",
         status: status === "APPROVED" && canApprove ? "APPROVED" : "PENDING",
         reason: parsed.data.reason ? sanitizeString(parsed.data.reason) : null,
         approvedById: status === "APPROVED" && canApprove ? session.user.id : null,
+        approvedAt: status === "APPROVED" && canApprove ? new Date() : null,
       },
       include: { employee: true },
     });
@@ -277,6 +299,7 @@ export async function POST(req: Request) {
           expenseId: approval.expenseId,
           walletLedgerId: approval.walletLedgerId,
           settlementStatus: approval.settlementStatus,
+          settledMonth: approval.settledMonth,
           settledAt: approval.settledAt,
         },
         include: { employee: true },
