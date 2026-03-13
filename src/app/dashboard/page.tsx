@@ -36,6 +36,8 @@ export default async function DashboardPage() {
     canEditPayroll,
     canApprovePayroll,
     canViewTeamEmployees,
+    canViewTasksAll,
+    canViewTasksAssigned,
   ] = await Promise.all([
     requirePermission(session.user.id, "dashboard.view_all_metrics"),
     requirePermission(session.user.id, "company_accounts.manage"),
@@ -60,6 +62,8 @@ export default async function DashboardPage() {
     requirePermission(session.user.id, "payroll.edit"),
     requirePermission(session.user.id, "payroll.approve"),
     requirePermission(session.user.id, "employees.view_team"),
+    requirePermission(session.user.id, "tasks.view_all"),
+    requirePermission(session.user.id, "tasks.view_assigned"),
   ]);
 
   const canViewReports = canViewReportsOwn || canViewReportsTeam || canViewReportsAll;
@@ -69,6 +73,9 @@ export default async function DashboardPage() {
   const canOpenWallets = canViewOwnEmployees || canViewAllEmployees || canEditWallet;
   const canOpenPayroll = canViewPayroll || canEditPayroll || canApprovePayroll;
   const canOpenAttendance = canViewOwnEmployees || canViewTeamEmployees || canViewAllEmployees;
+  const canViewManagerWorkspace = canViewTeamEmployees || canViewApprovals || canViewAllApprovals;
+  const canOpenTasks = canViewTasksAll || canViewTasksAssigned;
+  const canViewFinanceWorkspace = canManageCompanyAccounts || canViewAccounting || canManageAccounting || canEditPayroll || canApprovePayroll;
   const dashboardMetrics = await getDashboardDataEnhanced("THIS_MONTH");
   const netPositive = (dashboardMetrics?.netProfit || 0) >= 0;
   const pendingRisk = (dashboardMetrics?.pendingApprovals || 0) > 0 || (dashboardMetrics?.pendingRecovery || 0) > 0;
@@ -405,6 +412,62 @@ export default async function DashboardPage() {
               {canOpenAttendance ? (
                 <Link className="underline underline-offset-2" href="/hrms/attendance">
                   HR Attendance
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {canViewManagerWorkspace ? (
+          <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-6 shadow-sm">
+            <div className="text-sm font-medium text-muted-foreground">Manager Workspace</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              <div className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-3 py-2">
+                Team queue overdue: <span className="font-semibold">{controlSummary?.taskApprovals.overdue ?? 0}</span>
+              </div>
+              <div className="rounded-md border border-cyan-500/20 bg-cyan-500/10 px-3 py-2">
+                Pending approvals: <span className="font-semibold">{dashboardMetrics?.pendingApprovals ?? 0}</span>
+              </div>
+              {canOpenTasks ? (
+                <Link className="underline underline-offset-2" href="/tasks">
+                  Team Tasks
+                </Link>
+              ) : null}
+              {canViewApprovals || canViewAllApprovals ? (
+                <Link className="underline underline-offset-2" href="/approvals">
+                  Approval Queue
+                </Link>
+              ) : null}
+              <Link className="underline underline-offset-2" href="/reports/controls">
+                Exceptions & Controls
+              </Link>
+            </div>
+          </div>
+        ) : null}
+
+        {canViewFinanceWorkspace ? (
+          <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-6 shadow-sm">
+            <div className="text-sm font-medium text-muted-foreground">Finance Workspace</div>
+            <div className="mt-3 grid gap-2 text-sm">
+              <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-3 py-2">
+                AP outstanding: <span className="font-semibold">{formatMoney(controlSummary?.procurement.outstanding ?? 0)}</span>
+              </div>
+              <div className="rounded-md border border-rose-500/20 bg-rose-500/10 px-3 py-2">
+                Payroll overdue: <span className="font-semibold">{controlSummary?.payroll.totalOverdue ?? 0}</span>
+              </div>
+              {canOpenPayroll ? (
+                <Link className="underline underline-offset-2" href="/payroll">
+                  Payroll Runs
+                </Link>
+              ) : null}
+              {canManageCompanyAccounts ? (
+                <Link className="underline underline-offset-2" href="/company-accounts">
+                  Company Accounts
+                </Link>
+              ) : null}
+              {canViewAccounting || canManageAccounting ? (
+                <Link className="underline underline-offset-2" href="/reports/accounting/cash-position">
+                  Cash Position
                 </Link>
               ) : null}
             </div>

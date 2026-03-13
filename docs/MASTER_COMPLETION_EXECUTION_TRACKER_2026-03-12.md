@@ -24,8 +24,12 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 - [~] Wire register rows into role workspaces (My / Manager / Finance / CEO)
   - [x] Dashboard (`/dashboard`) control register snapshot cards
   - [x] CEO Dashboard (`/ceo/dashboard`) control register snapshot cards
-  - [ ] Remaining role workspaces: My / Manager / Finance direct queue blocks
-- [ ] Add field-level permission masking in register responses where required
+  - [x] Manager workspace queue block added on dashboard
+  - [x] Finance workspace queue block added on dashboard
+  - [x] My workspace action queue block added on `/me`
+- [x] Add field-level permission masking in register responses where required
+  - `maskControlRegistersSummary(...)` used in `/api/reports/control-registers/summary`
+  - Controls report (`/reports/controls`) now renders masked view for restricted viewers
 - [x] Add focused tests for register math and month-boundary behavior
   - `src/lib/__tests__/payroll-policy.test.ts`
   - `src/lib/__tests__/payroll-settlement.test.ts`

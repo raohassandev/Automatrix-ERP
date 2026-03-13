@@ -187,6 +187,9 @@ export default async function MyDashboardPage() {
   const expenseStatusMap = new Map(expenseCounts.map((row) => [row.status, row._count._all]));
   const assignedProjects = assignments.map((a) => a.project);
   const attendanceMap = new Map(attendanceCounts.map((row) => [row.status, row._count._all]));
+  const pendingExpenseCount = Number(expenseStatusMap.get("PENDING") || 0) + Number(expenseStatusMap.get("PENDING_L1") || 0) + Number(expenseStatusMap.get("PENDING_L2") || 0) + Number(expenseStatusMap.get("PENDING_L3") || 0);
+  const pendingLeaveCount = leaveRequests.filter((row) => String(row.status || "").toUpperCase().startsWith("PENDING")).length;
+  const payrollPendingCount = payrollEntries.filter((row) => String(row.status || "").toUpperCase() !== "PAID").length;
 
   return (
     <div className="grid gap-6">
@@ -257,6 +260,21 @@ export default async function MyDashboardPage() {
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="text-sm text-muted-foreground">Latest Salary</div>
           <div className="mt-2 text-xl font-semibold">{formatMoney(latestSalary)}</div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="text-sm font-semibold">My Action Queue</div>
+        <div className="mt-3 grid gap-3 md:grid-cols-3 text-sm">
+          <div className="rounded-md border border-amber-500/25 bg-amber-500/10 p-3">
+            Expense approvals pending: <span className="font-semibold">{pendingExpenseCount}</span>
+          </div>
+          <div className="rounded-md border border-sky-500/25 bg-sky-500/10 p-3">
+            Leave requests pending: <span className="font-semibold">{pendingLeaveCount}</span>
+          </div>
+          <div className="rounded-md border border-violet-500/25 bg-violet-500/10 p-3">
+            Payroll entries unpaid: <span className="font-semibold">{payrollPendingCount}</span>
+          </div>
         </div>
       </div>
 

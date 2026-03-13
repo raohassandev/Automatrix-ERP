@@ -110,6 +110,73 @@ export type TaskApprovalRegisterRow = {
   priority: string;
 };
 
+export type ControlRegistersSummary = {
+  generatedAt: string;
+  payroll: {
+    count: number;
+    totalNetPay: number;
+    totalOverdue: number;
+  };
+  variablePay: {
+    count: number;
+    unsettledAmount: number;
+  };
+  settlements: {
+    employees: number;
+    netCompanyPayable: number;
+    reimbursementDue: number;
+    advanceOutstanding: number;
+  };
+  projects: {
+    count: number;
+    pendingRecovery: number;
+    grossMargin: number;
+  };
+  procurement: {
+    rows: number;
+    outstanding: number;
+    blocked: number;
+  };
+  taskApprovals: {
+    items: number;
+    overdue: number;
+  };
+};
+
+export type ControlRegistersSummaryView = {
+  generatedAt: string;
+  maskedFinancials: boolean;
+  payroll: {
+    count: number;
+    totalNetPay: number | null;
+    totalOverdue: number;
+  };
+  variablePay: {
+    count: number;
+    unsettledAmount: number | null;
+  };
+  settlements: {
+    employees: number;
+    netCompanyPayable: number | null;
+    reimbursementDue: number | null;
+    advanceOutstanding: number | null;
+  };
+  projects: {
+    count: number;
+    pendingRecovery: number | null;
+    grossMargin: number | null;
+  };
+  procurement: {
+    rows: number;
+    outstanding: number | null;
+    blocked: number;
+  };
+  taskApprovals: {
+    items: number;
+    overdue: number;
+  };
+};
+
 export async function getPayrollControlRegister(args?: {
   db?: DbClient;
   from?: string;
@@ -528,7 +595,7 @@ export async function getControlRegistersSummary(args?: { db?: DbClient; from?: 
     getTaskApprovalRegister(args),
   ]);
 
-  return {
+  const summary: ControlRegistersSummary = {
     generatedAt: new Date().toISOString(),
     payroll: {
       count: payroll.length,
@@ -560,6 +627,40 @@ export async function getControlRegistersSummary(args?: { db?: DbClient; from?: 
     taskApprovals: {
       items: taskApprovals.length,
       overdue: taskApprovals.filter((row) => row.overdue).length,
+    },
+  };
+  return summary;
+}
+
+export function maskControlRegistersSummary(
+  summary: ControlRegistersSummary,
+  canViewFinancials: boolean,
+): ControlRegistersSummaryView {
+  if (canViewFinancials) {
+    return {
+      ...summary,
+      maskedFinancials: false,
+    };
+  }
+  return {
+    ...summary,
+    maskedFinancials: true,
+    payroll: { ...summary.payroll, totalNetPay: null },
+    variablePay: { ...summary.variablePay, unsettledAmount: null },
+    settlements: {
+      ...summary.settlements,
+      netCompanyPayable: null,
+      reimbursementDue: null,
+      advanceOutstanding: null,
+    },
+    projects: {
+      ...summary.projects,
+      pendingRecovery: null,
+      grossMargin: null,
+    },
+    procurement: {
+      ...summary.procurement,
+      outstanding: null,
     },
   };
 }

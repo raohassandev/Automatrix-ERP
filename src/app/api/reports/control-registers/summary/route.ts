@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/rbac";
-import { getControlRegistersSummary } from "@/lib/control-registers";
+import { getControlRegistersSummary, maskControlRegistersSummary } from "@/lib/control-registers";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -21,6 +21,11 @@ export async function GET(req: Request) {
   const to = (searchParams.get("to") || "").trim();
 
   const data = await getControlRegistersSummary({ from, to });
-  return NextResponse.json({ success: true, data });
+  const canViewFinancials =
+    canViewReports ||
+    (await requirePermission(session.user.id, "accounting.view")) ||
+    (await requirePermission(session.user.id, "accounting.manage")) ||
+    (await requirePermission(session.user.id, "projects.view_financials")) ||
+    (await requirePermission(session.user.id, "company_accounts.manage"));
+  return NextResponse.json({ success: true, data: maskControlRegistersSummary(data, canViewFinancials) });
 }
-

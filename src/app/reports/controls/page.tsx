@@ -2,6 +2,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { requirePermission } from "@/lib/rbac";
+import { formatMoney } from "@/lib/format";
+import { getControlRegistersSummary, maskControlRegistersSummary } from "@/lib/control-registers";
 
 function withinDays(days: number) {
   const d = new Date();
@@ -51,6 +53,13 @@ export default async function ControlsReportPage() {
         where: { action: "AUTH_SIGNIN_SUCCESS", createdAt: { gte: from30 } },
       }),
     ]);
+  const canViewFinancials =
+    canViewAll ||
+    (await requirePermission(session.user.id, "accounting.view")) ||
+    (await requirePermission(session.user.id, "accounting.manage")) ||
+    (await requirePermission(session.user.id, "projects.view_financials")) ||
+    (await requirePermission(session.user.id, "company_accounts.manage"));
+  const controlSummary = maskControlRegistersSummary(await getControlRegistersSummary(), canViewFinancials);
 
   const [poSubmitted, grnSubmitted, billSubmitted, paymentSubmitted] = submittedProcurement;
   const totalQueue = pendingExpense + pendingIncome + poSubmitted + grnSubmitted + billSubmitted + paymentSubmitted;
@@ -88,6 +97,46 @@ export default async function ControlsReportPage() {
           <div className="rounded-md border p-3">GRN submitted: <span className="font-semibold">{grnSubmitted}</span></div>
           <div className="rounded-md border p-3">Vendor bills submitted: <span className="font-semibold">{billSubmitted}</span></div>
           <div className="rounded-md border p-3">Vendor payments submitted: <span className="font-semibold">{paymentSubmitted}</span></div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold">Cross-Module Register Snapshot</h2>
+        <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-md border p-3">
+            Payroll rows: <span className="font-semibold">{controlSummary.payroll.count}</span>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Net pay: {controlSummary.payroll.totalNetPay === null ? "Masked" : formatMoney(controlSummary.payroll.totalNetPay)}
+            </div>
+          </div>
+          <div className="rounded-md border p-3">
+            Variable pay rows: <span className="font-semibold">{controlSummary.variablePay.count}</span>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Unsettled: {controlSummary.variablePay.unsettledAmount === null ? "Masked" : formatMoney(controlSummary.variablePay.unsettledAmount)}
+            </div>
+          </div>
+          <div className="rounded-md border p-3">
+            Employee settlements: <span className="font-semibold">{controlSummary.settlements.employees}</span>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Net payable: {controlSummary.settlements.netCompanyPayable === null ? "Masked" : formatMoney(controlSummary.settlements.netCompanyPayable)}
+            </div>
+          </div>
+          <div className="rounded-md border p-3">
+            Project rows: <span className="font-semibold">{controlSummary.projects.count}</span>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Pending recovery: {controlSummary.projects.pendingRecovery === null ? "Masked" : formatMoney(controlSummary.projects.pendingRecovery)}
+            </div>
+          </div>
+          <div className="rounded-md border p-3">
+            Procurement rows: <span className="font-semibold">{controlSummary.procurement.rows}</span>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Outstanding: {controlSummary.procurement.outstanding === null ? "Masked" : formatMoney(controlSummary.procurement.outstanding)}
+            </div>
+          </div>
+          <div className="rounded-md border p-3">
+            Task/approval items: <span className="font-semibold">{controlSummary.taskApprovals.items}</span>
+            <div className="mt-1 text-xs text-muted-foreground">Overdue: {controlSummary.taskApprovals.overdue}</div>
+          </div>
         </div>
       </div>
 
