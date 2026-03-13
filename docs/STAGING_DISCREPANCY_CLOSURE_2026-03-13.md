@@ -18,16 +18,13 @@ Scope: implemented modules only (Finance/Accounting, Inventory, Projects, Expens
 
 ## Open Discrepancies Only
 
-1. `Minor / Non-blocking` - Playwright flake on inventory detail navigation under staging latency.
-   - Test: `playwright/tests/inventory-rbac-actions.spec.ts` (`Item detail actions follow effective permissions`)
-   - Observed behavior: first attempt timeout on `page.goto('/inventory/items/:id')`; retry passed.
-   - Impact: no functional regression reproduced after rerun; stability issue in test/runtime timing only.
-   - Follow-up: tighten navigation readiness in test helper and/or add route-level lightweight loading signal for inventory item detail.
+- None currently open in implemented-module scope.
+- Previous minor flake (inventory detail navigation timeout) was closed by retry-safe navigation hardening in `playwright/tests/inventory-rbac-actions.spec.ts` and revalidated green.
 
 ## Closure Decision (Implemented Scope)
 
 - Critical open discrepancies: `0`
 - Major open discrepancies: `0`
-- Minor open discrepancies: `1` (flaky timeout, non-deterministic, rerun passes)
+- Minor open discrepancies: `0`
 
-Implemented module scope is audit-closed for staging operation with the above minor residual tracked.
+Implemented module scope is audit-closed for staging operation with no open discrepancy in this pass.

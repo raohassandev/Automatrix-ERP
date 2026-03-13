@@ -6,6 +6,26 @@ const ROLE_EMAILS = {
   engineer: process.env.E2E_ENGINEER_EMAIL || "engineer1@automatrix.pk",
 } as const;
 
+async function gotoWithRetry(page: import("@playwright/test").Page, url: string, attempts = 3) {
+  let lastError: unknown;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      if (response && response.status() >= 500) {
+        throw new Error(`Server error ${response.status()} on ${url}`);
+      }
+      await page.waitForLoadState("networkidle", { timeout: 15_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (i < attempts - 1) {
+        await page.waitForTimeout(1_200);
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(`Failed to navigate to ${url}`);
+}
+
 async function getEffectivePermissions(
   baseURL: string | undefined,
   storageStatePath: string,
@@ -118,8 +138,7 @@ test.describe.serial("Inventory RBAC actions", () => {
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto(`/inventory/items/${itemId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      await page.waitForLoadState("networkidle");
+      await gotoWithRetry(page, `/inventory/items/${itemId}`);
       await expect(page.getByTestId("workhub-actions-button")).toBeVisible();
       await page.getByTestId("workhub-actions-button").click();
       if (financeCanProcure) {
@@ -133,8 +152,7 @@ test.describe.serial("Inventory RBAC actions", () => {
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.engineer });
       const page = await ctx.newPage();
-      await page.goto(`/inventory/items/${itemId}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      await page.waitForLoadState("networkidle");
+      await gotoWithRetry(page, `/inventory/items/${itemId}`);
       if (!engineerCanAccessItem) {
         await expect(page.getByRole("heading", { name: /Access Denied/i })).toBeVisible();
         await expect(page.getByText("You do not have permission to open this page.")).toBeVisible();
