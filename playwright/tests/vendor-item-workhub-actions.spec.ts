@@ -2,11 +2,11 @@ import { test, expect, request, devices } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 
 const ROLE_EMAILS = {
-  engineer: "engineer1@automatrix.pk",
-  procurement: "procurement1@automatrix.pk",
-  sales: "sales1@automatrix.pk",
-  store: "store1@automatrix.pk",
-  finance: "finance1@automatrix.pk",
+  engineer: process.env.E2E_ENGINEER_EMAIL || "engineer1@automatrix.pk",
+  procurement: process.env.E2E_PROCUREMENT_EMAIL || "procurement1@automatrix.pk",
+  sales: process.env.E2E_SALES_EMAIL || "sales1@automatrix.pk",
+  store: process.env.E2E_STORE_EMAIL || "store1@automatrix.pk",
+  finance: process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk",
 } as const;
 
 async function uiLogin(page: import("@playwright/test").Page, email: string) {
@@ -24,6 +24,26 @@ async function openWorkhubActions(page: import("@playwright/test").Page) {
     await page.waitForTimeout(250);
   }
   throw new Error("Could not open workhub actions menu");
+}
+
+async function gotoDashboardStable(page: import("@playwright/test").Page) {
+  let lastError: unknown;
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      const response = await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 30_000 });
+      if (response && response.status() >= 500) {
+        throw new Error(`Server error ${response.status()} on /dashboard`);
+      }
+      await expect(page.locator("aside")).toBeVisible({ timeout: 15_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (i < 2) {
+        await page.waitForTimeout(1_200);
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Failed to open dashboard");
 }
 
 async function ensureStorageState(
@@ -160,7 +180,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await gotoDashboardStable(page);
       await expect(page.locator("aside").getByRole("link", { name: "Vendor Payments" })).toBeVisible();
       await ctx.close();
     }
@@ -169,7 +189,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     for (const role of ["procurement", "engineer", "store"] as const) {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
-      await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await gotoDashboardStable(page);
       await expect(page.locator("aside").getByRole("link", { name: "Vendor Payments" })).toHaveCount(0);
       await ctx.close();
     }
