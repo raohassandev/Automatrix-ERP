@@ -36,9 +36,12 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 
 ### Block 2 (Employee Settlement + Variable Pay + Payroll control) — In progress
 
-- [~] Employee Settlement Register maturity (advance/reimbursement/payroll due with monthly trace)
+- [x] Employee Settlement Register maturity (advance/reimbursement/payroll due with monthly trace)
   - [x] Include current-month due logic for payroll-linked variable pay (`scheduledPayrollMonth <= current month` for due view)
-  - [ ] Add explicit month drilldowns on employee settlement pages
+  - [x] Add explicit month drilldowns on employee settlement pages
+    - Payroll queue now separates due-now vs future-scheduled incentive signals
+    - `/incentives` supports month/payout/settlement/status/employee filters for direct drilldown
+    - `/me` links directly to month-scoped employee incentive due queue
 - [x] Variable Pay Register month-aware scheduling/settlement references
 - [x] Payroll Control Register full lifecycle and overdue logic hardening
 
@@ -49,10 +52,10 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 
 ### Block 4 (Role workspaces + exception dashboards)
 
-- [ ] My Workspace action queues
-- [ ] Manager Workspace delays/approvals exceptions
-- [ ] Finance Workspace due/reconciliation/period-close queues
-- [ ] CEO Workspace cash, recovery, bottleneck exception queues
+- [~] My Workspace action queues
+- [~] Manager Workspace delays/approvals exceptions
+- [~] Finance Workspace due/reconciliation/period-close queues
+- [~] CEO Workspace cash, recovery, bottleneck exception queues
 
 ### Block 5 (Hardening + UAT + Go/No-Go)
 

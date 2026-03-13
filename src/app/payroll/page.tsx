@@ -49,6 +49,7 @@ export default async function PayrollPage({
   const autoDraftDay = Number.isFinite(autoDraftDayRaw)
     ? Math.min(28, Math.max(1, Math.floor(autoDraftDayRaw)))
     : 1;
+  const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
 
   const [
     runs,
@@ -56,6 +57,7 @@ export default async function PayrollPage({
     employees,
     pendingApprovalIncentiveAgg,
     approvedUnsettledIncentiveAgg,
+    approvedFutureIncentiveAgg,
     settledIncentivePayrollAgg,
     openSalaryAdvanceAgg,
     companyAccounts,
@@ -93,6 +95,16 @@ export default async function PayrollPage({
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
         status: "APPROVED",
+        OR: [{ scheduledPayrollMonth: null }, { scheduledPayrollMonth: { lte: currentMonthKey } }],
+      },
+      _sum: { amount: true },
+    }),
+    prisma.incentiveEntry.aggregate({
+      where: {
+        payoutMode: "PAYROLL",
+        settlementStatus: "UNSETTLED",
+        status: "APPROVED",
+        scheduledPayrollMonth: { gt: currentMonthKey },
       },
       _sum: { amount: true },
     }),
@@ -118,6 +130,7 @@ export default async function PayrollPage({
       where: {
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
+        OR: [{ scheduledPayrollMonth: null }, { scheduledPayrollMonth: { lte: currentMonthKey } }],
       },
       include: { employee: { select: { id: true, name: true } } },
       orderBy: [{ status: "asc" }, { createdAt: "asc" }],
@@ -159,6 +172,7 @@ export default async function PayrollPage({
   );
   const pendingApprovalIncentive = Number(pendingApprovalIncentiveAgg._sum.amount || 0);
   const approvedUnsettledIncentive = Number(approvedUnsettledIncentiveAgg._sum.amount || 0);
+  const approvedFutureIncentive = Number(approvedFutureIncentiveAgg._sum.amount || 0);
   const settledIncentivePayroll = Number(settledIncentivePayrollAgg._sum.amount || 0);
   const openSalaryAdvance = Number(openSalaryAdvanceAgg._sum.outstandingAmount || 0);
   const openSalaryAdvanceCount = Number(openSalaryAdvanceAgg._count._all || 0);
@@ -307,7 +321,12 @@ export default async function PayrollPage({
           <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-900/60 dark:bg-violet-950/30">
             <div className="text-sm text-violet-700 dark:text-violet-300">Incentive Ready for Payroll</div>
             <div className="text-xl font-semibold text-violet-800 dark:text-violet-100">{formatMoney(approvedUnsettledIncentive)}</div>
-            <div className="text-xs text-violet-700/80 dark:text-violet-300/80">{approvedQueueRows.length} approved incentive line(s)</div>
+              <div className="text-xs text-violet-700/80 dark:text-violet-300/80">{approvedQueueRows.length} approved incentive line(s)</div>
+              {approvedFutureIncentive > 0 ? (
+                <div className="mt-1 text-[11px] text-violet-700/80 dark:text-violet-300/80">
+                  Future-scheduled (not due): {formatMoney(approvedFutureIncentive)}
+                </div>
+              ) : null}
           </div>
           <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
             <div className="text-sm text-emerald-700 dark:text-emerald-300">Incentive Settled (Payroll)</div>
@@ -327,7 +346,7 @@ export default async function PayrollPage({
             <span className="font-semibold">Ready incentives:</span> {formatMoney(approvedUnsettledIncentive)} (all approved + unsettled payroll incentives).
           </div>
           <div>
-            <span className="font-semibold">Important:</span> Auto-fill policy includes all approved unsettled incentives until they are settled.
+            <span className="font-semibold">Important:</span> Auto-fill policy includes only due incentives (scheduled month &lt;= current month).
           </div>
         </div>
         <div className="mt-3 rounded-lg border border-sky-300/35 bg-sky-500/10 p-3 text-xs text-sky-900 dark:text-sky-200">
@@ -360,6 +379,12 @@ export default async function PayrollPage({
             </div>
             <Link href="/incentives" className="text-xs font-medium text-primary underline underline-offset-2">
               Open Incentives Register
+            </Link>
+            <Link
+              href={`/incentives?month=${currentMonthKey}&payout=PAYROLL&settlement=UNSETTLED&status=APPROVED`}
+              className="text-xs font-medium text-primary underline underline-offset-2"
+            >
+              Open due month lines
             </Link>
           </div>
           {incentiveQueueRows.length === 0 ? (

@@ -66,6 +66,7 @@ export default async function MyDashboardPage() {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
   const monthEnd = new Date();
+  const currentMonthKey = `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`;
   const monthStartStr = monthStart.toISOString().slice(0, 10);
   const monthEndStr = monthEnd.toISOString().slice(0, 10);
 
@@ -134,6 +135,7 @@ export default async function MyDashboardPage() {
         status: "APPROVED",
         payoutMode: "PAYROLL",
         settlementStatus: "UNSETTLED",
+        OR: [{ scheduledPayrollMonth: null }, { scheduledPayrollMonth: { lte: currentMonthKey } }],
       },
       _sum: { amount: true },
     }),
@@ -283,6 +285,14 @@ export default async function MyDashboardPage() {
         <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm dark:border-indigo-900/60 dark:bg-indigo-950/30">
           <div className="text-sm text-indigo-700 dark:text-indigo-300">Pending Incentive (Payroll)</div>
           <div className="mt-2 text-xl font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(pendingPayrollIncentive)}</div>
+          <div className="mt-2 text-xs">
+            <Link
+              href={`/incentives?employeeId=${employee.id}&month=${currentMonthKey}&payout=PAYROLL&settlement=UNSETTLED&status=APPROVED`}
+              className="font-medium text-indigo-700 dark:text-indigo-300 underline underline-offset-2"
+            >
+              Open due incentive lines this month
+            </Link>
+          </div>
         </div>
         <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm dark:border-sky-900/60 dark:bg-sky-950/30">
           <div className="text-sm text-sky-700 dark:text-sky-300">Company Advance Issued</div>

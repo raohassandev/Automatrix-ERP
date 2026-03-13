@@ -14,7 +14,15 @@ import Link from "next/link";
 export default async function IncentivesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; page?: string }>;
+  searchParams: Promise<{
+    search?: string;
+    page?: string;
+    month?: string;
+    payout?: string;
+    settlement?: string;
+    status?: string;
+    employeeId?: string;
+  }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -37,6 +45,11 @@ export default async function IncentivesPage({
   const params = await searchParams;
   const search = (params.search || "").trim();
   const page = Math.max(parseInt(params.page || "1", 10), 1);
+  const month = (params.month || "").trim();
+  const payout = (params.payout || "").trim().toUpperCase();
+  const settlement = (params.settlement || "").trim().toUpperCase();
+  const status = (params.status || "").trim().toUpperCase();
+  const employeeId = (params.employeeId || "").trim();
   const take = 25;
   const skip = (page - 1) * take;
 
@@ -52,6 +65,20 @@ export default async function IncentivesPage({
   const where: Record<string, unknown> = {};
   if (!canViewAll) {
     where.employeeId = ownEmployeeId || "__none__";
+  } else if (employeeId) {
+    where.employeeId = employeeId;
+  }
+  if (month && /^\d{4}-\d{2}$/.test(month)) {
+    where.scheduledPayrollMonth = month;
+  }
+  if (payout) {
+    where.payoutMode = payout;
+  }
+  if (settlement) {
+    where.settlementStatus = settlement;
+  }
+  if (status) {
+    where.status = status;
   }
   if (search) {
     where.OR = [
@@ -95,6 +122,18 @@ export default async function IncentivesPage({
             </Link>
             {canEdit ? <IncentiveCreateButton employees={employees} /> : null}
           </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {month ? <span className="rounded-full border px-2 py-1">Month: {month}</span> : null}
+          {payout ? <span className="rounded-full border px-2 py-1">Payout: {payout}</span> : null}
+          {settlement ? <span className="rounded-full border px-2 py-1">Settlement: {settlement}</span> : null}
+          {status ? <span className="rounded-full border px-2 py-1">Status: {status}</span> : null}
+          {employeeId ? <span className="rounded-full border px-2 py-1">Employee filter active</span> : null}
+          {month || payout || settlement || status || employeeId ? (
+            <Link href="/incentives" className="underline underline-offset-2">
+              Clear filters
+            </Link>
+          ) : null}
         </div>
       </div>
 
