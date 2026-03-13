@@ -20,15 +20,19 @@ export default async function EmployeeDetailPage({
 
   const { id } = await params;
   const canViewAll = await requirePermission(session.user.id, "employees.view_all");
+  const canViewTeam = await requirePermission(session.user.id, "employees.view_team");
   const currentUserEmployee = session.user.email
     ? await prisma.employee.findUnique({
         where: { email: session.user.email },
-        select: { id: true },
+        select: { id: true, directReports: { select: { id: true } } },
       })
     : null;
   const canViewOwn = currentUserEmployee?.id === id;
+  const canViewDirectReport =
+    canViewTeam &&
+    Boolean(currentUserEmployee?.directReports.some((report) => report.id === id));
 
-  if (!canViewAll && !canViewOwn) {
+  if (!canViewAll && !canViewOwn && !canViewDirectReport) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Employee</h1>

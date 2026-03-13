@@ -39,10 +39,20 @@ export default async function EmployeesPage({
   const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;
   const skip = (page - 1) * take;
+  const currentEmployee = session.user.email
+    ? await prisma.employee.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      })
+    : null;
 
-  const baseWhere = canViewAll || canViewTeam
+  const baseWhere = canViewAll
     ? {}
-    : { email: session.user.email || "__none__" };
+    : canViewTeam && currentEmployee
+      ? {
+          OR: [{ id: currentEmployee.id }, { reportingOfficerId: currentEmployee.id }],
+        }
+      : { email: session.user.email || "__none__" };
 
   let employees: Array<{
     id: string;

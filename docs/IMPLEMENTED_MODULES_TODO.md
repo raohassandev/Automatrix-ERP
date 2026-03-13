@@ -133,9 +133,12 @@ This file is the running action list for closure, hardening, and go-live readine
   - [x] Achievements placeholder section (manual/admin entries in v1).  
     Evidence (2026-03-13): `Achievements (Profile v1)` placeholder block added in `/me`.
   - [ ] Role-based visibility matrix:
-    - employee sees self
-    - immediate manager sees direct reports
-    - CEO/Owner sees all
+    - [x] employee sees self  
+      Evidence (2026-03-13): `/employees/[id]` self-access preserved with `employees.view_own`.
+    - [x] immediate manager sees direct reports  
+      Evidence (2026-03-13): `/employees` and `/employees/[id]` now enforce team scope using `reportingOfficerId` + `employees.view_team`.
+    - [x] CEO/Owner sees all  
+      Evidence (2026-03-13): full list/detail access remains under `employees.view_all`.
     - client-facing view is separate and explicitly controlled
 
 - [ ] Define and implement **Task Assignment + Completion Performance v1**:
