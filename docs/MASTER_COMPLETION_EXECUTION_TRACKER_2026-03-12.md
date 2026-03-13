@@ -60,9 +60,9 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 
 ### Block 5 (Hardening + UAT + Go/No-Go)
 
-- [ ] Deep staging role-by-role audit rerun
-- [ ] Discrepancy-only closure report
-- [ ] Production cutover checklist sign-off
+- [x] Deep staging role-by-role audit rerun
+- [x] Discrepancy-only closure report
+- [x] Production cutover checklist sign-off
 
 ## Gate Criteria Per Batch
 
@@ -70,3 +70,11 @@ Source contract: `automatrix_erp_master_completion_plan_2026-03-12.md`
 - `pnpm vitest run ...` (targeted + changed areas)
 - `pnpm build`
 - staging Playwright critical subset for affected flows
+
+## Latest Evidence (2026-03-13)
+
+- `pnpm verify:staging:effective-permissions` -> pass (0 mismatches)
+- `pnpm verify:projects:financial-consistency` -> pass (0 drift)
+- `pnpm qa:staging:batch` -> pass on rerun after deploy stabilization; one minor flaky timeout remains tracked
+- Discrepancy report: `docs/STAGING_DISCREPANCY_CLOSURE_2026-03-13.md`
+- Cutover checklist: `docs/PRODUCTION_CUTOVER_CHECKLIST_2026-03-13.md`
