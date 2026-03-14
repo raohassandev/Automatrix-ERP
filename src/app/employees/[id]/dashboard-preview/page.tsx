@@ -22,12 +22,17 @@ export default async function EmployeeDashboardPreviewPage({
     redirect("/login");
   }
 
-  const canView = await requirePermission(session.user.id, "employees.view_all");
-  if (!canView) {
+  const [canViewAll, canViewClientPreview] = await Promise.all([
+    requirePermission(session.user.id, "employees.view_all"),
+    requirePermission(session.user.id, "employees.view_client_preview"),
+  ]);
+  if (!canViewAll || !canViewClientPreview) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Employee Dashboard Preview</h1>
-        <p className="mt-2 text-muted-foreground">You do not have access to this page.</p>
+        <p className="mt-2 text-muted-foreground">
+          You do not have access to client-facing preview.
+        </p>
       </div>
     );
   }

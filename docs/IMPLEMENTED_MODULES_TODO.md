@@ -139,7 +139,8 @@ This file is the running action list for closure, hardening, and go-live readine
       Evidence (2026-03-13): `/employees` and `/employees/[id]` now enforce team scope using `reportingOfficerId` + `employees.view_team`.
     - [x] CEO/Owner sees all  
       Evidence (2026-03-13): full list/detail access remains under `employees.view_all`.
-    - client-facing view is separate and explicitly controlled
+    - [x] client-facing view is separate and explicitly controlled  
+      Evidence (2026-03-14): new permission key `employees.view_client_preview` gates `/employees/[id]/dashboard-preview` and preview button visibility on employee detail.
 
 - [ ] Define and implement **Task Assignment + Completion Performance v1**:
   - [ ] Task authoring foundation:
