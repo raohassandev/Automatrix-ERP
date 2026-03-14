@@ -91,6 +91,7 @@ function PayrollRunFormDialogInner({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [policyLoading, setPolicyLoading] = useState(false);
+  const [lockProfileBaseSalary, setLockProfileBaseSalary] = useState(true);
   const [form, setForm] = useState(() => buildInitialForm(run));
   const [entries, setEntries] = useState<PayrollEntry[]>(() => buildInitialEntries(run, employees));
   const salaryByEmployeeId = new Map(employees.map((e) => [e.id, Number(e.baseSalary || 0)]));
@@ -105,13 +106,17 @@ function PayrollRunFormDialogInner({
           return {
             ...entry,
             employeeId: value,
-            baseSalary:
-              existingSalary > 0
-                ? entry.baseSalary
-                : pickedSalary > 0
-                ? String(pickedSalary)
-                : entry.baseSalary,
+            baseSalary: lockProfileBaseSalary
+              ? String(pickedSalary || 0)
+              : existingSalary > 0
+              ? entry.baseSalary
+              : pickedSalary > 0
+              ? String(pickedSalary)
+              : entry.baseSalary,
           };
+        }
+        if (lockProfileBaseSalary && key === "baseSalary") {
+          return entry;
         }
         return { ...entry, [key]: value };
       }),
@@ -144,7 +149,9 @@ function PayrollRunFormDialogInner({
     const cleaned = entries
       .map((entry) => ({
         employeeId: entry.employeeId,
-        baseSalary: Number(entry.baseSalary),
+        baseSalary: lockProfileBaseSalary
+          ? Number(salaryByEmployeeId.get(entry.employeeId) || 0)
+          : Number(entry.baseSalary),
         incentiveTotal: Number(entry.incentiveTotal || 0),
         deductions: Number(entry.deductions || 0),
         deductionReason: entry.deductionReason || undefined,
@@ -279,6 +286,31 @@ function PayrollRunFormDialogInner({
         <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
           Keep one employee per row. Default period is previous month only. If deductions are entered, write the reason for audit clarity.
         </div>
+        <div className="flex items-center justify-between rounded-md border border-emerald-200/50 bg-emerald-50/50 px-3 py-2 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/20">
+          <div>
+            Base salary source: <span className="font-semibold">Employee compensation profile</span>
+            {lockProfileBaseSalary ? " (locked)" : " (manual override enabled)"}
+          </div>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={lockProfileBaseSalary}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setLockProfileBaseSalary(checked);
+                if (checked) {
+                  setEntries((prev) =>
+                    prev.map((entry) => ({
+                      ...entry,
+                      baseSalary: String(Number(salaryByEmployeeId.get(entry.employeeId) || 0)),
+                    })),
+                  );
+                }
+              }}
+            />
+            Lock profile base salary
+          </label>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="periodStart">Period Start</Label>
@@ -356,6 +388,7 @@ function PayrollRunFormDialogInner({
                     value={entry.baseSalary}
                     onChange={(e) => updateEntry(index, "baseSalary", e.target.value)}
                     min={0}
+                    disabled={lockProfileBaseSalary}
                   />
                 </div>
                 <div className="space-y-1">

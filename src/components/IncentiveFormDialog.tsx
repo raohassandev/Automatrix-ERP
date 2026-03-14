@@ -15,6 +15,9 @@ type Incentive = {
   id: string;
   employeeId: string;
   projectRef?: string | null;
+  earningDate?: string | null;
+  scheduledPayrollMonth?: string | null;
+  dueDate?: string | null;
   formulaType?: string | null;
   basisAmount?: number | string | null;
   percent?: number | string | null;
@@ -37,9 +40,16 @@ const buildInitialForm = (
   incentive: Incentive | null | undefined,
   employees: EmployeeOption[],
   defaultProjectRef?: string,
-) => ({
+) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const earningDate = incentive?.earningDate ? String(incentive.earningDate).slice(0, 10) : today;
+  const scheduledPayrollMonthDefault = `${earningDate.slice(0, 4)}-${earningDate.slice(5, 7)}`;
+  return {
   employeeId: incentive?.employeeId || employees[0]?.id || "",
   projectRef: incentive?.projectRef || defaultProjectRef || "",
+  earningDate,
+  scheduledPayrollMonth: incentive?.scheduledPayrollMonth || scheduledPayrollMonthDefault,
+  dueDate: incentive?.dueDate ? String(incentive.dueDate).slice(0, 10) : "",
   formulaType: incentive?.formulaType || "FIXED",
   basisAmount:
     incentive?.basisAmount !== null && incentive?.basisAmount !== undefined
@@ -52,7 +62,8 @@ const buildInitialForm = (
   payoutMode: incentive?.payoutMode || "PAYROLL",
   amount: incentive?.amount !== null && incentive?.amount !== undefined ? String(incentive.amount) : "",
   reason: incentive?.reason || "",
-});
+  };
+};
 
 export function IncentiveFormDialog(props: IncentiveFormDialogProps) {
   const key = `${props.open ? "open" : "closed"}-${props.incentive?.id || "new"}`;
@@ -89,6 +100,9 @@ function IncentiveFormDialogInner({
     const payload = {
       employeeId: form.employeeId,
       projectRef: form.projectRef || undefined,
+      earningDate: form.earningDate || undefined,
+      scheduledPayrollMonth: form.payoutMode === "PAYROLL" ? form.scheduledPayrollMonth || undefined : undefined,
+      dueDate: form.payoutMode === "WALLET" ? form.dueDate || undefined : undefined,
       formulaType: form.formulaType,
       basisAmount,
       percent,
@@ -184,6 +198,50 @@ function IncentiveFormDialogInner({
               <option value="WALLET">Direct Wallet</option>
             </select>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="earningDate">Earning Date</Label>
+            <Input
+              id="earningDate"
+              type="date"
+              value={form.earningDate}
+              onChange={(e) => {
+                const value = e.target.value;
+                const nextMonth = value && value.length >= 7 ? `${value.slice(0, 4)}-${value.slice(5, 7)}` : "";
+                setForm((prev) => ({
+                  ...prev,
+                  earningDate: value,
+                  scheduledPayrollMonth:
+                    prev.payoutMode === "PAYROLL" && !prev.scheduledPayrollMonth ? nextMonth : prev.scheduledPayrollMonth,
+                }));
+              }}
+            />
+          </div>
+
+          {form.payoutMode === "PAYROLL" ? (
+            <div className="space-y-2">
+              <Label htmlFor="scheduledPayrollMonth">Payroll Month</Label>
+              <Input
+                id="scheduledPayrollMonth"
+                type="month"
+                value={form.scheduledPayrollMonth}
+                onChange={(e) => setForm({ ...form, scheduledPayrollMonth: e.target.value })}
+              />
+              <div className="text-xs text-muted-foreground">
+                Incentive will be due in this payroll month.
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="dueDate">Wallet Due Date</Label>
+              <Input
+                id="dueDate"
+                type="date"
+                value={form.dueDate}
+                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="basisAmount">Basis Amount</Label>

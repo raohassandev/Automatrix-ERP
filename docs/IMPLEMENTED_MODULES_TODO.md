@@ -63,6 +63,8 @@ This file is the running action list for closure, hardening, and go-live readine
   - [x] Added payroll incentive queue (employee/project/amount/status/aging) on payroll page.
   - [x] Enhanced latest-run variable component breakdown with project-linked line visibility.
   - [x] Added ERP guide link from payroll and introduced `/help#payroll-flow`.
+  - [x] Incentive form now captures earning date + payroll month explicitly, and payroll run form defaults to profile-salary lock to reduce manual errors.
+    Evidence (2026-03-14): `src/components/IncentiveFormDialog.tsx`, `src/components/PayrollRunFormDialog.tsx`, `src/app/incentives/page.tsx`.
 - [x] Task module smoke stabilization:
   - [x] `playwright/tests/tasks-module-smoke.spec.ts` now asserts recurring-template controls based on effective permissions, not static role assumptions.
 
@@ -90,7 +92,7 @@ This file is the running action list for closure, hardening, and go-live readine
 - [ ] Keep this tracker updated after each batch:
   - [x] mark completed items with date + evidence doc/spec.
   - [x] add new findings immediately with severity and owner.  
-    Evidence (2026-03-09): `qa:staging:postgreen` rerun green after smoke/auth test hardening; discrepancy-only report refreshed in `docs/STAGING_POSTGREEN_AUDIT_2026-03-09.md`.
+    Evidence (2026-03-14): payroll/incentive clarity hardening batch added with explicit source references and validation run (`tsc`, `build`, `payroll-policy` + `payroll-settlement` tests).
 - [ ] Keep module `19` and `20` work out of this file (tracked in `SUPER_MASTER_PLAN.md` main roadmap).
 
 ## 7) Latest Operations Evidence (2026-03-09)
@@ -191,6 +193,6 @@ This file is the running action list for closure, hardening, and go-live readine
     - [x] `tasks.grade_completion`
     - [x] `tasks.view_team_performance`
     - [x] `tasks.view_company_performance`
-    Evidence (2026-03-13): permission catalog expanded in `src/lib/permissions.ts`; task assignment endpoints now enforce `tasks.assign` on assign/reassign paths (`/api/tasks`, `/api/tasks/[id]`, `/api/projects/[id]/tasks`).
+    Evidence (2026-03-14): permission catalog expanded in `src/lib/permissions.ts`; task assignment endpoints enforce `tasks.assign` and task visibility now enforces `tasks.view_team` / `tasks.view_company` scope in `src/app/tasks/page.tsx` and `src/app/api/tasks/route.ts`.
 
 - [ ] Keep this feature set in planned state until current go-live blockers (section 1) are closed.

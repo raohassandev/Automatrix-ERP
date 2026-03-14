@@ -158,6 +158,7 @@ export default async function IncentivesPage({
                 <th className="py-2">Employee</th>
                 <th className="py-2">Project</th>
                 <th className="py-2">Payout</th>
+                <th className="py-2">Payroll Month</th>
                 <th className="py-2">Amount</th>
                 <th className="py-2">Settlement</th>
                 <th className="py-2">Status</th>
@@ -179,6 +180,7 @@ export default async function IncentivesPage({
                   </td>
                   <td className="py-2">{row.projectRef || "-"}</td>
                   <td className="py-2">{row.payoutMode || "-"}</td>
+                  <td className="py-2">{row.payoutMode === "PAYROLL" ? row.scheduledPayrollMonth || "-" : "-"}</td>
                   <td className="py-2">{formatMoney(Number(row.amount))}</td>
                   <td className="py-2">{row.settlementStatus || "-"}</td>
                   <td className="py-2">{row.status}</td>
@@ -189,6 +191,9 @@ export default async function IncentivesPage({
                           id: row.id,
                           employeeId: row.employeeId,
                           projectRef: row.projectRef,
+                          earningDate: row.earningDate?.toISOString() || null,
+                          scheduledPayrollMonth: row.scheduledPayrollMonth,
+                          dueDate: row.dueDate?.toISOString() || null,
                           formulaType: row.formulaType,
                           basisAmount: row.basisAmount ? Number(row.basisAmount) : null,
                           percent: row.percent ? Number(row.percent) : null,
@@ -216,6 +221,7 @@ export default async function IncentivesPage({
               fields={[
                 { label: "Project", value: row.projectRef || "-" },
                 { label: "Payout", value: row.payoutMode || "-" },
+                { label: "Payroll Month", value: row.payoutMode === "PAYROLL" ? row.scheduledPayrollMonth || "-" : "-" },
                 { label: "Amount", value: formatMoney(Number(row.amount)) },
                 { label: "Settlement", value: row.settlementStatus || "-" },
                 { label: "Status", value: row.status },
@@ -227,6 +233,9 @@ export default async function IncentivesPage({
                       id: row.id,
                       employeeId: row.employeeId,
                       projectRef: row.projectRef,
+                      earningDate: row.earningDate?.toISOString() || null,
+                      scheduledPayrollMonth: row.scheduledPayrollMonth,
+                      dueDate: row.dueDate?.toISOString() || null,
                       formulaType: row.formulaType,
                       basisAmount: row.basisAmount ? Number(row.basisAmount) : null,
                       percent: row.percent ? Number(row.percent) : null,
