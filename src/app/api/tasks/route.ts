@@ -30,13 +30,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const [canViewAllTasks, canViewAssignedTasks, canViewAllProjects] = await Promise.all([
+  const [canViewAllTasks, canViewAssignedTasks, canViewAllProjects, canViewTeamTasks, canViewCompanyTasks] = await Promise.all([
     requirePermission(session.user.id, "tasks.view_all"),
     requirePermission(session.user.id, "tasks.view_assigned"),
     requirePermission(session.user.id, "projects.view_all"),
+    requirePermission(session.user.id, "tasks.view_team"),
+    requirePermission(session.user.id, "tasks.view_company"),
   ]);
 
-  if (!canViewAllTasks && !canViewAssignedTasks && !canViewAllProjects) {
+  if (!canViewAllTasks && !canViewAssignedTasks && !canViewAllProjects && !canViewTeamTasks && !canViewCompanyTasks) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
@@ -52,8 +54,22 @@ export async function GET(req: Request) {
     select: { projectId: true },
   });
   const assignedProjectIds = assignedProjects.map((row) => row.projectId);
+  const currentEmployee = session.user.email
+    ? await prisma.employee.findUnique({
+        where: { email: session.user.email },
+        select: { directReports: { select: { email: true } } },
+      })
+    : null;
+  const directReportEmails = (currentEmployee?.directReports || []).map((row) => row.email).filter(Boolean);
+  const directReportUsers = directReportEmails.length
+    ? await prisma.user.findMany({
+        where: { email: { in: directReportEmails } },
+        select: { id: true },
+      })
+    : [];
+  const teamUserIds = directReportUsers.map((row) => row.id);
 
-  const canSeeAllRows = canViewAllTasks || canViewAllProjects;
+  const canSeeAllRows = canViewAllTasks || canViewAllProjects || canViewCompanyTasks;
   const andConditions: Array<Record<string, unknown>> = [];
 
   if (!canSeeAllRows || scope === "my") {
@@ -62,6 +78,9 @@ export async function GET(req: Request) {
         { assignedToId: session.user.id },
         { createdById: session.user.id },
         ...(assignedProjectIds.length > 0 ? [{ projectId: { in: assignedProjectIds } }] : []),
+        ...(canViewTeamTasks && teamUserIds.length > 0
+          ? [{ assignedToId: { in: teamUserIds } }, { createdById: { in: teamUserIds } }]
+          : []),
       ],
     });
   }

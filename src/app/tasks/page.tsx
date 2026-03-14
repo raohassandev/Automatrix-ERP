@@ -10,7 +10,7 @@ export default async function TasksPage() {
     redirect("/login");
   }
 
-  const [canViewAll, canViewAssigned, canManage, canUpdateAssigned, canReview, canManageTemplates, canAssign] =
+  const [canViewAll, canViewAssigned, canManage, canUpdateAssigned, canReview, canManageTemplates, canAssign, canViewTeam, canViewCompany] =
     await Promise.all([
       requirePermission(session.user.id, "tasks.view_all"),
       requirePermission(session.user.id, "tasks.view_assigned"),
@@ -19,9 +19,11 @@ export default async function TasksPage() {
       requirePermission(session.user.id, "tasks.review"),
       requirePermission(session.user.id, "tasks.templates_manage"),
       requirePermission(session.user.id, "tasks.assign"),
+      requirePermission(session.user.id, "tasks.view_team"),
+      requirePermission(session.user.id, "tasks.view_company"),
     ]);
 
-  if (!canViewAll && !canViewAssigned && !canManage && !canUpdateAssigned && !canReview) {
+  if (!canViewAll && !canViewAssigned && !canManage && !canUpdateAssigned && !canReview && !canViewTeam && !canViewCompany) {
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Tasks</h1>
@@ -35,19 +37,43 @@ export default async function TasksPage() {
     select: { projectId: true },
   });
   const assignedProjectIds = assignedProjects.map((row) => row.projectId);
+  const currentEmployee = session.user.email
+    ? await prisma.employee.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, directReports: { select: { email: true } } },
+      })
+    : null;
+  const directReportEmails = (currentEmployee?.directReports || []).map((row) => row.email).filter(Boolean);
+  const directReportUsers = directReportEmails.length
+    ? await prisma.user.findMany({
+        where: { email: { in: directReportEmails } },
+        select: { id: true },
+      })
+    : [];
+  const teamUserIds = directReportUsers.map((row) => row.id);
 
   const taskWhere: Record<string, unknown> = {};
-  if (!canViewAll) {
+  const canSeeCompanyTasks = canViewAll || canViewCompany;
+  if (!canSeeCompanyTasks) {
     taskWhere.OR = [
       { assignedToId: session.user.id },
       { createdById: session.user.id },
       ...(assignedProjectIds.length > 0 ? [{ projectId: { in: assignedProjectIds } }] : []),
+      ...(canViewTeam && teamUserIds.length > 0
+        ? [{ assignedToId: { in: teamUserIds } }, { createdById: { in: teamUserIds } }]
+        : []),
     ];
   }
 
   const templateWhere: Record<string, unknown> = {};
-  if (!canManageTemplates && !canViewAll) {
-    templateWhere.OR = [{ assignedToId: session.user.id }, { createdById: session.user.id }];
+  if (!canManageTemplates && !canSeeCompanyTasks) {
+    templateWhere.OR = [
+      { assignedToId: session.user.id },
+      { createdById: session.user.id },
+      ...(canViewTeam && teamUserIds.length > 0
+        ? [{ assignedToId: { in: teamUserIds } }, { createdById: { in: teamUserIds } }]
+        : []),
+    ];
   }
 
   const [tasks, templates, projects, users] = await Promise.all([
@@ -73,7 +99,7 @@ export default async function TasksPage() {
       take: 300,
     }),
     prisma.project.findMany({
-      where: canViewAll
+      where: canSeeCompanyTasks
         ? {}
         : assignedProjectIds.length > 0
           ? { id: { in: assignedProjectIds } }
