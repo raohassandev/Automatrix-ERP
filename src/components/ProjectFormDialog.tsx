@@ -28,6 +28,16 @@ interface ProjectFormDialogProps {
   onCreated?: () => void;
 }
 
+async function parseApiResponse(res: Response) {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text.slice(0, 300) || `Request failed with status ${res.status}` };
+  }
+}
+
 export function ProjectFormDialog({
   open,
   onOpenChange,
@@ -62,7 +72,7 @@ export function ProjectFormDialog({
     const loadUsers = async () => {
       try {
         const res = await fetch("/api/users/list");
-        const data = await res.json();
+        const data = await parseApiResponse(res);
         if (!res.ok) {
           throw new Error(data.error || "Failed to load users");
         }
@@ -79,7 +89,7 @@ export function ProjectFormDialog({
     const loadAssignments = async () => {
       try {
         const res = await fetch(`/api/projects/${initialData.id}/assignments`);
-        const data = await res.json();
+        const data = await parseApiResponse(res);
         if (!res.ok) {
           throw new Error(data.error || "Failed to load assignments");
         }
@@ -157,7 +167,7 @@ export function ProjectFormDialog({
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await parseApiResponse(res);
 
       if (!res.ok) {
         throw new Error(data.error || `Failed to ${isEdit ? "update" : "create"} project`);
