@@ -62,7 +62,7 @@ export default function PaymentModeAutoComplete({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn('justify-between', className || 'w-[200px]')}
+          className={cn('justify-between', className || 'w-[min(92vw,280px)]')}
           disabled={loading}
         >
           {value
@@ -71,11 +71,11 @@ export default function PaymentModeAutoComplete({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn('p-0', className || 'w-[200px]')}>
+      <PopoverContent className={cn('p-0', className || 'w-[min(92vw,280px)]')}>
         <Command>
           <CommandInput placeholder="Search payment mode..." />
           <CommandEmpty>No payment mode found.</CommandEmpty>
-          <CommandGroup>
+          <CommandGroup className="max-h-[50vh] overflow-y-auto">
             {paymentModes.map((mode) => (
               <CommandItem
                 key={mode}

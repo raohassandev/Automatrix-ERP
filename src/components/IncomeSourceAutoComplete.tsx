@@ -54,7 +54,7 @@ export default function IncomeSourceAutoComplete({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[200px] justify-between"
+          className="w-[min(92vw,280px)] justify-between"
           disabled={loading}
         >
           {value
@@ -63,11 +63,11 @@ export default function IncomeSourceAutoComplete({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0">
+      <PopoverContent className="w-[min(92vw,280px)] p-0">
         <Command>
           <CommandInput placeholder="Search income source..." />
           <CommandEmpty>No income source found.</CommandEmpty>
-          <CommandGroup>
+          <CommandGroup className="max-h-[50vh] overflow-y-auto">
             {incomeSources.map((source) => (
               <CommandItem
                 key={source}

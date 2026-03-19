@@ -67,11 +67,11 @@ export default function ClientAutoComplete({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0">
+      <PopoverContent className="w-[min(92vw,420px)] p-0">
         <Command>
           <CommandInput placeholder="Search client..." />
           <CommandEmpty>No client found.</CommandEmpty>
-          <CommandGroup>
+          <CommandGroup className="max-h-[50vh] overflow-y-auto">
             <CommandItem
               key="none"
               value=""

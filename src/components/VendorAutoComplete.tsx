@@ -71,11 +71,11 @@ export default function VendorAutoComplete({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0">
+      <PopoverContent className="w-[min(92vw,420px)] p-0">
         <Command>
           <CommandInput placeholder="Search vendor..." />
           <CommandEmpty>No vendor found.</CommandEmpty>
-          <CommandGroup>
+          <CommandGroup className="max-h-[50vh] overflow-y-auto">
             <CommandItem
               key="none"
               value=""
