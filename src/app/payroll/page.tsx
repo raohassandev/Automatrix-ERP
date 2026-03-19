@@ -204,10 +204,17 @@ export default async function PayrollPage({
       const incentiveDue = Number(approvedUnsettledIncentiveByEmployee.get(employeeId) || 0);
       const latestUnpaid = unpaidPayrollRows.find((row) => row.employeeId === employeeId);
       const employeeName = latestUnpaid?.employee?.name || approvedQueueRows.find((row) => row.employeeId === employeeId)?.employee?.name || "Employee";
-      const oldestIncentive = approvedQueueRows
-        .filter((row) => row.employeeId === employeeId)
+      const employeeIncentiveRows = approvedQueueRows.filter((row) => row.employeeId === employeeId);
+      const oldestIncentive = employeeIncentiveRows
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
       const oldestAgeDays = oldestIncentive ? ageInDays(oldestIncentive.createdAt) : 0;
+      const projectRefs = Array.from(
+        new Set(
+          employeeIncentiveRows
+            .map((row) => String(row.projectRef || "").trim())
+            .filter((row) => Boolean(row)),
+        ),
+      ).slice(0, 3);
       return {
         employeeId,
         employeeName,
@@ -215,7 +222,8 @@ export default async function PayrollPage({
         incentiveDue,
         totalDue: Number((payrollDue + incentiveDue).toFixed(2)),
         unpaidPayrollCount: unpaidPayrollRows.filter((row) => row.employeeId === employeeId).length,
-        approvedIncentiveCount: approvedQueueRows.filter((row) => row.employeeId === employeeId).length,
+        approvedIncentiveCount: employeeIncentiveRows.length,
+        approvedIncentiveProjects: projectRefs,
         oldestIncentiveAgeDays: oldestAgeDays,
       };
     })
@@ -349,6 +357,9 @@ export default async function PayrollPage({
             <span className="font-semibold">Important:</span> Auto-fill policy includes only due incentives (scheduled month &lt;= current month).
           </div>
         </div>
+        <div className="mt-3 rounded-lg border border-emerald-300/35 bg-emerald-500/10 p-3 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-200">
+          <span className="font-semibold">Approved vs Paid:</span> <span className="font-semibold">APPROVED</span> means payroll is authorized and locked for payout. <span className="font-semibold">PAID</span> means the employee transfer is executed and posted against company account.
+        </div>
         <div className="mt-3 rounded-lg border border-sky-300/35 bg-sky-500/10 p-3 text-xs text-sky-900 dark:text-sky-200">
           Monthly auto-draft scheduler target day: <span className="font-semibold">day {autoDraftDay}</span>. You can still use
           <span className="font-semibold"> Auto-Create Draft </span>
@@ -396,6 +407,7 @@ export default async function PayrollPage({
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="py-2">Created</th>
+                      <th className="py-2">Due In Payroll</th>
                       <th className="py-2">Employee</th>
                       <th className="py-2">Project</th>
                       <th className="py-2">Amount</th>
@@ -407,6 +419,7 @@ export default async function PayrollPage({
                     {incentiveQueueRows.map((row) => (
                       <tr key={row.id} className="border-b">
                         <td className="py-2">{new Date(row.createdAt).toLocaleDateString()}</td>
+                        <td className="py-2">{row.payoutMode === "PAYROLL" ? row.scheduledPayrollMonth || "-" : "-"}</td>
                         <td className="py-2">
                           <Link href={`/employees/${row.employeeId}`} className="font-medium text-primary underline underline-offset-2">
                             {employeeCodeFromId(row.employeeId)} - {row.employee?.name || "Employee"}
@@ -430,6 +443,7 @@ export default async function PayrollPage({
                     title={`${employeeCodeFromId(row.employeeId)} - ${row.employee?.name || "Employee"}`}
                     subtitle={new Date(row.createdAt).toLocaleDateString()}
                     fields={[
+                      { label: "Due In Payroll", value: row.payoutMode === "PAYROLL" ? row.scheduledPayrollMonth || "-" : "-" },
                       { label: "Project", value: row.projectRef || "-" },
                       { label: "Amount", value: formatMoney(Number(row.amount || 0)) },
                       { label: "Status", value: <StatusBadge status={row.status} /> },
@@ -459,19 +473,21 @@ export default async function PayrollPage({
         ) : (
           <>
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="py-2">Employee</th>
-                    <th className="py-2">Payroll Due</th>
-                    <th className="py-2">Incentive Due</th>
-                    <th className="py-2">Total Due</th>
-                    <th className="py-2">Unpaid Payroll Rows</th>
-                    <th className="py-2">Approved Incentives</th>
-                    <th className="py-2">Oldest Incentive Aging</th>
-                  </tr>
-                </thead>
-                <tbody>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="py-2">Employee</th>
+                      <th className="py-2">Payroll Due</th>
+                      <th className="py-2">Incentive Due</th>
+                      <th className="py-2">Total Due</th>
+                      <th className="py-2">Unpaid Payroll Rows</th>
+                      <th className="py-2">Approved Incentives</th>
+                      <th className="py-2">Projects</th>
+                      <th className="py-2">Oldest Incentive Aging</th>
+                      <th className="py-2">Trace</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                   {payableRows.map((row) => (
                     <tr key={row.employeeId} className="border-b">
                       <td className="py-2">
@@ -484,7 +500,18 @@ export default async function PayrollPage({
                       <td className="py-2 font-semibold">{formatMoney(row.totalDue)}</td>
                       <td className="py-2">{row.unpaidPayrollCount}</td>
                       <td className="py-2">{row.approvedIncentiveCount}</td>
+                      <td className="py-2">
+                        {row.approvedIncentiveProjects.length > 0 ? row.approvedIncentiveProjects.join(", ") : "-"}
+                      </td>
                       <td className="py-2">{row.oldestIncentiveAgeDays} day(s)</td>
+                      <td className="py-2">
+                        <Link
+                          href={`/incentives?employeeId=${row.employeeId}&payout=PAYROLL&settlement=UNSETTLED&status=APPROVED`}
+                          className="text-primary underline underline-offset-2"
+                        >
+                          Open due lines
+                        </Link>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -501,7 +528,22 @@ export default async function PayrollPage({
                     { label: "Total Due", value: formatMoney(row.totalDue) },
                     { label: "Unpaid Payroll Rows", value: row.unpaidPayrollCount.toString() },
                     { label: "Approved Incentives", value: row.approvedIncentiveCount.toString() },
+                    {
+                      label: "Projects",
+                      value: row.approvedIncentiveProjects.length > 0 ? row.approvedIncentiveProjects.join(", ") : "-",
+                    },
                     { label: "Oldest Incentive", value: `${row.oldestIncentiveAgeDays} day(s)` },
+                    {
+                      label: "Trace",
+                      value: (
+                        <Link
+                          href={`/incentives?employeeId=${row.employeeId}&payout=PAYROLL&settlement=UNSETTLED&status=APPROVED`}
+                          className="text-primary underline underline-offset-2"
+                        >
+                          Open due lines
+                        </Link>
+                      ),
+                    },
                   ]}
                 />
               ))}
@@ -789,7 +831,15 @@ export default async function PayrollPage({
                                 <div key={line.id} className="text-xs">
                                   <span className="font-medium">{line.componentType}</span>{" "}
                                   <span className="text-muted-foreground">{line.projectRef || "No project"}</span>{" "}
-                                  <span>{formatMoney(Number(line.amount || 0))}</span>
+                                  <span>{formatMoney(Number(line.amount || 0))}</span>{" "}
+                                  {line.sourceType === "INCENTIVE" ? (
+                                    <Link
+                                      href={`/incentives?employeeId=${entry.employeeId}&search=${encodeURIComponent(line.projectRef || "")}`}
+                                      className="text-primary underline underline-offset-2"
+                                    >
+                                      view
+                                    </Link>
+                                  ) : null}
                                 </div>
                               ))}
                               <div className="text-xs font-medium">Total: {formatMoney(variableTotal)}</div>
