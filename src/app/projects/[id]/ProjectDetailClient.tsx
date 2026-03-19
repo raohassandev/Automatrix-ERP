@@ -802,6 +802,13 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
           ) : (
             <>
               <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div className="rounded-lg border border-primary/25 bg-primary/10 p-4 shadow-sm">
+                  <div className="text-xs font-medium text-primary/90">Total Budget</div>
+                  <div className="mt-2 text-lg font-semibold text-foreground">{formatMoney(detail.costs.contractValue)}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Used: {detail.costs.contractValue > 0 ? ((detail.costs.totalProjectCosts / detail.costs.contractValue) * 100).toFixed(1) : "0.0"}%
+                  </div>
+                </div>
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900 dark:bg-emerald-950/35">
                   <div className="text-xs font-medium text-emerald-700 dark:text-emerald-200">Money In (Approved)</div>
                   <div className="mt-2 text-lg font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(detail.costs.approvedIncomeReceived)}</div>
@@ -809,6 +816,18 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                 <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-4 dark:border-rose-900 dark:bg-rose-950/30">
                   <div className="text-xs font-medium text-rose-800 dark:text-rose-200">Money Out (Total Cost)</div>
                   <div className="mt-2 text-lg font-semibold text-rose-900 dark:text-rose-100">{formatMoney(detail.costs.totalProjectCosts)}</div>
+                </div>
+                <div
+                  className={`rounded-lg border p-4 ${
+                    detail.costs.contractValue - detail.costs.totalProjectCosts >= 0
+                      ? "border-sky-200 bg-sky-50/70 dark:border-sky-900 dark:bg-sky-950/35"
+                      : "border-red-200 bg-red-50/70 dark:border-red-900 dark:bg-red-950/35"
+                  }`}
+                >
+                  <div className="text-xs font-medium text-sky-700 dark:text-sky-200">Budget Remaining</div>
+                  <div className="mt-2 text-lg font-semibold text-foreground">
+                    {formatMoney(detail.costs.contractValue - detail.costs.totalProjectCosts)}
+                  </div>
                 </div>
                 <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900 dark:bg-amber-950/30">
                   <div className="text-xs font-medium text-amber-800 dark:text-amber-200">Cash to Recover</div>
