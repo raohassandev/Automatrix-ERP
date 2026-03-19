@@ -9,6 +9,7 @@ import { IncentiveCreateButton } from "@/components/IncentiveCreateButton";
 import { IncentiveActions } from "@/components/IncentiveActions";
 import { MobileCard } from "@/components/MobileCard";
 import { employeeCodeFromId } from "@/lib/employee-display";
+import QuerySelect from "@/components/QuerySelect";
 import Link from "next/link";
 
 export default async function IncentivesPage({
@@ -101,6 +102,18 @@ export default async function IncentivesPage({
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / take));
+  const summary = rows.reduce(
+    (acc, row) => {
+      const amount = Number(row.amount || 0);
+      acc.total += amount;
+      if (String(row.status || "").toUpperCase() === "APPROVED") acc.approved += amount;
+      if (String(row.status || "").toUpperCase().startsWith("PENDING")) acc.pending += amount;
+      if (String(row.settlementStatus || "").toUpperCase() === "UNSETTLED") acc.unsettled += amount;
+      if (String(row.payoutMode || "").toUpperCase() === "PAYROLL") acc.payroll += amount;
+      return acc;
+    },
+    { total: 0, approved: 0, pending: 0, unsettled: 0, payroll: 0 },
+  );
 
   return (
     <div className="grid gap-6">
@@ -114,6 +127,39 @@ export default async function IncentivesPage({
             <div className="min-w-[220px]">
               <SearchInput placeholder="Search employee or project..." />
             </div>
+            <QuerySelect
+              param="status"
+              placeholder="All statuses"
+              options={[
+                { label: "Pending", value: "PENDING" },
+                { label: "Approved", value: "APPROVED" },
+                { label: "Rejected", value: "REJECTED" },
+              ]}
+            />
+            <QuerySelect
+              param="payout"
+              placeholder="All payout modes"
+              options={[
+                { label: "Payroll", value: "PAYROLL" },
+                { label: "Wallet", value: "WALLET" },
+              ]}
+            />
+            <QuerySelect
+              param="settlement"
+              placeholder="All settlement"
+              options={[
+                { label: "Unsettled", value: "UNSETTLED" },
+                { label: "Settled", value: "SETTLED" },
+              ]}
+            />
+            <QuerySelect
+              param="employeeId"
+              placeholder="All employees"
+              options={employees.map((row) => ({
+                value: row.id,
+                label: `${employeeCodeFromId(row.id)} - ${row.name}`,
+              }))}
+            />
             <Link
               href="/help#feature-incentives"
               className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
@@ -124,6 +170,19 @@ export default async function IncentivesPage({
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <form action="/incentives" className="flex items-center gap-2 rounded-md border border-border bg-muted/20 p-2">
+            <label htmlFor="month-filter" className="text-xs text-muted-foreground">Month</label>
+            <input
+              id="month-filter"
+              name="month"
+              type="month"
+              defaultValue={month}
+              className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
+            />
+            <button className="rounded border border-border bg-background px-2 py-1 text-xs font-medium hover:bg-accent" type="submit">
+              Apply
+            </button>
+          </form>
           {month ? <span className="rounded-full border px-2 py-1">Month: {month}</span> : null}
           {payout ? <span className="rounded-full border px-2 py-1">Payout: {payout}</span> : null}
           {settlement ? <span className="rounded-full border px-2 py-1">Settlement: {settlement}</span> : null}
@@ -134,6 +193,28 @@ export default async function IncentivesPage({
               Clear filters
             </Link>
           ) : null}
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-5">
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3">
+            <div className="text-xs text-sky-700 dark:text-sky-300">Total (Page)</div>
+            <div className="text-lg font-semibold text-sky-900 dark:text-sky-100">{formatMoney(summary.total)}</div>
+          </div>
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+            <div className="text-xs text-emerald-700 dark:text-emerald-300">Approved</div>
+            <div className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(summary.approved)}</div>
+          </div>
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+            <div className="text-xs text-amber-700 dark:text-amber-300">Pending</div>
+            <div className="text-lg font-semibold text-amber-900 dark:text-amber-100">{formatMoney(summary.pending)}</div>
+          </div>
+          <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-3">
+            <div className="text-xs text-violet-700 dark:text-violet-300">Unsettled</div>
+            <div className="text-lg font-semibold text-violet-900 dark:text-violet-100">{formatMoney(summary.unsettled)}</div>
+          </div>
+          <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3">
+            <div className="text-xs text-indigo-700 dark:text-indigo-300">Payroll Payout</div>
+            <div className="text-lg font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(summary.payroll)}</div>
+          </div>
         </div>
       </div>
 
