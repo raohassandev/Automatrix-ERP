@@ -120,6 +120,18 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
       return haystack.includes(query);
     });
   }, [detail.projectSwitcher.options, projectSwitchSearch]);
+  const budgetSummary = React.useMemo(() => {
+    if (!detail.costs) {
+      return { usedPercent: 0, remaining: 0 };
+    }
+    const contract = Number(detail.costs.contractValue || 0);
+    const used = Number(detail.costs.totalProjectCosts || 0);
+    const usedPercent = contract > 0 ? Math.min(999, (used / contract) * 100) : 0;
+    return {
+      usedPercent,
+      remaining: Number((contract - used).toFixed(2)),
+    };
+  }, [detail.costs]);
 
   async function updateIncentiveStatus(incentiveId: string, status: "APPROVED" | "REJECTED") {
     try {
@@ -415,11 +427,11 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
       </details>
 
       {detail.costs ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-7">
           <div className="rounded-xl border border-primary/25 bg-primary/10 p-4 shadow-sm">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-primary/90">Contract Amount</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-primary/90">Total Budget</div>
             <div className="mt-2 text-2xl font-semibold text-foreground">{formatMoney(detail.costs.contractValue)}</div>
-            <div className="mt-1 text-xs text-muted-foreground">Contracted project value</div>
+            <div className="mt-1 text-xs text-muted-foreground">Budget used: {budgetSummary.usedPercent.toFixed(1)}%</div>
           </div>
 
           <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 shadow-sm">
@@ -439,6 +451,22 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
             </div>
             <div className="mt-1 text-xs text-rose-700 dark:text-rose-300">
               Pending: {formatMoney(detail.costs.pendingExpenseSubmitted)}
+            </div>
+          </div>
+
+          <div
+            className={`rounded-xl border p-4 shadow-sm ${
+              budgetSummary.remaining >= 0
+                ? "border-sky-500/30 bg-sky-500/10"
+                : "border-red-500/30 bg-red-500/10"
+            }`}
+          >
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+              Budget Remaining
+            </div>
+            <div className="mt-2 text-2xl font-semibold text-foreground">{formatMoney(budgetSummary.remaining)}</div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              Total cost: {formatMoney(detail.costs.totalProjectCosts)}
             </div>
           </div>
 
