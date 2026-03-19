@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
@@ -91,6 +91,7 @@ function PayrollRunFormDialogInner({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [policyLoading, setPolicyLoading] = useState(false);
+  const [policyAutoLoaded, setPolicyAutoLoaded] = useState(false);
   const [lockProfileBaseSalary, setLockProfileBaseSalary] = useState(true);
   const [form, setForm] = useState(() => buildInitialForm(run));
   const [entries, setEntries] = useState<PayrollEntry[]>(() => buildInitialEntries(run, employees));
@@ -217,9 +218,9 @@ function PayrollRunFormDialogInner({
     router.refresh();
   }
 
-  async function loadFromPolicy() {
+  const loadFromPolicy = useCallback(async (silent = false) => {
     if (!form.periodStart || !form.periodEnd) {
-      toast.error("Set payroll period first.");
+      if (!silent) toast.error("Set payroll period first.");
       return;
     }
     setPolicyLoading(true);
@@ -231,7 +232,7 @@ function PayrollRunFormDialogInner({
       const res = await fetch(`/api/payroll/runs/policy-preview?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Failed to load policy entries.");
+        if (!silent) toast.error(data.error || "Failed to load policy entries.");
         return;
       }
       const nextEntries = Array.isArray(data.data)
@@ -244,15 +245,21 @@ function PayrollRunFormDialogInner({
           }))
         : [];
       if (nextEntries.length === 0) {
-        toast.error("No active employees or compensation data found for policy generation.");
+        if (!silent) toast.error("No active employees or compensation data found for policy generation.");
         return;
       }
       setEntries(nextEntries);
-      toast.success(`Loaded ${nextEntries.length} entries from payroll policy.`);
+      if (!silent) toast.success(`Loaded ${nextEntries.length} entries from payroll policy.`);
     } finally {
       setPolicyLoading(false);
     }
-  }
+  }, [form.periodEnd, form.periodStart]);
+
+  useEffect(() => {
+    if (!open || run || policyAutoLoaded || policyLoading) return;
+    setPolicyAutoLoaded(true);
+    void loadFromPolicy(true);
+  }, [open, run, policyAutoLoaded, policyLoading, loadFromPolicy]);
 
   function fillBaseSalariesFromProfile() {
     setEntries((prev) =>
@@ -284,7 +291,7 @@ function PayrollRunFormDialogInner({
         className="space-y-4"
       >
         <div className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-          Keep one employee per row. Default period is previous month only. If deductions are entered, write the reason for audit clarity.
+          Keep one employee per row. Default period is previous month only. Policy includes profile base salary plus all due unsettled payroll incentives/commissions up to the selected period end. If deductions are entered, write the reason for audit clarity.
         </div>
         <div className="flex items-center justify-between rounded-md border border-emerald-200/50 bg-emerald-50/50 px-3 py-2 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/20">
           <div>
@@ -346,7 +353,14 @@ function PayrollRunFormDialogInner({
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Entries</h3>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={loadFromPolicy} disabled={policyLoading || pending}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  void loadFromPolicy(false);
+                }}
+                disabled={policyLoading || pending}
+              >
                 {policyLoading ? "Loading..." : "Auto-fill by Policy"}
               </Button>
               <Button type="button" variant="outline" onClick={fillBaseSalariesFromProfile} disabled={pending}>
