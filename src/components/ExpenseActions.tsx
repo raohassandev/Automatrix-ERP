@@ -6,6 +6,7 @@ import { DeleteButton } from "./TableActions";
 import { ExpenseEditDialog } from "./ExpenseEditDialog";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { CheckCircle2, Pencil, RotateCcw } from "lucide-react";
 
 type Expense = {
   id: string;
@@ -94,21 +95,21 @@ export function ExpenseActions({
     <>
       <div className="flex gap-2">
         {canSetPaid ? (
-          <Button size="sm" variant="outline" onClick={markAsPaid} disabled={markingPaid}>
-            {markingPaid ? "Posting..." : "Mark Paid"}
+          <Button size="icon" variant="outline" onClick={markAsPaid} disabled={markingPaid} title="Mark as paid">
+            <CheckCircle2 className="h-4 w-4" />
           </Button>
         ) : null}
         {canReopenForEdit ? (
-          <Button size="sm" variant="outline" onClick={reopenForEdit}>
-            Reopen
+          <Button size="icon" variant="outline" onClick={reopenForEdit} title="Reopen for correction">
+            <RotateCcw className="h-4 w-4" />
           </Button>
         ) : null}
         {canEdit ? (
-          <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
-            Edit
+          <Button size="icon" variant="outline" onClick={() => setEditOpen(true)} title="Edit expense">
+            <Pencil className="h-4 w-4" />
           </Button>
         ) : null}
-        {canDelete ? <DeleteButton url={`/api/expenses/${expense.id}`} /> : null}
+      {canDelete ? <DeleteButton url={`/api/expenses/${expense.id}`} iconOnly /> : null}
       </div>
       {canEdit ? (
         <ExpenseEditDialog open={editOpen} onOpenChange={setEditOpen} expense={expense} />

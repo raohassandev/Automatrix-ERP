@@ -19,7 +19,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { type RoleName } from "@/lib/permissions";
 import { useEffectivePermissions } from "@/hooks/useEffectivePermissions";
-import { CircleCheckBig, Download, ListFilter } from "lucide-react";
+import { CircleCheckBig, Download, FilterX, HelpCircle } from "lucide-react";
 import { TablePageSkeleton } from "@/components/PageSkeletons";
 
 const COLUMNS = [
@@ -59,6 +59,17 @@ interface Expense {
   // Add other properties as needed based on your API response
 }
 
+interface EmployeeOption {
+  id: string;
+  name: string;
+}
+
+interface ProjectOption {
+  id: string;
+  projectId: string;
+  name: string;
+}
+
 export default function ExpensesPage() {
   return (
     <Suspense fallback={<TablePageSkeleton />}>
@@ -78,6 +89,9 @@ function ExpensesPageContent() {
   const [columns, setColumns] = useState(COLUMNS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkPending, setBulkPending] = useState(false);
+  const [employeeOptions, setEmployeeOptions] = useState<EmployeeOption[]>([]);
+  const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
+  const canViewAllExpenses = canAccess(["expenses.view_all"]);
   const canCreate = canAccess(["expenses.submit"]);
   const canEditAny = canAccess(["expenses.edit"]);
   const canMarkPaid = canAccess(["expenses.mark_paid"]);
@@ -119,6 +133,39 @@ function ExpensesPageContent() {
     };
     fetchExpenses();
   }, [searchParams]);
+
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const [projectsRes, employeesRes] = await Promise.all([
+          fetch("/api/projects", { cache: "no-store" }),
+          canViewAllExpenses ? fetch("/api/employees", { cache: "no-store" }) : Promise.resolve(null),
+        ]);
+        const projectsJson = await projectsRes.json().catch(() => ({}));
+        if (projectsRes.ok && Array.isArray(projectsJson?.data)) {
+          setProjectOptions(projectsJson.data.map((row: ProjectOption) => ({
+            id: row.id,
+            projectId: row.projectId,
+            name: row.name,
+          })));
+        }
+        if (employeesRes) {
+          const employeesJson = await employeesRes.json().catch(() => ({}));
+          if (employeesRes.ok && Array.isArray(employeesJson?.data)) {
+            setEmployeeOptions(
+              employeesJson.data.map((row: { id: string; name?: string }) => ({
+                id: row.id,
+                name: row.name || "Employee",
+              })),
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load expense filter options", error);
+      }
+    };
+    loadFilterOptions();
+  }, [canViewAllExpenses]);
 
   const summary = expenses.reduce(
     (acc, row) => {
@@ -215,6 +262,33 @@ function ExpensesPageContent() {
                 { label: "Employee Wallet", value: "EMPLOYEE_WALLET" },
               ]}
             />
+            <QuerySelect
+              param="paymentMode"
+              placeholder="All payment modes"
+              options={[
+                { label: "Cash", value: "CASH" },
+                { label: "Bank", value: "BANK" },
+                { label: "Card", value: "CARD" },
+                { label: "Transfer", value: "TRANSFER" },
+                { label: "Online", value: "ONLINE" },
+                { label: "Cheque", value: "CHEQUE" },
+              ]}
+            />
+            <QuerySelect
+              param="project"
+              placeholder="All projects"
+              options={projectOptions.map((row) => ({
+                value: row.projectId,
+                label: `${row.projectId} - ${row.name}`,
+              }))}
+            />
+            {canViewAllExpenses ? (
+              <QuerySelect
+                param="submittedById"
+                placeholder="All employees"
+                options={employeeOptions.map((row) => ({ value: row.id, label: row.name }))}
+              />
+            ) : null}
             <ColumnVisibilityToggle columns={columns} onVisibilityChange={setColumns} />
             <Link
               href={`/api/expenses/export?${searchParams.toString()}`}
@@ -226,18 +300,25 @@ function ExpensesPageContent() {
             </Link>
             <Link
               href="/help#feature-expenses"
-              className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+              className="inline-flex items-center justify-center rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+              title="Expense Help"
             >
-              Help
+              <HelpCircle className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/expenses"
+              className="inline-flex items-center justify-center rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent"
+              title="Clear filters"
+            >
+              <FilterX className="h-4 w-4" />
             </Link>
             {canCreate ? (
               <PageCreateButton label="Submit Expense" formType="expense" />
             ) : null}
           </div>
         </div>
-        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-          <ListFilter className="h-3.5 w-3.5" />
-          Use filters to quickly separate pending approvals, own-pocket reimbursements, and paid items.
+        <div className="mt-3 text-xs text-muted-foreground">
+          Filters support status, type, source, payment mode, project, employee, date range, and free text search.
         </div>
         <details className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-primary">

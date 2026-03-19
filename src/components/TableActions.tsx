@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/FormDialog";
 import { formatMoney } from "@/lib/format";
+import { Trash2 } from "lucide-react";
 
 function isProjectDeleteUrl(url: string) {
   return /^\/api\/projects\/[^/?#]+(?:\?.*)?$/i.test(url);
@@ -57,7 +58,7 @@ type LinkedProjectData = {
   groups: LinkedRecordGroup[];
 };
 
-export function DeleteButton({ url }: { url: string }) {
+export function DeleteButton({ url, iconOnly = false }: { url: string; iconOnly?: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -147,11 +148,12 @@ export function DeleteButton({ url }: { url: string }) {
   return (
     <>
       <button
-        className="rounded-md border px-3 py-1 text-xs"
+        className={iconOnly ? "inline-flex h-8 w-8 items-center justify-center rounded-md border" : "rounded-md border px-3 py-1 text-xs"}
         disabled={pending}
         onClick={() => setConfirmOpen(true)}
+        title="Delete"
       >
-        Delete
+        {iconOnly ? <Trash2 className="h-4 w-4" /> : "Delete"}
       </button>
 
       <FormDialog
