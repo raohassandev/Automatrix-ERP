@@ -292,38 +292,38 @@ export default async function MyDashboardPage() {
           </Link>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 p-3 text-sm">
+          <div className="rounded-lg border border-sky-500/25 bg-card/95 p-3 text-sm ring-1 ring-sky-500/10">
             <div className="text-sky-700 dark:text-sky-300">Employee ID</div>
             <div className="mt-1 font-semibold">{employeeCode}</div>
             <div className="text-xs text-muted-foreground">{employee.name}</div>
           </div>
-          <div className="rounded-lg border border-indigo-500/25 bg-indigo-500/10 p-3 text-sm">
+          <div className="rounded-lg border border-indigo-500/25 bg-card/95 p-3 text-sm ring-1 ring-indigo-500/10">
             <div className="text-indigo-700 dark:text-indigo-300">Role & Reporting</div>
             <div className="mt-1 font-semibold">{employee.role || "-"}</div>
             <div className="text-xs text-muted-foreground">
               Manager: {employee.reportingOfficer?.name || "Not assigned"}
             </div>
           </div>
-          <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm">
+          <div className="rounded-lg border border-emerald-500/25 bg-card/95 p-3 text-sm ring-1 ring-emerald-500/10">
             <div className="text-emerald-700 dark:text-emerald-300">Service Period</div>
             <div className="mt-1 font-semibold">{servicePeriod}</div>
             <div className="text-xs text-muted-foreground">
               Join date: {employee.joinDate ? new Date(employee.joinDate).toLocaleDateString() : "Not set"}
             </div>
           </div>
-          <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-3 text-sm">
+          <div className="rounded-lg border border-amber-500/25 bg-card/95 p-3 text-sm ring-1 ring-amber-500/10">
             <div className="text-amber-700 dark:text-amber-300">Department</div>
             <div className="mt-1 font-semibold">{employee.department || "-"}</div>
             <div className="text-xs text-muted-foreground">Designation: {employee.designation || "-"}</div>
           </div>
-          <div className="rounded-lg border border-violet-500/25 bg-violet-500/10 p-3 text-sm">
+          <div className="rounded-lg border border-violet-500/25 bg-card/95 p-3 text-sm ring-1 ring-violet-500/10">
             <div className="text-violet-700 dark:text-violet-300">Base Salary (Profile)</div>
             <div className="mt-1 font-semibold">
               {profileCurrency} {profileSalary.toLocaleString()}
             </div>
             <div className="text-xs text-muted-foreground">Used as payroll draft baseline</div>
           </div>
-          <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 text-sm">
+          <div className="rounded-lg border border-cyan-500/25 bg-card/95 p-3 text-sm ring-1 ring-cyan-500/10">
             <div className="text-cyan-700 dark:text-cyan-300">Employment Status</div>
             <div className="mt-1 font-semibold">{employee.status || "ACTIVE"}</div>
             <div className="text-xs text-muted-foreground">{employee.email}</div>
@@ -333,20 +333,20 @@ export default async function MyDashboardPage() {
 
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Wallet Snapshot</div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
+        <div className="rounded-xl border border-emerald-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-emerald-500/10">
           <div className="text-sm text-emerald-700 dark:text-emerald-300">Wallet Available</div>
-          <div className="mt-2 text-xl font-semibold text-emerald-900 dark:text-emerald-100">{formatMoney(walletAvailable)}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(walletAvailable)}</div>
           <div className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">Balance minus hold amount</div>
         </div>
-        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm dark:border-indigo-900/60 dark:bg-indigo-950/30">
+        <div className="rounded-xl border border-indigo-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-indigo-500/10">
           <div className="text-sm text-indigo-700 dark:text-indigo-300">Wallet Balance</div>
-          <div className="mt-2 text-xl font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(walletBalance)}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(walletBalance)}</div>
         </div>
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+        <div className="rounded-xl border border-amber-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-amber-500/10">
           <div className="text-sm text-amber-700 dark:text-amber-300">On Hold</div>
-          <div className="mt-2 text-xl font-semibold text-amber-900 dark:text-amber-100">{formatMoney(walletHold)}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(walletHold)}</div>
         </div>
-        <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="rounded-xl border border-slate-400/30 bg-card/95 p-6 shadow-sm ring-1 ring-slate-400/10">
           <div className="text-sm text-muted-foreground">Latest Salary</div>
           <div className="mt-2 text-xl font-semibold">{formatMoney(latestSalary)}</div>
         </div>
@@ -354,14 +354,14 @@ export default async function MyDashboardPage() {
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="text-sm font-semibold">My Action Queue</div>
-        <div className="mt-3 grid gap-3 md:grid-cols-3 text-sm">
-          <div className="rounded-md border border-amber-500/25 bg-amber-500/10 p-3">
+        <div className="mt-3 grid gap-3 text-sm md:grid-cols-3">
+          <div className="rounded-md border border-amber-500/25 bg-card/95 p-3 ring-1 ring-amber-500/10">
             Expense approvals pending: <span className="font-semibold">{pendingExpenseCount}</span>
           </div>
-          <div className="rounded-md border border-sky-500/25 bg-sky-500/10 p-3">
+          <div className="rounded-md border border-sky-500/25 bg-card/95 p-3 ring-1 ring-sky-500/10">
             Leave requests pending: <span className="font-semibold">{pendingLeaveCount}</span>
           </div>
-          <div className="rounded-md border border-violet-500/25 bg-violet-500/10 p-3">
+          <div className="rounded-md border border-violet-500/25 bg-card/95 p-3 ring-1 ring-violet-500/10">
             Payroll entries unpaid: <span className="font-semibold">{payrollPendingCount}</span>
           </div>
         </div>
@@ -369,9 +369,9 @@ export default async function MyDashboardPage() {
 
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Advance and Reimbursement</div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm dark:border-indigo-900/60 dark:bg-indigo-950/30">
+        <div className="rounded-xl border border-indigo-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-indigo-500/10">
           <div className="text-sm text-indigo-700 dark:text-indigo-300">Pending Incentive (Payroll)</div>
-          <div className="mt-2 text-xl font-semibold text-indigo-900 dark:text-indigo-100">{formatMoney(pendingPayrollIncentive)}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(pendingPayrollIncentive)}</div>
           <div className="mt-2 text-xs">
             <Link
               href={`/incentives?employeeId=${employee.id}&month=${currentMonthKey}&payout=PAYROLL&settlement=UNSETTLED&status=APPROVED`}
@@ -381,17 +381,17 @@ export default async function MyDashboardPage() {
             </Link>
           </div>
         </div>
-        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm dark:border-sky-900/60 dark:bg-sky-950/30">
+        <div className="rounded-xl border border-sky-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-sky-500/10">
           <div className="text-sm text-sky-700 dark:text-sky-300">Company Advance Issued</div>
-          <div className="mt-2 text-xl font-semibold text-sky-900 dark:text-sky-100">{formatMoney(advanceIssued)}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(advanceIssued)}</div>
         </div>
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+        <div className="rounded-xl border border-amber-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-amber-500/10">
           <div className="text-sm text-amber-700 dark:text-amber-300">Advance Outstanding</div>
-          <div className="mt-2 text-xl font-semibold text-amber-900 dark:text-amber-100">{formatMoney(advanceOutstanding)}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(advanceOutstanding)}</div>
         </div>
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/30">
+        <div className="rounded-xl border border-rose-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-rose-500/10">
           <div className="text-sm text-rose-700 dark:text-rose-300">Own-Pocket Reimbursement Due</div>
-          <div className="mt-2 text-xl font-semibold text-rose-900 dark:text-rose-100">{formatMoney(pocketPayable)}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(pocketPayable)}</div>
           <div className="mt-2 text-xs">
             <Link
               href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=APPROVED`}
@@ -404,9 +404,9 @@ export default async function MyDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-6 shadow-sm dark:border-violet-900/60 dark:bg-violet-950/30">
+        <div className="rounded-xl border border-violet-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-violet-500/10">
           <div className="text-sm text-violet-700 dark:text-violet-300">Advance Used This Month</div>
-          <div className="mt-2 text-xl font-semibold text-violet-900 dark:text-violet-100">{formatMoney(advanceUsedThisMonth)}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(advanceUsedThisMonth)}</div>
           <div className="mt-2 text-xs">
             <Link
               href={`/wallets?employeeId=${employee.id}&type=DEBIT&from=${monthStartStr}&to=${monthEndStr}`}
@@ -416,9 +416,9 @@ export default async function MyDashboardPage() {
             </Link>
           </div>
         </div>
-        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-6 shadow-sm dark:border-cyan-900/60 dark:bg-cyan-950/30">
+        <div className="rounded-xl border border-cyan-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-cyan-500/10">
           <div className="text-sm text-cyan-700 dark:text-cyan-300">Reimbursement Paid This Month</div>
-          <div className="mt-2 text-xl font-semibold text-cyan-900 dark:text-cyan-100">{formatMoney(reimbursementPaidThisMonth)}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(reimbursementPaidThisMonth)}</div>
           <div className="mt-2 text-xs">
             <Link
               href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=PAID&from=${monthStartStr}&to=${monthEndStr}`}
@@ -432,21 +432,21 @@ export default async function MyDashboardPage() {
 
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attendance Snapshot</div>
       <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm dark:border-emerald-900/60 dark:bg-emerald-950/30">
+        <div className="rounded-xl border border-emerald-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-emerald-500/10">
           <div className="text-sm text-emerald-700 dark:text-emerald-300">This Month Present</div>
-          <div className="mt-2 text-xl font-semibold text-emerald-800 dark:text-emerald-300">{attendanceMap.get("PRESENT") || 0}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{attendanceMap.get("PRESENT") || 0}</div>
         </div>
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm dark:border-amber-900/60 dark:bg-amber-950/30">
+        <div className="rounded-xl border border-amber-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-amber-500/10">
           <div className="text-sm text-amber-700 dark:text-amber-300">This Month Late</div>
-          <div className="mt-2 text-xl font-semibold text-amber-800 dark:text-amber-300">{attendanceMap.get("LATE") || 0}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{attendanceMap.get("LATE") || 0}</div>
         </div>
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm dark:border-rose-900/60 dark:bg-rose-950/30">
+        <div className="rounded-xl border border-rose-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-rose-500/10">
           <div className="text-sm text-rose-700 dark:text-rose-300">This Month Absent</div>
-          <div className="mt-2 text-xl font-semibold text-rose-800 dark:text-rose-300">{attendanceMap.get("ABSENT") || 0}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{attendanceMap.get("ABSENT") || 0}</div>
         </div>
-        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm dark:border-sky-900/60 dark:bg-sky-950/30">
+        <div className="rounded-xl border border-sky-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-sky-500/10">
           <div className="text-sm text-sky-700 dark:text-sky-300">Leave Requests</div>
-          <div className="mt-2 text-xl font-semibold text-sky-800 dark:text-sky-300">{leaveRequests.length}</div>
+          <div className="mt-2 text-xl font-semibold text-foreground">{leaveRequests.length}</div>
         </div>
       </div>
 
