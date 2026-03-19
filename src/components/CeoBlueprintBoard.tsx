@@ -49,15 +49,15 @@ export default function CeoBlueprintBoard({ diagrams }: Props) {
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 md:grid-cols-3">
-        <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-4">
+        <div className="rounded-lg border border-sky-500/30 bg-card/95 p-4 ring-1 ring-sky-500/10">
           <div className="text-xs text-sky-700 dark:text-sky-300">Diagram Pack</div>
           <div className="mt-1 text-sm font-semibold text-sky-900 dark:text-sky-100">{stats.diagrams} diagrams</div>
         </div>
-        <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-4">
+        <div className="rounded-lg border border-violet-500/30 bg-card/95 p-4 ring-1 ring-violet-500/10">
           <div className="text-xs text-violet-700 dark:text-violet-300">Scope</div>
           <div className="mt-1 text-sm font-semibold text-violet-900 dark:text-violet-100">{stats.scope}</div>
         </div>
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4">
+        <div className="rounded-lg border border-emerald-500/30 bg-card/95 p-4 ring-1 ring-emerald-500/10">
           <div className="text-xs text-emerald-700 dark:text-emerald-300">Model</div>
           <div className="mt-1 text-sm font-semibold text-emerald-900 dark:text-emerald-100">{stats.mode}</div>
         </div>

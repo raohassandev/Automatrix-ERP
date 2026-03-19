@@ -181,7 +181,7 @@ export default async function CeoDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-rose-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-rose-500/10">
           <div className="text-sm font-medium text-rose-700 dark:text-rose-300">AP outstanding</div>
           <div className="mt-2 text-2xl font-bold text-rose-900 dark:text-rose-100">{formatMoney(apOutstanding)}</div>
           <div className="mt-1 text-sm text-rose-700/80 dark:text-rose-300/80">Overdue bills: {apOverdueCount}</div>
@@ -192,7 +192,7 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-emerald-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-emerald-500/10">
           <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Purchases billed (this month)</div>
           <div className="mt-2 text-2xl font-bold text-emerald-900 dark:text-emerald-100">
             {formatMoney(Number(purchasesBilledThisMonth._sum.totalAmount || 0))}
@@ -204,7 +204,7 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-sky-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-sky-500/10">
           <div className="text-sm font-medium text-sky-700 dark:text-sky-300">GRN stock-in (this month)</div>
           <div className="mt-2 text-2xl font-bold text-sky-900 dark:text-sky-100">
             {Number(grnActivity._sum.quantity || 0).toLocaleString()} units
@@ -219,7 +219,7 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-indigo-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-indigo-500/10">
           <div className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Payments (this month) by account</div>
           <div className="mt-2 space-y-1 text-sm">
             {paymentsByAccount.length === 0 ? (
@@ -240,7 +240,7 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-amber-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-amber-500/10">
           <div className="text-sm font-medium text-amber-700 dark:text-amber-300">Low stock items</div>
           <div className="mt-2 text-2xl font-bold text-amber-900 dark:text-amber-100">{inventoryLowCount}</div>
           <div className="mt-2 space-y-1 text-sm">
@@ -264,7 +264,7 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-violet-500/30 bg-violet-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-violet-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-violet-500/10">
           <div className="text-sm font-medium text-violet-700 dark:text-violet-300">Inventory data quality</div>
           <div className="mt-2 space-y-1 text-sm">
             <div className="flex items-center justify-between gap-3">
@@ -291,7 +291,7 @@ export default async function CeoDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/10 p-6 shadow-sm">
+        <div className="rounded-xl border border-cyan-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-cyan-500/10">
           <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">Approval queue (pending)</div>
           <div className="mt-2 space-y-1 text-sm">
             <div className="flex items-center justify-between">
