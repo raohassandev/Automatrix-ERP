@@ -1,6 +1,6 @@
 # Employee Finance Deep Audit
 
-- Generated: 2026-03-29T16:06:01.467Z
+- Generated: 2026-03-29T16:23:19.758Z
 - Base URL: https://erp-staging.automatrix.pk
 - Wide interval used: 2024-01-01T00:00:00.000Z to 2026-12-31T23:59:59.999Z
 - Preferred employee example requested: raoibrarulhaq1@gmail.com
@@ -16,12 +16,14 @@
 - Login: israrulhaq5@gmail.com
 - Finance workspace: https://erp-staging.automatrix.pk/employees/finance-workspace?employeeId=cml74nd9g000irvb5w6a5xcbb&from=2024-01-01T00%3A00%3A00.000Z&to=2026-12-31T23%3A59%3A59.999Z
 - Analytics: https://erp-staging.automatrix.pk/reports/employee-expenses?from=2024-01-01T00%3A00%3A00.000Z&to=2026-12-31T23%3A59%3A59.999Z
-- Wallet drill: https://erp-staging.automatrix.pk/wallets?employeeId=cml6zsykm0001rvtj5uutjugr&type=CREDIT&from=2026-03-01T00%3A00%3A00.000Z&to=2026-03-29T16%3A05%3A42.783Z
+- Wallet drill: https://erp-staging.automatrix.pk/wallets?employeeId=cml74nd9g000irvb5w6a5xcbb&type=CREDIT&from=2024-01-01T00%3A00%3A00.000Z&to=2026-12-31T23%3A59%3A59.999Z
+- Selected employee ID: cml74nd9g000irvb5w6a5xcbb
 - Selected employee: Muhammad Ibrar Ul Haq (raoibrarulhaq1@gmail.com)
 - Preferred employee available: Yes
-- Category filter options: 0
-- Workspace expense rows: 0
-- Workspace monthly rows: 0
+- Category filter options: 11
+- Category selected: Food
+- Workspace expense rows: 11
+- Workspace monthly rows: 4
 - Analytics employee rows: 7
 - Analytics category rows: 15
 - Analytics monthly rows: 4
@@ -30,7 +32,7 @@
   - Used preferred employee raoibrarulhaq1@gmail.com for finance workflow verification.
   - Owner can reach employee/category/month/detail analytics in one report destination.
   - Issued amount, payables, reimbursements, and advances are visible on the workspace without leaving the page.
-  - No category options were available for the selected employee in the live interval; section shells still rendered.
+  - Expense slice can be narrowed by category (Food) from the workspace.
   - Exact wallet credit/debit evidence is one click from the workspace.
   - Category/month/average analysis remains one click away from the workspace via Employee expense analytics.
 
@@ -38,15 +40,17 @@
 
 - Login: raoabdulkhaliq786@gmail.com
 - Finance workspace: https://erp-staging.automatrix.pk/employees/finance-workspace?employeeId=cml74nd9g000irvb5w6a5xcbb&from=2024-01-01T00%3A00%3A00.000Z&to=2026-12-31T23%3A59%3A59.999Z
-- Analytics: https://erp-staging.automatrix.pk/reports/employee-expenses?submittedById=dev-admin-id&from=2026-03-01T00%3A00%3A00.000Z&to=2026-03-29T16%3A05%3A51.541Z
+- Analytics: https://erp-staging.automatrix.pk/reports/employee-expenses?submittedById=cml74nd9f000hrvb5at3uqh0y&from=2024-01-01T00%3A00%3A00.000Z&to=2026-12-31T23%3A59%3A59.999Z&category=Food
+- Selected employee ID: cml74nd9g000irvb5w6a5xcbb
 - Selected employee: Muhammad Ibrar Ul Haq (raoibrarulhaq1@gmail.com)
-- Category filter options: 0
-- Workspace expense rows: 0
-- Workspace monthly rows: 0
-- Analytics employee rows: 7
-- Analytics category rows: 15
-- Analytics monthly rows: 4
-- Analytics detail rows: 136
+- Category filter options: 11
+- Category selected: Food
+- Workspace expense rows: 11
+- Workspace monthly rows: 4
+- Analytics employee rows: 1
+- Analytics category rows: 1
+- Analytics monthly rows: 3
+- Analytics detail rows: 11
 - Notes:
   - Accountant can investigate issued amount, approved expense, and advance outstanding from the same workspace.
   - Accountant can reach category/month/detail analytics in one drill from the workspace.

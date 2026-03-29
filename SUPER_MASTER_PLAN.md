@@ -980,8 +980,24 @@ Reason: implemented-module program baseline is complete and validated with deplo
       - `expenses-export-route.test.ts`
       - `salary-advances-export-route.test.ts`
       - `employee-finance-export-route.test.ts`
+  - closure batch `11.13-b` completed on `2026-03-29`
+    - identified and fixed a real live drilldown mismatch on finance pages caused by synchronous `searchParams` usage under Next.js 16
+    - migrated `Employee Finance Workspace`, `Employee Expense Analytics`, `Wallet Ledger`, and `Salary Advances` to awaited `searchParams` so server-rendered links/cards stay aligned with URL-selected employee and interval
+    - reran full local safety gates after the fix:
+      - `pnpm typecheck` passed
+      - `pnpm test` passed (`25/25`, `76/76`)
+      - `pnpm build` passed
+    - reran strengthened staging Playwright deep audit after deploy `a0e2145` and verified:
+      - owner workflow passed
+      - accountant workflow passed
+      - employee self-scope block passed
+      - selected employee + interval were preserved in workspace drilldowns
+      - preferred employee example `Muhammad Ibrar Ul Haq (raoibrarulhaq1@gmail.com)` now shows category slice data on the workspace (`Food`, `11` expense rows, `4` month rows)
+    - evidence:
+      - `docs/EMPLOYEE_FINANCE_DEEP_AUDIT_PLAYWRIGHT_2026-03-29.md`
+  - status after live verification: `P0 employee-finance investigation scope verified on staging`
   - next execution rule:
-    - do not treat employee-finance as complete again until the above acceptance gates are met on staging with live role verification
+    - treat this stream as complete for the current P0 investigation scope unless a new gap is reopened with concrete evidence
     - future progress must be logged as dated closure batches under this section
 
 ---
