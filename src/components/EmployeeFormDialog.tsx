@@ -146,49 +146,57 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
         toast.error("Initial wallet balance must be a valid non-negative number.");
         return;
       }
+      const payload = isEdit
+        ? {
+            name: form.name.trim(),
+            phone: form.phone,
+            role: form.role,
+            status: form.status,
+            cnic: form.cnic,
+            address: form.address,
+            education: form.education,
+            experience: form.experience,
+            department: form.department,
+            designation: form.designation,
+            reportingOfficerId: form.reportingOfficerId,
+            joinDate: form.joinDate,
+          }
+        : {
+            name: form.name.trim(),
+            email: form.email.trim(),
+            phone: form.phone,
+            cnic: form.cnic || undefined,
+            address: form.address || undefined,
+            education: form.education || undefined,
+            experience: form.experience || undefined,
+            department: form.department || undefined,
+            designation: form.designation || undefined,
+            reportingOfficerId: form.reportingOfficerId || undefined,
+            joinDate: form.joinDate || undefined,
+            role: form.role,
+            initialWalletBalance: form.initialWalletBalance
+              ? parseFloat(form.initialWalletBalance)
+              : 0,
+          };
+
       const res = await fetch(isEdit ? `/api/employees/${initialData?.id}` : "/api/employees", {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(isEdit
-            ? {
-                name: form.name.trim(),
-                phone: form.phone || null,
-                role: form.role,
-                status: form.status,
-                cnic: form.cnic,
-                address: form.address,
-                education: form.education,
-                experience: form.experience,
-                department: form.department,
-                designation: form.designation,
-                reportingOfficerId: form.reportingOfficerId,
-                joinDate: form.joinDate,
-              }
-            : {
-                name: form.name.trim(),
-                email: form.email.trim(),
-                phone: form.phone || null,
-                cnic: form.cnic || undefined,
-                address: form.address || undefined,
-                education: form.education || undefined,
-                experience: form.experience || undefined,
-                department: form.department || undefined,
-                designation: form.designation || undefined,
-                reportingOfficerId: form.reportingOfficerId || undefined,
-                joinDate: form.joinDate || undefined,
-                role: form.role,
-                initialWalletBalance: form.initialWalletBalance
-                  ? parseFloat(form.initialWalletBalance)
-                  : 0,
-              }),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to add employee");
+        const detailMessage =
+          data?.details?.fieldErrors && typeof data.details.fieldErrors === "object"
+            ? Object.entries(data.details.fieldErrors)
+                .flatMap(([field, errors]) =>
+                  Array.isArray(errors) ? errors.map((message) => `${field}: ${message}`) : [],
+                )
+                .join(", ")
+            : "";
+        throw new Error(detailMessage || data.error || "Failed to add employee");
       }
 
       toast.success(isEdit ? "Employee updated successfully!" : "Employee added successfully!");
