@@ -24,6 +24,7 @@ type DeepAuditResult = {
   financeWorkspaceUrl?: string;
   analyticsUrl?: string;
   walletUrl?: string;
+  selectedEmployeeId?: string;
   chosenEmployee?: string;
   preferredEmployeeAvailable?: boolean;
   selectedCategory?: string;
@@ -110,12 +111,6 @@ async function openFinanceWorkspaceForEmployee(page: Page, employeeEmail: string
     throw new Error(`Employee ${employeeEmail} was not available in finance workspace options`);
   }
 
-  const currentValue = await employeeSelect.inputValue();
-  if (currentValue !== matchingOption.value) {
-    await employeeSelect.selectOption(matchingOption.value);
-    await page.waitForURL((url) => url.pathname === "/employees/finance-workspace" && url.searchParams.get("employeeId") === matchingOption.value, { timeout: 20_000 });
-  }
-
   const financeUrl = hrefWithQuery("/employees/finance-workspace", {
     employeeId: matchingOption.value,
     from: WIDE_FROM,
@@ -123,10 +118,15 @@ async function openFinanceWorkspaceForEmployee(page: Page, employeeEmail: string
   });
   await page.goto(financeUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
   await expectFinanceWorkspaceShell(page);
+  const selectedValue = await page.locator("select").first().inputValue();
+  if (selectedValue !== matchingOption.value) {
+    throw new Error(`Workspace selected employee drifted from ${matchingOption.value} to ${selectedValue}`);
+  }
 
   return {
     option: matchingOption,
     financeUrl,
+    selectedValue,
   };
 }
 
@@ -170,6 +170,7 @@ function renderSection(title: string, result: DeepAuditResult) {
   if (result.financeWorkspaceUrl) lines.push(`- Finance workspace: ${result.financeWorkspaceUrl}`);
   if (result.analyticsUrl) lines.push(`- Analytics: ${result.analyticsUrl}`);
   if (result.walletUrl) lines.push(`- Wallet drill: ${result.walletUrl}`);
+  if (result.selectedEmployeeId) lines.push(`- Selected employee ID: ${result.selectedEmployeeId}`);
   if (result.chosenEmployee) lines.push(`- Selected employee: ${result.chosenEmployee}`);
   if (typeof result.preferredEmployeeAvailable === "boolean") lines.push(`- Preferred employee available: ${result.preferredEmployeeAvailable ? "Yes" : "No"}`);
   if (typeof result.categoryOptionCount === "number") lines.push(`- Category filter options: ${result.categoryOptionCount}`);
@@ -249,7 +250,15 @@ test.describe("Employee finance deep audit", () => {
 
     const ownerWorkspace = await openFinanceWorkspaceForEmployee(ownerPage, chosenEmployeeEmail);
     ownerResult.financeWorkspaceUrl = ownerPage.url();
+    ownerResult.selectedEmployeeId = ownerWorkspace.selectedValue;
     ownerResult.chosenEmployee = `${ownerWorkspace.option.label}`;
+    const ownerWalletHref = await ownerPage.getByRole("link", { name: "Wallet Credits", exact: true }).first().getAttribute("href");
+    expect(ownerWalletHref).toContain(`employeeId=${ownerWorkspace.option.value}`);
+    expect(ownerWalletHref).toContain(encodeURIComponent(WIDE_FROM));
+    expect(ownerWalletHref).toContain(encodeURIComponent(WIDE_TO));
+    const ownerAnalyticsHref = await ownerPage.getByRole("link", { name: "Employee expense analytics", exact: true }).first().getAttribute("href");
+    expect(ownerAnalyticsHref).toContain(encodeURIComponent(WIDE_FROM));
+    expect(ownerAnalyticsHref).toContain(encodeURIComponent(WIDE_TO));
     const categoryState = await applyFirstCategoryIfAvailable(ownerPage);
     ownerResult.selectedCategory = categoryState.selectedCategory || undefined;
     ownerResult.categoryOptionCount = categoryState.categoryOptionCount;
@@ -263,7 +272,7 @@ test.describe("Employee finance deep audit", () => {
       ownerResult.notes.push("No category options were available for the selected employee in the live interval; section shells still rendered.");
     }
 
-    await ownerPage.getByRole("link", { name: "Wallet Credits" }).click();
+    await ownerPage.getByRole("link", { name: "Wallet Credits", exact: true }).first().click();
     await ownerPage.waitForURL(/\/wallets/, { timeout: 20_000 });
     await expectWalletShell(ownerPage);
     ownerResult.walletUrl = ownerPage.url();
@@ -280,7 +289,7 @@ test.describe("Employee finance deep audit", () => {
         await ownerPage.waitForURL((url) => url.pathname === "/employees/finance-workspace" && url.searchParams.get("category") === selectedOption.value, { timeout: 20_000 });
       }
     }
-    await ownerPage.getByRole("link", { name: "Employee expense analytics" }).click();
+    await ownerPage.getByRole("link", { name: "Employee expense analytics", exact: true }).first().click();
     await ownerPage.waitForURL(/\/reports\/employee-expenses/, { timeout: 20_000 });
     await expectExpenseAnalyticsShell(ownerPage);
     ownerResult.notes.push("Category/month/average analysis remains one click away from the workspace via Employee expense analytics.");
@@ -295,7 +304,11 @@ test.describe("Employee finance deep audit", () => {
     await loginAs(accountantPage, ACCOUNTANT_EMAIL, PASSWORD);
     const accountantWorkspace = await openFinanceWorkspaceForEmployee(accountantPage, chosenEmployeeEmail);
     accountantResult.financeWorkspaceUrl = accountantPage.url();
+    accountantResult.selectedEmployeeId = accountantWorkspace.selectedValue;
     accountantResult.chosenEmployee = accountantWorkspace.option.label;
+    const accountantAnalyticsHref = await accountantPage.getByRole("link", { name: "Employee expense analytics", exact: true }).first().getAttribute("href");
+    expect(accountantAnalyticsHref).toContain(encodeURIComponent(WIDE_FROM));
+    expect(accountantAnalyticsHref).toContain(encodeURIComponent(WIDE_TO));
     const accountantCategoryState = await applyFirstCategoryIfAvailable(accountantPage);
     accountantResult.selectedCategory = accountantCategoryState.selectedCategory || undefined;
     accountantResult.categoryOptionCount = accountantCategoryState.categoryOptionCount;
@@ -304,7 +317,7 @@ test.describe("Employee finance deep audit", () => {
     accountantResult.workspaceMonthlyRows = accountantWorkspaceCounts.monthlyRows;
     accountantResult.notes.push("Accountant can investigate issued amount, approved expense, and advance outstanding from the same workspace.");
 
-    await accountantPage.getByRole("link", { name: "Employee expense analytics" }).click();
+    await accountantPage.getByRole("link", { name: "Employee expense analytics", exact: true }).first().click();
     await accountantPage.waitForURL(/\/reports\/employee-expenses/, { timeout: 20_000 });
     await expectExpenseAnalyticsShell(accountantPage);
     accountantResult.analyticsUrl = accountantPage.url();

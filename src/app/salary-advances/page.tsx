@@ -26,12 +26,13 @@ function ageDays(date: Date) {
 export default async function SalaryAdvancesPage({
   searchParams,
 }: {
-  searchParams: { search?: string; page?: string; from?: string; to?: string; status?: string; employeeId?: string };
+  searchParams: Promise<{ search?: string; page?: string; from?: string; to?: string; status?: string; employeeId?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
     return redirect("/login");
   }
+  const params = await searchParams;
 
   const canViewAll = await requirePermission(session.user.id, "salary_advance.view_all");
   const canViewOwn = await requirePermission(session.user.id, "employees.view_own");
@@ -46,12 +47,12 @@ export default async function SalaryAdvancesPage({
     );
   }
 
-  const search = (searchParams.search || "").trim();
-  const status = (searchParams.status || "").trim();
-  const employeeId = (searchParams.employeeId || "").trim();
-  const from = searchParams.from;
-  const to = searchParams.to;
-  const page = Math.max(parseInt(searchParams.page || "1", 10), 1);
+  const search = (params.search || "").trim();
+  const status = (params.status || "").trim();
+  const employeeId = (params.employeeId || "").trim();
+  const from = params.from;
+  const to = params.to;
+  const page = Math.max(parseInt(params.page || "1", 10), 1);
   const take = 25;
   const skip = (page - 1) * take;
 

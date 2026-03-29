@@ -39,7 +39,7 @@ type ExpenseViewRow = {
 export default async function EmployeeExpenseReportPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
     from?: string;
     to?: string;
@@ -48,12 +48,13 @@ export default async function EmployeeExpenseReportPage({
     paymentSource?: string;
     project?: string;
     status?: string;
-  };
+  }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
     return redirect("/login");
   }
+  const params = await searchParams;
 
   const canViewAll = await requirePermission(session.user.id, "reports.view_all");
   const canViewTeam = await requirePermission(session.user.id, "reports.view_team");
@@ -68,14 +69,14 @@ export default async function EmployeeExpenseReportPage({
     );
   }
 
-  const search = (searchParams.search || "").trim();
-  const from = (searchParams.from || "").trim();
-  const to = (searchParams.to || "").trim();
-  const submittedById = (searchParams.submittedById || "").trim();
-  const category = (searchParams.category || "").trim();
-  const paymentSource = (searchParams.paymentSource || "").trim();
-  const project = (searchParams.project || "").trim();
-  const status = (searchParams.status || "").trim();
+  const search = (params.search || "").trim();
+  const from = (params.from || "").trim();
+  const to = (params.to || "").trim();
+  const submittedById = (params.submittedById || "").trim();
+  const category = (params.category || "").trim();
+  const paymentSource = (params.paymentSource || "").trim();
+  const project = (params.project || "").trim();
+  const status = (params.status || "").trim();
 
   const where: import("@prisma/client").Prisma.ExpenseWhereInput = {
     status: status ? status : { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },

@@ -17,7 +17,7 @@ function monthLabel(date: Date) {
 export default async function WalletLedgerPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     search?: string;
     page?: string;
     type?: string;
@@ -25,12 +25,13 @@ export default async function WalletLedgerPage({
     from?: string;
     to?: string;
     employeeId?: string;
-  };
+  }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
     return redirect("/login");
   }
+  const params = await searchParams;
 
   const canViewAll = await requirePermission(session.user.id, "employees.view_all");
   const canViewOwn = await requirePermission(session.user.id, "employees.view_own");
@@ -45,7 +46,6 @@ export default async function WalletLedgerPage({
     );
   }
 
-  const params = searchParams;
   const search = (params.search || "").trim();
   const type = (params.type || "").trim();
   const sourceType = (params.sourceType || "").trim();

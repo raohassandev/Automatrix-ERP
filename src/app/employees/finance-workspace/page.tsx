@@ -46,7 +46,7 @@ function SummaryCard({
 export default async function EmployeeFinanceWorkspacePage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: Promise<{
     employeeId?: string;
     search?: string;
     event?: string;
@@ -55,12 +55,13 @@ export default async function EmployeeFinanceWorkspacePage({
     project?: string;
     from?: string;
     to?: string;
-  };
+  }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) {
     return redirect("/login");
   }
+  const params = await searchParams;
 
   const [canViewAll, canViewTeam, canViewOwn, canReportsAll, canReportsTeam, canReportsOwn, canExport] = await Promise.all([
     requirePermission(session.user.id, "employees.view_all"),
@@ -130,19 +131,19 @@ export default async function EmployeeFinanceWorkspacePage({
     );
   }
 
-  const selectedEmployeeId = employeeOptionsRaw.some((row) => row.id === (searchParams.employeeId || "").trim())
-    ? (searchParams.employeeId || "").trim()
+  const selectedEmployeeId = employeeOptionsRaw.some((row) => row.id === (params.employeeId || "").trim())
+    ? (params.employeeId || "").trim()
     : employeeOptionsRaw[0].id;
 
   const workspace = await getEmployeeFinanceWorkspaceData({
     employeeId: selectedEmployeeId,
-    from: searchParams.from,
-    to: searchParams.to,
-    search: searchParams.search,
-    event: searchParams.event,
-    category: searchParams.category,
-    paymentSource: searchParams.paymentSource,
-    project: searchParams.project,
+    from: params.from,
+    to: params.to,
+    search: params.search,
+    event: params.event,
+    category: params.category,
+    paymentSource: params.paymentSource,
+    project: params.project,
   });
 
   if (!workspace) {
@@ -159,11 +160,11 @@ export default async function EmployeeFinanceWorkspacePage({
     employeeId: selectedEmployee.id,
     from: workspace.rangeFrom.toISOString(),
     to: workspace.rangeTo.toISOString(),
-    category: searchParams.category,
-    paymentSource: searchParams.paymentSource,
-    project: searchParams.project,
-    search: searchParams.search,
-    event: searchParams.event,
+    category: params.category,
+    paymentSource: params.paymentSource,
+    project: params.project,
+    search: params.search,
+    event: params.event,
   };
 
   const walletCreditHref = hrefWithQuery("/wallets", {
@@ -182,10 +183,10 @@ export default async function EmployeeFinanceWorkspacePage({
     submittedById: workspace.linkedUserId,
     from: workspace.rangeFrom.toISOString(),
     to: workspace.rangeTo.toISOString(),
-    category: searchParams.category,
-    paymentSource: searchParams.paymentSource,
-    project: searchParams.project,
-    search: searchParams.search,
+    category: params.category,
+    paymentSource: params.paymentSource,
+    project: params.project,
+    search: params.search,
   });
   const financeExportHref = hrefWithQuery("/api/employees/finance-workspace/export", filterQueryBase);
   const advanceHref = hrefWithQuery("/salary-advances", {
@@ -365,10 +366,10 @@ export default async function EmployeeFinanceWorkspacePage({
               submittedById: workspace.linkedUserId,
               from: workspace.rangeFrom.toISOString(),
               to: workspace.rangeTo.toISOString(),
-              category: searchParams.category,
-              paymentSource: searchParams.paymentSource,
-              project: searchParams.project,
-              search: searchParams.search,
+              category: params.category,
+              paymentSource: params.paymentSource,
+              project: params.project,
+              search: params.search,
             })} className="block rounded-lg border p-3 hover:bg-accent">
               Employee expense analytics
             </Link>
