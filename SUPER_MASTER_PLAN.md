@@ -995,6 +995,25 @@ Reason: implemented-module program baseline is complete and validated with deplo
       - preferred employee example `Muhammad Ibrar Ul Haq (raoibrarulhaq1@gmail.com)` now shows category slice data on the workspace (`Food`, `11` expense rows, `4` month rows)
     - evidence:
       - `docs/EMPLOYEE_FINANCE_DEEP_AUDIT_PLAYWRIGHT_2026-03-29.md`
+  - closure batch `11.13-c` completed on `2026-03-29`
+    - added `Exceptions & Follow-Up` and `Reconciliation Panel` directly inside `Employee Finance Workspace`
+    - canonical workspace model now derives:
+      - approved-but-unpaid employee-pocket reimbursement exceptions
+      - overdue salary-advance recovery exceptions
+      - payroll due exceptions
+      - unsettled variable-pay exceptions
+      - wallet-availability risk exceptions
+    - reconciliation layer now gives one-click slices for:
+      - company payable now
+      - recoverable now
+      - employee-pocket expense slice
+      - wallet-funded slice
+      - company-funded slice
+      - net position
+    - verification completed:
+      - `pnpm typecheck` passed
+      - `pnpm test` passed (`25/25`, `76/76`)
+      - `pnpm build` passed
   - status after live verification: `P0 employee-finance investigation scope verified on staging`
   - next execution rule:
     - treat this stream as complete for the current P0 investigation scope unless a new gap is reopened with concrete evidence

@@ -89,6 +89,26 @@ export type EmployeeFinanceMonthlyRow = {
   averageClaim: number;
 };
 
+export type EmployeeFinanceExceptionSeverity = "high" | "medium" | "info";
+
+export type EmployeeFinanceExceptionRow = {
+  id: string;
+  severity: EmployeeFinanceExceptionSeverity;
+  title: string;
+  detail: string;
+  amount: number;
+  href: string;
+  cta: string;
+};
+
+export type EmployeeFinanceReconciliationRow = {
+  id: string;
+  label: string;
+  amount: number;
+  note: string;
+  href: string;
+};
+
 function parseDate(value: string | undefined): Date | null {
   if (!value) return null;
   const parsed = new Date(value);
@@ -103,6 +123,26 @@ function asMoney(value: unknown) {
 
 function monthLabel(date: Date) {
   return new Intl.DateTimeFormat("en", { month: "short", year: "numeric" }).format(date);
+}
+
+function expenseHref(args: {
+  submittedById: string | null;
+  from: Date;
+  to: Date;
+  category?: string | null;
+  paymentSource?: string | null;
+  project?: string | null;
+  status?: string | null;
+}) {
+  const params = new URLSearchParams();
+  if (args.submittedById) params.set("submittedById", args.submittedById);
+  params.set("from", args.from.toISOString());
+  params.set("to", args.to.toISOString());
+  if (args.category) params.set("category", args.category);
+  if (args.paymentSource) params.set("paymentSource", args.paymentSource);
+  if (args.project) params.set("project", args.project);
+  if (args.status) params.set("status", args.status);
+  return `/reports/employee-expenses?${params.toString()}`;
 }
 
 export function normalizeExpenseAmount(expense: {
@@ -555,6 +595,163 @@ export async function getEmployeeFinanceWorkspaceData(filters: EmployeeFinanceFi
     })),
   ];
 
+  const overdueAdvanceRows = advanceRows.filter(
+    (row) => Number(row.outstandingAmount || 0) > 0 && Date.now() - new Date(row.createdAt).getTime() > 30 * 24 * 60 * 60 * 1000,
+  );
+  const overdueAdvanceAmount = asMoney(overdueAdvanceRows.reduce((sum, row) => sum + Number(row.outstandingAmount || 0), 0));
+  const unpaidPocketRows = filteredExpenseRows.filter(
+    (row) => row.paymentSource === "EMPLOYEE_POCKET" && (row.status === "APPROVED" || row.status === "PARTIALLY_APPROVED"),
+  );
+  const unpaidPocketAmount = asMoney(unpaidPocketRows.reduce((sum, row) => sum + row.approvedAmountNumber, 0));
+  const unsettledVariableRows = [
+    ...incentiveRows.filter(
+      (row) => String(row.status || "").toUpperCase() === "APPROVED" && String(row.settlementStatus || "").toUpperCase() !== "SETTLED",
+    ),
+    ...commissionRows.filter(
+      (row) => String(row.status || "").toUpperCase() === "APPROVED" && String(row.settlementStatus || "").toUpperCase() !== "SETTLED",
+    ),
+  ];
+  const unsettledVariableCount = unsettledVariableRows.length;
+  const payrollDueRows = payrollRows.filter((row) => String(row.status || "").toUpperCase() !== "PAID");
+  const filteredWalletTotal = asMoney(categorySummary.reduce((sum, row) => sum + row.wallet, 0));
+  const filteredCompanyTotal = asMoney(categorySummary.reduce((sum, row) => sum + row.company, 0));
+  const filteredPocketTotal = asMoney(categorySummary.reduce((sum, row) => sum + row.pocket, 0));
+
+  const exceptions: EmployeeFinanceExceptionRow[] = [];
+  if (unpaidPocketAmount > 0) {
+    exceptions.push({
+      id: "expense-pocket-payable",
+      severity: "high",
+      title: "Approved employee-pocket claims are still payable",
+      detail: `${unpaidPocketRows.length} approved claim(s) in the active slice still need reimbursement.`,
+      amount: unpaidPocketAmount,
+      href: expenseHref({
+        submittedById: linkedUser?.id || null,
+        from: rangeFrom,
+        to: rangeTo,
+        category: categoryFilter || null,
+        paymentSource: "EMPLOYEE_POCKET",
+        project: projectFilter || null,
+        status: "APPROVED",
+      }),
+      cta: "Open payable claims",
+    });
+  }
+  if (overdueAdvanceAmount > 0) {
+    exceptions.push({
+      id: "advance-overdue",
+      severity: "high",
+      title: "Salary advances are overdue for recovery",
+      detail: `${overdueAdvanceRows.length} advance row(s) remain open beyond 30 days.`,
+      amount: overdueAdvanceAmount,
+      href: `/salary-advances?employeeId=${employee.id}&from=${rangeFrom.toISOString()}&to=${rangeTo.toISOString()}`,
+      cta: "Open overdue advances",
+    });
+  }
+  if (statement.payrollDue > 0) {
+    exceptions.push({
+      id: "payroll-due",
+      severity: "medium",
+      title: "Payroll remains due in the selected interval",
+      detail: `${payrollDueRows.length} payroll entr${payrollDueRows.length === 1 ? "y is" : "ies are"} not marked paid.`,
+      amount: statement.payrollDue,
+      href: "/payroll",
+      cta: "Open payroll due",
+    });
+  }
+  if (statement.variablePayDue > 0) {
+    exceptions.push({
+      id: "variable-pay-due",
+      severity: "medium",
+      title: "Variable pay is approved but unsettled",
+      detail: `${unsettledVariableCount} incentive/commission row(s) still need settlement.`,
+      amount: statement.variablePayDue,
+      href: `/incentives?employeeId=${employee.id}&status=APPROVED&settlement=UNSETTLED`,
+      cta: "Open unsettled variable pay",
+    });
+  }
+  if (statement.currentAvailable <= 0 || statement.currentAvailable < statement.expensePayable) {
+    exceptions.push({
+      id: "wallet-at-risk",
+      severity: statement.currentAvailable <= 0 ? "high" : "info",
+      title: "Wallet availability is below reimbursement exposure",
+      detail:
+        statement.currentAvailable <= 0
+          ? "Current available wallet is zero or negative after holds."
+          : "Available wallet is lower than current pocket-payable reimbursement exposure.",
+      amount: statement.currentAvailable,
+      href: `/wallets?employeeId=${employee.id}`,
+      cta: "Open wallet position",
+    });
+  }
+
+  const reconciliation: EmployeeFinanceReconciliationRow[] = [
+    {
+      id: "company-payable-now",
+      label: "Company Payable Now",
+      amount: asMoney(statement.expensePayable + statement.payrollDue + statement.variablePayDue),
+      note: "Reimbursements + payroll due + variable pay due",
+      href: expenseHref({
+        submittedById: linkedUser?.id || null,
+        from: rangeFrom,
+        to: rangeTo,
+        category: categoryFilter || null,
+        paymentSource: "EMPLOYEE_POCKET",
+        project: projectFilter || null,
+        status: "APPROVED",
+      }),
+    },
+    {
+      id: "recoverable-now",
+      label: "Recoverable Now",
+      amount: statement.advanceOutstanding,
+      note: "Outstanding salary advances still to recover",
+      href: `/salary-advances?employeeId=${employee.id}&from=${rangeFrom.toISOString()}&to=${rangeTo.toISOString()}`,
+    },
+    {
+      id: "employee-pocket-slice",
+      label: "Employee-Pocket Slice",
+      amount: filteredPocketTotal,
+      note: "Current expense slice paid from employee pocket",
+      href: expenseHref({
+        submittedById: linkedUser?.id || null,
+        from: rangeFrom,
+        to: rangeTo,
+        category: categoryFilter || null,
+        paymentSource: "EMPLOYEE_POCKET",
+        project: projectFilter || null,
+      }),
+    },
+    {
+      id: "wallet-funded-slice",
+      label: "Wallet-Funded Slice",
+      amount: filteredWalletTotal,
+      note: "Current expense slice consumed from wallet",
+      href: `/wallets?employeeId=${employee.id}&type=DEBIT&from=${rangeFrom.toISOString()}&to=${rangeTo.toISOString()}`,
+    },
+    {
+      id: "company-funded-slice",
+      label: "Company-Funded Slice",
+      amount: filteredCompanyTotal,
+      note: "Current expense slice funded directly by company",
+      href: expenseHref({
+        submittedById: linkedUser?.id || null,
+        from: rangeFrom,
+        to: rangeTo,
+        category: categoryFilter || null,
+        paymentSource: paymentSourceFilter || "COMPANY_ACCOUNT",
+        project: projectFilter || null,
+      }),
+    },
+    {
+      id: "net-position",
+      label: "Net Position",
+      amount: statement.netCompanyPayable,
+      note: "Company payable less recoverable advances",
+      href: `/employees/finance-workspace?employeeId=${employee.id}&from=${rangeFrom.toISOString()}&to=${rangeTo.toISOString()}`,
+    },
+  ];
+
   const timeline = timelineBase
     .filter((row) => (moduleFilter ? row.module === moduleFilter : true))
     .filter((row) => {
@@ -597,6 +794,8 @@ export async function getEmployeeFinanceWorkspaceData(filters: EmployeeFinanceFi
       hasExpenseSlice,
     },
     statement,
+    exceptions,
+    reconciliation,
     timeline,
     expenseDetailRows,
     categorySummary,

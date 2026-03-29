@@ -43,6 +43,12 @@ function SummaryCard({
   return href ? <a href={href}>{body}</a> : body;
 }
 
+function exceptionTone(severity: "high" | "medium" | "info") {
+  if (severity === "high") return "border-rose-200 bg-rose-50";
+  if (severity === "medium") return "border-amber-200 bg-amber-50";
+  return "border-sky-200 bg-sky-50";
+}
+
 export default async function EmployeeFinanceWorkspacePage({
   searchParams,
 }: {
@@ -303,6 +309,64 @@ export default async function EmployeeFinanceWorkspacePage({
         <SummaryCard label="Pocket-Funded" value={formatMoney(filteredPocketTotal)} note="Employee own-pocket claims" href="#expense-categories" />
         <SummaryCard label="Wallet-Funded" value={formatMoney(filteredWalletTotal)} note="Consumed from employee wallet" href="#expense-categories" />
         <SummaryCard label="Company-Funded" value={formatMoney(filteredCompanyTotal)} note="Company direct/account funded" href="#expense-categories" />
+      </div>
+
+      <div id="exceptions" className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Exceptions & Follow-Up</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Outstanding payables, recoveries, and wallet-risk conditions for the selected employee and interval.</p>
+            </div>
+            <div className="text-sm text-muted-foreground">{workspace.exceptions.length} active items</div>
+          </div>
+          <div className="mt-4 space-y-3">
+            {workspace.exceptions.map((row) => (
+              <div key={row.id} className={`rounded-lg border p-4 ${exceptionTone(row.severity)}`}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium">{row.title}</div>
+                    <div className="mt-1 text-sm text-muted-foreground">{row.detail}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{row.severity}</div>
+                    <div className="mt-1 text-base font-semibold">{formatMoney(row.amount)}</div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <Link href={row.href} className="text-sm font-medium text-primary underline underline-offset-2">
+                    {row.cta}
+                  </Link>
+                </div>
+              </div>
+            ))}
+            {workspace.exceptions.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                No active exceptions are open for the current employee and interval.
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div>
+            <h2 className="text-lg font-semibold">Reconciliation Panel</h2>
+            <p className="mt-1 text-sm text-muted-foreground">One-click slices for payable, recoverable, and funding-source review.</p>
+          </div>
+          <div className="mt-4 space-y-3">
+            {workspace.reconciliation.map((row) => (
+              <Link key={row.id} href={row.href} className="block rounded-lg border p-4 hover:bg-accent">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium">{row.label}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{row.note}</div>
+                  </div>
+                  <div className="text-sm font-semibold">{formatMoney(row.amount)}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div id="expense-categories" className="grid gap-6 lg:grid-cols-[1.25fr_1fr]">
