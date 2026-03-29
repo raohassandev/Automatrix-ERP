@@ -98,4 +98,35 @@ describe("expenses export route", () => {
       }),
     );
   });
+
+  test("GET supports project export mode with project and source slices", async () => {
+    const { GET } = await import("@/app/api/reports/employee-expenses/export/route");
+
+    mockRequirePermission.mockImplementation(async (_userId: string, permission: string) => permission === "reports.export" || permission === "reports.view_all");
+    mockExpenseFindMany.mockResolvedValue([
+      {
+        id: "exp-1",
+        date: new Date("2026-01-15T00:00:00.000Z"),
+        description: "Fuel refill",
+        category: "Fuel",
+        project: "P-001",
+        paymentSource: "EMPLOYEE_POCKET",
+        status: "PAID",
+        amount: 1500,
+        approvedAmount: 1400,
+        submittedById: "user-2",
+        submittedBy: { email: "ibrar@example.com", name: "Ibrar" },
+      },
+    ]);
+
+    const req = new Request("http://localhost/api/reports/employee-expenses/export?mode=projects");
+    const res = await GET(req);
+    const csv = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(csv).toContain("Project");
+    expect(csv).toContain("P-001");
+    expect(csv).toContain("Payment Source");
+    expect(csv).toContain("EMPLOYEE_POCKET");
+  });
 });

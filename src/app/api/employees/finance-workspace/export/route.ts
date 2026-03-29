@@ -63,6 +63,7 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
+  const mode = (searchParams.get("mode") || "timeline").trim().toLowerCase();
   const selectedEmployeeId = employeeOptions.some((row) => row.id === (searchParams.get("employeeId") || "").trim())
     ? (searchParams.get("employeeId") || "").trim()
     : employeeOptions[0].id;
@@ -86,38 +87,86 @@ export async function GET(req: Request) {
     action: "EXPORT_EMPLOYEE_FINANCE_WORKSPACE_CSV",
     entity: "Export",
     entityId: `employee-finance:${selectedEmployeeId}`,
-    newValue: JSON.stringify({ route: "/api/employees/finance-workspace/export", query: searchParams.toString() }),
+    newValue: JSON.stringify({ route: "/api/employees/finance-workspace/export", query: searchParams.toString(), mode }),
     userId: session.user.id,
   });
 
-  const rows: Array<Array<string | number | null | undefined>> = [
-    ["Employee", workspace.employee.name],
-    ["Email", workspace.employee.email],
-    ["Range From", workspace.rangeFrom.toISOString()],
-    ["Range To", workspace.rangeTo.toISOString()],
-    [],
-    ["Date", "Module", "Reference", "Status", "Impact", "Amount", "Running Balance", "Category", "Payment Source", "Project", "Source Type", "Note", "Href"],
-    ...workspace.timeline.map((row) => [
-      row.date.toISOString(),
-      row.module,
-      row.reference,
-      row.status,
-      row.impact,
-      row.amount,
-      row.runningBalance,
-      row.category,
-      row.paymentSource,
-      row.project,
-      row.sourceType,
-      row.note,
-      row.href,
-    ]),
-  ];
+  const rows: Array<Array<string | number | null | undefined>> =
+    mode === "summary"
+      ? [
+          ["Employee", workspace.employee.name],
+          ["Email", workspace.employee.email],
+          ["Range From", workspace.rangeFrom.toISOString()],
+          ["Range To", workspace.rangeTo.toISOString()],
+          [],
+          ["Statement", "Amount", "Note"],
+          ["Opening Balance", workspace.statement.openingBalance, "Wallet position at range start"],
+          ["Issued In Interval", workspace.statement.issuedAmount, "Wallet credits and company-issued funding"],
+          ["Consumed In Interval", workspace.statement.consumedAmount, "Wallet debits and recoveries"],
+          ["Closing Balance", workspace.statement.closingBalance, "Wallet position at range end"],
+          ["Expense Approved", workspace.statement.expenseApproved, "Approved expense total"],
+          ["Reimburse Due", workspace.statement.expensePayable, "Approved employee-pocket claims still payable"],
+          ["Reimbursed", workspace.statement.reimbursedAmount, "Employee-pocket claims already paid"],
+          ["Advance Outstanding", workspace.statement.advanceOutstanding, "Open advance recovery"],
+          ["Payroll Due", workspace.statement.payrollDue, "Payroll not marked paid"],
+          ["Variable Pay Due", workspace.statement.variablePayDue, "Approved variable pay unsettled"],
+          ["Net Company Payable", workspace.statement.netCompanyPayable, "Company payable less recoverable advances"],
+          [],
+          ["Funding Breakdown", "Amount", "Note"],
+          ...workspace.fundingBreakdown.map((row) => [row.label, row.amount, row.note]),
+          [],
+          ["Category", "Claims", "Total", "Average Claim", "Pocket", "Wallet", "Company"],
+          ...workspace.categorySummary.map((row) => [row.category, row.claims, row.total, row.averageClaim, row.pocket, row.wallet, row.company]),
+          [],
+          ["Project", "Claims", "Total", "Average Claim", "Pocket", "Wallet", "Company"],
+          ...workspace.projectSummary.map((row) => [row.project, row.claims, row.total, row.averageClaim, row.pocket, row.wallet, row.company]),
+          [],
+          ["Payment Source", "Claims", "Total", "Average Claim"],
+          ...workspace.sourceSummary.map((row) => [row.paymentSource, row.claims, row.total, row.averageClaim]),
+          [],
+          ["Month", "Issued", "Consumed", "Expense Approved", "Pocket Payable", "Reimbursed", "Advance Issued", "Payroll Paid", "Variable Paid", "Claims", "Average Claim"],
+          ...workspace.monthlySummary.map((row) => [
+            row.month,
+            row.issued,
+            row.consumed,
+            row.expenseApproved,
+            row.pocketPayable,
+            row.reimbursed,
+            row.advanceIssued,
+            row.payrollPaid,
+            row.variablePaid,
+            row.claims,
+            row.averageClaim,
+          ]),
+        ]
+      : [
+          ["Employee", workspace.employee.name],
+          ["Email", workspace.employee.email],
+          ["Range From", workspace.rangeFrom.toISOString()],
+          ["Range To", workspace.rangeTo.toISOString()],
+          [],
+          ["Date", "Module", "Reference", "Status", "Impact", "Amount", "Running Balance", "Category", "Payment Source", "Project", "Source Type", "Note", "Href"],
+          ...workspace.timeline.map((row) => [
+            row.date.toISOString(),
+            row.module,
+            row.reference,
+            row.status,
+            row.impact,
+            row.amount,
+            row.runningBalance,
+            row.category,
+            row.paymentSource,
+            row.project,
+            row.sourceType,
+            row.note,
+            row.href,
+          ]),
+        ];
 
   return new Response(toCsv(rows), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename=employee_finance_${selectedEmployeeId}_${new Date().toISOString().slice(0, 10)}.csv`,
+      "Content-Disposition": `attachment; filename=employee_finance_${mode}_${selectedEmployeeId}_${new Date().toISOString().slice(0, 10)}.csv`,
     },
   });
 }

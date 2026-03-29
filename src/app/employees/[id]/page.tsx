@@ -148,6 +148,24 @@ export default async function EmployeeDetailPage({
             >
               Open Finance Workspace
             </a>
+            <a
+              href={`/reports/employee-expenses?submittedById=${user?.id || ""}`}
+              className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+            >
+              Expenses
+            </a>
+            <a
+              href={`/salary-advances?employeeId=${employee.id}`}
+              className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+            >
+              Advances
+            </a>
+            <a
+              href={`/wallets?employeeId=${employee.id}`}
+              className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+            >
+              Wallet
+            </a>
             {canViewClientPreview ? (
               <a
                 href={`/employees/${employee.id}/dashboard-preview`}
@@ -160,6 +178,20 @@ export default async function EmployeeDetailPage({
         </div>
         <div className="mt-4 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
           This page is the employee profile and preview surface. Funding, expense analysis, payroll due, reimbursements, and advance investigation belong in the Finance Workspace.
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <a href={`/employees/finance-workspace?employeeId=${employee.id}`} className="rounded-lg border p-3 text-sm hover:bg-accent">
+            Finance Overview
+          </a>
+          <a href={`/reports/employee-expenses?submittedById=${user?.id || ""}`} className="rounded-lg border p-3 text-sm hover:bg-accent">
+            Expenses
+          </a>
+          <a href={`/salary-advances?employeeId=${employee.id}`} className="rounded-lg border p-3 text-sm hover:bg-accent">
+            Advances
+          </a>
+          <a href={`/wallets?employeeId=${employee.id}`} className="rounded-lg border p-3 text-sm hover:bg-accent">
+            Wallet
+          </a>
         </div>
       </div>
 

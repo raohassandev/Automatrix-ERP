@@ -169,6 +169,8 @@ export default async function EmployeeExpenseReportPage({
   const employeeSummaryMap = new Map<string, { submittedById: string; name: string; email: string; claims: number; total: number }>();
   const categorySummaryMap = new Map<string, { category: string; claims: number; total: number; pocket: number; wallet: number; company: number }>();
   const monthlySummaryMap = new Map<string, { month: string; claims: number; total: number; pocket: number; reimbursed: number }>();
+  const projectSummaryMap = new Map<string, { project: string; claims: number; total: number; pocket: number; wallet: number; company: number }>();
+  const sourceSummaryMap = new Map<string, { paymentSource: string; claims: number; total: number }>();
 
   expenses.forEach((row) => {
     const employeeKey = row.submittedById || "unknown";
@@ -198,6 +200,32 @@ export default async function EmployeeExpenseReportPage({
     else categoryEntry.company += row.approvedAmount;
     categorySummaryMap.set(row.category, categoryEntry);
 
+    const projectKey = row.project || "Unassigned";
+    const projectEntry = projectSummaryMap.get(projectKey) || {
+      project: projectKey,
+      claims: 0,
+      total: 0,
+      pocket: 0,
+      wallet: 0,
+      company: 0,
+    };
+    projectEntry.claims += 1;
+    projectEntry.total += row.approvedAmount;
+    if (row.paymentSource === "EMPLOYEE_POCKET") projectEntry.pocket += row.approvedAmount;
+    else if (row.paymentSource === "EMPLOYEE_WALLET") projectEntry.wallet += row.approvedAmount;
+    else projectEntry.company += row.approvedAmount;
+    projectSummaryMap.set(projectKey, projectEntry);
+
+    const sourceKey = row.paymentSource || "UNSPECIFIED";
+    const sourceEntry = sourceSummaryMap.get(sourceKey) || {
+      paymentSource: sourceKey,
+      claims: 0,
+      total: 0,
+    };
+    sourceEntry.claims += 1;
+    sourceEntry.total += row.approvedAmount;
+    sourceSummaryMap.set(sourceKey, sourceEntry);
+
     const month = monthLabel(row.date);
     const monthEntry = monthlySummaryMap.get(month) || {
       month,
@@ -226,6 +254,12 @@ export default async function EmployeeExpenseReportPage({
   const monthlySummary = Array.from(monthlySummaryMap.values())
     .map((row) => ({ ...row, averageClaim: row.claims > 0 ? row.total / row.claims : 0 }))
     .sort((a, b) => new Date(`01 ${b.month}`).getTime() - new Date(`01 ${a.month}`).getTime());
+  const projectSummary = Array.from(projectSummaryMap.values())
+    .map((row) => ({ ...row, averageClaim: row.claims > 0 ? row.total / row.claims : 0 }))
+    .sort((a, b) => b.total - a.total);
+  const sourceSummary = Array.from(sourceSummaryMap.values())
+    .map((row) => ({ ...row, averageClaim: row.claims > 0 ? row.total / row.claims : 0 }))
+    .sort((a, b) => b.total - a.total);
 
   const totalApproved = expenses.reduce((sum, row) => sum + row.approvedAmount, 0);
   const averageClaim = expenses.length > 0 ? totalApproved / expenses.length : 0;
@@ -294,6 +328,9 @@ export default async function EmployeeExpenseReportPage({
                 </a>
                 <a href={hrefWithQuery("/api/reports/employee-expenses/export", { ...exportQuery, mode: "summary" })} className="rounded-md border px-4 py-2 text-sm hover:bg-accent">
                   Export Summary CSV
+                </a>
+                <a href={hrefWithQuery("/api/reports/employee-expenses/export", { ...exportQuery, mode: "projects" })} className="rounded-md border px-4 py-2 text-sm hover:bg-accent">
+                  Export Project CSV
                 </a>
               </>
             ) : null}
@@ -398,6 +435,68 @@ export default async function EmployeeExpenseReportPage({
             </table>
           </div>
           {categorySummary.length === 0 ? <div className="mt-4 text-sm text-muted-foreground">No category rows found.</div> : null}
+        </div>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Project Summary</h2>
+          <div className="mt-4 hidden overflow-x-auto md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Project</th>
+                  <th className="py-2">Claims</th>
+                  <th className="py-2">Total</th>
+                  <th className="py-2">Avg Claim</th>
+                  <th className="py-2">Pocket</th>
+                  <th className="py-2">Wallet</th>
+                  <th className="py-2">Company</th>
+                </tr>
+              </thead>
+              <tbody>
+                {projectSummary.map((row) => (
+                  <tr key={row.project} className="border-b">
+                    <td className="py-2 font-medium">{row.project}</td>
+                    <td className="py-2">{row.claims}</td>
+                    <td className="py-2">{formatMoney(row.total)}</td>
+                    <td className="py-2">{formatMoney(row.averageClaim)}</td>
+                    <td className="py-2">{formatMoney(row.pocket)}</td>
+                    <td className="py-2">{formatMoney(row.wallet)}</td>
+                    <td className="py-2">{formatMoney(row.company)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {projectSummary.length === 0 ? <div className="mt-4 text-sm text-muted-foreground">No project rows found.</div> : null}
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Payment Source Summary</h2>
+          <div className="mt-4 hidden overflow-x-auto md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Source</th>
+                  <th className="py-2">Claims</th>
+                  <th className="py-2">Total</th>
+                  <th className="py-2">Avg Claim</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sourceSummary.map((row) => (
+                  <tr key={row.paymentSource} className="border-b">
+                    <td className="py-2 font-medium">{row.paymentSource}</td>
+                    <td className="py-2">{row.claims}</td>
+                    <td className="py-2">{formatMoney(row.total)}</td>
+                    <td className="py-2">{formatMoney(row.averageClaim)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {sourceSummary.length === 0 ? <div className="mt-4 text-sm text-muted-foreground">No payment source rows found.</div> : null}
         </div>
       </div>
 

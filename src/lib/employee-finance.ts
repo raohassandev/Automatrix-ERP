@@ -75,6 +75,23 @@ export type EmployeeFinanceCategoryRow = {
   averageClaim: number;
 };
 
+export type EmployeeFinanceProjectRow = {
+  project: string;
+  claims: number;
+  total: number;
+  pocket: number;
+  wallet: number;
+  company: number;
+  averageClaim: number;
+};
+
+export type EmployeeFinanceSourceRow = {
+  paymentSource: string;
+  claims: number;
+  total: number;
+  averageClaim: number;
+};
+
 export type EmployeeFinanceMonthlyRow = {
   month: string;
   issued: number;
@@ -102,6 +119,14 @@ export type EmployeeFinanceExceptionRow = {
 };
 
 export type EmployeeFinanceReconciliationRow = {
+  id: string;
+  label: string;
+  amount: number;
+  note: string;
+  href: string;
+};
+
+export type EmployeeFinanceFundingBreakdownRow = {
   id: string;
   label: string;
   amount: number;
@@ -406,6 +431,46 @@ export async function getEmployeeFinanceWorkspaceData(filters: EmployeeFinanceFi
     categoryMap.set(key, entry);
   });
   const categorySummary = Array.from(categoryMap.values())
+    .map((row) => ({ ...row, averageClaim: row.claims > 0 ? asMoney(row.total / row.claims) : 0 }))
+    .sort((a, b) => b.total - a.total);
+
+  const projectMap = new Map<string, EmployeeFinanceProjectRow>();
+  filteredExpenseRows.forEach((row) => {
+    const key = row.project || "Unassigned";
+    const entry = projectMap.get(key) || {
+      project: key,
+      claims: 0,
+      total: 0,
+      pocket: 0,
+      wallet: 0,
+      company: 0,
+      averageClaim: 0,
+    };
+    entry.claims += 1;
+    entry.total += row.approvedAmountNumber;
+    if (row.paymentSource === "EMPLOYEE_POCKET") entry.pocket += row.approvedAmountNumber;
+    else if (row.paymentSource === "EMPLOYEE_WALLET") entry.wallet += row.approvedAmountNumber;
+    else entry.company += row.approvedAmountNumber;
+    projectMap.set(key, entry);
+  });
+  const projectSummary = Array.from(projectMap.values())
+    .map((row) => ({ ...row, averageClaim: row.claims > 0 ? asMoney(row.total / row.claims) : 0 }))
+    .sort((a, b) => b.total - a.total);
+
+  const sourceMap = new Map<string, EmployeeFinanceSourceRow>();
+  filteredExpenseRows.forEach((row) => {
+    const key = row.paymentSource || "UNSPECIFIED";
+    const entry = sourceMap.get(key) || {
+      paymentSource: key,
+      claims: 0,
+      total: 0,
+      averageClaim: 0,
+    };
+    entry.claims += 1;
+    entry.total += row.approvedAmountNumber;
+    sourceMap.set(key, entry);
+  });
+  const sourceSummary = Array.from(sourceMap.values())
     .map((row) => ({ ...row, averageClaim: row.claims > 0 ? asMoney(row.total / row.claims) : 0 }))
     .sort((a, b) => b.total - a.total);
 
@@ -752,6 +817,77 @@ export async function getEmployeeFinanceWorkspaceData(filters: EmployeeFinanceFi
     },
   ];
 
+  const fundingBreakdown: EmployeeFinanceFundingBreakdownRow[] = [
+    {
+      id: "issued-company",
+      label: "Company-Issued",
+      amount: statement.issuedAmount,
+      note: "Wallet credits and company-issued funding in the selected interval",
+      href: `/wallets?employeeId=${employee.id}&type=CREDIT&from=${rangeFrom.toISOString()}&to=${rangeTo.toISOString()}`,
+    },
+    {
+      id: "used-wallet",
+      label: "Used From Wallet",
+      amount: filteredWalletTotal,
+      note: "Expense slice consumed from employee wallet",
+      href: `/wallets?employeeId=${employee.id}&type=DEBIT&from=${rangeFrom.toISOString()}&to=${rangeTo.toISOString()}`,
+    },
+    {
+      id: "used-employee-pocket",
+      label: "Employee-Pocket",
+      amount: filteredPocketTotal,
+      note: "Expense slice paid personally by the employee",
+      href: expenseHref({
+        submittedById: linkedUser?.id || null,
+        from: rangeFrom,
+        to: rangeTo,
+        category: categoryFilter || null,
+        paymentSource: "EMPLOYEE_POCKET",
+        project: projectFilter || null,
+      }),
+    },
+    {
+      id: "reimbursed-pocket",
+      label: "Reimbursed",
+      amount: statement.reimbursedAmount,
+      note: "Employee-pocket claims already paid back",
+      href: expenseHref({
+        submittedById: linkedUser?.id || null,
+        from: rangeFrom,
+        to: rangeTo,
+        paymentSource: "EMPLOYEE_POCKET",
+        status: "PAID",
+      }),
+    },
+    {
+      id: "unreimbursed-pocket",
+      label: "Unreimbursed Approved",
+      amount: statement.expensePayable,
+      note: "Approved employee-pocket claims still payable",
+      href: expenseHref({
+        submittedById: linkedUser?.id || null,
+        from: rangeFrom,
+        to: rangeTo,
+        paymentSource: "EMPLOYEE_POCKET",
+        status: "APPROVED",
+      }),
+    },
+    {
+      id: "advance-recovered",
+      label: "Advance Recovered",
+      amount: asMoney(Math.max(statement.advanceIssued - statement.advanceOutstanding, 0)),
+      note: "Issued advance already recovered/settled",
+      href: `/salary-advances?employeeId=${employee.id}&from=${rangeFrom.toISOString()}&to=${rangeTo.toISOString()}`,
+    },
+    {
+      id: "advance-unrecovered",
+      label: "Advance Unrecovered",
+      amount: statement.advanceOutstanding,
+      note: "Advance still open for recovery",
+      href: `/salary-advances?employeeId=${employee.id}&from=${rangeFrom.toISOString()}&to=${rangeTo.toISOString()}`,
+    },
+  ];
+
   const timeline = timelineBase
     .filter((row) => (moduleFilter ? row.module === moduleFilter : true))
     .filter((row) => {
@@ -796,9 +932,12 @@ export async function getEmployeeFinanceWorkspaceData(filters: EmployeeFinanceFi
     statement,
     exceptions,
     reconciliation,
+    fundingBreakdown,
     timeline,
     expenseDetailRows,
     categorySummary,
+    projectSummary,
+    sourceSummary,
     monthlySummary,
     options: {
       categories: Array.from(new Set(expenseRows.map((row) => row.category).filter(Boolean) as string[])).sort(),

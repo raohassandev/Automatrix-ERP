@@ -195,6 +195,10 @@ export default async function EmployeeFinanceWorkspacePage({
     search: params.search,
   });
   const financeExportHref = hrefWithQuery("/api/employees/finance-workspace/export", filterQueryBase);
+  const financeSummaryExportHref = hrefWithQuery("/api/employees/finance-workspace/export", {
+    ...filterQueryBase,
+    mode: "summary",
+  });
   const advanceHref = hrefWithQuery("/salary-advances", {
     employeeId: selectedEmployee.id,
     from: workspace.rangeFrom.toISOString(),
@@ -229,9 +233,14 @@ export default async function EmployeeFinanceWorkspacePage({
               Expense Evidence
             </Link>
             {canExport ? (
-              <a href={financeExportHref} className="rounded-md border px-3 py-2 hover:bg-accent">
-                Export Timeline CSV
-              </a>
+              <>
+                <a href={financeExportHref} className="rounded-md border px-3 py-2 hover:bg-accent">
+                  Export Timeline CSV
+                </a>
+                <a href={financeSummaryExportHref} className="rounded-md border px-3 py-2 hover:bg-accent">
+                  Export Summary CSV
+                </a>
+              </>
             ) : null}
           </div>
         </div>
@@ -309,6 +318,25 @@ export default async function EmployeeFinanceWorkspacePage({
         <SummaryCard label="Pocket-Funded" value={formatMoney(filteredPocketTotal)} note="Employee own-pocket claims" href="#expense-categories" />
         <SummaryCard label="Wallet-Funded" value={formatMoney(filteredWalletTotal)} note="Consumed from employee wallet" href="#expense-categories" />
         <SummaryCard label="Company-Funded" value={formatMoney(filteredCompanyTotal)} note="Company direct/account funded" href="#expense-categories" />
+      </div>
+
+      <div id="funding-breakdown" className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Issued vs Used vs Recoverable</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Explicit breakdown of company issue, usage path, reimbursement state, and advance recovery.</p>
+          </div>
+          <div className="text-sm text-muted-foreground">{workspace.fundingBreakdown.length} measures</div>
+        </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {workspace.fundingBreakdown.map((row) => (
+            <Link key={row.id} href={row.href} className="rounded-xl border bg-card p-4 shadow-sm hover:bg-accent">
+              <div className="text-xs text-muted-foreground">{row.label}</div>
+              <div className="mt-1 text-lg font-semibold">{formatMoney(row.amount)}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{row.note}</div>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div id="exceptions" className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
@@ -423,6 +451,17 @@ export default async function EmployeeFinanceWorkspacePage({
             <Link href={expenseListHref} className="block rounded-lg border p-3 hover:bg-accent">
               Exact expense rows for current slice
             </Link>
+            <Link href={hrefWithQuery("/reports/employee-expenses", {
+              submittedById: workspace.linkedUserId,
+              from: workspace.rangeFrom.toISOString(),
+              to: workspace.rangeTo.toISOString(),
+              category: params.category,
+              paymentSource: params.paymentSource,
+              project: params.project,
+              search: params.search,
+            })} className="block rounded-lg border p-3 hover:bg-accent">
+              Expense category / month / project analytics
+            </Link>
             <Link href={advanceHref} className="block rounded-lg border p-3 hover:bg-accent">
               Salary advances and outstanding recovery
             </Link>
@@ -438,6 +477,84 @@ export default async function EmployeeFinanceWorkspacePage({
               Employee expense analytics
             </Link>
           </div>
+        </div>
+      </div>
+
+      <div id="expense-projects" className="grid gap-6 xl:grid-cols-2">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Project Breakdown</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Project-wise expense totals for the active employee and slice.</p>
+            </div>
+            <div className="text-sm text-muted-foreground">{workspace.projectSummary.length} projects</div>
+          </div>
+          <div className="mt-4 hidden overflow-x-auto md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Project</th>
+                  <th className="py-2">Claims</th>
+                  <th className="py-2">Total</th>
+                  <th className="py-2">Avg Claim</th>
+                  <th className="py-2">Pocket</th>
+                  <th className="py-2">Wallet</th>
+                  <th className="py-2">Company</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workspace.projectSummary.map((row) => (
+                  <tr key={row.project} className="border-b">
+                    <td className="py-2 font-medium">{row.project}</td>
+                    <td className="py-2">{row.claims}</td>
+                    <td className="py-2">{formatMoney(row.total)}</td>
+                    <td className="py-2">{formatMoney(row.averageClaim)}</td>
+                    <td className="py-2">{formatMoney(row.pocket)}</td>
+                    <td className="py-2">{formatMoney(row.wallet)}</td>
+                    <td className="py-2">{formatMoney(row.company)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {workspace.projectSummary.length === 0 ? (
+            <div className="mt-4 text-sm text-muted-foreground">No project rows match the active expense slice.</div>
+          ) : null}
+        </div>
+
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold">Payment Source Breakdown</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Source-wise approved totals so funding responsibility is visible without leaving the workspace.</p>
+            </div>
+            <div className="text-sm text-muted-foreground">{workspace.sourceSummary.length} sources</div>
+          </div>
+          <div className="mt-4 hidden overflow-x-auto md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-2">Source</th>
+                  <th className="py-2">Claims</th>
+                  <th className="py-2">Total</th>
+                  <th className="py-2">Avg Claim</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workspace.sourceSummary.map((row) => (
+                  <tr key={row.paymentSource} className="border-b">
+                    <td className="py-2 font-medium">{row.paymentSource}</td>
+                    <td className="py-2">{row.claims}</td>
+                    <td className="py-2">{formatMoney(row.total)}</td>
+                    <td className="py-2">{formatMoney(row.averageClaim)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {workspace.sourceSummary.length === 0 ? (
+            <div className="mt-4 text-sm text-muted-foreground">No payment-source rows match the active expense slice.</div>
+          ) : null}
         </div>
       </div>
 

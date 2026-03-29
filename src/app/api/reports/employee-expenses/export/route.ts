@@ -100,10 +100,12 @@ export async function GET(req: Request) {
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
 
-  if (mode === "summary") {
+  if (mode === "summary" || mode === "projects") {
     const employeeSummaryMap = new Map<string, { name: string; email: string; claims: number; total: number }>();
     const categorySummaryMap = new Map<string, { claims: number; total: number }>();
     const monthSummaryMap = new Map<string, { claims: number; total: number }>();
+    const projectSummaryMap = new Map<string, { claims: number; total: number; pocket: number; wallet: number; company: number }>();
+    const sourceSummaryMap = new Map<string, { claims: number; total: number }>();
 
     expenses.forEach((row) => {
       const approvedAmount = Number(normalizeExpenseAmount(row));
@@ -128,13 +130,63 @@ export async function GET(req: Request) {
       monthEntry.claims += 1;
       monthEntry.total += approvedAmount;
       monthSummaryMap.set(month, monthEntry);
+
+      const projectKey = row.project || "Unassigned";
+      const projectEntry = projectSummaryMap.get(projectKey) || { claims: 0, total: 0, pocket: 0, wallet: 0, company: 0 };
+      projectEntry.claims += 1;
+      projectEntry.total += approvedAmount;
+      if (row.paymentSource === "EMPLOYEE_POCKET") projectEntry.pocket += approvedAmount;
+      else if (row.paymentSource === "EMPLOYEE_WALLET") projectEntry.wallet += approvedAmount;
+      else projectEntry.company += approvedAmount;
+      projectSummaryMap.set(projectKey, projectEntry);
+
+      const sourceKey = row.paymentSource || "UNSPECIFIED";
+      const sourceEntry = sourceSummaryMap.get(sourceKey) || { claims: 0, total: 0 };
+      sourceEntry.claims += 1;
+      sourceEntry.total += approvedAmount;
+      sourceSummaryMap.set(sourceKey, sourceEntry);
     });
+
+    if (mode === "projects") {
+      const rows: Array<Array<string | number | null | undefined>> = [
+        ["Section", "Label", "Claims", "Total", "Average", "Pocket", "Wallet", "Company"],
+        ...Array.from(projectSummaryMap.entries()).map(([label, row]) => [
+          "Project",
+          label,
+          row.claims,
+          row.total,
+          row.claims > 0 ? row.total / row.claims : 0,
+          row.pocket,
+          row.wallet,
+          row.company,
+        ]),
+        ...Array.from(sourceSummaryMap.entries()).map(([label, row]) => [
+          "Payment Source",
+          label,
+          row.claims,
+          row.total,
+          row.claims > 0 ? row.total / row.claims : 0,
+          null,
+          null,
+          null,
+        ]),
+      ];
+
+      return new Response(toCsv(rows), {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename=employee_expense_projects_${new Date().toISOString().slice(0, 10)}.csv`,
+        },
+      });
+    }
 
     const rows: Array<Array<string | number | null | undefined>> = [
       ["Section", "Label", "Metric 1", "Metric 2", "Metric 3"],
       ...Array.from(employeeSummaryMap.values()).map((row) => ["Employee", row.name, row.email, row.claims, row.total]),
       ...Array.from(categorySummaryMap.entries()).map(([label, row]) => ["Category", label, row.claims, row.total, row.claims > 0 ? row.total / row.claims : 0]),
       ...Array.from(monthSummaryMap.entries()).map(([label, row]) => ["Month", label, row.claims, row.total, row.claims > 0 ? row.total / row.claims : 0]),
+      ...Array.from(projectSummaryMap.entries()).map(([label, row]) => ["Project", label, row.claims, row.total, row.claims > 0 ? row.total / row.claims : 0]),
+      ...Array.from(sourceSummaryMap.entries()).map(([label, row]) => ["Payment Source", label, row.claims, row.total, row.claims > 0 ? row.total / row.claims : 0]),
     ];
 
     return new Response(toCsv(rows), {

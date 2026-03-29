@@ -1340,3 +1340,32 @@ Rules:
   - Result: both finance audit specs discovered successfully
 - Acceptance note:
   - Finance workflow ease is now enforced as a measurable regression contract, not just documented as a narrative goal.
+
+### 17.6 Finance investigation completeness batch (2026-03-29)
+
+- Expanded `Employee Finance Workspace` investigation depth:
+  - explicit `Issued vs Used vs Recoverable` breakdown
+  - project-wise expense analysis
+  - payment-source analysis
+  - summary export mode aligned to visible workspace sections
+- Expanded `Employee Expense Analytics`:
+  - project summary
+  - payment-source summary
+  - dedicated project/source export mode
+- Strengthened employee profile drill entry:
+  - direct links for `Finance Overview`, `Expenses`, `Advances`, and `Wallet`
+- Files updated:
+  - `src/lib/employee-finance.ts`
+  - `src/app/employees/finance-workspace/page.tsx`
+  - `src/app/reports/employee-expenses/page.tsx`
+  - `src/app/api/employees/finance-workspace/export/route.ts`
+  - `src/app/api/reports/employee-expenses/export/route.ts`
+  - `src/app/employees/[id]/page.tsx`
+- Regression coverage added/updated:
+  - `src/lib/__tests__/employee-finance-export-route.test.ts`
+  - `src/lib/__tests__/expenses-export-route.test.ts`
+- Verification:
+  - `pnpm vitest run src/lib/__tests__/employee-finance-export-route.test.ts src/lib/__tests__/expenses-export-route.test.ts` -> passed
+  - `pnpm typecheck` -> passed
+- Acceptance note:
+  - Owner/accountant can now answer funding-path, category, project, and payment-source questions from the workspace/reporting surfaces without falling back to ad hoc row hunting.
