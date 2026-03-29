@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
+import { DateField } from "./ui/date-field";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { ClientFormDialog } from "./ClientFormDialog";
@@ -269,11 +270,10 @@ export function ProjectFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="startDate">Start Date</Label>
-            <Input
+            <DateField
               id="startDate"
-              type="date"
               value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, startDate: value })}
               disabled={isEdit}
               required
             />
@@ -281,11 +281,10 @@ export function ProjectFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="endDate">End Date (Optional)</Label>
-            <Input
+            <DateField
               id="endDate"
-              type="date"
               value={form.endDate}
-              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, endDate: value })}
             />
           </div>
 

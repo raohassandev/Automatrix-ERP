@@ -74,7 +74,7 @@ export function PayrollRunActions({
             )}
           </Button>
         ) : null}
-        <DeleteButton url={`/api/payroll/runs/${run.id}`} />
+        {run.status === "DRAFT" ? <DeleteButton url={`/api/payroll/runs/${run.id}`} /> : null}
       </div>
       {editOpen ? (
         <PayrollRunFormDialog

@@ -7,6 +7,7 @@ import CategoryAutoComplete from "./CategoryAutoComplete";
 import PaymentModeAutoComplete from "./PaymentModeAutoComplete";
 import ProjectAutoComplete from "./ProjectAutoComplete";
 import { toast } from "sonner";
+import { DateField } from "./ui/date-field";
 
 type DuplicateExpense = {
   id: string;
@@ -228,12 +229,7 @@ export default function ExpenseForm() {
         Fill in 4 basics: date, category, amount, and project. Use Procurement for stock/material purchases.
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <input
-          className="rounded-md border px-3 py-2"
-          type="date"
-          value={form.date}
-          onChange={(e) => setForm({ ...form, date: e.target.value })}
-        />
+        <DateField value={form.date} onChange={(value) => setForm({ ...form, date: value })} />
         <CategoryAutoComplete
           value={form.category}
           onChange={(value) => setForm({ ...form, category: value })}

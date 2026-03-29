@@ -1,0 +1,336 @@
+Rollback drill mode: execute
+Target: hostinger-vps
+App: automatrix-erp-staging @ /var/www/automatrix-erp-staging
+Health: http://127.0.0.1:3031/api/health
+Fetching origin
+START_COMMIT=51339d0952e0813ada4a90813e644e93775dbe33
+TARGET_COMMIT=dfbc4681ce50cc7d567c7e18acb46bdef48b81cd
+=== PRECHECK ===
+51339d0 Improve payroll payable traceability and status clarity
+┌────┬───────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name                      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 2  │ automatrix-erp-prod       │ default     │ 16.1.5  │ fork    │ 1060484  │ 23D    │ 1547 │ online    │ 0%       │ 117.2mb  │ root     │ disabled │
+│ 6  │ automatrix-erp-staging    │ default     │ N/A     │ fork    │ 1305455  │ 8D     │ 5292 │ online    │ 0%       │ 19.5mb   │ root     │ disabled │
+│ 7  │ automatrix-prod           │ default     │ N/A     │ fork    │ 1417399  │ 3h     │ 1    │ online    │ 0%       │ 17.8mb   │ root     │ disabled │
+│ 8  │ automatrix-staging        │ default     │ N/A     │ fork    │ 1414597  │ 4h     │ 1    │ online    │ 0%       │ 18.8mb   │ root     │ disabled │
+│ 0  │ pv-backend                │ default     │ 1.0.0   │ fork    │ 394687   │ 48D    │ 299… │ online    │ 0%       │ 181.3mb  │ root     │ disabled │
+└────┴───────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+{"ok":true,"db":"up","timestamp":"2026-03-28T16:52:45.405Z"}=== ROLLBACK TO TARGET ===
+HEAD is now at dfbc468 Align payroll settlement variable-pay carry-forward logic
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 5m 38.4s using pnpm v10.28.2
+
+> automatrix-erp@0.1.0 prisma:generate /var/www/automatrix-erp-staging
+> prisma generate
+
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v6.19.2) to ./node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client in 4.61s
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+
+
+> automatrix-erp@0.1.0 build /var/www/automatrix-erp-staging
+> next build
+
+▲ Next.js 16.1.5 (Turbopack)
+- Environments: .env
+- Experiments (use with caution):
+  ✓ webpackBuildWorker
+
+  Creating an optimized production build ...
+ ELIFECYCLE  Command failed.
+=== AUTO-RESTORE START COMMIT (FAILSAFE) ===
+HEAD is now at 51339d0 Improve payroll payable traceability and status clarity
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 5.1s using pnpm v10.28.2
+
+> automatrix-erp@0.1.0 prisma:generate /var/www/automatrix-erp-staging
+> prisma generate
+
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v6.19.2) to ./node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client in 3.05s
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
+
+
+> automatrix-erp@0.1.0 build /var/www/automatrix-erp-staging
+> next build
+
+▲ Next.js 16.1.5 (Turbopack)
+- Environments: .env
+- Experiments (use with caution):
+  ✓ webpackBuildWorker
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.2min
+  Running TypeScript ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/166) ...
+  Generating static pages using 1 worker (41/166) 
+  Generating static pages using 1 worker (82/166) 
+  Generating static pages using 1 worker (124/166) 
+✓ Generating static pages using 1 worker (166/166) in 1831.1ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ƒ /
+├ ƒ /_not-found
+├ ƒ /accounting/accounts
+├ ƒ /accounting/fiscal-periods
+├ ƒ /accounting/journals
+├ ƒ /accounting/journals/[id]
+├ ƒ /admin/users
+├ ƒ /api/access-control/approval-routes
+├ ƒ /api/access-control/roles
+├ ƒ /api/access-control/roles/sync
+├ ƒ /api/access-control/user-overrides
+├ ƒ /api/accounting/accounts
+├ ƒ /api/accounting/accounts/[id]
+├ ƒ /api/accounting/backfill
+├ ƒ /api/accounting/fiscal-periods
+├ ƒ /api/accounting/fiscal-periods/[id]
+├ ƒ /api/accounting/journals
+├ ƒ /api/accounting/journals/[id]
+├ ƒ /api/accounting/period-close/checklist
+├ ƒ /api/accounting/period-close/close
+├ ƒ /api/approval-policies
+├ ƒ /api/approvals
+├ ƒ /api/attachments
+├ ƒ /api/attachments/[id]
+├ ƒ /api/audit
+├ ƒ /api/audit/export
+├ ƒ /api/auth/[...nextauth]
+├ ƒ /api/categories
+├ ƒ /api/clients
+├ ƒ /api/clients/[id]
+├ ƒ /api/commissions
+├ ƒ /api/commissions/[id]
+├ ƒ /api/company-accounts
+├ ƒ /api/company-accounts/[id]
+├ ƒ /api/company-accounts/[id]/attachments
+├ ƒ /api/company-accounts/[id]/detail
+├ ƒ /api/company-accounts/[id]/notes
+├ ƒ /api/dashboard
+├ ƒ /api/departments
+├ ƒ /api/departments/[id]
+├ ƒ /api/designations
+├ ƒ /api/designations/[id]
+├ ƒ /api/employees
+├ ƒ /api/employees/[id]
+├ ƒ /api/employees/[id]/compensation
+├ ƒ /api/employees/access
+├ ƒ /api/employees/wallet
+├ ƒ /api/expenses
+├ ƒ /api/expenses/[id]
+├ ƒ /api/expenses/[id]/mark-as-paid
+├ ƒ /api/expenses/[id]/reopen
+├ ƒ /api/expenses/bulk-mark-paid
+├ ƒ /api/expenses/export
+├ ƒ /api/health
+├ ƒ /api/hrms/attendance
+├ ƒ /api/hrms/attendance/[id]
+├ ƒ /api/hrms/leave
+├ ƒ /api/hrms/leave/[id]
+├ ƒ /api/incentives
+├ ƒ /api/incentives/[id]
+├ ƒ /api/income
+├ ƒ /api/income-sources
+├ ƒ /api/income/[id]
+├ ƒ /api/income/export
+├ ƒ /api/inventory
+├ ƒ /api/inventory/[id]
+├ ƒ /api/inventory/import/validate
+├ ƒ /api/inventory/items/[id]/attachments
+├ ƒ /api/inventory/items/[id]/detail
+├ ƒ /api/inventory/items/[id]/notes
+├ ƒ /api/inventory/ledger
+├ ƒ /api/inventory/ledger/export
+├ ƒ /api/inventory/similar
+├ ƒ /api/inventory/transfer
+├ ƒ /api/invoices
+├ ƒ /api/invoices/[id]
+├ ƒ /api/invoices/outstanding
+├ ƒ /api/me/effective-permissions
+├ ƒ /api/me/incentives/export
+├ ƒ /api/me/payroll/export
+├ ƒ /api/me/wallet/export
+├ ƒ /api/notifications
+├ ƒ /api/notifications/[id]
+├ ƒ /api/payment-modes
+├ ƒ /api/payroll/runs
+├ ƒ /api/payroll/runs/[id]
+├ ƒ /api/payroll/runs/[id]/entries/[entryId]/mark-paid
+├ ƒ /api/payroll/runs/auto-draft
+├ ƒ /api/payroll/runs/policy-preview
+├ ƒ /api/procurement/grn
+├ ƒ /api/procurement/grn/[id]
+├ ƒ /api/procurement/grn/[id]/attachments
+├ ƒ /api/procurement/purchase-orders
+├ ƒ /api/procurement/purchase-orders/[id]
+├ ƒ /api/procurement/purchase-orders/[id]/attachments
+├ ƒ /api/procurement/vendor-bills
+├ ƒ /api/procurement/vendor-bills/[id]
+├ ƒ /api/procurement/vendor-bills/[id]/attachments
+├ ƒ /api/procurement/vendor-payments
+├ ƒ /api/procurement/vendor-payments/[id]
+├ ƒ /api/procurement/vendor-payments/[id]/attachments
+├ ƒ /api/projects
+├ ƒ /api/projects/[id]
+├ ƒ /api/projects/[id]/assignments
+├ ƒ /api/projects/[id]/attachments
+├ ƒ /api/projects/[id]/detail
+├ ƒ /api/projects/[id]/linked-records
+├ ƒ /api/projects/[id]/notes
+├ ƒ /api/projects/[id]/tasks
+├ ƒ /api/projects/[id]/tasks/[taskId]
+├ ƒ /api/projects/financial
+├ ƒ /api/quotations
+├ ƒ /api/quotations/[id]
+├ ƒ /api/register
+├ ƒ /api/reports/accounting/ar-aging
+├ ƒ /api/reports/accounting/ar-aging/export
+├ ƒ /api/reports/accounting/balance-sheet
+├ ƒ /api/reports/accounting/balance-sheet/export
+├ ƒ /api/reports/accounting/bank-reconciliation
+├ ƒ /api/reports/accounting/bank-reconciliation/auto-match
+├ ƒ /api/reports/accounting/bank-reconciliation/close
+├ ƒ /api/reports/accounting/bank-reconciliation/import
+├ ƒ /api/reports/accounting/bank-reconciliation/line/[id]
+├ ƒ /api/reports/accounting/cash-forecast
+├ ƒ /api/reports/accounting/cash-position
+├ ƒ /api/reports/accounting/cash-position/export
+├ ƒ /api/reports/accounting/o2c-reconciliation
+├ ƒ /api/reports/accounting/profit-loss
+├ ƒ /api/reports/accounting/profit-loss/export
+├ ƒ /api/reports/accounting/reconciliation
+├ ƒ /api/reports/accounting/trial-balance
+├ ƒ /api/reports/accounting/trial-balance/export
+├ ƒ /api/reports/ap/export
+├ ƒ /api/reports/control-registers/summary
+├ ƒ /api/reports/employee-expenses/export
+├ ƒ /api/reports/export
+├ ƒ /api/reports/inventory/export
+├ ƒ /api/reports/procurement/export
+├ ƒ /api/reports/procurement/grn-export
+├ ƒ /api/reports/procurement/po-export
+├ ƒ /api/reports/projects/[id]/export
+├ ƒ /api/reports/projects/export
+├ ƒ /api/salary-advances
+├ ƒ /api/salary-advances/[id]
+├ ƒ /api/settings/organization
+├ ƒ /api/tasks
+├ ƒ /api/tasks/[id]
+├ ƒ /api/tasks/recurrence/run
+├ ƒ /api/tasks/templates
+├ ƒ /api/tasks/templates/[id]
+├ ƒ /api/users/list
+├ ƒ /api/users/reset-password
+├ ƒ /api/users/role
+├ ƒ /api/vendors
+├ ƒ /api/vendors/[id]
+├ ƒ /api/vendors/[id]/attachments
+├ ƒ /api/vendors/[id]/detail
+├ ƒ /api/vendors/[id]/notes
+├ ƒ /api/wallets/export
+├ ƒ /api/warehouses
+├ ƒ /api/warehouses/[id]
+├ ƒ /approvals
+├ ƒ /attachments
+├ ƒ /audit
+├ ƒ /categories
+├ ƒ /ceo/blueprint
+├ ƒ /ceo/dashboard
+├ ƒ /clients
+├ ƒ /commissions
+├ ƒ /company-accounts
+├ ƒ /company-accounts/[id]
+├ ƒ /dashboard
+├ ƒ /departments
+├ ƒ /designations
+├ ƒ /employees
+├ ƒ /employees/[id]
+├ ƒ /employees/[id]/dashboard-preview
+├ ƒ /expenses
+├ ƒ /expenses/[id]
+├ ƒ /expenses/by-project
+├ ƒ /forbidden
+├ ƒ /help
+├ ƒ /hrms/attendance
+├ ƒ /hrms/leave
+├ ○ /icon.svg
+├ ƒ /incentives
+├ ƒ /income
+├ ƒ /income/[id]
+├ ƒ /inventory
+├ ƒ /inventory/items/[id]
+├ ƒ /inventory/ledger
+├ ƒ /inventory/warehouses
+├ ƒ /invoices
+├ ƒ /login
+├ ƒ /master-data
+├ ƒ /me
+├ ƒ /notifications
+├ ƒ /payroll
+├ ƒ /procurement/grn
+├ ƒ /procurement/purchase-orders
+├ ƒ /procurement/vendor-bills
+├ ƒ /procurement/vendor-payments
+├ ƒ /projects
+├ ƒ /projects/[id]
+├ ƒ /projects/financial
+├ ƒ /quotations
+├ ƒ /quotations/[id]
+├ ƒ /reports
+├ ƒ /reports/accounting/ar-aging
+├ ƒ /reports/accounting/balance-sheet
+├ ƒ /reports/accounting/bank-reconciliation
+├ ƒ /reports/accounting/cash-forecast
+├ ƒ /reports/accounting/cash-position
+├ ƒ /reports/accounting/o2c-reconciliation
+├ ƒ /reports/accounting/profit-loss
+├ ƒ /reports/accounting/trial-balance
+├ ƒ /reports/ap
+├ ƒ /reports/controls
+├ ƒ /reports/employee-expenses
+├ ƒ /reports/exceptions
+├ ƒ /reports/expenses
+├ ƒ /reports/inventory
+├ ƒ /reports/procurement
+├ ƒ /reports/projects
+├ ƒ /reports/wallets
+├ ƒ /salary-advances
+├ ƒ /settings
+├ ƒ /tasks
+├ ƒ /vendors
+├ ƒ /vendors/[id]
+└ ƒ /wallets
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+[PM2] Applying action restartProcessId on app [automatrix-erp-staging](ids: [ 6 ])
+[PM2] [automatrix-erp-staging](6) ✓
+┌────┬───────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name                      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 2  │ automatrix-erp-prod       │ default     │ 16.1.5  │ fork    │ 1060484  │ 23D    │ 1547 │ online    │ 0.9%     │ 117.3mb  │ root     │ disabled │
+│ 6  │ automatrix-erp-staging    │ default     │ N/A     │ fork    │ 1421750  │ 0s     │ 5293 │ online    │ 0%       │ 4.0kb    │ root     │ disabled │
+│ 7  │ automatrix-prod           │ default     │ N/A     │ fork    │ 1417399  │ 4h     │ 1    │ online    │ 0%       │ 20.3mb   │ root     │ disabled │
+│ 8  │ automatrix-staging        │ default     │ N/A     │ fork    │ 1414597  │ 4h     │ 1    │ online    │ 0%       │ 20.7mb   │ root     │ disabled │
+│ 0  │ pv-backend                │ default     │ 1.0.0   │ fork    │ 394687   │ 48D    │ 299… │ online    │ 17.9%    │ 197.3mb  │ root     │ disabled │
+└────┴───────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+{"ok":true,"db":"up","timestamp":"2026-03-28T17:06:38.369Z"}

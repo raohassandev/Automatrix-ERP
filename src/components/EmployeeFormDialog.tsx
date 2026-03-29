@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
+import { DateField } from "./ui/date-field";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
@@ -328,11 +329,10 @@ export function EmployeeFormDialog({ open, onOpenChange, initialData }: Employee
 
           <div className="space-y-2">
             <Label htmlFor="joinDate">Join Date</Label>
-            <Input
+            <DateField
               id="joinDate"
-              type="date"
               value={form.joinDate}
-              onChange={(e) => setForm({ ...form, joinDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, joinDate: value })}
             />
           </div>
 

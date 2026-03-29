@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -201,12 +202,10 @@ function IncentiveFormDialogInner({
 
           <div className="space-y-2">
             <Label htmlFor="earningDate">Earning Date</Label>
-            <Input
+            <DateField
               id="earningDate"
-              type="date"
               value={form.earningDate}
-              onChange={(e) => {
-                const value = e.target.value;
+              onChange={(value) => {
                 const nextMonth = value && value.length >= 7 ? `${value.slice(0, 4)}-${value.slice(5, 7)}` : "";
                 setForm((prev) => ({
                   ...prev,
@@ -234,11 +233,10 @@ function IncentiveFormDialogInner({
           ) : (
             <div className="space-y-2">
               <Label htmlFor="dueDate">Wallet Due Date</Label>
-              <Input
+              <DateField
                 id="dueDate"
-                type="date"
                 value={form.dueDate}
-                onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                onChange={(value) => setForm({ ...form, dueDate: value })}
               />
             </div>
           )}

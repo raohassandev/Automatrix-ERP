@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import ClientAutoComplete from "./ClientAutoComplete";
+import { DateField } from "./ui/date-field";
 
 export default function ProjectForm() {
   const router = useRouter();
@@ -50,18 +51,8 @@ export default function ProjectForm() {
           onChange={(value) => setForm({ ...form, clientId: value })}
           placeholder="Select client"
         />
-        <input
-          className="rounded-md border px-3 py-2"
-          type="date"
-          value={form.startDate}
-          onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-        />
-        <input
-          className="rounded-md border px-3 py-2"
-          type="date"
-          value={form.endDate}
-          onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-        />
+        <DateField value={form.startDate} onChange={(value) => setForm({ ...form, startDate: value })} />
+        <DateField value={form.endDate} onChange={(value) => setForm({ ...form, endDate: value })} />
         <input
           className="rounded-md border px-3 py-2"
           placeholder="Total Budget"

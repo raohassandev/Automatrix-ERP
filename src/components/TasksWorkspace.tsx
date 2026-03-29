@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -530,7 +531,7 @@ export function TasksWorkspace({
                 </div>
                 <div className="space-y-1">
                   <Label>Due Date</Label>
-                  <Input type="date" value={taskForm.dueDate} onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))} />
+                  <DateField value={taskForm.dueDate} onChange={(value) => setTaskForm((prev) => ({ ...prev, dueDate: value }))} />
                 </div>
                 <div className="space-y-1 md:col-span-4">
                   <Label>Description</Label>
@@ -647,14 +648,15 @@ export function TasksWorkspace({
                           />
                         </td>
                         <td className="py-2 pr-3">
-                          <Input
-                            type="date"
+                          <DateField
                             className="w-36"
                             value={task.dueDate || ""}
                             disabled={!canManage || savingTaskId === task.id}
-                            onChange={(e) => setTasks((prev) => prev.map((row) => (row.id === task.id ? { ...row, dueDate: e.target.value } : row)))}
-                            onBlur={(e) => {
-                              if (canManage) void saveTask(task, { dueDate: e.target.value || "" });
+                            onChange={(value) => {
+                              setTasks((prev) => prev.map((row) => (row.id === task.id ? { ...row, dueDate: value } : row)));
+                              if (canManage && value !== (task.dueDate || "")) {
+                                void saveTask(task, { dueDate: value || "" });
+                              }
                             }}
                           />
                           {isOverdue(task.status, task.dueDate) ? (
@@ -868,11 +870,11 @@ export function TasksWorkspace({
                 </div>
                 <div className="space-y-1">
                   <Label>Start Date</Label>
-                  <Input type="date" value={templateForm.startDate} onChange={(e) => setTemplateForm((prev) => ({ ...prev, startDate: e.target.value }))} />
+                  <DateField value={templateForm.startDate} onChange={(value) => setTemplateForm((prev) => ({ ...prev, startDate: value }))} />
                 </div>
                 <div className="space-y-1">
                   <Label>End Date</Label>
-                  <Input type="date" value={templateForm.endDate} onChange={(e) => setTemplateForm((prev) => ({ ...prev, endDate: e.target.value }))} />
+                  <DateField value={templateForm.endDate} onChange={(value) => setTemplateForm((prev) => ({ ...prev, endDate: value }))} />
                 </div>
                 <div className="md:col-span-6 flex flex-wrap justify-end gap-2">
                   <Button variant="outline" onClick={runRecurrence} disabled={runningRecurrence}>

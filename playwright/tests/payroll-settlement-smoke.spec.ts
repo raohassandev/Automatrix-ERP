@@ -4,7 +4,7 @@ import { loginAs } from "./helpers/auth";
 const FINANCE_EMAIL = process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk";
 
 test.describe("Payroll settlement smoke (non-destructive)", () => {
-  test("auto-draft endpoint is reachable and per-entry mark-paid route is available", async ({ page }) => {
+  test("auto-draft endpoint is reachable, mark-paid route exists, and non-draft delete is blocked", async ({ page }) => {
     await loginAs(page, FINANCE_EMAIL);
     await page.goto("/payroll", { waitUntil: "networkidle" });
 
@@ -52,5 +52,10 @@ test.describe("Payroll settlement smoke (non-destructive)", () => {
     expect(probeRes.status()).toBe(404);
     const probeJson = await probeRes.json();
     expect(String(probeJson.error || "")).toMatch(/not found/i);
+
+    const deleteProbeRes = await page.request.delete(`/api/payroll/runs/${candidate.id}`);
+    expect(deleteProbeRes.status()).toBe(400);
+    const deleteProbeJson = await deleteProbeRes.json();
+    expect(String(deleteProbeJson.error || "")).toMatch(/only draft payroll runs can be deleted/i);
   });
 });

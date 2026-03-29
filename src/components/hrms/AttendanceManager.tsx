@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -117,10 +118,9 @@ export function AttendanceManager({
           ) : null}
           <div className="space-y-2">
             <Label>Date</Label>
-            <Input
-              type="date"
+            <DateField
               value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              onChange={(value) => setForm({ ...form, date: value })}
             />
           </div>
           <div className="space-y-2">

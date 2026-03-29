@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -254,21 +255,19 @@ function PurchaseOrderFormDialogInner({
           </div>
           <div className="space-y-2">
             <Label htmlFor="orderDate">Order Date</Label>
-            <Input
+            <DateField
               id="orderDate"
-              type="date"
               value={form.orderDate}
-              onChange={(e) => setForm({ ...form, orderDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, orderDate: value })}
               required
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="expectedDate">Expected Date</Label>
-            <Input
+            <DateField
               id="expectedDate"
-              type="date"
               value={form.expectedDate}
-              onChange={(e) => setForm({ ...form, expectedDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, expectedDate: value })}
             />
           </div>
           <div className="space-y-2">

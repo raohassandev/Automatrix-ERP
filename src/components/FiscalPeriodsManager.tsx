@@ -3,6 +3,7 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { DateField } from "@/components/ui/date-field";
 
 type FiscalPeriod = {
   id: string;
@@ -89,20 +90,8 @@ export default function FiscalPeriodsManager({
               onChange={(e) => setForm({ ...form, code: e.target.value })}
               className="rounded-md border px-3 py-2 text-sm"
             />
-            <input
-              required
-              type="date"
-              value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-              className="rounded-md border px-3 py-2 text-sm"
-            />
-            <input
-              required
-              type="date"
-              value={form.endDate}
-              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-              className="rounded-md border px-3 py-2 text-sm"
-            />
+            <DateField required value={form.startDate} onChange={(value) => setForm({ ...form, startDate: value })} />
+            <DateField required value={form.endDate} onChange={(value) => setForm({ ...form, endDate: value })} />
             <button disabled={pending} className="rounded-md border px-3 py-2 text-sm font-medium">
               {pending ? "Saving..." : "Create Period"}
             </button>

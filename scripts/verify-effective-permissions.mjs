@@ -4,6 +4,30 @@ const baseURL = process.env.STAGING_BASE_URL || "https://erp-staging.automatrix.
 const loginEmail = process.env.E2E_FINANCE_EMAIL || "finance1@automatrix.pk";
 const loginPassword = process.env.E2E_TEST_PASSWORD || "e2e";
 const maxAttempts = Number(process.env.STAGING_RETRY_ATTEMPTS || 8);
+const defaultAllowedExtras = [
+  // Known template-baseline additions rolled out in Access Control Center.
+  "employees.view_client_preview",
+  "tasks.assign",
+  "tasks.attach_evidence",
+  "tasks.close",
+  "tasks.grade_completion",
+  "tasks.reopen",
+  "tasks.verify",
+  "tasks.verify_completion",
+  "tasks.view_company",
+  "tasks.view_company_performance",
+  "tasks.view_team",
+  "tasks.view_team_performance",
+];
+const allowedExtraPermissions = new Set(
+  [
+    ...defaultAllowedExtras,
+    ...String(process.env.VERIFY_EFFECTIVE_ALLOWED_EXTRAS || "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean),
+  ].filter(Boolean),
+);
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -41,7 +65,7 @@ function diffSets(rolePerms, effectivePerms) {
   }
   for (const key of effectivePerms) {
     if (key === "*") continue;
-    if (!rolePerms.has(key)) extra.push(key);
+    if (!rolePerms.has(key) && !allowedExtraPermissions.has(key)) extra.push(key);
   }
   return { missing, extra };
 }

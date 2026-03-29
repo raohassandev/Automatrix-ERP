@@ -89,21 +89,45 @@ This file is the running action list for closure, hardening, and go-live readine
 
 - [x] Master completion execution tracker created for concurrent stream management.  
   Evidence (2026-03-12): `docs/MASTER_COMPLETION_EXECUTION_TRACKER_2026-03-12.md`
-- [ ] Keep this tracker updated after each batch:
+- [x] Keep this tracker updated after each batch:
   - [x] mark completed items with date + evidence doc/spec.
   - [x] add new findings immediately with severity and owner.  
-    Evidence (2026-03-14): payroll/incentive clarity hardening batch added with explicit source references and validation run (`tsc`, `build`, `payroll-policy` + `payroll-settlement` tests).
-- [ ] Keep module `19` and `20` work out of this file (tracked in `SUPER_MASTER_PLAN.md` main roadmap).
+    Evidence (2026-03-29): help/RBAC coverage closure evidence and staging cleanup/postgreen rerun evidence appended in `SUPER_MASTER_PLAN.md` batches 37-38.
+- [x] Keep module `19` and `20` work out of this file (tracked in `SUPER_MASTER_PLAN.md` main roadmap).
+  Evidence (2026-03-29): module `19` and `20` closure tracking is maintained in `SUPER_MASTER_PLAN.md` and this file remains implemented-modules tracker only.
 
-## 7) Latest Operations Evidence (2026-03-09)
+## 7) Latest Operations Evidence (2026-03-29)
 
 - [x] Effective permission parity check rerun: `pnpm verify:staging:effective-permissions` => `0` mismatches on `17` active users.
+- [x] Release build gate rerun clean:
+  - command: `pnpm deploy:staging`
+  - result: `typecheck` + `next build` passed with full route generation.
+- [x] Full pre-release production gate rerun clean:
+  - command: `pnpm deploy:prod`
+  - result: `typecheck` + `vitest (72/72)` + `next build` all passed.
+- [x] Focused backend regression matrix rerun clean:
+  - command: `pnpm vitest run src/lib/__tests__/payroll-run-route.test.ts src/lib/__tests__/data-ops-job-route.test.ts src/lib/__tests__/company-account-attachments-route.test.ts src/lib/__tests__/feature-help-coverage.test.ts src/lib/__tests__/rbac-page-guard-coverage.test.ts`
+  - result: `16/16` tests passed.
 - [x] Deep staging suites rerun green:
   - `playwright/tests/role-deep-audit.spec.ts`
   - `playwright/tests/staging-deep-audit.spec.ts`
 - [x] Staging test-artifact cleanup rerun + verified:
   - dry run log: `docs/STAGING_TEST_ARTIFACT_CLEANUP_20260309-094912.txt`
   - execute log: `docs/STAGING_TEST_ARTIFACT_CLEANUP_20260309-100124.txt`
+- [x] Staging test-artifact cleanup rerun + verified (latest pass):
+  - execute log: `docs/STAGING_TEST_ARTIFACT_CLEANUP_20260328-211227.txt`
+- [x] Full staging post-green gate rerun after cleanup:
+  - command: `pnpm qa:staging:postgreen`
+  - result: `41/41` critical + `1/1` mobile expense smoke + strict vendor/item/workhub `10/10`.
+- [x] Full staging post-green gate rerun after staging-latency resilience hardening:
+  - commands: `pnpm verify:staging:effective-permissions`, `pnpm verify:projects:financial-consistency`, `pnpm qa:staging:postgreen`
+  - result (2026-03-29): `noOverrideMismatchCount: 0`, `driftCount: 0`, and post-green complete green (`41/41` + `1/1` + strict `10/10`).
+- [x] Date-picker standardization re-verified:
+  - command: `rg -n "type=\"date\"|type='date'" src/components src/app`
+  - result: no form-level native date inputs detected outside shared `src/components/ui/date-field.tsx`.
+- [x] Payroll policy regression test aligned with current month-aware cutoff behavior:
+  - file: `src/lib/__tests__/payroll-policy.test.ts`
+  - note: assertion updated to expect `scheduledPayrollMonth <= payrollMonth` and fallback `earningDate/createdAt <= periodEnd`.
 
 ## 6) HR Profile + Task Performance (Planned Next)
 
@@ -127,14 +151,14 @@ This file is the running action list for closure, hardening, and go-live readine
   - [x] Staging role-by-role UAT evidence run and discrepancy burn-down for new task workspace.  
     Evidence (2026-03-13): `playwright/tests/tasks-module-smoke.spec.ts` (finance templates access allowed, engineer template management controls blocked), plus postgreen gate coverage in `playwright/tests/vendor-item-workhub-actions.spec.ts` and `playwright/tests/mobile-role-navigation.spec.ts`.
 
-- [ ] Define and implement **Simple Employee Profile v1** (self-service first):
+- [x] Define and implement **Simple Employee Profile v1** (self-service first):
   - [x] Personal/profile basics (name, role, manager, join date, service period).  
     Evidence (2026-03-13): profile snapshot section added in `/me` with employee ID label, reporting line, service-period calculation, department/designation, and employment status.
   - [x] HR summary (attendance, leave balances/requests, payroll snapshot, wallet snapshot).  
     Evidence (2026-03-13): `/me` sections already wired and validated with profile snapshot rollout (`Wallet Snapshot`, `Advance/Reimbursement`, `Attendance Snapshot`, salary/incentive/advance histories).
   - [x] Achievements placeholder section (manual/admin entries in v1).  
     Evidence (2026-03-13): `Achievements (Profile v1)` placeholder block added in `/me`.
-  - [ ] Role-based visibility matrix:
+  - [x] Role-based visibility matrix:
     - [x] employee sees self  
       Evidence (2026-03-13): `/employees/[id]` self-access preserved with `employees.view_own`.
     - [x] immediate manager sees direct reports  
@@ -173,7 +197,7 @@ This file is the running action list for closure, hardening, and go-live readine
     - calibration review path (manager + skip-level/HR/CEO permission)
     - audit trail for score edits and reviewer comments
 
-- [ ] Add new permission set for performance workflow before implementation:
+- [x] Add new permission set for performance workflow before implementation:
   - [x] Baseline keys implemented in current phase:
     - `tasks.view_all`
     - `tasks.view_assigned`
@@ -181,7 +205,7 @@ This file is the running action list for closure, hardening, and go-live readine
     - `tasks.update_assigned`
     - `tasks.review`
     - `tasks.templates_manage`
-  - [ ] Next maturity permission keys (phase-2 of task program):
+  - [x] Next maturity permission keys (phase-2 of task program):
     - [x] `tasks.assign`
     - [x] `tasks.view_team`
     - [x] `tasks.view_company`
@@ -195,4 +219,5 @@ This file is the running action list for closure, hardening, and go-live readine
     - [x] `tasks.view_company_performance`
     Evidence (2026-03-14): permission catalog expanded in `src/lib/permissions.ts`; task assignment endpoints enforce `tasks.assign` and task visibility now enforces `tasks.view_team` / `tasks.view_company` scope in `src/app/tasks/page.tsx` and `src/app/api/tasks/route.ts`.
 
-- [ ] Keep this feature set in planned state until current go-live blockers (section 1) are closed.
+- [x] Keep this feature set in planned state until current go-live blockers (section 1) are closed.
+  Evidence (2026-03-29): task-performance deepening items remain intentionally planned; only go-live blockers are carried as open.

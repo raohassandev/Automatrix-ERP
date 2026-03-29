@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { sanitizeString } from "@/lib/sanitize";
 import { z } from "zod";
+import { validateAttachmentFormat } from "@/lib/document-attachment-policy";
 
 const attachmentSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
@@ -38,6 +39,10 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       { status: 400 }
     );
   }
+  const formatError = validateAttachmentFormat(parsed.data.fileName, parsed.data.mimeType);
+  if (formatError) {
+    return NextResponse.json({ success: false, error: formatError }, { status: 400 });
+  }
 
   const created = await prisma.attachment.create({
     data: {
@@ -66,4 +71,3 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
   return NextResponse.json({ success: true, data: { id: created.id } });
 }
-

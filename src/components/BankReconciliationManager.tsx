@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -252,10 +253,9 @@ export function BankReconciliationManager({ initialData }: { initialData: Datase
           </div>
           <div className="space-y-2">
             <Label>Statement Date</Label>
-            <Input
-              type="date"
+            <DateField
               value={form.asOfDate}
-              onChange={(e) => setForm({ ...form, asOfDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, asOfDate: value })}
             />
           </div>
           <div className="space-y-2">

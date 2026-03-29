@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { hasPayrollRunNonStatusMutations } from "@/lib/payroll-run-update-guards";
 
 function getPreviousMonthRange(now: Date) {
   const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
@@ -64,6 +65,17 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
       { success: false, error: "Validation failed", details: parsed.error.flatten() },
       { status: 400 },
     );
+  }
+
+  if (!canEdit && hasPayrollRunNonStatusMutations(parsed.data)) {
+    await logAudit({
+      action: "BLOCK_UPDATE_PAYROLL_RUN_NO_EDIT",
+      entity: "PayrollRun",
+      entityId: id,
+      userId: session.user.id,
+      reason: "Blocked update because request attempted non-status mutation without payroll.edit",
+    });
+    return NextResponse.json({ success: false, error: "Edit permission required" }, { status: 403 });
   }
 
   const hasPaidEntries = existing.entries.some((entry) => String(entry.status || "").toUpperCase() === "PAID");
@@ -284,6 +296,23 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
   }
 
   const paidEntries = existing.entries.filter((entry) => String(entry.status || "").toUpperCase() === "PAID");
+  const runStatus = String(existing.status || "").toUpperCase();
+  if (runStatus !== "DRAFT") {
+    await logAudit({
+      action: "BLOCK_DELETE_PAYROLL_RUN_STATUS",
+      entity: "PayrollRun",
+      entityId: id,
+      userId: session.user.id,
+      reason: `Blocked delete because payroll run status is ${runStatus}`,
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Only DRAFT payroll runs can be deleted.",
+      },
+      { status: 400 },
+    );
+  }
   if (paidEntries.length > 0) {
     await logAudit({
       action: "BLOCK_DELETE_PAYROLL_RUN_PAID",

@@ -1,0 +1,107 @@
+Cleanup mode: execute
+Target: hostinger-vps
+App dir: /var/www/automatrix-erp-staging
+=== PREVIEW ===
+SELECT 17
+SELECT 17
+SELECT 18
+SELECT 18
+SELECT 5
+SELECT 21
+SELECT 5
+SELECT 9
+SELECT 0
+SELECT 18
+SELECT 4
+SELECT 0
+SELECT 5
+SELECT 0
+SELECT 0
+SELECT 0
+      entity      | rows 
+------------------+------
+ clients          |   17
+ commissions      |    0
+ company_accounts |    5
+ expenses         |   21
+ goods_receipts   |    0
+ incentives       |    0
+ incomes          |    5
+ items            |   18
+ payroll_entries  |    0
+ payroll_runs     |    0
+ projects         |   17
+ purchase_orders  |    9
+ salary_advances  |    5
+ vendor_bills     |   18
+ vendor_payments  |    4
+ vendors          |   18
+(16 rows)
+
+=== EXECUTE CLEANUP ===
+BEGIN
+SELECT 17
+SELECT 17
+SELECT 18
+SELECT 18
+SELECT 5
+SELECT 21
+SELECT 5
+SELECT 9
+SELECT 0
+SELECT 18
+SELECT 4
+SELECT 0
+SELECT 5
+SELECT 0
+SELECT 0
+SELECT 0
+DELETE 5
+DELETE 0
+DELETE 82
+DELETE 37
+DELETE 37
+DELETE 4
+DELETE 18
+DELETE 0
+DELETE 9
+DELETE 25
+DELETE 0
+DELETE 9
+DELETE 9
+DELETE 0
+DELETE 0
+DELETE 349
+DELETE 21
+DELETE 5
+DELETE 0
+DELETE 0
+DELETE 5
+DELETE 0
+DELETE 0
+DELETE 4
+DELETE 18
+DELETE 0
+DELETE 9
+DELETE 17
+DELETE 17
+DELETE 18
+DELETE 18
+DELETE 5
+UPDATE 1
+COMMIT
+=== VERIFY AFTER CLEANUP ===
+      entity      | rows 
+------------------+------
+ clients          |    0
+ company_accounts |    0
+ expenses         |    0
+ incomes          |    0
+ items            |    0
+ projects         |    0
+ vendor_bills     |    0
+ vendor_payments  |    0
+ vendors          |    0
+(9 rows)
+
+Cleanup log written to docs/STAGING_TEST_ARTIFACT_CLEANUP_20260328-120626.txt

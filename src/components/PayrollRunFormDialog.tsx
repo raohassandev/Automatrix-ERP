@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -321,21 +322,19 @@ function PayrollRunFormDialogInner({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="periodStart">Period Start</Label>
-            <Input
+            <DateField
               id="periodStart"
-              type="date"
               value={form.periodStart}
-              onChange={(e) => setForm({ ...form, periodStart: e.target.value })}
+              onChange={(value) => setForm({ ...form, periodStart: value })}
               required
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="periodEnd">Period End</Label>
-            <Input
+            <DateField
               id="periodEnd"
-              type="date"
               value={form.periodEnd}
-              onChange={(e) => setForm({ ...form, periodEnd: e.target.value })}
+              onChange={(value) => setForm({ ...form, periodEnd: value })}
               required
             />
           </div>

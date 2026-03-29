@@ -5,6 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { sanitizeString } from "@/lib/sanitize";
 import { logAudit } from "@/lib/audit";
+import {
+  isProcurementAttachmentLocked,
+  procurementAttachmentLockMessage,
+  validateProcurementAttachmentFormat,
+} from "@/lib/procurement-attachment-policy";
 
 const attachmentSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
@@ -51,9 +56,23 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   }
 
   const { id } = await context.params;
-  const grn = await prisma.goodsReceipt.findUnique({ where: { id }, select: { id: true, grnNumber: true } });
+  const grn = await prisma.goodsReceipt.findUnique({
+    where: { id },
+    select: { id: true, grnNumber: true, status: true },
+  });
   if (!grn) {
     return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+  }
+  if (isProcurementAttachmentLocked("goods_receipt", grn.status)) {
+    const error = procurementAttachmentLockMessage("Goods Receipt", grn.status);
+    await logAudit({
+      action: "BLOCK_GRN_ATTACHMENT_LOCKED",
+      entity: "GoodsReceipt",
+      entityId: id,
+      reason: error,
+      userId: session.user.id,
+    });
+    return NextResponse.json({ success: false, error }, { status: 400 });
   }
 
   const body = await req.json();
@@ -63,6 +82,10 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       { success: false, error: "Validation failed", details: parsed.error.flatten() },
       { status: 400 },
     );
+  }
+  const formatError = validateProcurementAttachmentFormat(parsed.data.fileName, parsed.data.mimeType);
+  if (formatError) {
+    return NextResponse.json({ success: false, error: formatError }, { status: 400 });
   }
 
   const created = await prisma.attachment.create({

@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
+import { DateField } from "./ui/date-field";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
@@ -182,11 +183,10 @@ export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFo
 
           <div className="space-y-2">
             <Label htmlFor="date">Issue Date</Label>
-            <Input
+            <DateField
               id="date"
-              type="date"
               value={form.date}
-              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              onChange={(value) => setForm({ ...form, date: value })}
               required
               disabled={isEdit}
             />
@@ -194,11 +194,10 @@ export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFo
 
           <div className="space-y-2">
             <Label htmlFor="dueDate">Due Date</Label>
-            <Input
+            <DateField
               id="dueDate"
-              type="date"
               value={form.dueDate}
-              onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, dueDate: value })}
               required
             />
           </div>
@@ -244,11 +243,10 @@ export function InvoiceFormDialog({ open, onOpenChange, initialData }: InvoiceFo
           {isEdit ? (
             <div className="space-y-2">
               <Label htmlFor="paymentDate">Payment Date (Optional)</Label>
-              <Input
+              <DateField
                 id="paymentDate"
-                type="date"
                 value={form.paymentDate}
-                onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
+                onChange={(value) => setForm({ ...form, paymentDate: value })}
               />
             </div>
           ) : null}

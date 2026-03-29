@@ -28,9 +28,9 @@ async function openWorkhubActions(page: import("@playwright/test").Page) {
 
 async function gotoDashboardStable(page: import("@playwright/test").Page) {
   let lastError: unknown;
-  for (let i = 0; i < 3; i += 1) {
+  for (let i = 0; i < 5; i += 1) {
     try {
-      const response = await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 30_000 });
+      const response = await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 45_000 });
       if (response && response.status() >= 500) {
         throw new Error(`Server error ${response.status()} on /dashboard`);
       }
@@ -38,12 +38,31 @@ async function gotoDashboardStable(page: import("@playwright/test").Page) {
       return;
     } catch (error) {
       lastError = error;
-      if (i < 2) {
-        await page.waitForTimeout(1_200);
+      if (i < 4) {
+        await page.waitForTimeout(2_000 * (i + 1));
       }
     }
   }
   throw lastError instanceof Error ? lastError : new Error("Failed to open dashboard");
+}
+
+async function gotoRouteStable(page: import("@playwright/test").Page, path: string) {
+  let lastError: unknown;
+  for (let i = 0; i < 5; i += 1) {
+    try {
+      const response = await page.goto(path, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      if (response && response.status() >= 500) {
+        throw new Error(`Server error ${response.status()} on ${path}`);
+      }
+      return;
+    } catch (error) {
+      lastError = error;
+      if (i < 4) {
+        await page.waitForTimeout(2_000 * (i + 1));
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(`Failed to open ${path}`);
 }
 
 async function ensureStorageState(
@@ -200,7 +219,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
+      await gotoRouteStable(page, `/company-accounts/${companyAccountId}`);
       await expect(page.getByTestId("workhub-actions-button").first()).toBeVisible();
       await ctx.close();
     }
@@ -219,7 +238,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     for (const role of ["engineer", "store", "sales", "procurement"] as const) {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
-      await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
+      await gotoRouteStable(page, `/company-accounts/${companyAccountId}`);
       await expect(page.getByRole("main").getByText("You do not have access to this page.").first()).toBeVisible();
       await ctx.close();
     }
@@ -236,7 +255,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     {
       const ctx = await browser.newContext({ ...devices["iPhone 13"], baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto(`/company-accounts/${companyAccountId}`, { waitUntil: "domcontentloaded", timeout: 20_000 });
+      await gotoRouteStable(page, `/company-accounts/${companyAccountId}`);
       await expect(page.getByTestId("workhub-actions-button").first()).toBeVisible();
       await expect(page.getByText("Section")).toBeVisible();
       await ctx.close();
@@ -248,7 +267,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     {
       const ctx = await browser.newContext({ baseURL, storageState: states.finance });
       const page = await ctx.newPage();
-      await page.goto("/projects/financial");
+      await gotoRouteStable(page, "/projects/financial");
       await expect(page.getByRole("heading", { name: "Project Financial Dashboard" })).toBeVisible();
       await expect(page.getByText("Total Contract Value").first()).toBeVisible();
       await expect(page.getByText(/Gross Margin|Current Profit/).first()).toBeVisible();
@@ -259,7 +278,7 @@ test.describe.serial("Vendor + Item Work Hub actions (RBAC + mobile)", () => {
     for (const role of ["engineer", "sales", "store", "procurement"] as const) {
       const ctx = await browser.newContext({ baseURL, storageState: states[role] });
       const page = await ctx.newPage();
-      await page.goto("/projects/financial");
+      await gotoRouteStable(page, "/projects/financial");
       await expect(page.getByText("You do not have access to project financials.").first()).toBeVisible();
       await ctx.close();
     }

@@ -495,6 +495,84 @@ export const featureHelpCatalog: FeatureHelpDoc[] = [
     ],
   },
   {
+    id: "accounting",
+    title: "Accounting and Treasury Controls",
+    summary: "Use accounting/treasury pages to maintain chart integrity, journals, periods, and cash controls.",
+    procedure: [
+      "Maintain account structure and period status before posting cycles.",
+      "Review journals and source traces for every posted movement.",
+      "Run bank reconciliation and close mismatches before period close.",
+      "Use company accounts pages for account-level operational actions and traceability.",
+    ],
+    controls: [
+      "Accounting and treasury actions are permission-gated and audited.",
+      "Period controls prevent unsafe posting windows.",
+      "Company account actions and related attachments enforce lifecycle guardrails.",
+    ],
+    impacts: [
+      "Errors in this area affect cash position, trial balance, and executive reporting.",
+      "Period/ledger discipline is mandatory for production close confidence.",
+    ],
+    links: [
+      { label: "Company Accounts", href: "/company-accounts" },
+      { label: "Chart of Accounts", href: "/accounting/accounts" },
+      { label: "Journals", href: "/accounting/journals" },
+      { label: "Bank Reconciliation", href: "/reports/accounting/bank-reconciliation" },
+    ],
+  },
+  {
+    id: "master-data",
+    title: "Master Data and Directory",
+    summary: "Maintain stable base entities used across all modules: clients, vendors, categories, departments, and designations.",
+    procedure: [
+      "Create and standardize core entities before heavy transaction entry.",
+      "Avoid duplicates and inconsistent naming patterns.",
+      "Use detail pages for notes/attachments and lifecycle-safe edits.",
+      "Coordinate role and access changes for admin-level user records.",
+    ],
+    controls: [
+      "Master data changes are permission-gated and should be minimal in production windows.",
+      "Delete/deactivate guardrails protect linked transactional history.",
+      "Directory correctness is prerequisite for reliable reporting and approvals routing.",
+    ],
+    impacts: [
+      "Master-data drift creates downstream reporting fragmentation.",
+      "Wrong client/vendor/project mapping directly affects project and AP/AR reconciliation.",
+    ],
+    links: [
+      { label: "Master Data", href: "/master-data" },
+      { label: "Clients", href: "/clients" },
+      { label: "Vendors", href: "/vendors" },
+      { label: "Categories", href: "/categories" },
+    ],
+  },
+  {
+    id: "controls-ops",
+    title: "Controls, Audit, and Data Ops",
+    summary: "Operate control surfaces for approvals, audit traceability, notifications, and operational data jobs.",
+    procedure: [
+      "Review pending approvals and clear decision queue first.",
+      "Use audit logs to investigate blocked actions and data anomalies.",
+      "Run Data Ops jobs with idempotency/schedule discipline and review job timelines.",
+      "Use notifications and attachments as supporting trace, not source-of-truth replacement.",
+    ],
+    controls: [
+      "Approvals, audit, and data-ops actions are heavily RBAC-gated.",
+      "Job execution and artifacts maintain full audit timeline entries.",
+      "Control pages are read-heavy and should avoid ad-hoc manual corrections.",
+    ],
+    impacts: [
+      "These screens govern data quality and control confidence across modules.",
+      "Misuse can mask workflow defects or break reconciliation cadence.",
+    ],
+    links: [
+      { label: "Approvals", href: "/approvals" },
+      { label: "Audit Log", href: "/audit" },
+      { label: "Data Ops", href: "/data-ops" },
+      { label: "Notifications", href: "/notifications" },
+    ],
+  },
+  {
     id: "help",
     title: "ERP Guide",
     summary: "Central SOP reference for all implemented features.",
@@ -541,22 +619,43 @@ export function resolveFeatureHelp(pathname: string): FeatureHelpDoc {
 
   if (p === "/" || p === "/dashboard") return getDoc("dashboard");
   if (p === "/help") return getDoc("help");
+  if (p === "/login" || p === "/forbidden") return getDoc("help");
   if (p.startsWith("/ceo/dashboard")) return getDoc("ceo-dashboard");
   if (p.startsWith("/ceo/blueprint")) return getDoc("ceo-blueprint");
+  if (p.startsWith("/accounting") || p.startsWith("/company-accounts")) return getDoc("accounting");
+  if (
+    p.startsWith("/master-data") ||
+    p.startsWith("/clients") ||
+    p.startsWith("/vendors") ||
+    p.startsWith("/categories") ||
+    p.startsWith("/departments") ||
+    p.startsWith("/designations") ||
+    p.startsWith("/admin/users")
+  ) {
+    return getDoc("master-data");
+  }
+  if (
+    p.startsWith("/approvals") ||
+    p.startsWith("/audit") ||
+    p.startsWith("/data-ops") ||
+    p.startsWith("/notifications") ||
+    p.startsWith("/attachments")
+  ) {
+    return getDoc("controls-ops");
+  }
   if (p.startsWith("/settings")) return getDoc("settings");
   if (p.startsWith("/reports")) return getDoc("reports");
-  if (p.startsWith("/approvals")) return getDoc("approvals");
+  if (p.startsWith("/hrms") || p.startsWith("/employees")) return getDoc("employees");
   if (p.startsWith("/payroll")) return getDoc("payroll");
   if (p.startsWith("/incentives") || p.startsWith("/commissions")) return getDoc("incentives");
   if (p.startsWith("/salary-advances")) return getDoc("salary-advances");
   if (p.startsWith("/wallets")) return getDoc("wallets");
-  if (p.startsWith("/employees")) return getDoc("employees");
   if (p === "/me") return getDoc("my-portal");
   if (p.startsWith("/tasks")) return getDoc("tasks");
   if (p === "/projects" || p.startsWith("/projects/financial")) return getDoc("projects");
   if (/^\/projects\/[^/]+$/.test(p)) return getDoc("project-detail");
   if (p.startsWith("/expenses")) return getDoc("expenses");
-  if (p.startsWith("/income")) return getDoc("income");
+  if (p.startsWith("/income") || p.startsWith("/invoices") || p.startsWith("/quotations")) return getDoc("income");
   if (p.startsWith("/procurement")) return getDoc("procurement");
   if (p.startsWith("/inventory")) return getDoc("inventory");
 

@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -134,18 +135,16 @@ export function LeaveManager({
           </div>
           <div className="space-y-2">
             <Label>Start Date</Label>
-            <Input
-              type="date"
+            <DateField
               value={form.startDate}
-              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, startDate: value })}
             />
           </div>
           <div className="space-y-2">
             <Label>End Date</Label>
-            <Input
-              type="date"
+            <DateField
               value={form.endDate}
-              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, endDate: value })}
             />
           </div>
           <div className="space-y-2">

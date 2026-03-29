@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -124,11 +125,10 @@ export function EmployeeCompensationDialog({
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="effectiveFrom">Effective From</Label>
-              <Input
+              <DateField
                 id="effectiveFrom"
-                type="date"
                 value={form.effectiveFrom}
-                onChange={(e) => setForm((prev) => ({ ...prev, effectiveFrom: e.target.value }))}
+                onChange={(value) => setForm((prev) => ({ ...prev, effectiveFrom: value }))}
               />
             </div>
             <div className="space-y-2 md:col-span-2">

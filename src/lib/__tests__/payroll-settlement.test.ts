@@ -43,9 +43,9 @@ describe("collectAndSettleVariablePay", () => {
 
     const unsettledIncentiveWhere = tx.incentiveEntry.findMany.mock.calls[0][0]?.where;
     expect(unsettledIncentiveWhere.OR).toEqual([
-      { scheduledPayrollMonth: "2026-02" },
-      { scheduledPayrollMonth: null, earningDate: { gte: periodStart, lte: periodEnd } },
-      { scheduledPayrollMonth: null, earningDate: null, createdAt: { gte: periodStart, lte: periodEnd } },
+      { scheduledPayrollMonth: { lte: "2026-02" } },
+      { scheduledPayrollMonth: null, earningDate: { lte: periodEnd } },
+      { scheduledPayrollMonth: null, earningDate: null, createdAt: { lte: periodEnd } },
     ]);
   });
 });

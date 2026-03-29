@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "./FormDialog";
 import { Button } from "./ui/button";
+import { DateField } from "./ui/date-field";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -264,12 +265,10 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
             </div>
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
-              <Input
+              <DateField
                 id="date"
-                type="date"
                 value={date ? format(date, "yyyy-MM-dd") : ""}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(value) => {
                   setDate(value ? new Date(value) : undefined);
                 }}
                 required

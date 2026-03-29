@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -329,11 +330,10 @@ export function VendorPaymentFormDialog({
 
           <div className="space-y-2">
             <Label htmlFor="paymentDate">Payment Date</Label>
-            <Input
+            <DateField
               id="paymentDate"
-              type="date"
               value={form.paymentDate}
-              onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, paymentDate: value })}
               required
             />
           </div>

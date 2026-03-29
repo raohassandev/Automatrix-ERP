@@ -1,0 +1,66 @@
+Rollback drill mode: execute
+Target: hostinger-vps
+App: automatrix-erp-staging @ /var/www/automatrix-erp-staging
+Health: http://127.0.0.1:3031/api/health
+Fetching origin
+START_COMMIT=9f4fbf45617146ade605a017963c2b8fdec43313
+TARGET_COMMIT=51339d0952e0813ada4a90813e644e93775dbe33
+=== PRECHECK ===
+9f4fbf4 Add incentive filters and payout summary cards
+┌────┬───────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name                      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 2  │ automatrix-erp-prod       │ default     │ 16.1.5  │ fork    │ 1060484  │ 23D    │ 1547 │ online    │ 0%       │ 121.5mb  │ root     │ disabled │
+│ 6  │ automatrix-erp-staging    │ default     │ N/A     │ fork    │ 1305455  │ 8D     │ 5292 │ online    │ 0%       │ 26.3mb   │ root     │ disabled │
+│ 7  │ automatrix-prod           │ default     │ N/A     │ fork    │ 1417399  │ 4h     │ 1    │ online    │ 0%       │ 25.2mb   │ root     │ disabled │
+│ 8  │ automatrix-staging        │ default     │ N/A     │ fork    │ 1414597  │ 4h     │ 1    │ online    │ 0%       │ 25.8mb   │ root     │ disabled │
+│ 0  │ pv-backend                │ default     │ 1.0.0   │ fork    │ 394687   │ 48D    │ 299… │ online    │ 0%       │ 234.1mb  │ root     │ disabled │
+└────┴───────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+{"ok":true,"db":"up","timestamp":"2026-03-28T16:59:09.608Z"}=== ROLLBACK TO TARGET ===
+HEAD is now at 51339d0 Improve payroll payable traceability and status clarity
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 6.8s using pnpm v10.28.2
+
+> automatrix-erp@0.1.0 prisma:generate /var/www/automatrix-erp-staging
+> prisma generate
+
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v6.19.2) to ./node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client in 2.26s
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
+
+
+> automatrix-erp@0.1.0 build /var/www/automatrix-erp-staging
+> next build
+
+  Suggestion: If you intended to restart next build, terminate the other process, and then try again.
+ ELIFECYCLE  Command failed with exit code 1.
+=== AUTO-RESTORE START COMMIT (FAILSAFE) ===
+HEAD is now at 9f4fbf4 Add incentive filters and payout summary cards
+Lockfile is up to date, resolution step is skipped
+Already up to date
+
+Done in 3.7s using pnpm v10.28.2
+
+> automatrix-erp@0.1.0 prisma:generate /var/www/automatrix-erp-staging
+> prisma generate
+
+Prisma schema loaded from prisma/schema.prisma
+
+✔ Generated Prisma Client (v6.19.2) to ./node_modules/.pnpm/@prisma+client@6.19.2_prisma@6.19.2_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client in 1.97s
+
+Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+
+Tip: Want to turn off tips and other hints? https://pris.ly/tip-4-nohints
+
+
+> automatrix-erp@0.1.0 build /var/www/automatrix-erp-staging
+> next build
+
+  Suggestion: If you intended to restart next build, terminate the other process, and then try again.
+ ELIFECYCLE  Command failed with exit code 1.

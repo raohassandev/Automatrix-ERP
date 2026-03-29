@@ -1,10 +1,11 @@
 import { expect, type Page } from "@playwright/test";
 
 export async function loginAs(page: Page, email: string, password = process.env.E2E_TEST_PASSWORD || "e2e") {
+  const NAV_TIMEOUT_MS = 45_000;
   for (let authAttempt = 0; authAttempt < 4; authAttempt += 1) {
     // Staging can briefly return 502 during PM2/nginx restart windows.
-    for (let attempt = 0; attempt < 12; attempt += 1) {
-      await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 30_000 });
+    for (let attempt = 0; attempt < 18; attempt += 1) {
+      await page.goto("/login", { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS }).catch(() => null);
       const isBadGateway = await page.getByText("502 Bad Gateway").first().isVisible().catch(() => false);
       if (!isBadGateway) {
         // If already signed in, /login can redirect away. Session check below handles this.
@@ -13,7 +14,7 @@ export async function loginAs(page: Page, email: string, password = process.env.
           break;
         }
       }
-      await page.waitForTimeout(1200 * (attempt + 1));
+      await page.waitForTimeout(Math.min(1_500 * (attempt + 1), 7_500));
     }
 
     // Fast path: if session already exists, return without touching login form.
@@ -21,8 +22,8 @@ export async function loginAs(page: Page, email: string, password = process.env.
     const preSessionJson = (await preSession.json().catch(() => null)) as { user?: { email?: string } } | null;
     if (preSessionJson?.user?.email) {
       if (page.url().includes("/login")) {
-        await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 12_000 }).catch(async () => {
-          await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 12_000 });
+        await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(async () => {
+          await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 20_000 });
         });
       }
       return;
@@ -94,10 +95,10 @@ export async function loginAs(page: Page, email: string, password = process.env.
       await page.waitForTimeout(250);
       if (page.url().includes("/login")) {
         try {
-          await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 12_000 });
+          await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 20_000 });
         } catch {
           // Staging may perform a near-simultaneous redirect; fallback without failing auth.
-          await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 12_000 }).catch(async () => {
+          await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 20_000 }).catch(async () => {
             await page.waitForTimeout(400);
           });
         }

@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { sanitizeString } from "@/lib/sanitize";
 import { z } from "zod";
+import { isProjectAttachmentLocked, validateAttachmentFormat } from "@/lib/document-attachment-policy";
 
 const attachmentSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
@@ -43,6 +44,24 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
   if (!access.ok) {
     return NextResponse.json({ success: false, error: access.status === 404 ? "Not found" : "Forbidden" }, { status: access.status });
   }
+  const project = await prisma.project.findUnique({
+    where: { id },
+    select: { id: true, projectId: true, status: true },
+  });
+  if (!project) {
+    return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+  }
+  if (isProjectAttachmentLocked(project.status)) {
+    const error = `Attachments are locked because project ${project.projectId} is ${String(project.status || "").toUpperCase()}.`;
+    await logAudit({
+      action: "BLOCK_PROJECT_ATTACHMENT_LOCKED",
+      entity: "Project",
+      entityId: id,
+      reason: error,
+      userId: session.user.id,
+    });
+    return NextResponse.json({ success: false, error }, { status: 400 });
+  }
 
   const body = await req.json();
   const parsed = attachmentSchema.safeParse(body);
@@ -51,6 +70,10 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
       { success: false, error: "Validation failed", details: parsed.error.flatten() },
       { status: 400 }
     );
+  }
+  const formatError = validateAttachmentFormat(parsed.data.fileName, parsed.data.mimeType);
+  if (formatError) {
+    return NextResponse.json({ success: false, error: formatError }, { status: 400 });
   }
 
   const created = await prisma.attachment.create({
@@ -80,4 +103,3 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
   return NextResponse.json({ success: true, data: { id: created.id } });
 }
-

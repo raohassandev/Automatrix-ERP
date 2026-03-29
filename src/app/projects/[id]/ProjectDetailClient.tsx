@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import type { ProjectDetailData, ProjectDetailTab } from "@/lib/project-detail-policy";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { FormDialog } from "@/components/FormDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -281,6 +282,18 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error || "Failed to update task");
+  }
+
+  async function updateTaskDueDate(taskId: string, dueDate: string) {
+    try {
+      setUpdatingTaskId(taskId);
+      await updateTask(taskId, { dueDate: dueDate || "" });
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update due date");
+    } finally {
+      setUpdatingTaskId(null);
+    }
   }
 
   const anyActions = Object.values(workhubActions).some(Boolean);
@@ -1416,11 +1429,10 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                       <option value="HIGH">HIGH</option>
                       <option value="CRITICAL">CRITICAL</option>
                     </select>
-                    <input
-                      type="date"
-                      className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    <DateField
                       value={taskForm.dueDate}
-                      onChange={(e) => setTaskForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+                      onChange={(value) => setTaskForm((prev) => ({ ...prev, dueDate: value }))}
+                      className="text-sm"
                     />
                     <select
                       className="rounded-md border border-border bg-background px-3 py-2 text-sm md:col-span-2"
@@ -1528,22 +1540,11 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                             />
                           </td>
                           <td className="py-2">
-                            <input
-                              type="date"
-                              className="rounded-md border border-border bg-background px-2 py-1 text-xs"
-                              defaultValue={task.dueDate || ""}
-                              onBlur={(e) => {
-                                (async () => {
-                                  try {
-                                    setUpdatingTaskId(task.id);
-                                    await updateTask(task.id, { dueDate: e.target.value || "" });
-                                    router.refresh();
-                                  } catch (err) {
-                                    toast.error(err instanceof Error ? err.message : "Failed to update due date");
-                                  } finally {
-                                    setUpdatingTaskId(null);
-                                  }
-                                })();
+                            <DateField
+                              className="text-xs"
+                              value={task.dueDate || ""}
+                              onChange={(value) => {
+                                void updateTaskDueDate(task.id, value);
                               }}
                               disabled={!canManageTasks || updatingTaskId === task.id}
                             />
@@ -1619,22 +1620,11 @@ export function ProjectDetailClient({ detail }: { detail: ProjectDetailData }) {
                               }}
                               disabled={!canUpdateExecutionTasks || updatingTaskId === task.id}
                             />
-                            <input
-                              type="date"
-                              className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs"
-                              defaultValue={task.dueDate || ""}
-                              onBlur={(e) => {
-                                (async () => {
-                                  try {
-                                    setUpdatingTaskId(task.id);
-                                    await updateTask(task.id, { dueDate: e.target.value || "" });
-                                    router.refresh();
-                                  } catch (err) {
-                                    toast.error(err instanceof Error ? err.message : "Failed to update due date");
-                                  } finally {
-                                    setUpdatingTaskId(null);
-                                  }
-                                })();
+                            <DateField
+                              className="w-full text-xs"
+                              value={task.dueDate || ""}
+                              onChange={(value) => {
+                                void updateTaskDueDate(task.id, value);
                               }}
                               disabled={!canManageTasks || updatingTaskId === task.id}
                             />

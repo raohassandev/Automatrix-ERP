@@ -7,6 +7,7 @@ import PaymentModeAutoComplete from "./PaymentModeAutoComplete";
 import ProjectAutoComplete from "./ProjectAutoComplete";
 import { ProjectFormDialog } from "./ProjectFormDialog";
 import { toast } from "sonner";
+import { DateField } from "./ui/date-field";
 
 export default function IncomeForm() {
   const router = useRouter();
@@ -95,12 +96,7 @@ export default function IncomeForm() {
         For invoice receipt, pick invoice from dropdown. System prevents over-receiving.
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <input
-          className="rounded-md border px-3 py-2"
-          type="date"
-          value={form.date}
-          onChange={(e) => setForm({ ...form, date: e.target.value })}
-        />
+        <DateField value={form.date} onChange={(value) => setForm({ ...form, date: value })} />
         <IncomeSourceAutoComplete
           value={form.source}
           onChange={(value) => setForm({ ...form, source: value })}

@@ -1,0 +1,19 @@
+Rollback drill mode: dry-run
+Target: hostinger-vps
+App: automatrix-erp-staging @ /var/www/automatrix-erp-staging
+Health: http://127.0.0.1:3031/api/health
+Fetching origin
+START_COMMIT=9f4fbf45617146ade605a017963c2b8fdec43313
+TARGET_COMMIT=51339d0952e0813ada4a90813e644e93775dbe33
+=== PRECHECK ===
+9f4fbf4 Add incentive filters and payout summary cards
+┌────┬───────────────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name                      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼───────────────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 2  │ automatrix-erp-prod       │ default     │ 16.1.5  │ fork    │ 1060484  │ 23D    │ 1547 │ online    │ 0%       │ 121.8mb  │ root     │ disabled │
+│ 6  │ automatrix-erp-staging    │ default     │ N/A     │ fork    │ 1305455  │ 8D     │ 5292 │ online    │ 0%       │ 26.6mb   │ root     │ disabled │
+│ 7  │ automatrix-prod           │ default     │ N/A     │ fork    │ 1417399  │ 4h     │ 1    │ online    │ 0%       │ 25.4mb   │ root     │ disabled │
+│ 8  │ automatrix-staging        │ default     │ N/A     │ fork    │ 1414597  │ 4h     │ 1    │ online    │ 0%       │ 25.6mb   │ root     │ disabled │
+│ 0  │ pv-backend                │ default     │ 1.0.0   │ fork    │ 394687   │ 48D    │ 299… │ online    │ 0%       │ 228.8mb  │ root     │ disabled │
+└────┴───────────────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+{"ok":true,"db":"up","timestamp":"2026-03-28T16:58:45.127Z"}DRY_RUN: would execute rollback to 51339d0952e0813ada4a90813e644e93775dbe33 and return to 9f4fbf45617146ade605a017963c2b8fdec43313

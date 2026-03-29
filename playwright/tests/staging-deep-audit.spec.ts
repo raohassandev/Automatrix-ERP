@@ -98,6 +98,7 @@ async function bootstrapState(
 }
 
 test.describe("Staging Deep Audit", () => {
+  test.describe.configure({ timeout: 300_000 });
   test.beforeAll(async ({ browser, baseURL }) => {
     await bootstrapState(browser, baseURL, USERS.finance.email, USERS.finance.password, states.finance);
     await bootstrapState(browser, baseURL, USERS.engineer.email, USERS.engineer.password, states.engineer);
@@ -143,13 +144,13 @@ test.describe("Staging Deep Audit", () => {
     ];
 
     const gotoStable = async (route: string) => {
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      for (let attempt = 0; attempt < 4; attempt += 1) {
         try {
-          await page.goto(route, { waitUntil: "domcontentloaded", timeout: 30_000 });
+          await page.goto(route, { waitUntil: "domcontentloaded", timeout: 45_000 });
           await page.waitForTimeout(250);
           return;
         } catch {
-          if (attempt === 2) throw new Error(`Could not load route: ${route}`);
+          if (attempt === 3) throw new Error(`Could not load route: ${route}`);
           await page.waitForTimeout(1000 * (attempt + 1));
         }
       }
@@ -186,7 +187,19 @@ test.describe("Staging Deep Audit", () => {
   test("RBAC spot checks for completed modules", async ({ browser, baseURL }) => {
     const financeCtx = await browser.newContext({ baseURL, storageState: states.finance, ignoreHTTPSErrors: true });
     const financePage = await financeCtx.newPage();
-    await financePage.goto("/employees", { waitUntil: "networkidle" });
+    const gotoStable = async (route: string) => {
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        try {
+          await financePage.goto(route, { waitUntil: "domcontentloaded", timeout: 45_000 });
+          await financePage.waitForTimeout(250);
+          return;
+        } catch {
+          if (attempt === 3) throw new Error(`Could not load route: ${route}`);
+          await financePage.waitForTimeout(1000 * (attempt + 1));
+        }
+      }
+    };
+    await gotoStable("/employees");
     await expect(financePage.getByRole("heading", { name: /employees/i })).toBeVisible();
 
     const empApi = await request.newContext({ baseURL, storageState: states.finance, ignoreHTTPSErrors: true });
@@ -200,9 +213,9 @@ test.describe("Staging Deep Audit", () => {
 
     const storeCtx = await browser.newContext({ baseURL, storageState: states.store, ignoreHTTPSErrors: true });
     const storePage = await storeCtx.newPage();
-    await storePage.goto("/audit", { waitUntil: "networkidle" });
+    await storePage.goto("/audit", { waitUntil: "domcontentloaded", timeout: 45_000 });
     await expect(storePage.locator("body")).toContainText(/do not have access|forbidden|access denied/i);
-    await storePage.goto(`/employees/${employeeId}`, { waitUntil: "networkidle" });
+    await storePage.goto(`/employees/${employeeId}`, { waitUntil: "domcontentloaded", timeout: 45_000 });
     await expect(storePage.locator("body")).toContainText(/do not have access|forbidden|access denied/i);
     await storeCtx.close();
   });

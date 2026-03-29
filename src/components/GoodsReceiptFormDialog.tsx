@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FormDialog } from "@/components/FormDialog";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -180,11 +181,10 @@ function GoodsReceiptFormDialogInner({
           </div>
           <div className="space-y-2">
             <Label htmlFor="receivedDate">Received Date</Label>
-            <Input
+            <DateField
               id="receivedDate"
-              type="date"
               value={form.receivedDate}
-              onChange={(e) => setForm({ ...form, receivedDate: e.target.value })}
+              onChange={(value) => setForm({ ...form, receivedDate: value })}
               required
             />
           </div>
