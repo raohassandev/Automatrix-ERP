@@ -11,6 +11,7 @@ import { MobileCard } from "@/components/MobileCard";
 import { employeeCodeFromId } from "@/lib/employee-display";
 import QuerySelect from "@/components/QuerySelect";
 import Link from "next/link";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 export default async function IncentivesPage({
   searchParams,
@@ -56,8 +57,7 @@ export default async function IncentivesPage({
 
   let ownEmployeeId: string | null = null;
   if (!canViewAll && session.user.email) {
-    const employee = await prisma.employee.findUnique({
-      where: { email: session.user.email },
+    const employee = await findEmployeeByEmailInsensitive(session.user.email, {
       select: { id: true },
     });
     ownEmployeeId = employee?.id || null;

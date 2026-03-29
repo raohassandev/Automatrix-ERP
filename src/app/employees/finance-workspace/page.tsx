@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/format";
 import DateRangePicker from "@/components/DateRangePicker";
 import QuerySelect from "@/components/QuerySelect";
 import SearchInput from "@/components/SearchInput";
+import { findEmployeeByEmailInsensitive, findUserByEmailInsensitive } from "@/lib/identity";
 
 type TimelineRow = {
   id: string;
@@ -96,8 +97,7 @@ export default async function EmployeeFinanceWorkspacePage({
   const rangeTo = parsedTo >= parsedFrom ? parsedTo : parsedFrom;
 
   const currentEmployee = session.user.email
-    ? await prisma.employee.findUnique({
-        where: { email: session.user.email },
+    ? await findEmployeeByEmailInsensitive(session.user.email, {
         select: { id: true, directReports: { select: { id: true } } },
       })
     : null;
@@ -117,10 +117,21 @@ export default async function EmployeeFinanceWorkspacePage({
   });
 
   if (employeeOptionsRaw.length === 0) {
+    const linkedUser = session.user.email
+      ? await findUserByEmailInsensitive(session.user.email, { select: { id: true, email: true } })
+      : null;
+
     return (
       <div className="rounded-xl border bg-card p-8 shadow-sm">
         <h1 className="text-2xl font-semibold">Employee Finance Workspace</h1>
-        <p className="mt-2 text-muted-foreground">No accessible employee record was found for your session.</p>
+        <p className="mt-2 text-muted-foreground">
+          No accessible employee record was linked to this login. Finance self-scope and team-scope pages require a matching active employee profile.
+        </p>
+        <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+          <div>Session email: {session.user.email || "Unknown"}</div>
+          <div>User account linked: {linkedUser ? "Yes" : "No"}</div>
+          <div>Next action: map this user email to an active Employee record in Employees or Access Control.</div>
+        </div>
       </div>
     );
   }
@@ -135,10 +146,7 @@ export default async function EmployeeFinanceWorkspacePage({
     : employeeOptions[0].id;
   const selectedEmployee = employeeOptionsRaw.find((row) => row.id === selectedEmployeeId)!;
 
-  const linkedUser = await prisma.user.findUnique({
-    where: { email: selectedEmployee.email },
-    select: { id: true },
-  });
+  const linkedUser = await findUserByEmailInsensitive(selectedEmployee.email, { select: { id: true } });
 
   const [openingBalanceRow, closingBalanceRow, walletRows, expenseRows, advanceRows, payrollRows, incentiveRows, commissionRows] =
     await Promise.all([

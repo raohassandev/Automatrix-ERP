@@ -7,6 +7,7 @@ import { formatMoney } from "@/lib/format";
 import { employeeCodeFromId } from "@/lib/employee-display";
 import { canManageEmployeeCompensation } from "@/lib/employee-compensation-access";
 import { EmployeeCompensationDialog } from "@/components/EmployeeCompensationDialog";
+import { findEmployeeByEmailInsensitive, findUserByEmailInsensitive } from "@/lib/identity";
 
 export default async function EmployeeDetailPage({
   params,
@@ -22,8 +23,7 @@ export default async function EmployeeDetailPage({
   const canViewAll = await requirePermission(session.user.id, "employees.view_all");
   const canViewTeam = await requirePermission(session.user.id, "employees.view_team");
   const currentUserEmployee = session.user.email
-    ? await prisma.employee.findUnique({
-        where: { email: session.user.email },
+    ? await findEmployeeByEmailInsensitive(session.user.email, {
         select: { id: true, directReports: { select: { id: true } } },
       })
     : null;
@@ -66,7 +66,7 @@ export default async function EmployeeDetailPage({
     );
   }
 
-  const user = await prisma.user.findUnique({ where: { email: employee.email }, select: { id: true } });
+  const user = await findUserByEmailInsensitive(employee.email, { select: { id: true } });
   const [assignments, walletEntries, expenses, payrollEntries, incentiveEntries, salaryAdvances] = await Promise.all([
     user?.id
       ? prisma.projectAssignment.findMany({

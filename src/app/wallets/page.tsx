@@ -8,6 +8,7 @@ import PaginationControls from "@/components/PaginationControls";
 import QuerySelect from "@/components/QuerySelect";
 import DateRangePicker from "@/components/DateRangePicker";
 import Link from "next/link";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 export default async function WalletLedgerPage({
   searchParams,
@@ -52,7 +53,7 @@ export default async function WalletLedgerPage({
   const skip = (page - 1) * take;
 
   const ownEmployee = session.user.email
-    ? await prisma.employee.findUnique({ where: { email: session.user.email }, select: { id: true } })
+    ? await findEmployeeByEmailInsensitive(session.user.email, { select: { id: true } })
     : null;
 
   let baseWhere: import("@prisma/client").Prisma.WalletLedgerWhereInput = {};

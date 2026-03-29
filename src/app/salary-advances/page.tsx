@@ -9,6 +9,7 @@ import { SalaryAdvanceCreateButton } from "@/components/SalaryAdvanceCreateButto
 import { SalaryAdvanceActions } from "@/components/SalaryAdvanceActions";
 import { StatusBadge } from "@/components/StatusBadge";
 import { MobileCard } from "@/components/MobileCard";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 export default async function SalaryAdvancesPage({
   searchParams,
@@ -41,8 +42,7 @@ export default async function SalaryAdvancesPage({
 
   let ownEmployeeId: string | null = null;
   if (!canViewAll && session.user.email) {
-    const employee = await prisma.employee.findUnique({
-      where: { email: session.user.email },
+    const employee = await findEmployeeByEmailInsensitive(session.user.email, {
       select: { id: true },
     });
     ownEmployeeId = employee?.id || null;

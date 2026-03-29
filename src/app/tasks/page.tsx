@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { TasksWorkspace } from "@/components/TasksWorkspace";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 export default async function TasksPage() {
   const session = await auth();
@@ -38,8 +39,7 @@ export default async function TasksPage() {
   });
   const assignedProjectIds = assignedProjects.map((row) => row.projectId);
   const currentEmployee = session.user.email
-    ? await prisma.employee.findUnique({
-        where: { email: session.user.email },
+    ? await findEmployeeByEmailInsensitive(session.user.email, {
         select: { id: true, directReports: { select: { email: true } } },
       })
     : null;

@@ -680,6 +680,64 @@ Reason: implemented-module program baseline is complete and validated with deplo
 - Rule going forward:
   - this plan remains the source of truth; future work should be appended as new dated closure batches/phases without reopening closed implemented-module baseline status.
 
+### 11.12 Role-Objective Recovery Program (2026-03-29)
+
+- Reason:
+  - implemented-module baseline is complete, but business usability for people/finance workflows still depends on role-objective completion, not only route availability.
+  - `Profile` and `Employee Finance Workspace` must be treated as separate products with separate success criteria.
+- Product separation (locked):
+  - `Employee Profile` = identity, employment metadata, compensation snapshot, restricted PII.
+  - `Employee Finance Workspace` = interval-based finance operations, reconciliation, drilldowns, and exception handling.
+  - `My Dashboard` = employee self-service control panel only.
+- Recovery objective:
+  - prove that `Owner`, `Accountant`, and `Employee` can complete their top people/finance objectives with minimum primary navigations and correct RBAC boundaries.
+- Role objectives (must be verifiably achievable):
+  - `Owner`
+    - inspect any employee's financial position for a selected interval
+    - drill from summary to wallet/expense/payroll/advance evidence
+    - identify outstanding payables, recoverables, and exception states
+  - `Accountant`
+    - reconcile issued vs consumed vs payable amounts for an employee
+    - verify approved employee-expense totals and source-linked entries
+    - access operational finance workspace and export-safe reporting paths
+  - `Employee`
+    - inspect own wallet/payroll/advance context from self-service
+    - submit and track expenses with minimal navigation
+    - remain blocked from unauthorized cross-employee finance views
+- Execution order (locked):
+  - `R1` identity and role truth
+    - confirm provided user accounts map correctly to intended employee records
+    - confirm effective permissions match intended business role
+    - fix missing employee linkage / wrong role assignment before UI changes
+  - `R2` accountant usability
+    - harden `Employee Finance Workspace` for finance/operator use
+    - ensure interval filter, timeline, and drill links work for finance roles
+  - `R3` owner usability
+    - verify executive visibility path and minimum-navigation oversight workflow
+    - ensure owner route access is not blocked by missing credentials/role drift
+  - `R4` employee self-service
+    - confirm self-only dashboard/wallet/expense/payroll journey is clear and low-friction
+  - `R5` navigation reduction and evidence
+    - remove unnecessary route hops for top objectives
+    - add objective-based Playwright coverage with navigation-count expectations
+- Success gate:
+  - each role can complete its top 3 objectives
+  - each objective requires `1-3` primary navigations
+  - every key amount shown drills to source evidence
+  - unauthorized access fails cleanly with explicit RBAC response
+  - Playwright role audit passes for provided test accounts or explicitly documented mapped replacements
+- Current execution status:
+  - `R1` started on `2026-03-29`
+  - provided-account staging audit completed
+  - Playwright recovery audit result:
+    - `israrulhaq5@gmail.com` resolves as `Owner`, can load `/employees` and `/reports/employee-expenses`, but still fails `/employees/finance-workspace` with `Employee not found`
+    - the other four supplied accounts are self-scope employee paths: `/me` works and cross-employee finance/report routes are correctly blocked
+    - accountant-grade objective coverage is still absent from the supplied accounts
+  - engineering remediation started:
+    - introduced case-insensitive session-email identity lookup helper for employee/user linkage
+    - applied linkage hardening across employees, finance workspace, wallets, salary advances, incentives, commissions, tasks, and wallet export/task API paths
+  - next action: ship and verify the linkage fix on staging, then rerun the same objective audit and add a real accountant credential to the audit set.
+
 ---
 
 ## 12) PHASED ROADMAP (Execution Order, DoD, Dependencies)

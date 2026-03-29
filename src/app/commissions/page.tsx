@@ -8,6 +8,7 @@ import PaginationControls from "@/components/PaginationControls";
 import { CommissionCreateButton } from "@/components/CommissionCreateButton";
 import { CommissionActions } from "@/components/CommissionActions";
 import { MobileCard } from "@/components/MobileCard";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 export default async function CommissionsPage({
   searchParams,
@@ -40,8 +41,7 @@ export default async function CommissionsPage({
 
   let ownEmployeeId: string | null = null;
   if (!canViewAll && session.user.email) {
-    const employee = await prisma.employee.findUnique({
-      where: { email: session.user.email },
+    const employee = await findEmployeeByEmailInsensitive(session.user.email, {
       select: { id: true },
     });
     ownEmployeeId = employee?.id || null;

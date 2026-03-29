@@ -7,6 +7,7 @@ import SearchInput from "@/components/SearchInput";
 import PaginationControls from "@/components/PaginationControls";
 import { PageCreateButton } from "@/components/PageCreateButton";
 import { formatMoney } from "@/lib/format";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 export default async function EmployeesPage({
   searchParams,
@@ -40,8 +41,7 @@ export default async function EmployeesPage({
   const take = 25;
   const skip = (page - 1) * take;
   const currentEmployee = session.user.email
-    ? await prisma.employee.findUnique({
-        where: { email: session.user.email },
+    ? await findEmployeeByEmailInsensitive(session.user.email, {
         select: { id: true },
       })
     : null;

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { toTaskPriority, toTaskStatus } from "@/lib/tasks";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 const createTaskSchema = z.object({
   projectId: z.string().trim().min(1),
@@ -55,8 +56,7 @@ export async function GET(req: Request) {
   });
   const assignedProjectIds = assignedProjects.map((row) => row.projectId);
   const currentEmployee = session.user.email
-    ? await prisma.employee.findUnique({
-        where: { email: session.user.email },
+    ? await findEmployeeByEmailInsensitive(session.user.email, {
         select: { directReports: { select: { email: true } } },
       })
     : null;

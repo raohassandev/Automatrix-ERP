@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -51,7 +52,7 @@ export async function GET(req: Request) {
   });
 
   const ownEmployee = session.user.email
-    ? await prisma.employee.findUnique({ where: { email: session.user.email }, select: { id: true } })
+    ? await findEmployeeByEmailInsensitive(session.user.email, { select: { id: true } })
     : null;
 
   let baseWhere: Record<string, unknown> = {};
