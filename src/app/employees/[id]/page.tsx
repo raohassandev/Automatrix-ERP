@@ -141,14 +141,22 @@ export default async function EmployeeDetailPage({
               <span>Role: {employee.role}</span>
             </div>
           </div>
-          {canViewClientPreview ? (
+          <div className="flex flex-wrap items-center gap-2">
             <a
-              href={`/employees/${employee.id}/dashboard-preview`}
+              href={`/employees/finance-workspace?employeeId=${employee.id}`}
               className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
             >
-              View Dashboard Preview
+              Open Finance Workspace
             </a>
-          ) : null}
+            {canViewClientPreview ? (
+              <a
+                href={`/employees/${employee.id}/dashboard-preview`}
+                className="rounded-md border border-border px-3 py-2 text-sm hover:bg-accent"
+              >
+                View Dashboard Preview
+              </a>
+            ) : null}
+          </div>
         </div>
       </div>
 

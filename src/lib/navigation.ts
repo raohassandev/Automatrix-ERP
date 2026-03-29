@@ -68,6 +68,12 @@ export const navGroups: NavGroup[] = [
     title: "People",
     items: [
       { name: "Employees", href: "/employees", icon: Users, permissions: ["employees.view_all", "employees.view_team"] },
+      {
+        name: "Employee Finance",
+        href: "/employees/finance-workspace",
+        icon: FileBarChart,
+        permissions: ["employees.view_all", "employees.view_team", "employees.view_own", "reports.view_all", "reports.view_team", "reports.view_own"],
+      },
       { name: "Wallet Ledger", href: "/wallets", icon: Wallet, permissions: ["employees.view_own", "employees.view_all", "employees.edit_wallet"] },
       { name: "Payroll", href: "/payroll", icon: Wallet, permissions: ["payroll.view_all", "payroll.edit", "payroll.approve"] },
       { name: "Attendance", href: "/hrms/attendance", icon: Users, permissions: ["employees.view_all", "employees.view_team", "employees.view_own"] },
@@ -81,6 +87,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { name: "Approvals", href: "/approvals", icon: FileCheck, permissions: ["approvals.view_all", "approvals.view_pending", "approvals.approve_low", "approvals.approve_high", "expenses.approve_low", "expenses.approve_medium", "expenses.approve_high"] },
       { name: "Audit Log", href: "/audit", icon: FileText, permissions: ["audit.view"] },
+      { name: "Data Ops", href: "/data-ops", icon: FileBarChart, permissions: ["audit.view"] },
       { name: "Master Data", href: "/master-data", icon: Building2, permissions: ["clients.view_all", "vendors.view_all", "categories.manage", "departments.view_all", "designations.view_all"] },
       { name: "Settings", href: "/settings", icon: Settings, permissions: ["employees.view_all", "company_accounts.manage", "accounting.manage"] },
     ],

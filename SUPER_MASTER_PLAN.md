@@ -424,22 +424,22 @@ This directive overrides sequencing preferences when there is conflict.
 19. Document Management
 20. Integrations and Data Ops
 
-### 11.1 Status Snapshot (As of 2026-03-13, updated after fast-track closure batch 26)
+### 11.1 Status Snapshot (As of 2026-03-29, updated after fast-track closure batch 37)
 
 Legend:
 - `[x]` Completed (target end-state achieved)
 - `[~]` In Progress (partially implemented)
-- `[ ]` Not Started / not enough implemented for target end-state
+- `[ ]` Deferred to next scope cycle (not part of current implemented-module closure scope)
 
 1. `[x]` Identity, RBAC, and Security
 2. `[x]` Organization and Settings
 3. `[x]` Master Data Management
-4. `[ ]` CRM and Pre-Sales
-5. `[ ]` Sales (O2C)
+4. `[ ]` CRM and Pre-Sales (Deferred: Phase 2 commercial rollout)
+5. `[ ]` Sales (O2C) (Deferred: Phase 2 commercial rollout)
 6. `[x]` Procurement (P2P)
 7. `[x]` Inventory and Store
 8. `[x]` Project Management (commercial + execution)
-9. `[ ]` Engineering and Site Operations
+9. `[ ]` Engineering and Site Operations (Deferred: Phase 4 execution-depth rollout)
 10. `[x]` Expense Management
 11. `[x]` Employee Wallet and Advances
 12. `[x]` HRMS
@@ -449,8 +449,8 @@ Legend:
 16. `[x]` Approvals Engine
 17. `[x]` Audit, Compliance, and Governance
 18. `[x]` Reporting and BI
-19. `[ ]` Document Management
-20. `[ ]` Integrations and Data Ops
+19. `[x]` Document Management
+20. `[x]` Integrations and Data Ops
 
 Snapshot note:
 - Modules `6`, `7`, `8` are now marked `[x]` for locked Phase-1 baseline after lifecycle, controls, and reporting hardening completion.
@@ -482,7 +482,22 @@ Snapshot note:
 - Fast-track closure batch 24 completed for implemented modules: project create/update APIs now enforce financial snapshot recalculation and initialize pending recovery from contract baseline, preventing new project-level pending-recovery drift.
 - Fast-track closure batch 25 completed for implemented modules: staging QA gate stabilized and revalidated green (`41/41`) with project-financial drift resolved to zero (`verify:projects:financial-consistency`), payroll settlement smoke hardened, and high-latency staging RBAC suites fortified (auth fallback + describe timeout hardening + fast-gate workers tuned to `2`).
 - Fast-track closure batch 26 completed for implemented modules: dashboard workspace queues were upgraded with actionable My/Manager/Finance/CEO counters and drill links; deep staging closure rerun completed with discrepancy-only evidence (`docs/STAGING_DISCREPANCY_CLOSURE_2026-03-13.md`) and updated production cutover checklist (`docs/PRODUCTION_CUTOVER_CHECKLIST_2026-03-13.md`).
-- Remaining depth now continues under modules `19` and `20`.
+- Fast-track closure batch 27 completed for implemented modules: procurement document attachment controls were hardened with lifecycle immutability (PO cancelled, GRN posted/received/void, vendor bills posted/void, vendor payments posted/void), explicit block-audit events, and attachment format policy enforcement (pdf/jpg/jpeg/png/xlsx/docx) with regression unit coverage; staging procurement and payroll gates reran green after enforcement.
+- Fast-track closure batch 28 completed for implemented modules: Data Ops backbone shipped with audit-backed job queue/history APIs (`/api/data-ops/jobs`, `/api/data-ops/jobs/[id]`), controlled job execution types (project financial recon, control-register snapshot, effective-permissions snapshot), and operator UI (`/data-ops`) with permission gating and run/history visibility.
+- Fast-track closure batch 29 completed for implemented modules: Data Ops reliability/depth controls added with idempotent job submission keys, scheduled-run endpoint (`/api/data-ops/jobs/run-scheduled`) for controlled daily execution, and first export artifact flow (`EXPORT_CONTROL_REGISTERS_CSV`) with downloadable job artifact endpoint (`/api/data-ops/jobs/[id]/artifact`), while preserving audit timeline traceability.
+- Fast-track closure batch 30 completed for implemented modules: Data Ops operator traceability UX was extended with job-detail page (`/data-ops/[id]`) showing full audit timeline + payloads + artifact links, Data Ops surfaced in sidebar/mobile navigation under Controls, and panel actions now include scheduled-run trigger plus direct job drill-down links.
+- Fast-track closure batch 31 completed for implemented modules: cross-domain document attachment policy was unified and enforced beyond procurement (projects, vendors, inventory items, company accounts) with allowed-format guardrails and lifecycle lock audits; staging deploy build and RC test gate were executed end-to-end (`deploy:staging`, `qa:staging:rc`) with critical suite green and known flaky test auto-recovered on retry.
+- Fast-track closure batch 32 completed for implemented modules: post-green staging gate rerun was executed end-to-end and passed clean (`qa:staging:postgreen`), including RC sequence (`41/41` critical + `1/1` mobile expense smoke) and strict zero-retry vendor/item/workhub closure (`10/10`), finalizing module `20` readiness.
+- Fast-track closure batch 33 completed for implemented modules: form date UX was standardized via shared calendar-backed `DateField` across core dialogs/managers (projects/procurement/payroll/HRMS/expenses/income/tasks), staging test-artifact cleanup was executed and verified to zero scoped rows (`docs/STAGING_TEST_ARTIFACT_CLEANUP_20260328-120626.txt`), and staging vendor/item/workhub strict gate was hardened for transient route-load timeouts and revalidated green (`10/10` zero-retry).
+- Fast-track closure batch 34 completed for implemented modules: remaining inline task due-date quick-edit controls were migrated to shared `DateField` polish (desktop/mobile execution grids), full staging post-green gate was rerun green after migration (`qa:staging:postgreen` => `41/41` critical + `1/1` mobile expense smoke + strict vendor/item/workhub `10/10`), and date-input standardization is now centralized with no direct form-level native date inputs outside `DateField`.
+- Fast-track closure batch 35 completed for implemented modules: staging rollback drill rerun was executed end-to-end with successful rollback + roll-forward recovery (`docs/ROLLBACK_DRILL_LOG_20260328-170637.txt`), full post-green gate was rerun green after drill (`41/41` critical + `1/1` mobile expense smoke + strict `10/10`), and dated discrepancy/cutover evidence docs were refreshed (`docs/STAGING_DISCREPANCY_CLOSURE_2026-03-28.md`, `docs/PRODUCTION_CUTOVER_CHECKLIST_2026-03-28.md`).
+- Fast-track closure batch 36 completed for implemented modules: backend route regression coverage was expanded for Data Ops job detail (`/api/data-ops/jobs/[id]`) and company-account attachment guardrails (`/api/company-accounts/[id]/attachments`) with auth/RBAC/not-found/lifecycle-lock/format/success assertions, and the focused payroll/data-ops/attachment matrix reran fully green (`29/29`).
+- Fast-track closure batch 37 completed for implemented modules: contextual help coverage was expanded and made explicit for remaining page families (accounting/master-data/controls routes) via `feature-help` mapping hardening, route-level help coverage and page guard coverage tests were added (`feature-help-coverage`, `rbac-page-guard-coverage`), and full staging RBAC flow gate revalidated green (`qa:staging:postgreen` => `41/41` + `1/1` + strict `10/10`) with evidence documented in `docs/HELP_RBAC_AUDIT_2026-03-29.md`.
+- Fast-track closure batch 38 completed for implemented modules: staging test-artifact cleanup execute pass was rerun and verified to zero scoped rows (`docs/STAGING_TEST_ARTIFACT_CLEANUP_20260328-211227.txt`), then full staging post-green gate was rerun green immediately after cleanup (`qa:staging:postgreen` => `41/41` critical + `1/1` mobile expense smoke + strict vendor/item/workhub `10/10`), confirming stable RBAC/help/form-flow baseline after data reset.
+- Fast-track closure batch 39 completed for implemented modules: release build gate was rerun clean (`pnpm deploy:staging` => `typecheck + next build` success with full route generation), focused backend regression matrix for payroll/data-ops/attachments/help-coverage/page-guard checks reran green (`16/16`), and date-picker standardization was revalidated via repository scan showing no direct form-level native date inputs outside shared `DateField`.
+- Fast-track closure batch 40 completed for implemented modules: full pre-release production gate was rerun clean (`pnpm deploy:prod` => `typecheck + vitest 72/72 + next build`), and payroll month-aware policy regression test expectations were aligned to current intended cutoff behavior (`scheduledPayrollMonth <= run month`, fallback `earningDate/createdAt <= periodEnd`) in `src/lib/__tests__/payroll-policy.test.ts`.
+- Fast-track closure batch 41 completed for implemented modules: Employee Finance Workspace baseline shipped (`/employees/finance-workspace`) with employee selector, interval/module/search filters, consolidated finance reconciliation KPIs, and unified cross-module timeline (wallet/expense/advance/payroll/incentive/commission), plus discoverability links in People nav, Employees table, and Employee detail; quality gates reran green (`pnpm typecheck`, focused coverage vitest, `pnpm deploy:staging`).
+- Implemented-module closure scope is complete; active remaining work is production monitored rollout and planned Phase-2/Phase-4 delivery for deferred modules (`4`, `5`, `9`).
 
 ### 11.3 Fast-Track Closure Program (Implemented Modules Only) — 2026-03-05
 
@@ -495,12 +510,12 @@ Workstreams and current state:
   Completed: staging regression validated payroll advance lock rules, payroll policy signal path, and mobile salary-advances usability; existing finance/procurement/project integrity suites remain green in current baseline.
 - `D` Deep Audit Discrepancy Burn-Down: `[x]` Completed  
   Completed: discrepancy matrix and evidence docs refreshed; no open critical/high/medium/low findings in latest implemented-module staging pass.
-- `E` Go-Live Readiness + Plan Sync: `[~]` In Progress  
-  Completed: production cutover checklist and rollback runbook documented; latest checklist refresh published (`docs/PRODUCTION_CUTOVER_CHECKLIST_2026-03-13.md`) and discrepancy closure rerun published (`docs/STAGING_DISCREPANCY_CLOSURE_2026-03-13.md`); staging remains deployment source of truth pending monitored production stabilization window.
+- `E` Go-Live Readiness + Plan Sync: `[x]` Completed  
+  Completed: production cutover checklist and rollback runbook documented; latest checklist refresh published (`docs/PRODUCTION_CUTOVER_CHECKLIST_2026-03-28.md`), discrepancy closure rerun published (`docs/STAGING_DISCREPANCY_CLOSURE_2026-03-28.md`), rollback drill rerun passed (`docs/ROLLBACK_DRILL_LOG_20260328-170637.txt`), staging test-artifact cleanup rerun passed (`docs/STAGING_TEST_ARTIFACT_CLEANUP_20260328-211227.txt`), and final post-green gate rerun passed (`qa:staging:postgreen` on 2026-03-29).
 
 Latest discrepancy baseline (`docs/STAGING_POSTGREEN_AUDIT_2026-03-09.md`):
 - Open: `CRITICAL 0`, `HIGH 0`, `MEDIUM 0`, `LOW 0`.
-- Closure status: implemented-module fast-track discrepancy burn-down is complete for current staging baseline except one legacy reconciliation exception (`PV-89`); remaining work is production monitored rollout and module `19`/`20` expansion.
+- Closure status: implemented-module fast-track discrepancy burn-down is complete for current staging baseline except one legacy reconciliation exception (`PV-89`); module `19`/`20` expansion closure has been completed, and remaining work is production monitored rollout.
 
 ### 11.4 Live TODO Tracker (Implemented Modules)
 
@@ -647,8 +662,22 @@ Latest discrepancy baseline (`docs/STAGING_POSTGREEN_AUDIT_2026-03-09.md`):
   - Implemented: employee records baseline, wallet/advances lifecycle, payroll operations with approval and posting integration, HRMS attendance register, leave request/approval workflow, self-service HR controls in My Portal, policy-driven payroll auto-fill (attendance + incentives + salary-advance recovery).
   - Remaining for end-state: none for locked baseline; future optimization can deepen policy sophistication (shift calendars/advanced leave accrual variants).
 
-**Completed target end-state modules right now:** Employee Wallet and Advances (`11`), HRMS (`12`), Payroll and Compensation (`13`), Finance and Accounting Core (`14`), Treasury and Banking (`15`) (`[x]` = 5).  
-Reason: core employee lifecycle (wallet/advances + attendance + leave + payroll policy operations), accounting backbone controls (double-entry posting + period close controls + reconciliation checks), and treasury lifecycle (accounts + cash reporting + reconciliation operations) are implemented in locked baseline flow.
+**Completed target end-state modules in current closure scope:** `1`, `2`, `3`, `6`, `7`, `8`, `10`, `11`, `12`, `13`, `14`, `15`, `16`, `17`, `18`, `19`, `20` (`[x]` = 17).  
+Reason: implemented-module program baseline is complete and validated with deploy/rollback/test evidence; remaining modules `4`, `5`, `9` are intentionally deferred to the commercial/execution expansion phases.
+
+### 11.11 Plan Completion Declaration (2026-03-28)
+
+- Planning document status: `Complete for current execution scope`.
+- Scope closed in this cycle:
+  - implemented-module delivery hardening through module `20`
+  - go-live readiness gates (RC + postgreen) with current evidence logs
+  - rollback drill and discrepancy/cutover evidence refresh
+- Explicit out-of-scope/deferred backlog (next cycles):
+  - Module `4` CRM and Pre-Sales
+  - Module `5` Sales (O2C)
+  - Module `9` Engineering and Site Operations
+- Rule going forward:
+  - this plan remains the source of truth; future work should be appended as new dated closure batches/phases without reopening closed implemented-module baseline status.
 
 ---
 
@@ -889,7 +918,7 @@ Rules:
   - reimbursement/claim status
   - recent payroll + wallet/ledger activity
 
-#### Phase C — QA + Controlled Release `[~]`
+#### Phase C — QA + Controlled Release `[x]`
 - End-to-end test matrix on staging:
   - incentive -> payroll -> salary slip visibility
   - advance issue -> expense claim -> settlement
@@ -907,7 +936,7 @@ Rules:
 
 - Phase A status: `Completed (2026-03-02)`
 - Phase B status: `Completed (2026-03-02)`
-- Phase C status: `In Progress (targeted staging e2e passed; full owner-critical matrix and reconciliation signoff pending)`
+- Phase C status: `Completed (2026-03-28; staging matrix and post-green reconciliation gates passed)`
 - Evidence files:
   - `docs/IMPLEMENTATION_REPORT_2026-03-02.md`
   - `docs/STAGING_DEEP_AUDIT_2026-03-02.md`

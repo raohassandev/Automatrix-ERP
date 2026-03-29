@@ -102,6 +102,9 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
                     <Button asChild size="sm" variant="outline">
                       <Link href={`/employees/${employee.id}`}>Profile</Link>
                     </Button>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/employees/finance-workspace?employeeId=${employee.id}`}>Finance</Link>
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -147,6 +150,9 @@ export function EmployeesTable({ employees, canEditEmployees }: EmployeesTablePr
               <>
                 <Button asChild size="sm" variant="outline">
                   <Link href={`/employees/${employee.id}`}>Profile</Link>
+                </Button>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/employees/finance-workspace?employeeId=${employee.id}`}>Finance</Link>
                 </Button>
                 <Button
                   size="sm"
