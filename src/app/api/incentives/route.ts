@@ -8,6 +8,7 @@ import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 import { computeProjectFinancialSnapshot, recalculateProjectFinancials, resolveProjectId } from "@/lib/projects";
 import { toMonthKey } from "@/lib/lifecycle";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 type ResolvedIncentiveAmount = {
   amount: number;
@@ -175,8 +176,7 @@ export async function GET() {
     if (!session.user.email) {
       return NextResponse.json({ success: false, error: "User email missing" }, { status: 400 });
     }
-    const employee = await prisma.employee.findUnique({
-      where: { email: session.user.email },
+    const employee = await findEmployeeByEmailInsensitive(session.user.email, {
       select: { id: true },
     });
     if (!employee) {

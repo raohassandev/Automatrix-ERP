@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
+import { normalizeExpenseAmount } from "@/lib/employee-finance";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -11,9 +12,13 @@ function toCsv(rows: Array<Array<string | number | null | undefined>>) {
           const value = field ?? "";
           return `"${String(value).replace(/"/g, '""')}"`;
         })
-        .join(",")
+        .join(","),
     )
     .join("\n");
+}
+
+function monthLabel(date: Date) {
+  return new Intl.DateTimeFormat("en", { month: "short", year: "numeric" }).format(date);
 }
 
 export async function GET(req: Request) {
@@ -31,98 +36,136 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
-  const search = (searchParams.get("search") || "").trim().toLowerCase();
-  const from = searchParams.get("from");
-  const to = searchParams.get("to");
+  const search = (searchParams.get("search") || "").trim();
+  const from = (searchParams.get("from") || "").trim();
+  const to = (searchParams.get("to") || "").trim();
+  const submittedById = (searchParams.get("submittedById") || "").trim();
+  const category = (searchParams.get("category") || "").trim();
+  const paymentSource = (searchParams.get("paymentSource") || "").trim();
+  const project = (searchParams.get("project") || "").trim();
+  const status = (searchParams.get("status") || "").trim();
+  const mode = (searchParams.get("mode") || "detail").trim().toLowerCase();
 
   await logAudit({
     action: "EXPORT_EMPLOYEE_EXPENSES_REPORT_CSV",
     entity: "Export",
     entityId: "employee-expenses-report",
-    newValue: JSON.stringify({ route: "/api/reports/employee-expenses/export", query: searchParams.toString() }),
+    newValue: JSON.stringify({ route: "/api/reports/employee-expenses/export", query: searchParams.toString(), mode }),
     userId: session.user.id,
   });
 
-  const where: Record<string, unknown> = {
-    status: { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
+  const where: import("@prisma/client").Prisma.ExpenseWhereInput = {
+    status: status ? status : { in: ["APPROVED", "PARTIALLY_APPROVED", "PAID"] },
   };
   if (!canViewAll && !canViewTeam) {
     where.submittedById = session.user.id;
+  } else if (submittedById) {
+    where.submittedById = submittedById;
   }
+  if (category) where.category = category;
+  if (paymentSource) where.paymentSource = paymentSource;
+  if (project) where.project = project;
   if (from || to) {
     const range: { gte?: Date; lte?: Date } = {};
     if (from) range.gte = new Date(from);
     if (to) range.lte = new Date(to);
     where.date = range;
   }
+  if (search) {
+    where.OR = [
+      { description: { contains: search, mode: "insensitive" } },
+      { category: { contains: search, mode: "insensitive" } },
+      { project: { contains: search, mode: "insensitive" } },
+      { paymentSource: { contains: search, mode: "insensitive" } },
+      { submittedBy: { name: { contains: search, mode: "insensitive" } } },
+      { submittedBy: { email: { contains: search, mode: "insensitive" } } },
+    ];
+  }
 
   const expenses = await prisma.expense.findMany({
     where,
     select: {
-      submittedById: true,
+      id: true,
+      date: true,
       amount: true,
       approvedAmount: true,
       status: true,
       project: true,
       description: true,
       category: true,
+      paymentSource: true,
+      submittedById: true,
       submittedBy: { select: { name: true, email: true } },
     },
-    orderBy: { date: "desc" },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
 
-  const filtered = search
-    ? expenses.filter((exp) => {
-        const haystack = [
-          exp.submittedBy?.name,
-          exp.submittedBy?.email,
-          exp.project,
-          exp.description,
-          exp.category,
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(search);
-      })
-    : expenses;
+  if (mode === "summary") {
+    const employeeSummaryMap = new Map<string, { name: string; email: string; claims: number; total: number }>();
+    const categorySummaryMap = new Map<string, { claims: number; total: number }>();
+    const monthSummaryMap = new Map<string, { claims: number; total: number }>();
 
-  const aggregated = new Map<
-    string,
-    { name: string; email: string; total: number; count: number }
-  >();
+    expenses.forEach((row) => {
+      const approvedAmount = Number(normalizeExpenseAmount(row));
+      const employeeKey = row.submittedById || "unknown";
+      const employeeEntry = employeeSummaryMap.get(employeeKey) || {
+        name: row.submittedBy?.name || "Unknown",
+        email: row.submittedBy?.email || "unknown",
+        claims: 0,
+        total: 0,
+      };
+      employeeEntry.claims += 1;
+      employeeEntry.total += approvedAmount;
+      employeeSummaryMap.set(employeeKey, employeeEntry);
 
-  filtered.forEach((exp) => {
-    const key = exp.submittedById || "unknown";
-    const usedAmount =
-      exp.status === "PARTIALLY_APPROVED" && exp.approvedAmount !== null
-        ? Number(exp.approvedAmount)
-        : Number(exp.amount);
-    const entry = aggregated.get(key) || {
-      name: exp.submittedBy?.name || "Unknown",
-      email: exp.submittedBy?.email || "unknown",
-      total: 0,
-      count: 0,
-    };
-    entry.total += usedAmount;
-    entry.count += 1;
-    aggregated.set(key, entry);
-  });
+      const categoryEntry = categorySummaryMap.get(row.category) || { claims: 0, total: 0 };
+      categoryEntry.claims += 1;
+      categoryEntry.total += approvedAmount;
+      categorySummaryMap.set(row.category, categoryEntry);
 
-  const rows = Array.from(aggregated.values()).sort((a, b) => b.total - a.total);
+      const month = monthLabel(new Date(row.date));
+      const monthEntry = monthSummaryMap.get(month) || { claims: 0, total: 0 };
+      monthEntry.claims += 1;
+      monthEntry.total += approvedAmount;
+      monthSummaryMap.set(month, monthEntry);
+    });
 
-  const csvRows: Array<Array<string | number | null | undefined>> = [
-    ["Employee", "Email", "Records", "Total Approved"],
-    ...rows.map((row) => [row.name, row.email, row.count, row.total]),
+    const rows: Array<Array<string | number | null | undefined>> = [
+      ["Section", "Label", "Metric 1", "Metric 2", "Metric 3"],
+      ...Array.from(employeeSummaryMap.values()).map((row) => ["Employee", row.name, row.email, row.claims, row.total]),
+      ...Array.from(categorySummaryMap.entries()).map(([label, row]) => ["Category", label, row.claims, row.total, row.claims > 0 ? row.total / row.claims : 0]),
+      ...Array.from(monthSummaryMap.entries()).map(([label, row]) => ["Month", label, row.claims, row.total, row.claims > 0 ? row.total / row.claims : 0]),
+    ];
+
+    return new Response(toCsv(rows), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename=employee_expense_summary_${new Date().toISOString().slice(0, 10)}.csv`,
+      },
+    });
+  }
+
+  const rows: Array<Array<string | number | null | undefined>> = [
+    ["Date", "Employee", "Email", "Category", "Project", "Payment Source", "Status", "Amount", "Approved Amount", "Description", "Expense Id"],
+    ...expenses.map((row) => [
+      row.date.toISOString(),
+      row.submittedBy?.name || "Unknown",
+      row.submittedBy?.email || "unknown",
+      row.category,
+      row.project || "",
+      row.paymentSource || "",
+      row.status,
+      Number(row.amount),
+      Number(normalizeExpenseAmount(row)),
+      row.description,
+      row.id,
+    ]),
   ];
 
-  const csv = toCsv(csvRows);
-  const filename = `employee_expenses_${new Date().toISOString().slice(0, 10)}.csv`;
-
-  return new Response(csv, {
+  return new Response(toCsv(rows), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename=${filename}`,
+      "Content-Disposition": `attachment; filename=employee_expense_detail_${new Date().toISOString().slice(0, 10)}.csv`,
     },
   });
 }

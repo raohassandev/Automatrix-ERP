@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { formatMoney } from "@/lib/format";
 import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -29,8 +30,7 @@ export async function GET() {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const employee = await prisma.employee.findUnique({
-    where: { email: session.user.email },
+  const employee = await findEmployeeByEmailInsensitive(session.user.email, {
     select: { id: true },
   });
   if (!employee) {

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
+import { buildExpenseWhere, readExpenseQueryFilters } from "@/lib/expenses-query";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -11,12 +12,12 @@ function toCsv(rows: Array<Array<string | number | null | undefined>>) {
           const value = field ?? "";
           return `"${String(value).replace(/"/g, '""')}"`;
         })
-        .join(",")
+        .join(","),
     )
     .join("\n");
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   const userId = session?.user?.id;
 
@@ -31,21 +32,25 @@ export async function GET() {
     return new Response("Forbidden", { status: 403 });
   }
 
+  const { searchParams } = new URL(req.url);
+  const filters = readExpenseQueryFilters(searchParams);
+
   await logAudit({
     action: "EXPORT_EXPENSES_CSV",
     entity: "Export",
     entityId: "expenses",
-    newValue: JSON.stringify({ route: "/api/expenses/export", scope: canViewAll ? "ALL" : "OWN" }),
+    newValue: JSON.stringify({ route: "/api/expenses/export", scope: canViewAll ? "ALL" : "OWN", query: searchParams.toString() }),
     userId,
   });
 
   const expenses = await prisma.expense.findMany({
-    where: canViewAll ? {} : { submittedById: userId },
+    where: buildExpenseWhere(filters, { canViewAll, sessionUserId: userId }),
     include: {
       submittedBy: { select: { email: true, name: true } },
       approvedBy: { select: { email: true, name: true } },
+      companyAccount: { select: { name: true } },
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
 
   const rows = [
@@ -53,12 +58,14 @@ export async function GET() {
       "Date",
       "Description",
       "Category",
-      "Amount",
-      "Payment Mode",
+      "Expense Type",
       "Project",
+      "Payment Source",
+      "Payment Mode",
       "Status",
-      "Approval Level",
+      "Amount",
       "Approved Amount",
+      "Company Account",
       "Submitted By",
       "Approved By",
       "Receipt URL",
@@ -68,14 +75,16 @@ export async function GET() {
       expense.date.toISOString(),
       expense.description,
       expense.category,
-      expense.amount.toString(),
-      expense.paymentMode,
+      expense.expenseType,
       expense.project || "",
+      expense.paymentSource || "",
+      expense.paymentMode,
       expense.status,
-      expense.approvalLevel || "",
-      expense.approvedAmount ? expense.approvedAmount.toString() : "",
-      expense.submittedBy?.email || "",
-      expense.approvedBy?.email || "",
+      Number(expense.amount),
+      expense.approvedAmount ? Number(expense.approvedAmount) : "",
+      expense.companyAccount?.name || "",
+      expense.submittedBy?.email || expense.submittedBy?.name || "",
+      expense.approvedBy?.email || expense.approvedBy?.name || "",
       expense.receiptUrl || "",
       expense.createdAt.toISOString(),
     ]),

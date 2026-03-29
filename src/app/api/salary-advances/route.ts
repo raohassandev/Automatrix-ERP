@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 export async function GET() {
   const session = await auth();
@@ -24,8 +25,7 @@ export async function GET() {
     if (!session.user.email) {
       return NextResponse.json({ success: false, error: "User email missing" }, { status: 400 });
     }
-    const employee = await prisma.employee.findUnique({
-      where: { email: session.user.email },
+    const employee = await findEmployeeByEmailInsensitive(session.user.email, {
       select: { id: true },
     });
     if (!employee) {

@@ -740,6 +740,250 @@ Reason: implemented-module program baseline is complete and validated with deplo
     - reran Playwright role-objective recovery audit after deploy and verified pass state for owner/accountant/employee objectives
   - recovery objective status: complete
 
+### 11.13 Employee Finance Deep Audit Reopen (2026-03-29)
+
+- Audit reason:
+  - `11.12` proved role access and basic route usability, but it did not prove that Owner/Accountant/Employee can answer real finance questions with minimum navigation and decision-grade clarity.
+  - Passing Playwright on route access is not the same as completing the employee-finance product.
+  - The employee-finance area is therefore reopened as a product-completion stream, not an RBAC stream.
+- Audit conclusion:
+  - `Employee Profile`, `Employee Finance Workspace`, `Wallet Ledger`, `Expenses`, `Salary Advances`, and employee finance reports are all individually usable, but together they still do not provide a complete employee-finance investigation workflow.
+  - Current state is best described as `baseline operational`, not `end-state complete`.
+  - Core business question still requires too many route hops:
+    - example: "How much was issued to Ibrar, what did he spend, by category (`fuel`, `travel`, `food`, `other`), by month, on a selected interval, with totals and averages?"
+  - That question is not currently answerable from one truthful screen with one set of filters.
+
+- Deep findings:
+  - `F1` navigation is still fragmented for owner/accountant workflows
+    - current answer path often requires a hop across `Employees` -> `Employee Finance Workspace` -> `Wallet Ledger` -> `Expenses` -> `Employee Expense Summary` -> `Salary Advances`
+    - this violates the intended `1-3` primary navigation target for common finance questions
+    - current page set is route-oriented, not investigation-oriented
+  - `F2` `Employee Finance Workspace` is a baseline timeline, not a true employee financial statement
+    - current strengths:
+      - employee selector
+      - date interval
+      - module filter
+      - text search
+      - high-level KPI cards
+      - unified event timeline
+    - missing for end-state:
+      - category filter
+      - payment-source filter
+      - project filter
+      - monthly grouping
+      - category summary
+      - average per claim
+      - average per month
+      - running balance per row
+      - issued vs spent vs reimbursed vs outstanding reconciliation by interval
+      - quick drill from a summary card into an exact filtered detail view
+  - `F3` employee expense reporting is too shallow for finance analysis
+    - current `Employee Expense Summary` only groups approved expenses by employee
+    - missing:
+      - employee picker
+      - category breakdown
+      - monthly trend
+      - project slice
+      - payment-source slice
+      - status slice
+      - averages
+      - detail drilldown
+    - current output is a ranked summary table, not a finance analysis surface
+  - `F4` wallet ledger is a raw transaction list, not an analysis tool
+    - current strengths:
+      - date range
+      - type filter
+      - source filter
+      - employee filter
+      - export
+    - missing:
+      - opening balance for selected interval
+      - closing balance for selected interval
+      - grouped totals by source type
+      - monthly rollups
+      - issued/recovered/settled summaries
+      - source-of-funds explanation for finance review
+  - `F5` salary advances are not yet finance-review ready
+    - current page supports search and approvals, but not interval-based investigation
+    - missing:
+      - date range
+      - status filter
+      - export
+      - aging / overdue recovery view
+      - month-wise outstanding analysis
+      - employee reconciliation against payroll recovery
+  - `F6` export parity is not consistently truthful
+    - `Wallet Ledger` export respects active filters
+    - `Employee Expense Summary` export mirrors only the current shallow aggregate
+    - `Expenses` export is materially defective:
+      - current UI supports rich filters (`date`, `status`, `expenseType`, `paymentSource`, `paymentMode`, `project`, `submittedById`)
+      - `/api/expenses/export` ignores the active query filters and exports role-scope rows only
+      - this is a real finance-control defect because exported data can differ from the on-screen filtered dataset
+  - `F7` employee profile still mixes master record and operational preview
+    - profile currently contains identity, PII, projects, wallet preview, expenses preview, payroll preview, incentive preview, and salary advances preview
+    - this is acceptable as a summary page, but not as the primary finance workspace
+    - profile should remain a master record with selective previews, not become the place where finance users perform reconciliation
+  - `F8` reports hub still positions employee finance surfaces as secondary
+    - `Employee Expense Summary` and `Wallet Summary` are still listed under `Legacy / Non-spine`
+    - this is a signal that employee-finance analysis has not yet been elevated to a first-class operational truth surface
+  - `F9` partial truth already exists in control registers, but not as employee investigation UX
+    - `control-registers` already computes:
+      - reimbursement due
+      - advance outstanding
+      - payroll due
+      - variable pay due
+      - net company payable by employee
+    - this is strong data groundwork, but it is not yet surfaced as an employee-centric investigation console with interval filters and drilldowns
+  - `F10` self-service identity consistency is still not fully hardened
+    - `My Dashboard` still uses a case-sensitive employee lookup by email
+    - that means the prior identity hardening is incomplete at product level
+    - this is a lower-severity issue than owner/accountant analytics gaps, but it remains a real defect
+  - `F11` objective-based test coverage is still too shallow
+    - current role audit proves route access and blocking behavior
+    - missing automated proof for:
+      - answering top finance questions end-to-end
+      - preserved drilldown filters
+      - export parity against UI filters
+      - navigation-count targets
+
+- Product correction (locked):
+  - `Employee Profile`
+    - purpose: identity, employment metadata, compensation snapshot, restricted PII, project assignment context
+    - must not carry the burden of finance investigation
+  - `Employee Finance Workspace`
+    - purpose: one-screen employee finance investigation and reconciliation
+    - must become the primary owner/accountant surface for employee money questions
+  - `My Dashboard`
+    - purpose: self-service only
+    - must remain simple and self-scoped
+
+- Business questions that must become first-class supported outcomes:
+  - how much was issued to employee `X` in a selected interval?
+  - how much did employee `X` spend in that same interval?
+  - what portion was `fuel`, `travel`, `food`, `lodging`, `other`?
+  - what was company-funded vs employee-pocket vs wallet-funded?
+  - what is reimbursable, reimbursed, advance-outstanding, payroll-due, and closing position?
+  - what is the monthly trend and average per claim / per month?
+  - can each number drill to the exact rows that created it?
+
+- Reopened execution backlog:
+  - `P0` build `Employee Finance Workspace v2`
+    - employee picker
+    - interval picker
+    - category filter
+    - payment-source filter
+    - project filter
+    - source/module filter
+    - one-screen finance statement:
+      - opening position
+      - issued amount
+      - expense booked
+      - expense approved
+      - reimbursable due
+      - reimbursed
+      - advance outstanding
+      - payroll due
+      - variable pay due
+      - closing position
+    - detail timeline with deterministic ordering and running balance
+    - summary-card drilldowns that preserve filters
+  - `P0` build employee expense analytics, not just summaries
+    - category totals table
+    - monthly totals table
+    - average per claim
+    - average per month
+    - employee/category/project/payment-source slices
+    - exact-row drilldowns
+  - `P0` fix export parity
+    - `Expenses` export must respect all active UI filters
+    - finance workspace export must mirror current filter state exactly
+    - employee expense analytics export must support detailed and summary modes
+  - `P0` add salary-advance investigation capability
+    - date range
+    - status filter
+    - export
+    - aging view
+    - outstanding by employee
+    - recovery trace into payroll or wallet offsets
+  - `P1` upgrade wallet analytics
+    - opening/closing balance for interval
+    - grouped totals by source type
+    - monthly funding and usage rollups
+    - top source contributors and deductions
+  - `P1` restructure employee detail for clearer product boundaries
+    - keep profile as summary/master record
+    - move finance-heavy decisions into finance workspace
+    - keep previews, but remove expectation that profile answers accounting questions
+  - `P1` harden self-service linkage consistency
+    - replace remaining case-sensitive employee lookups
+    - verify `/me` against the same identity helper used elsewhere
+  - `P1` elevate employee finance from legacy reporting status
+    - reports hub should point finance users toward the true finance workspace
+    - legacy report surfaces should be repositioned as supporting views, not primary decision tools
+  - `P2` add productivity features for real finance use
+    - saved views (`This Month`, `Last Month`, `Quarter`, `Custom`)
+    - compare intervals
+    - exception panel (`unsettled approved pocket expenses`, `overdue advances`, `negative availability`, `recovery mismatches`)
+    - role-safe PDF/CSV export variants
+
+- Data and UX constraints for implementation:
+  - all summary cards must derive from a single canonical employee-finance event set for the selected employee and interval
+  - every number displayed must drill to a preserved filtered row set
+  - export rows must match the same filter contract as the UI
+  - owner/accountant questions must be answerable in `1-3` primary navigations
+  - no screen should require memorizing `employeeId`; employee lookup must always work by name/email selector
+
+- Acceptance gates before this stream can be called complete:
+  - Owner can answer "issued vs spent vs outstanding for employee `X` in interval `Y`" from one primary workspace
+  - Accountant can filter by category (`fuel`, `travel`, `food`, `other`) and export exactly the same filtered dataset
+  - monthly totals and averages are visible without route hopping
+  - salary-advance aging and recovery are traceable without leaving employee finance context
+  - profile remains clean and understandable as a profile
+  - Playwright covers:
+    - owner finance investigation objective
+    - accountant category/interval/export objective
+    - employee self-service objective
+    - filter-preserving drilldowns
+    - export parity
+    - navigation-count thresholds
+
+- Execution status:
+  - audit completed on `2026-03-29`
+  - status after audit: `reopened for product completion`
+  - closure batch `11.13-a` completed on `2026-03-29`
+    - upgraded `Employee Finance Workspace` into a one-screen investigation surface with:
+      - category, payment-source, project, module, employee, date, and text filters
+      - finance statement cards (`issued`, `consumed`, `expense approved`, `reimburse due`, `advance outstanding`, `payroll due`, `variable pay due`, `net company payable`)
+      - category breakdown, monthly trend, detailed expense rows, and filtered unified timeline
+      - filter-preserving timeline export route
+    - upgraded `Employee Expense Summary` into `Employee Expense Analytics` with:
+      - employee/category/payment-source/project/status/date filters
+      - employee summary, category summary, monthly summary, detailed rows
+      - `detail` and `summary` export modes
+    - upgraded `Wallet Ledger` with:
+      - employee selector, source summary, monthly movement, credits/debits/net movement cards
+      - opening/closing balance support when scoped to one employee
+    - upgraded `Salary Advances` with:
+      - employee/date/status filters
+      - issued/outstanding/aging summary cards
+      - monthly summary and CSV export
+    - fixed export parity and identity consistency:
+      - `/api/expenses/export` now respects active UI filters
+      - self-scope employee lookup hardened across `My Dashboard`, salary-advance API, incentives/commissions APIs, self exports, wallet helper, and expense wallet-hold adjustment paths
+    - clarified product boundary:
+      - employee profile now explicitly positions itself as profile/preview and directs finance investigation to the finance workspace
+      - reports hub now elevates `Employee Finance Workspace` as the primary employee-finance investigation surface
+  - verification completed on local build/test gates:
+    - `pnpm typecheck` passed
+    - `pnpm build` passed
+    - targeted vitest passed:
+      - `expenses-export-route.test.ts`
+      - `salary-advances-export-route.test.ts`
+      - `employee-finance-export-route.test.ts`
+  - next execution rule:
+    - do not treat employee-finance as complete again until the above acceptance gates are met on staging with live role verification
+    - future progress must be logged as dated closure batches under this section
+
 ---
 
 ## 12) PHASED ROADMAP (Execution Order, DoD, Dependencies)

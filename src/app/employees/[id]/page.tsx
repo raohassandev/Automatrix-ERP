@@ -124,8 +124,8 @@ export default async function EmployeeDetailPage({
   return (
     <div className="grid gap-6">
       <div className="rounded-xl border bg-card p-8 shadow-sm">
-        <h1 className="text-2xl font-semibold">Employee</h1>
-        <p className="mt-2 text-muted-foreground">HR/Finance view (PII permission-gated).</p>
+        <h1 className="text-2xl font-semibold">Employee Profile</h1>
+        <p className="mt-2 text-muted-foreground">Master employee record. Use Finance Workspace for interval-based money investigation and reconciliation.</p>
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
@@ -158,6 +158,9 @@ export default async function EmployeeDetailPage({
             ) : null}
           </div>
         </div>
+        <div className="mt-4 rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
+          This page is the employee profile and preview surface. Funding, expense analysis, payroll due, reimbursements, and advance investigation belong in the Finance Workspace.
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -177,7 +180,7 @@ export default async function EmployeeDetailPage({
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Company Profile</h2>
+        <h2 className="text-lg font-semibold">Profile Overview</h2>
           <EmployeeCompensationDialog
             employeeId={employee.id}
             employeeName={employee.name}
@@ -271,7 +274,7 @@ export default async function EmployeeDetailPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold">Wallet Ledger</h2>
+            <h2 className="text-lg font-semibold">Wallet Preview</h2>
             <a
               href={`/wallets?employeeId=${employee.id}`}
               className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-accent"
@@ -310,7 +313,7 @@ export default async function EmployeeDetailPage({
         </div>
 
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Submitted Expenses</h2>
+          <h2 className="text-lg font-semibold">Expense Preview</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Employee-submitted expenses with approval status and project impact.
           </p>

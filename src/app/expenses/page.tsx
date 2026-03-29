@@ -70,6 +70,10 @@ interface ProjectOption {
   name: string;
 }
 
+interface CategoryOption {
+  name: string;
+}
+
 export default function ExpensesPage() {
   return (
     <Suspense fallback={<TablePageSkeleton />}>
@@ -91,6 +95,7 @@ function ExpensesPageContent() {
   const [bulkPending, setBulkPending] = useState(false);
   const [employeeOptions, setEmployeeOptions] = useState<EmployeeOption[]>([]);
   const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
   const canViewAllExpenses = canAccess(["expenses.view_all"]);
   const canCreate = canAccess(["expenses.submit"]);
   const canEditAny = canAccess(["expenses.edit"]);
@@ -137,9 +142,10 @@ function ExpensesPageContent() {
   useEffect(() => {
     const loadFilterOptions = async () => {
       try {
-        const [projectsRes, employeesRes] = await Promise.all([
+        const [projectsRes, employeesRes, categoriesRes] = await Promise.all([
           fetch("/api/projects", { cache: "no-store" }),
           canViewAllExpenses ? fetch("/api/employees", { cache: "no-store" }) : Promise.resolve(null),
+          fetch("/api/categories?type=expense", { cache: "no-store" }),
         ]);
         const projectsJson = await projectsRes.json().catch(() => ({}));
         if (projectsRes.ok && Array.isArray(projectsJson?.data)) {
@@ -159,6 +165,14 @@ function ExpensesPageContent() {
               })),
             );
           }
+        }
+        const categoriesJson = await categoriesRes.json().catch(() => ({}));
+        if (categoriesRes.ok && Array.isArray(categoriesJson?.data)) {
+          setCategoryOptions(
+            categoriesJson.data.map((name: string) => ({
+              name,
+            })),
+          );
         }
       } catch (error) {
         console.error("Failed to load expense filter options", error);
@@ -253,6 +267,14 @@ function ExpensesPageContent() {
               ]}
             />
             <QuerySelect
+              param="category"
+              placeholder="All categories"
+              options={categoryOptions.map((row) => ({
+                value: row.name,
+                label: row.name,
+              }))}
+            />
+            <QuerySelect
               param="paymentSource"
               placeholder="All sources"
               options={[
@@ -318,7 +340,7 @@ function ExpensesPageContent() {
           </div>
         </div>
         <div className="mt-3 text-xs text-muted-foreground">
-          Filters support status, type, source, payment mode, project, employee, date range, and free text search.
+          Filters support status, type, category, source, payment mode, project, employee, date range, and free text search.
         </div>
         <details className="mt-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-primary">

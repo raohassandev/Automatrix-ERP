@@ -163,6 +163,10 @@ export default async function ReportsPage() {
           <div className="text-sm text-muted-foreground">Controls</div>
           <div className="mt-2 text-lg font-semibold">Controls KPI Snapshot</div>
         </a>
+        <a href="/employees/finance-workspace" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
+          <div className="text-sm text-muted-foreground">People Finance</div>
+          <div className="mt-2 text-lg font-semibold">Employee Finance Workspace</div>
+        </a>
         <a href="/audit" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
           <div className="text-sm text-muted-foreground">Audit Log</div>
           <div className="mt-2 text-lg font-semibold">Traceability + exceptions</div>
@@ -170,7 +174,7 @@ export default async function ReportsPage() {
       </div>
 
       <div className="rounded-xl border bg-card p-6 shadow-sm">
-        <div className="text-sm font-medium text-muted-foreground">Legacy / Non-spine (not Phase 1 truth sources)</div>
+        <div className="text-sm font-medium text-muted-foreground">Supporting Views (use Employee Finance Workspace for employee-level investigation)</div>
         <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
           <a className="underline" href="/reports/expenses">
             Expense Report (non-stock)

@@ -7,6 +7,7 @@ import { employeeCodeFromId } from "@/lib/employee-display";
 import Link from "next/link";
 import { MobileCard } from "@/components/MobileCard";
 import { BellRing, CalendarCheck2, CreditCard, HandCoins } from "lucide-react";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 function resolveExpenseAmount(expense: { status: string; amount: number | { toString(): string }; approvedAmount: number | { toString(): string } | null }) {
   if ((expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED" || expense.status === "PAID") && expense.approvedAmount) {
@@ -62,8 +63,7 @@ export default async function MyDashboardPage() {
     );
   }
 
-  const employee = await prisma.employee.findUnique({
-    where: { email: session.user.email },
+  const employee = await findEmployeeByEmailInsensitive(session.user.email, {
     include: {
       reportingOfficer: {
         select: {

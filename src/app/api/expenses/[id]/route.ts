@@ -274,7 +274,9 @@ export async function PATCH(req: Request, context: { params: Promise<{ id: strin
           select: { email: true },
         });
         if (user?.email) {
-          const employee = await tx.employee.findUnique({ where: { email: user.email } });
+          const employee = await tx.employee.findFirst({
+            where: { email: { equals: user.email, mode: "insensitive" } },
+          });
           if (employee) {
             const delta = Number(parsed.data.amount) - Number(expense.amount);
             if (delta > 0) {
@@ -355,7 +357,9 @@ export async function DELETE(_req: Request, context: { params: Promise<{ id: str
         select: { email: true },
       });
       if (user?.email) {
-        const employee = await tx.employee.findUnique({ where: { email: user.email } });
+        const employee = await tx.employee.findFirst({
+          where: { email: { equals: user.email, mode: "insensitive" } },
+        });
         if (employee) {
           const currentHold = Number(employee.walletHold || 0);
           const nextHold = Math.max(0, currentHold - Number(expense.amount));

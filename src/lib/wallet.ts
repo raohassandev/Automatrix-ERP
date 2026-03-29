@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 
 export async function applyWalletTransactionByEmail(input: {
   email: string;
@@ -7,7 +8,7 @@ export async function applyWalletTransactionByEmail(input: {
   amount: number;
   reference?: string;
 }) {
-  const employee = await prisma.employee.findUnique({ where: { email: input.email } });
+  const employee = await findEmployeeByEmailInsensitive(input.email);
   if (!employee) {
     return { applied: false, reason: "Employee not found" } as const;
   }

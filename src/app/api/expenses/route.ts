@@ -12,6 +12,7 @@ import { sanitizeString } from '@/lib/sanitize';
 import { recalculateProjectFinancials, resolveProjectDbId, resolveProjectId } from '@/lib/projects';
 import { postExpenseApprovalJournal } from '@/lib/accounting';
 import { getOrganizationDefaults } from '@/lib/organization-settings';
+import { buildExpenseWhere, readExpenseQueryFilters } from '@/lib/expenses-query';
 
 const STOCK_KEYS_BLOCKED_IN_EXPENSES = [
   "addToInventory",
@@ -61,67 +62,16 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const search = searchParams.get('search') || '';
-    const category = searchParams.get('category') || '';
-    const status = searchParams.get('status') || '';
-    const expenseType = searchParams.get('expenseType') || '';
-    const paymentSource = searchParams.get('paymentSource') || '';
-    const paymentMode = searchParams.get('paymentMode') || '';
-    const submittedById = searchParams.get('submittedById') || '';
-    const project = searchParams.get('project') || '';
-    const from = searchParams.get('from');
-    const to = searchParams.get('to');
+    const filters = readExpenseQueryFilters(searchParams);
     const sortBy = searchParams.get('sortBy') || 'date';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
-    const where: Prisma.ExpenseWhereInput = {};
-
-    // Check if user can view all expenses or only their own
-    if (!canViewAll) {
-      where.submittedById = session.user.id;
-    }
-
-    if (search) {
-      where.OR = [
-        { description: { contains: search, mode: 'insensitive' as const } },
-        { category: { contains: search, mode: 'insensitive' as const } },
-        { project: { contains: search, mode: 'insensitive' as const } },
-        { submittedBy: { name: { contains: search, mode: 'insensitive' as const } } },
-      ];
-    }
-
-    if (category) {
-      where.category = category;
-    }
-
-    if (status) {
-      where.status = status;
-    }
-    if (expenseType) {
-      where.expenseType = expenseType;
-    }
-    if (paymentSource) {
-      where.paymentSource = paymentSource;
-    }
-    if (paymentMode) {
-      where.paymentMode = paymentMode;
-    }
-    if (submittedById && canViewAll) {
-      where.submittedById = submittedById;
-    }
-    if (project) {
-      where.project = project;
-    }
-
-    if (from || to) {
-      const range: { gte?: Date; lte?: Date } = {};
-      if (from) range.gte = new Date(from);
-      if (to) range.lte = new Date(to);
-      where.date = range;
-    }
+    const where = buildExpenseWhere(filters, {
+      canViewAll,
+      sessionUserId: session.user.id,
+    });
 
     // Build orderBy
     const orderDirection = sortOrder === 'asc' ? 'asc' : 'desc';
