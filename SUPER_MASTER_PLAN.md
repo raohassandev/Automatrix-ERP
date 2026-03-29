@@ -1014,6 +1014,26 @@ Reason: implemented-module program baseline is complete and validated with deplo
       - `pnpm typecheck` passed
       - `pnpm test` passed (`25/25`, `76/76`)
       - `pnpm build` passed
+  - closure batch `11.13-d` completed on `2026-03-29`
+    - restructured `/me` into a clearer employee finance self-service surface
+    - replaced fragmented wallet/advance/reimbursement blocks with:
+      - `My Finance Summary`
+      - `Finance Notices`
+      - `My Reimbursements`
+      - `My Advances`
+      - `My Payroll`
+      - `My Variable Pay`
+    - added employee-side finance notices for:
+      - approved reimbursements waiting payment
+      - outstanding advances
+      - unpaid payroll entries
+      - unsettled variable pay
+      - wallet hold reducing available amount
+    - extended employee variable-pay history to include both incentives and commissions in one self-service section
+    - verification completed:
+      - `pnpm typecheck` passed
+      - `pnpm test` passed (`25/25`, `76/76`)
+      - `pnpm build` passed
   - status after live verification: `P0 employee-finance investigation scope verified on staging`
   - next execution rule:
     - treat this stream as complete for the current P0 investigation scope unless a new gap is reopened with concrete evidence

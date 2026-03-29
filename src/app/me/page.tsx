@@ -37,6 +37,12 @@ function formatServicePeriod(joinDate?: Date | null) {
   return `${years} year(s), ${remMonths} month(s)`;
 }
 
+function financeNoticeTone(severity: "high" | "medium" | "info") {
+  if (severity === "high") return "border-rose-500/25 bg-rose-500/10";
+  if (severity === "medium") return "border-amber-500/25 bg-amber-500/10";
+  return "border-sky-500/25 bg-sky-500/10";
+}
+
 export default async function MyDashboardPage() {
   const session = await auth();
   if (!session?.user?.id) {
@@ -98,7 +104,7 @@ export default async function MyDashboardPage() {
   const monthStartStr = monthStart.toISOString().slice(0, 10);
   const monthEndStr = monthEnd.toISOString().slice(0, 10);
 
-  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg, pocketPayableRows, advanceUsedThisMonthAgg, reimbursementPaidThisMonthRows] = await Promise.all([
+  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, commissionEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg, pocketPayableRows, advanceUsedThisMonthAgg, reimbursementPaidThisMonthRows] = await Promise.all([
     prisma.projectAssignment.findMany({
       where: { userId: session.user.id },
       select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
@@ -139,6 +145,11 @@ export default async function MyDashboardPage() {
     }),
     prisma.incentiveEntry.findMany({
       where: { employeeId: employee.id },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    }),
+    prisma.commissionEntry.findMany({
+      where: { employeeId: employee.id, payeeType: "EMPLOYEE" },
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
@@ -214,6 +225,15 @@ export default async function MyDashboardPage() {
   const advanceUsedThisMonth = Number(advanceUsedThisMonthAgg._sum.amount || 0);
   const reimbursementPaidThisMonth = reimbursementPaidThisMonthRows.reduce((sum, row) => sum + resolveExpenseAmount(row), 0);
   const latestSalary = Number(payrollEntries[0]?.netPay || 0);
+  const pendingVariableEntries = [
+    ...incentiveEntries.filter(
+      (row) => String(row.status || "").toUpperCase() === "APPROVED" && String(row.settlementStatus || "").toUpperCase() !== "SETTLED",
+    ),
+    ...commissionEntries.filter(
+      (row) => String(row.status || "").toUpperCase() === "APPROVED" && String(row.settlementStatus || "").toUpperCase() !== "SETTLED",
+    ),
+  ];
+  const pendingVariablePay = pendingVariableEntries.reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const expenseStatusMap = new Map(expenseCounts.map((row) => [row.status, row._count._all]));
   const assignedProjects = assignments.map((a) => a.project);
   const attendanceMap = new Map(attendanceCounts.map((row) => [row.status, row._count._all]));
@@ -224,6 +244,62 @@ export default async function MyDashboardPage() {
   const servicePeriod = formatServicePeriod(employee.joinDate);
   const profileSalary = Number(employee.compensation?.baseSalary || 0);
   const profileCurrency = employee.compensation?.currency || "PKR";
+  const financeNotices = [
+    pocketPayable > 0
+      ? {
+          id: "reimburse-due",
+          severity: "high" as const,
+          title: "Approved reimbursements are waiting payment",
+          detail: `${formatMoney(pocketPayable)} is still payable from your approved employee-pocket claims.`,
+          href: `/expenses?paymentSource=EMPLOYEE_POCKET&status=APPROVED`,
+          cta: "Open reimbursements",
+        }
+      : null,
+    advanceOutstanding > 0
+      ? {
+          id: "advance-outstanding",
+          severity: "medium" as const,
+          title: "Advance is still outstanding",
+          detail: `${formatMoney(advanceOutstanding)} remains to be recovered against prior company advance issue.`,
+          href: `/salary-advances?employeeId=${employee.id}`,
+          cta: "Open advances",
+        }
+      : null,
+    payrollPendingCount > 0
+      ? {
+          id: "payroll-pending",
+          severity: "medium" as const,
+          title: "Payroll entry is not yet paid",
+          detail: `${payrollPendingCount} payroll entr${payrollPendingCount === 1 ? "y is" : "ies are"} still pending payment.`,
+          href: `/payroll`,
+          cta: "Open payroll history",
+        }
+      : null,
+    pendingVariablePay > 0
+      ? {
+          id: "variable-pending",
+          severity: "info" as const,
+          title: "Variable pay is approved but unsettled",
+          detail: `${formatMoney(pendingVariablePay)} is pending in incentives/commissions settlement.`,
+          href: `/incentives?employeeId=${employee.id}&settlement=UNSETTLED&status=APPROVED`,
+          cta: "Open variable pay",
+        }
+      : null,
+    walletHold > 0
+      ? {
+          id: "wallet-hold",
+          severity: "info" as const,
+          title: "Wallet hold is reducing available amount",
+          detail: `${formatMoney(walletHold)} is reserved and not available for direct use.`,
+          href: `/wallets?employeeId=${employee.id}`,
+          cta: "Open wallet history",
+        }
+      : null,
+  ].filter((notice): notice is NonNullable<typeof notice> => Boolean(notice));
+  const variablePayHistory = [
+    ...incentiveEntries.map((entry) => ({ ...entry, entryType: "INCENTIVE" as const })),
+    ...commissionEntries.map((entry) => ({ ...entry, entryType: "COMMISSION" as const })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
     <div className="grid gap-6">
@@ -331,24 +407,84 @@ export default async function MyDashboardPage() {
         </div>
       </div>
 
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Wallet Snapshot</div>
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-emerald-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-emerald-500/10">
-          <div className="text-sm text-emerald-700 dark:text-emerald-300">Wallet Available</div>
-          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(walletAvailable)}</div>
-          <div className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-300/80">Balance minus hold amount</div>
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">My Finance Summary</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Self-service summary for wallet, reimbursements, advances, payroll, and variable pay.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Link href={`/wallets?employeeId=${employee.id}`} className="rounded-md border px-3 py-2 hover:bg-accent">
+              Wallet History
+            </Link>
+            <Link href={`/expenses?submittedById=${session.user.id}`} className="rounded-md border px-3 py-2 hover:bg-accent">
+              My Expenses
+            </Link>
+            <Link href={`/salary-advances?employeeId=${employee.id}`} className="rounded-md border px-3 py-2 hover:bg-accent">
+              My Advances
+            </Link>
+          </div>
         </div>
-        <div className="rounded-xl border border-indigo-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-indigo-500/10">
-          <div className="text-sm text-indigo-700 dark:text-indigo-300">Wallet Balance</div>
-          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(walletBalance)}</div>
+        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-xl border border-emerald-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-emerald-500/10">
+            <div className="text-sm text-emerald-700 dark:text-emerald-300">Available Wallet</div>
+            <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(walletAvailable)}</div>
+            <div className="mt-1 text-xs text-muted-foreground">Balance minus hold amount</div>
+          </div>
+          <div className="rounded-xl border border-rose-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-rose-500/10">
+            <div className="text-sm text-rose-700 dark:text-rose-300">Reimburse Due</div>
+            <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(pocketPayable)}</div>
+            <div className="mt-1 text-xs text-muted-foreground">Approved employee-pocket claims</div>
+          </div>
+          <div className="rounded-xl border border-amber-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-amber-500/10">
+            <div className="text-sm text-amber-700 dark:text-amber-300">Advance Outstanding</div>
+            <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(advanceOutstanding)}</div>
+            <div className="mt-1 text-xs text-muted-foreground">Advance still to recover</div>
+          </div>
+          <div className="rounded-xl border border-sky-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-sky-500/10">
+            <div className="text-sm text-sky-700 dark:text-sky-300">Payroll Pending</div>
+            <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(payrollPendingCount > 0 ? latestSalary : 0)}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{payrollPendingCount} unpaid payroll entr{payrollPendingCount === 1 ? "y" : "ies"}</div>
+          </div>
+          <div className="rounded-xl border border-violet-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-violet-500/10">
+            <div className="text-sm text-violet-700 dark:text-violet-300">Variable Pay Pending</div>
+            <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(pendingVariablePay)}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{pendingVariableEntries.length} unsettled incentive/commission entr{pendingVariableEntries.length === 1 ? "y" : "ies"}</div>
+          </div>
         </div>
-        <div className="rounded-xl border border-amber-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-amber-500/10">
-          <div className="text-sm text-amber-700 dark:text-amber-300">On Hold</div>
-          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(walletHold)}</div>
+      </div>
+
+      <div className="rounded-xl border bg-card p-6 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Finance Notices</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              The finance items that need your follow-up or explain why a number looks lower than expected.
+            </p>
+          </div>
+          <div className="text-sm text-muted-foreground">{financeNotices.length} active</div>
         </div>
-        <div className="rounded-xl border border-slate-400/30 bg-card/95 p-6 shadow-sm ring-1 ring-slate-400/10">
-          <div className="text-sm text-muted-foreground">Latest Salary</div>
-          <div className="mt-2 text-xl font-semibold">{formatMoney(latestSalary)}</div>
+        <div className="mt-4 space-y-3">
+          {financeNotices.map((notice) => (
+            <div key={notice.id} className={`rounded-lg border p-4 ${financeNoticeTone(notice.severity)}`}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium">{notice.title}</div>
+                  <div className="mt-1 text-sm text-muted-foreground">{notice.detail}</div>
+                </div>
+                <Link href={notice.href} className="text-sm font-medium text-primary underline underline-offset-2">
+                  {notice.cta}
+                </Link>
+              </div>
+            </div>
+          ))}
+          {financeNotices.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+              No active finance notices right now.
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -367,64 +503,65 @@ export default async function MyDashboardPage() {
         </div>
       </div>
 
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Advance and Reimbursement</div>
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-indigo-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-indigo-500/10">
-          <div className="text-sm text-indigo-700 dark:text-indigo-300">Pending Incentive (Payroll)</div>
-          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(pendingPayrollIncentive)}</div>
-          <div className="mt-2 text-xs">
-            <Link
-              href={`/incentives?employeeId=${employee.id}&month=${currentMonthKey}&payout=PAYROLL&settlement=UNSETTLED&status=APPROVED`}
-              className="font-medium text-indigo-700 dark:text-indigo-300 underline underline-offset-2"
-            >
-              Open due incentive lines this month
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm font-semibold">My Reimbursements</div>
+          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <div>Due now: <span className="font-semibold text-foreground">{formatMoney(pocketPayable)}</span></div>
+            <div>Paid this month: <span className="font-semibold text-foreground">{formatMoney(reimbursementPaidThisMonth)}</span></div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <Link href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=APPROVED`} className="rounded-md border px-3 py-2 hover:bg-accent">
+              Due Claims
+            </Link>
+            <Link href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=PAID&from=${monthStartStr}&to=${monthEndStr}`} className="rounded-md border px-3 py-2 hover:bg-accent">
+              Paid This Month
             </Link>
           </div>
         </div>
-        <div className="rounded-xl border border-sky-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-sky-500/10">
-          <div className="text-sm text-sky-700 dark:text-sky-300">Company Advance Issued</div>
-          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(advanceIssued)}</div>
-        </div>
-        <div className="rounded-xl border border-amber-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-amber-500/10">
-          <div className="text-sm text-amber-700 dark:text-amber-300">Advance Outstanding</div>
-          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(advanceOutstanding)}</div>
-        </div>
-        <div className="rounded-xl border border-rose-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-rose-500/10">
-          <div className="text-sm text-rose-700 dark:text-rose-300">Own-Pocket Reimbursement Due</div>
-          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(pocketPayable)}</div>
-          <div className="mt-2 text-xs">
-            <Link
-              href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=APPROVED`}
-              className="font-medium text-rose-700 dark:text-rose-300 underline underline-offset-2"
-            >
-              View approved reimbursements
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm font-semibold">My Advances</div>
+          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <div>Issued total: <span className="font-semibold text-foreground">{formatMoney(advanceIssued)}</span></div>
+            <div>Outstanding: <span className="font-semibold text-foreground">{formatMoney(advanceOutstanding)}</span></div>
+            <div>Used this month: <span className="font-semibold text-foreground">{formatMoney(advanceUsedThisMonth)}</span></div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <Link href={`/salary-advances?employeeId=${employee.id}`} className="rounded-md border px-3 py-2 hover:bg-accent">
+              Advance History
+            </Link>
+            <Link href={`/wallets?employeeId=${employee.id}&type=DEBIT&from=${monthStartStr}&to=${monthEndStr}`} className="rounded-md border px-3 py-2 hover:bg-accent">
+              Wallet Debits
             </Link>
           </div>
         </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border border-violet-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-violet-500/10">
-          <div className="text-sm text-violet-700 dark:text-violet-300">Advance Used This Month</div>
-          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(advanceUsedThisMonth)}</div>
-          <div className="mt-2 text-xs">
-            <Link
-              href={`/wallets?employeeId=${employee.id}&type=DEBIT&from=${monthStartStr}&to=${monthEndStr}`}
-              className="font-medium text-violet-700 dark:text-violet-300 underline underline-offset-2"
-            >
-              Open wallet debits this month
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm font-semibold">My Payroll</div>
+          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <div>Latest net pay: <span className="font-semibold text-foreground">{formatMoney(latestSalary)}</span></div>
+            <div>Pending rows: <span className="font-semibold text-foreground">{payrollPendingCount}</span></div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <Link href="/payroll" className="rounded-md border px-3 py-2 hover:bg-accent">
+              Payroll History
             </Link>
+            <a href="/api/me/payroll/export" className="rounded-md border px-3 py-2 hover:bg-accent">
+              Export Salary CSV
+            </a>
           </div>
         </div>
-        <div className="rounded-xl border border-cyan-500/30 bg-card/95 p-6 shadow-sm ring-1 ring-cyan-500/10">
-          <div className="text-sm text-cyan-700 dark:text-cyan-300">Reimbursement Paid This Month</div>
-          <div className="mt-2 text-xl font-semibold text-foreground">{formatMoney(reimbursementPaidThisMonth)}</div>
-          <div className="mt-2 text-xs">
-            <Link
-              href={`/expenses?paymentSource=EMPLOYEE_POCKET&status=PAID&from=${monthStartStr}&to=${monthEndStr}`}
-              className="font-medium text-cyan-700 dark:text-cyan-300 underline underline-offset-2"
-            >
-              Open paid reimbursements
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="text-sm font-semibold">My Variable Pay</div>
+          <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <div>Pending now: <span className="font-semibold text-foreground">{formatMoney(pendingVariablePay)}</span></div>
+            <div>Payroll-mode due: <span className="font-semibold text-foreground">{formatMoney(pendingPayrollIncentive)}</span></div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            <Link href={`/incentives?employeeId=${employee.id}&settlement=UNSETTLED&status=APPROVED`} className="rounded-md border px-3 py-2 hover:bg-accent">
+              Incentives
+            </Link>
+            <Link href={`/commissions?search=${encodeURIComponent(employee.name)}`} className="rounded-md border px-3 py-2 hover:bg-accent">
+              Commissions
             </Link>
           </div>
         </div>
@@ -721,21 +858,23 @@ export default async function MyDashboardPage() {
         </div>
 
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Incentive History</h2>
+          <h2 className="text-lg font-semibold">Variable Pay History</h2>
           <div className="mt-4 hidden overflow-x-auto md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="py-2">Date</th>
+                  <th className="py-2">Type</th>
                   <th className="py-2">Project</th>
                   <th className="py-2">Amount</th>
                   <th className="py-2">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {incentiveEntries.map((entry) => (
-                  <tr key={entry.id} className="border-b">
+                {variablePayHistory.map((entry) => (
+                  <tr key={`${entry.entryType}-${entry.id}`} className="border-b">
                     <td className="py-2">{new Date(entry.createdAt).toLocaleDateString()}</td>
+                    <td className="py-2">{entry.entryType}</td>
                     <td className="py-2">{entry.projectRef || "-"}</td>
                     <td className="py-2">{formatMoney(Number(entry.amount))}</td>
                     <td className="py-2">
@@ -749,12 +888,13 @@ export default async function MyDashboardPage() {
             </table>
           </div>
           <div className="mt-4 space-y-3 md:hidden">
-            {incentiveEntries.map((entry) => (
+            {variablePayHistory.map((entry) => (
               <MobileCard
-                key={entry.id}
-                title={entry.projectRef || "Incentive"}
+                key={`${entry.entryType}-${entry.id}`}
+                title={entry.projectRef || (entry.entryType === "INCENTIVE" ? "Incentive" : "Commission")}
                 subtitle={new Date(entry.createdAt).toLocaleDateString()}
                 fields={[
+                  { label: "Type", value: entry.entryType },
                   { label: "Amount", value: formatMoney(Number(entry.amount)) },
                   { label: "Status", value: entry.status },
                   { label: "Payout", value: entry.payoutMode || "-" },
@@ -763,8 +903,8 @@ export default async function MyDashboardPage() {
               />
             ))}
           </div>
-          {incentiveEntries.length === 0 && (
-            <div className="py-6 text-center text-muted-foreground">No incentives recorded yet.</div>
+          {variablePayHistory.length === 0 && (
+            <div className="py-6 text-center text-muted-foreground">No incentives or commissions recorded yet.</div>
           )}
           <div className="pt-4">
             <a
