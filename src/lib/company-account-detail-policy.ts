@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getUserRoleName, requirePermission } from "@/lib/rbac";
 import type { RoleName } from "@/lib/permissions";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 export type CompanyAccountDetailTab = "activity" | "payments" | "summary" | "documents";
 
@@ -419,10 +420,10 @@ export async function getCompanyAccountDetailForUser(args: {
   for (const expense of approvedExpenseDocuments) {
     documents.push({
       type: "EXPENSE",
-      number: expense.description,
+      number: decodeHtmlEntities(expense.description),
       date: fmtDate(expense.date),
       status: expense.status,
-      href: `/expenses?search=${encodeURIComponent(expense.description)}`,
+      href: `/expenses?search=${encodeURIComponent(decodeHtmlEntities(expense.description))}`,
     });
   }
   const walletDocuments = await prisma.walletLedger.findMany({
@@ -514,10 +515,10 @@ export async function getCompanyAccountDetailForUser(args: {
     activity.push({
       at: iso(e.date),
       type: "EXPENSE",
-      label: `Expense ${e.category}: ${e.description}`,
+      label: `Expense ${decodeHtmlEntities(e.category)}: ${decodeHtmlEntities(e.description)}`,
       status: e.status,
       amount: Number.isFinite(used) ? used : 0,
-      href: `/expenses?search=${encodeURIComponent(e.description.slice(0, 20))}`,
+      href: `/expenses?search=${encodeURIComponent(decodeHtmlEntities(e.description).slice(0, 20))}`,
     });
   }
   for (const w of latestWalletCredits) {
@@ -534,7 +535,7 @@ export async function getCompanyAccountDetailForUser(args: {
       activity.push({
         at: e.at,
         type: "NOTE",
-        label: `Note: ${e.note.slice(0, 120)}${e.note.length > 120 ? "…" : ""}`,
+        label: `Note: ${decodeHtmlEntities(e.note).slice(0, 120)}${decodeHtmlEntities(e.note).length > 120 ? "…" : ""}`,
       });
     } else if (e.attachment) {
       activity.push({

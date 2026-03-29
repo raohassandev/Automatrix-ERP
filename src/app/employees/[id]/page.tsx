@@ -8,6 +8,7 @@ import { employeeCodeFromId } from "@/lib/employee-display";
 import { canManageEmployeeCompensation } from "@/lib/employee-compensation-access";
 import { EmployeeCompensationDialog } from "@/components/EmployeeCompensationDialog";
 import { findEmployeeByEmailInsensitive, findUserByEmailInsensitive } from "@/lib/identity";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 export default async function EmployeeDetailPage({
   params,
@@ -370,10 +371,12 @@ export default async function EmployeeDetailPage({
                     <tr key={exp.id} className="border-b">
                       <td className="py-2">{new Date(exp.date).toLocaleDateString()}</td>
                       <td className="py-2">
-                        {exp.description}
-                        <div className="text-xs text-muted-foreground">{exp.category} • {exp.paymentSource}</div>
+                        {decodeHtmlEntities(exp.description)}
+                        <div className="text-xs text-muted-foreground">
+                          {decodeHtmlEntities(exp.category)} • {exp.paymentSource ? decodeHtmlEntities(exp.paymentSource) : "-"}
+                        </div>
                       </td>
-                      <td className="py-2">{exp.project || "-"}</td>
+                      <td className="py-2">{exp.project ? decodeHtmlEntities(exp.project) : "-"}</td>
                       <td className="py-2">{formatMoney(usedAmount)}</td>
                       <td className="py-2">{exp.status}</td>
                     </tr>

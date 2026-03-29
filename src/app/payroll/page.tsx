@@ -354,7 +354,7 @@ export default async function PayrollPage({
             <span className="font-semibold">Ready incentives:</span> {formatMoney(approvedUnsettledIncentive)} (all approved + unsettled payroll incentives).
           </div>
           <div>
-            <span className="font-semibold">Important:</span> Auto-fill policy includes only due incentives (scheduled month &lt;= current month).
+            <span className="font-semibold">Important:</span> Auto-fill policy includes only due incentives (scheduled month {"<="} current month).
           </div>
         </div>
         <div className="mt-3 rounded-lg border border-emerald-300/35 bg-emerald-500/10 p-3 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-200">

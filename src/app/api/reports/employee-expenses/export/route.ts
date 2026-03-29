@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { normalizeExpenseAmount } from "@/lib/employee-finance";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -111,7 +112,7 @@ export async function GET(req: Request) {
       const approvedAmount = Number(normalizeExpenseAmount(row));
       const employeeKey = row.submittedById || "unknown";
       const employeeEntry = employeeSummaryMap.get(employeeKey) || {
-        name: row.submittedBy?.name || "Unknown",
+        name: row.submittedBy?.name ? decodeHtmlEntities(row.submittedBy.name) : "Unknown",
         email: row.submittedBy?.email || "unknown",
         claims: 0,
         total: 0,
@@ -120,10 +121,11 @@ export async function GET(req: Request) {
       employeeEntry.total += approvedAmount;
       employeeSummaryMap.set(employeeKey, employeeEntry);
 
-      const categoryEntry = categorySummaryMap.get(row.category) || { claims: 0, total: 0 };
+      const categoryLabel = decodeHtmlEntities(row.category);
+      const categoryEntry = categorySummaryMap.get(categoryLabel) || { claims: 0, total: 0 };
       categoryEntry.claims += 1;
       categoryEntry.total += approvedAmount;
-      categorySummaryMap.set(row.category, categoryEntry);
+      categorySummaryMap.set(categoryLabel, categoryEntry);
 
       const month = monthLabel(new Date(row.date));
       const monthEntry = monthSummaryMap.get(month) || { claims: 0, total: 0 };
@@ -131,7 +133,7 @@ export async function GET(req: Request) {
       monthEntry.total += approvedAmount;
       monthSummaryMap.set(month, monthEntry);
 
-      const projectKey = row.project || "Unassigned";
+      const projectKey = row.project ? decodeHtmlEntities(row.project) : "Unassigned";
       const projectEntry = projectSummaryMap.get(projectKey) || { claims: 0, total: 0, pocket: 0, wallet: 0, company: 0 };
       projectEntry.claims += 1;
       projectEntry.total += approvedAmount;
@@ -140,7 +142,7 @@ export async function GET(req: Request) {
       else projectEntry.company += approvedAmount;
       projectSummaryMap.set(projectKey, projectEntry);
 
-      const sourceKey = row.paymentSource || "UNSPECIFIED";
+      const sourceKey = row.paymentSource ? decodeHtmlEntities(row.paymentSource) : "UNSPECIFIED";
       const sourceEntry = sourceSummaryMap.get(sourceKey) || { claims: 0, total: 0 };
       sourceEntry.claims += 1;
       sourceEntry.total += approvedAmount;
@@ -201,15 +203,15 @@ export async function GET(req: Request) {
     ["Date", "Employee", "Email", "Category", "Project", "Payment Source", "Status", "Amount", "Approved Amount", "Description", "Expense Id"],
     ...expenses.map((row) => [
       row.date.toISOString(),
-      row.submittedBy?.name || "Unknown",
+      row.submittedBy?.name ? decodeHtmlEntities(row.submittedBy.name) : "Unknown",
       row.submittedBy?.email || "unknown",
-      row.category,
-      row.project || "",
-      row.paymentSource || "",
+      decodeHtmlEntities(row.category),
+      row.project ? decodeHtmlEntities(row.project) : "",
+      row.paymentSource ? decodeHtmlEntities(row.paymentSource) : "",
       row.status,
       Number(row.amount),
       Number(normalizeExpenseAmount(row)),
-      row.description,
+      decodeHtmlEntities(row.description),
       row.id,
     ]),
   ];

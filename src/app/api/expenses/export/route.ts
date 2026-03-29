@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requirePermission } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 import { buildExpenseWhere, readExpenseQueryFilters } from "@/lib/expenses-query";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 function toCsv(rows: Array<Array<string | number | null | undefined>>) {
   return rows
@@ -73,16 +74,16 @@ export async function GET(req: Request) {
     ],
     ...expenses.map((expense) => [
       expense.date.toISOString(),
-      expense.description,
-      expense.category,
+      decodeHtmlEntities(expense.description),
+      decodeHtmlEntities(expense.category),
       expense.expenseType,
-      expense.project || "",
+      expense.project ? decodeHtmlEntities(expense.project) : "",
       expense.paymentSource || "",
       expense.paymentMode,
       expense.status,
       Number(expense.amount),
       expense.approvedAmount ? Number(expense.approvedAmount) : "",
-      expense.companyAccount?.name || "",
+      expense.companyAccount?.name ? decodeHtmlEntities(expense.companyAccount.name) : "",
       expense.submittedBy?.email || expense.submittedBy?.name || "",
       expense.approvedBy?.email || expense.approvedBy?.name || "",
       expense.receiptUrl || "",

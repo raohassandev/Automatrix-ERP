@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { findUserByEmailInsensitive } from "@/lib/identity";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 export type FinanceTimelineModule = "WALLET" | "EXPENSE" | "ADVANCE" | "PAYROLL" | "INCENTIVE" | "COMMISSION";
 
@@ -320,6 +321,10 @@ export async function getEmployeeFinanceWorkspaceData(filters: EmployeeFinanceFi
 
   const expenseRows = expenseRowsRaw.map((row) => ({
     ...row,
+    description: decodeHtmlEntities(row.description),
+    category: decodeHtmlEntities(row.category),
+    project: row.project ? decodeHtmlEntities(row.project) : null,
+    paymentSource: row.paymentSource ? decodeHtmlEntities(row.paymentSource) : null,
     amountNumber: asMoney(row.amount),
     approvedAmountNumber: asMoney(normalizeExpenseAmount(row)),
   }));
@@ -633,12 +638,12 @@ export async function getEmployeeFinanceWorkspaceData(filters: EmployeeFinanceFi
       impact: (String(row.settlementStatus || "").toUpperCase() === "SETTLED" ? "IN" : "INFO") as EmployeeFinanceTimelineRow["impact"],
       amount: asMoney(row.amount),
       status: `${row.status}/${row.settlementStatus}`,
-      note: [row.projectRef, row.payoutMode].filter(Boolean).join(" • ") || "Incentive",
+      note: [row.projectRef ? decodeHtmlEntities(row.projectRef) : null, row.payoutMode].filter(Boolean).join(" • ") || "Incentive",
       reference: row.id,
       href: `/incentives?employeeId=${employee.id}`,
       category: null,
       paymentSource: row.payoutMode || null,
-      project: row.projectRef || null,
+      project: row.projectRef ? decodeHtmlEntities(row.projectRef) : null,
       sourceType: row.payoutMode || null,
       runningBalance: null,
     })),
@@ -649,12 +654,12 @@ export async function getEmployeeFinanceWorkspaceData(filters: EmployeeFinanceFi
       impact: (String(row.settlementStatus || "").toUpperCase() === "SETTLED" ? "IN" : "INFO") as EmployeeFinanceTimelineRow["impact"],
       amount: asMoney(row.amount),
       status: `${row.status}/${row.settlementStatus}`,
-      note: [row.projectRef, row.payoutMode].filter(Boolean).join(" • ") || "Commission",
+      note: [row.projectRef ? decodeHtmlEntities(row.projectRef) : null, row.payoutMode].filter(Boolean).join(" • ") || "Commission",
       reference: row.id,
       href: `/commissions?search=${encodeURIComponent(employee.name)}`,
       category: null,
       paymentSource: row.payoutMode || null,
-      project: row.projectRef || null,
+      project: row.projectRef ? decodeHtmlEntities(row.projectRef) : null,
       sourceType: row.payoutMode || null,
       runningBalance: null,
     })),

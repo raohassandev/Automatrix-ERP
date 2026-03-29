@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getUserRoleName, requirePermission } from "@/lib/rbac";
 import { RoleName } from "@/lib/permissions";
 import { buildProjectAliases, computeProjectFinancialSnapshot } from "@/lib/projects";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 export type ProjectDetailTab = "activity" | "costs" | "inventory" | "people" | "execution" | "documents";
 
@@ -684,7 +685,9 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
     activity.push({
       at: formatIso(e.date),
       type: "EXPENSE",
-      label: canViewExpenseNarrative ? `${e.category}: ${e.description}` : "Team expense entry (masked)",
+      label: canViewExpenseNarrative
+        ? `${decodeHtmlEntities(e.category)}: ${decodeHtmlEntities(e.description)}`
+        : "Team expense entry (masked)",
       status: e.status,
       amount: policy.canViewFinancialTotals
         ? (() => {
@@ -793,7 +796,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
           id: `expense-${e.id}`,
           date: fmtDate(e.date),
           itemName: canViewExpenseNarrative
-            ? e.description || e.category || "Material expense"
+            ? decodeHtmlEntities(e.description || e.category || "Material expense")
             : "Team material expense (masked)",
           unit: "entry",
           quantity: -1,
@@ -801,7 +804,7 @@ export async function getProjectDetailForUser(args: { userId: string; projectDbI
           total: policy.canViewUnitCosts ? (Number.isFinite(useAmount) ? useAmount : 0) : null,
           reference: "Expense fallback",
           href: canViewExpenseNarrative
-            ? `/expenses?search=${encodeURIComponent((e.description || e.category || "").slice(0, 24))}`
+            ? `/expenses?search=${encodeURIComponent(decodeHtmlEntities(e.description || e.category || "").slice(0, 24))}`
             : null,
         };
       });

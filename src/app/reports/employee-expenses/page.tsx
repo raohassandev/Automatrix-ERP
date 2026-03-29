@@ -7,6 +7,7 @@ import SearchInput from "@/components/SearchInput";
 import DateRangePicker from "@/components/DateRangePicker";
 import QuerySelect from "@/components/QuerySelect";
 import { normalizeExpenseAmount } from "@/lib/employee-finance";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 function hrefWithQuery(path: string, query: Record<string, string | undefined>) {
   const params = new URLSearchParams();
@@ -164,12 +165,12 @@ export default async function EmployeeExpenseReportPage({
     amount: Number(row.amount),
     approvedAmount: Number(normalizeExpenseAmount(row)),
     status: row.status,
-    project: row.project,
-    description: row.description,
-    category: row.category,
+    project: row.project ? decodeHtmlEntities(row.project) : null,
+    description: decodeHtmlEntities(row.description),
+    category: decodeHtmlEntities(row.category),
     paymentSource: row.paymentSource,
     submittedById: row.submittedById,
-    submittedByName: row.submittedBy?.name || "Unknown",
+    submittedByName: row.submittedBy?.name ? decodeHtmlEntities(row.submittedBy.name) : "Unknown",
     submittedByEmail: row.submittedBy?.email || "unknown",
   }));
 

@@ -302,7 +302,7 @@ export default function ExpenseForm() {
         <div className="rounded-md border px-3 py-2 text-xs text-muted-foreground md:col-span-2">
           <div className="font-medium text-foreground">Stock purchases</div>
           <div>
-            Phase 1 rule: Expenses are non-stock only. For stock purchases use Procurement -&gt; PO/GRN/Vendor Bill.
+            Phase 1 rule: Expenses are non-stock only. For stock purchases use Procurement {"->"} PO/GRN/Vendor Bill.
           </div>
         </div>
         <input

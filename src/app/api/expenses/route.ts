@@ -8,7 +8,7 @@ import { DUPLICATE_CHECK_DAYS, PROCUREMENT_SPIKE_THRESHOLD } from '@/lib/constan
 import { getExpenseApprovalLevel } from '@/lib/approvals';
 import { createNotification } from '@/lib/notifications';
 import { Prisma } from '@prisma/client';
-import { sanitizeString } from '@/lib/sanitize';
+import { decodeHtmlEntities, sanitizeString } from '@/lib/sanitize';
 import { recalculateProjectFinancials, resolveProjectDbId, resolveProjectId } from '@/lib/projects';
 import { postExpenseApprovalJournal } from '@/lib/accounting';
 import { getOrganizationDefaults } from '@/lib/organization-settings';
@@ -97,6 +97,11 @@ export async function GET(req: Request) {
     // Convert Decimal to number for JSON serialization
     const serializedExpenses = expenses.map((expense) => ({
       ...expense,
+      description: decodeHtmlEntities(expense.description),
+      category: decodeHtmlEntities(expense.category),
+      project: expense.project ? decodeHtmlEntities(expense.project) : null,
+      remarks: expense.remarks ? decodeHtmlEntities(expense.remarks) : null,
+      categoryRequest: expense.categoryRequest ? decodeHtmlEntities(expense.categoryRequest) : null,
       amount: Number(expense.amount),
       approvedAmount: expense.approvedAmount ? Number(expense.approvedAmount) : null,
       companyAccountName: expense.companyAccount?.name || null,

@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/rbac";
 import { redirect } from "next/navigation";
 import { formatMoney } from "@/lib/format";
 import Link from "next/link";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 function resolveExpenseAmount(expense: { status: string; amount: number | { toString(): string }; approvedAmount: number | { toString(): string } | null }) {
   if ((expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED" || expense.status === "PAID") && expense.approvedAmount) {
@@ -200,8 +201,8 @@ export default async function EmployeeDashboardPreviewPage({
                   return (
                     <tr key={exp.id} className="border-b">
                       <td className="py-2">{new Date(exp.date).toLocaleDateString()}</td>
-                      <td className="py-2">{exp.description}</td>
-                      <td className="py-2">{exp.project || "-"}</td>
+                      <td className="py-2">{decodeHtmlEntities(exp.description)}</td>
+                      <td className="py-2">{exp.project ? decodeHtmlEntities(exp.project) : "-"}</td>
                       <td className="py-2">{formatMoney(usedAmount)}</td>
                       <td className="py-2">{exp.status}</td>
                     </tr>

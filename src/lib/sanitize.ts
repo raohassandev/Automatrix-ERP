@@ -1,15 +1,19 @@
 import validator from 'validator';
 
+const CONTROL_CHAR_PATTERN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
+
 export function sanitizeString(input: string): string {
-  // Trim whitespace from the beginning and end of the string
-  let sanitized = validator.trim(input);
+  return validator.trim(input).replace(CONTROL_CHAR_PATTERN, "");
+}
 
-  // Escape HTML entities to prevent XSS attacks
-  sanitized = validator.escape(sanitized);
+export function decodeHtmlEntities(input: string | null | undefined): string {
+  if (!input) return "";
 
-  // You might want to add more sanitization rules here,
-  // depending on the specific use case, e.g., removing specific characters,
-  // normalizing unicode, etc.
-
-  return sanitized;
+  let decoded = input;
+  for (let i = 0; i < 3; i += 1) {
+    const next = validator.unescape(decoded);
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return decoded;
 }

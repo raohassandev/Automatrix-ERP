@@ -8,6 +8,7 @@ import ApprovalQueue from "@/components/ApprovalQueue";
 import { Expense, Income } from "@prisma/client";
 import { getExpenseApprovalLevel, getIncomeApprovalLevel } from "@/lib/approvals";
 import { userHasApprovalAssignment } from "@/lib/approval-policies";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 import ProcurementApprovalQueue, {
   type ProcurementApprovalItem,
 } from "@/components/ProcurementApprovalQueue";
@@ -110,12 +111,12 @@ export default async function ApprovalsPage() {
             id: expense.id,
             type: "EXPENSE" as const,
             date: expense.date,
-            category: expense.category,
-            description: expense.description,
-            remarks: expense.remarks,
-            categoryRequest: expense.categoryRequest,
+            category: decodeHtmlEntities(expense.category),
+            description: decodeHtmlEntities(expense.description),
+            remarks: expense.remarks ? decodeHtmlEntities(expense.remarks) : null,
+            categoryRequest: expense.categoryRequest ? decodeHtmlEntities(expense.categoryRequest) : null,
             amount,
-            project: expense.project || undefined,
+            project: expense.project ? decodeHtmlEntities(expense.project) : undefined,
             submittedBy: { 
               id: expense.submittedById, 
               email: submitter?.email || '', 
@@ -400,7 +401,7 @@ export default async function ApprovalsPage() {
             </div>
           </div>
           <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-            <div className="text-sm font-medium text-muted-foreground">Overdue (&gt;48h)</div>
+            <div className="text-sm font-medium text-muted-foreground">Overdue ({">"}48h)</div>
             <div className={`mt-2 text-3xl font-bold ${overdueCount > 0 ? "text-rose-600" : "text-emerald-600"}`}>
               {overdueCount}
             </div>

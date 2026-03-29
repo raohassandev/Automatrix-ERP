@@ -135,7 +135,7 @@ export default async function ReportsPage() {
             </a>
             <a href="/reports/accounting/profit-loss" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
               <div className="text-sm text-muted-foreground">Accounting</div>
-              <div className="mt-2 text-lg font-semibold">Profit &amp; Loss</div>
+              <div className="mt-2 text-lg font-semibold">Profit & Loss</div>
             </a>
             <a href="/reports/accounting/balance-sheet" className="rounded-xl border bg-card p-6 shadow-sm hover:bg-accent">
               <div className="text-sm text-muted-foreground">Accounting</div>

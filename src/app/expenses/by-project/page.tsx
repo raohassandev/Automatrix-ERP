@@ -4,6 +4,7 @@ import { formatMoney } from "@/lib/format";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requirePermission } from "@/lib/rbac";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 export default async function ExpensesByProjectPage({
   searchParams,
@@ -135,8 +136,8 @@ export default async function ExpensesByProjectPage({
                     <td className="py-2">
                       {new Date(expense.date).toLocaleDateString()}
                     </td>
-                    <td className="py-2">{expense.description}</td>
-                    <td className="py-2">{expense.category}</td>
+                    <td className="py-2">{decodeHtmlEntities(expense.description)}</td>
+                    <td className="py-2">{decodeHtmlEntities(expense.category)}</td>
                     <td className="py-2 font-semibold">
                       {formatMoney(Number(expense.amount))}
                     </td>
@@ -162,7 +163,7 @@ export default async function ExpensesByProjectPage({
           <div className="md:hidden space-y-3">
             {projectExpenses.map((expense) => (
               <div key={expense.id} className="border rounded-lg p-3">
-                <div className="font-medium mb-2">{expense.description}</div>
+                <div className="font-medium mb-2">{decodeHtmlEntities(expense.description)}</div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Amount:</span>
@@ -170,7 +171,7 @@ export default async function ExpensesByProjectPage({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Category:</span>
-                    <span>{expense.category}</span>
+                    <span>{decodeHtmlEntities(expense.category)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status:</span>

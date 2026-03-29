@@ -440,7 +440,7 @@ export function ExpenseFormDialog({ open, onOpenChange }: ExpenseFormDialogProps
             <div className="space-y-2 md:col-span-2 rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground dark:bg-muted/15">
               <div className="font-medium text-foreground dark:text-foreground">Stock purchases</div>
               <div>
-                Phase 1 rule: Expenses are non-stock only. For stock purchases use Procurement -&gt; PO/GRN/Vendor
+                Phase 1 rule: Expenses are non-stock only. For stock purchases use Procurement {"->"} PO/GRN/Vendor
                 Bill.
               </div>
             </div>

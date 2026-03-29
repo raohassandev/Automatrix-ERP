@@ -9,6 +9,7 @@ import { MobileCard } from "@/components/MobileCard";
 import { BellRing, CalendarCheck2, CreditCard, HandCoins } from "lucide-react";
 import { findEmployeeByEmailInsensitive } from "@/lib/identity";
 import { Prisma } from "@prisma/client";
+import { decodeHtmlEntities } from "@/lib/sanitize";
 
 function resolveExpenseAmount(expense: { status: string; amount: number | { toString(): string }; approvedAmount: number | { toString(): string } | null }) {
   if ((expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED" || expense.status === "PAID") && expense.approvedAmount) {
@@ -253,6 +254,13 @@ export default async function MyDashboardPage() {
       select: { amount: true, approvedAmount: true, status: true },
     }),
   ]);
+  const normalizedExpenses = expenses.map((exp) => ({
+    ...exp,
+    description: decodeHtmlEntities(exp.description),
+    category: decodeHtmlEntities(exp.category),
+    project: exp.project ? decodeHtmlEntities(exp.project) : null,
+    paymentSource: exp.paymentSource ? decodeHtmlEntities(exp.paymentSource) : null,
+  }));
 
   const walletBalance = Number(employee.walletBalance || 0);
   const walletHold = Number(employee.walletHold || 0);
@@ -760,7 +768,7 @@ export default async function MyDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {expenses.map((exp) => {
+                {normalizedExpenses.map((exp) => {
                   const usedAmount = resolveExpenseAmount(exp);
                   return (
                     <tr key={exp.id} className="border-b">
@@ -780,7 +788,7 @@ export default async function MyDashboardPage() {
             </table>
           </div>
           <div className="mt-4 space-y-3 md:hidden">
-            {expenses.map((exp) => {
+            {normalizedExpenses.map((exp) => {
               const usedAmount = resolveExpenseAmount(exp);
               return (
                 <MobileCard
@@ -797,7 +805,7 @@ export default async function MyDashboardPage() {
               );
             })}
           </div>
-          {expenses.length === 0 && (
+          {normalizedExpenses.length === 0 && (
             <div className="py-6 text-center text-muted-foreground">No expenses submitted yet.</div>
           )}
         </div>
