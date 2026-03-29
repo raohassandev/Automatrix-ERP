@@ -7,7 +7,7 @@ import { requirePermission } from "@/lib/rbac";
 import { Prisma } from "@prisma/client";
 import { sanitizeString } from "@/lib/sanitize";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -18,7 +18,12 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
   }
 
-  const data = await prisma.employee.findMany({ orderBy: { name: "asc" } });
+  const { searchParams } = new URL(req.url);
+  const status = (searchParams.get("status") || "").trim().toUpperCase();
+  const data = await prisma.employee.findMany({
+    where: status ? { status } : undefined,
+    orderBy: { name: "asc" },
+  });
   return NextResponse.json({ success: true, data });
 }
 

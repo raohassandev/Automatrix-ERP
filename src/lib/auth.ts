@@ -13,6 +13,13 @@ const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const e2eMode = process.env.E2E_TEST_MODE === "1";
 const credentialsMode = isCredentialsModeAllowed(process.env as Record<string, string | undefined>);
 
+function activeEmployeeWhere(email: string) {
+  return {
+    email: { equals: email, mode: "insensitive" as const },
+    status: "ACTIVE" as const,
+  };
+}
+
 // Fail-fast: prevent accidental enablement of E2E mode in staging/prod.
 assertE2eTestModeAllowed(process.env as Record<string, string | undefined>);
 assertCredentialsModeAllowed(process.env as Record<string, string | undefined>);
@@ -54,7 +61,7 @@ if (credentialsMode) {
         if (!email || !password) return null;
 
         const employee = await prisma.employee.findFirst({
-          where: { email: { equals: email, mode: "insensitive" } },
+          where: activeEmployeeWhere(email),
           select: { status: true },
         });
         if (!employee || employee.status !== "ACTIVE") return null;
@@ -112,7 +119,7 @@ if (e2eMode) {
         if (!expected || password !== expected || !email) return null;
 
         let employee = await prisma.employee.findFirst({
-          where: { email: { equals: email, mode: "insensitive" } },
+          where: activeEmployeeWhere(email),
           select: { id: true, name: true, status: true },
         });
 
@@ -200,7 +207,7 @@ const adapter = {
     const email = rawEmail.toLowerCase();
 
     const employee = await prisma.employee.findFirst({
-      where: { email: { equals: email, mode: "insensitive" } },
+      where: activeEmployeeWhere(email),
       select: { status: true },
     });
 
@@ -259,7 +266,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!email) return false;
 
       const employee = await prisma.employee.findFirst({
-        where: { email: { equals: email, mode: "insensitive" } },
+        where: activeEmployeeWhere(email),
         select: { status: true },
       });
 
@@ -309,12 +316,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return session;
     },
-    authorized: ({ auth, request }) => {
+    authorized: async ({ auth, request }) => {
       const { pathname } = request.nextUrl;
       if (pathname.startsWith("/api/auth")) return true;
       if (pathname === "/api/health") return true;
       if (pathname.startsWith("/login")) return true;
-      return !!auth?.user;
+      if (!auth?.user) return false;
+      const email = typeof auth.user.email === "string" ? auth.user.email.trim().toLowerCase() : "";
+      if (!email) return false;
+      const employee = await prisma.employee.findFirst({
+        where: activeEmployeeWhere(email),
+        select: { id: true },
+      });
+      return Boolean(employee);
     },
   },
   events: {

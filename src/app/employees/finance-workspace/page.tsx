@@ -112,7 +112,10 @@ export default async function EmployeeFinanceWorkspacePage({
         : [];
 
   const employeeOptionsRaw = await prisma.employee.findMany({
-    where: scopedEmployeeIds ? { id: { in: scopedEmployeeIds as string[] } } : {},
+    where: {
+      ...(scopedEmployeeIds ? { id: { in: scopedEmployeeIds as string[] } } : {}),
+      status: "ACTIVE",
+    },
     select: { id: true, name: true, email: true, status: true },
     orderBy: { name: "asc" },
   });

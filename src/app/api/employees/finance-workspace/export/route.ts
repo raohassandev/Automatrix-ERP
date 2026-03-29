@@ -53,7 +53,10 @@ export async function GET(req: Request) {
         : [];
 
   const employeeOptions = await prisma.employee.findMany({
-    where: scopedEmployeeIds ? { id: { in: scopedEmployeeIds as string[] } } : {},
+    where: {
+      ...(scopedEmployeeIds ? { id: { in: scopedEmployeeIds as string[] } } : {}),
+      status: "ACTIVE",
+    },
     select: { id: true },
     orderBy: { name: "asc" },
   });

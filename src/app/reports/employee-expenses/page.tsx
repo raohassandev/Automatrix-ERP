@@ -119,7 +119,7 @@ export default async function EmployeeExpenseReportPage({
     optionWhere.date = range;
   }
 
-  const [expensesRaw, optionRows] = await Promise.all([
+  const [expensesRaw, optionRows, activeEmployees] = await Promise.all([
     prisma.expense.findMany({
       where,
       select: {
@@ -149,6 +149,13 @@ export default async function EmployeeExpenseReportPage({
       orderBy: { date: "desc" },
       take: 500,
     }),
+    (canViewAll || canViewTeam)
+      ? prisma.employee.findMany({
+          where: { status: "ACTIVE" },
+          select: { id: true, name: true, email: true },
+          orderBy: { name: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
 
   const expenses: ExpenseViewRow[] = expensesRaw.map((row) => ({
@@ -265,17 +272,10 @@ export default async function EmployeeExpenseReportPage({
   const averageClaim = expenses.length > 0 ? totalApproved / expenses.length : 0;
   const averageMonth = monthlySummary.length > 0 ? totalApproved / monthlySummary.length : 0;
 
-  const employeeOptions = Array.from(
-    new Map(
-      optionRows
-        .filter((row) => row.submittedById && row.submittedBy?.email)
-        .map((row) => {
-          const email = row.submittedBy?.email || "";
-          const name = row.submittedBy?.name || email;
-          return [row.submittedById!, { value: row.submittedById!, label: `${name} (${email})` }];
-        }),
-    ).values(),
-  );
+  const employeeOptions = activeEmployees.map((row) => ({
+    value: row.id,
+    label: `${row.name} (${row.email})`,
+  }));
   const categoryOptions = Array.from(new Set(optionRows.map((row) => row.category).filter(Boolean) as string[])).sort();
   const paymentSourceOptions = Array.from(new Set(optionRows.map((row) => row.paymentSource).filter(Boolean) as string[])).sort();
   const projectOptions = Array.from(new Set(optionRows.map((row) => row.project).filter(Boolean) as string[])).sort();

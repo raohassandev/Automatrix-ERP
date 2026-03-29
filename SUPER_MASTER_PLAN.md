@@ -1369,3 +1369,31 @@ Rules:
   - `pnpm typecheck` -> passed
 - Acceptance note:
   - Owner/accountant can now answer funding-path, category, project, and payment-source questions from the workspace/reporting surfaces without falling back to ad hoc row hunting.
+
+### 17.7 Staging rerun + inactive-employee enforcement (2026-03-30)
+
+- Live staging Playwright rerun passed after staging VPS rebuild:
+  - `playwright/tests/employee-finance-deep-audit.spec.ts`
+  - `playwright/tests/me-finance-self-service.spec.ts`
+- Staging test artifacts were cleaned in execute mode after verification:
+  - cleanup log: `docs/STAGING_TEST_ARTIFACT_CLEANUP_20260329-195738.txt`
+- Inactive-employee policy tightened:
+  - inactive employees are filtered out of operational selectors in finance/workflow pages
+  - `/api/employees` now supports status-filtered option loading
+  - existing authenticated sessions are denied on protected routes if the linked employee is no longer `ACTIVE`
+  - credentials / Google sign-in remained blocked for inactive employees
+- Files updated:
+  - `src/lib/auth.ts`
+  - `src/app/api/employees/route.ts`
+  - `src/app/employees/finance-workspace/page.tsx`
+  - `src/app/api/employees/finance-workspace/export/route.ts`
+  - `src/app/wallets/page.tsx`
+  - `src/app/salary-advances/page.tsx`
+  - `src/app/incentives/page.tsx`
+  - `src/app/expenses/page.tsx`
+  - `src/app/reports/employee-expenses/page.tsx`
+- Verification:
+  - staging Playwright finance suite passed
+  - `pnpm typecheck` passed
+- Acceptance note:
+  - marking an employee `INACTIVE` now removes them from key dropdowns and prevents further use of protected app routes under that identity.

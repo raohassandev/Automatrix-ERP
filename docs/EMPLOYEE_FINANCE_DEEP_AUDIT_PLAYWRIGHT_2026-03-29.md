@@ -1,6 +1,6 @@
 # Employee Finance Deep Audit
 
-- Generated: 2026-03-29T16:23:19.758Z
+- Generated: 2026-03-29T19:56:14.861Z
 - Base URL: https://erp-staging.automatrix.pk
 - Wide interval used: 2024-01-01T00:00:00.000Z to 2026-12-31T23:59:59.999Z
 - Preferred employee example requested: raoibrarulhaq1@gmail.com
@@ -10,6 +10,7 @@
 - Owner and Accountant can answer issued amount, expense breakdown, monthly trend, averages, and exact expense rows using one primary finance workspace and one-click drills.
 - Wallet credits and debits are one click from the workspace, so issued amount evidence does not require a manual multi-page search.
 - Employee self-scope remains blocked from cross-employee finance investigation routes.
+- Navigation-cost gate: Owner <= 3 destinations, Accountant <= 2 destinations, Employee self-service + RBAC check <= 2 destinations.
 
 ## Owner
 
@@ -26,8 +27,9 @@
 - Workspace monthly rows: 4
 - Analytics employee rows: 7
 - Analytics category rows: 15
-- Analytics monthly rows: 4
-- Analytics detail rows: 136
+- Analytics monthly rows: 22
+- Analytics detail rows: 4
+- Unique destinations used: 3
 - Notes:
   - Used preferred employee raoibrarulhaq1@gmail.com for finance workflow verification.
   - Owner can reach employee/category/month/detail analytics in one report destination.
@@ -49,8 +51,9 @@
 - Workspace monthly rows: 4
 - Analytics employee rows: 1
 - Analytics category rows: 1
-- Analytics monthly rows: 3
-- Analytics detail rows: 11
+- Analytics monthly rows: 2
+- Analytics detail rows: 2
+- Unique destinations used: 2
 - Notes:
   - Accountant can investigate issued amount, approved expense, and advance outstanding from the same workspace.
   - Accountant can reach category/month/detail analytics in one drill from the workspace.
@@ -59,6 +62,7 @@
 
 - Login: raomazeem1122@gmail.com
 - Cross-employee routes blocked: Yes
+- Unique destinations used: 2
 - Notes:
   - Employee self-scope login is correctly blocked from cross-employee finance investigation pages.
 

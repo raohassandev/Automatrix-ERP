@@ -62,6 +62,7 @@ interface Expense {
 interface EmployeeOption {
   id: string;
   name: string;
+  status?: string;
 }
 
 interface ProjectOption {
@@ -144,7 +145,7 @@ function ExpensesPageContent() {
       try {
         const [projectsRes, employeesRes, categoriesRes] = await Promise.all([
           fetch("/api/projects", { cache: "no-store" }),
-          canViewAllExpenses ? fetch("/api/employees", { cache: "no-store" }) : Promise.resolve(null),
+          canViewAllExpenses ? fetch("/api/employees?status=ACTIVE", { cache: "no-store" }) : Promise.resolve(null),
           fetch("/api/categories?type=expense", { cache: "no-store" }),
         ]);
         const projectsJson = await projectsRes.json().catch(() => ({}));
@@ -159,9 +160,10 @@ function ExpensesPageContent() {
           const employeesJson = await employeesRes.json().catch(() => ({}));
           if (employeesRes.ok && Array.isArray(employeesJson?.data)) {
             setEmployeeOptions(
-              employeesJson.data.map((row: { id: string; name?: string }) => ({
+              employeesJson.data.map((row: { id: string; name?: string; status?: string }) => ({
                 id: row.id,
                 name: row.name || "Employee",
+                status: row.status,
               })),
             );
           }

@@ -101,7 +101,7 @@ export default async function SalaryAdvancesPage({
       include: { employee: true },
     }),
     prisma.salaryAdvance.count({ where }),
-    prisma.employee.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, email: true } }),
+    prisma.employee.findMany({ where: { status: "ACTIVE" }, orderBy: { name: "asc" }, select: { id: true, name: true, email: true } }),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / take));

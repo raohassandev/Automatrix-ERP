@@ -61,7 +61,11 @@ export default async function WalletLedgerPage({
     : null;
 
   const employeeOptionsRaw = await prisma.employee.findMany({
-    where: canViewAll || canEdit ? {} : ownEmployee?.id ? { id: ownEmployee.id } : { id: "__none__" },
+    where: canViewAll || canEdit
+      ? { status: "ACTIVE" }
+      : ownEmployee?.id
+        ? { id: ownEmployee.id, status: "ACTIVE" }
+        : { id: "__none__" },
     select: { id: true, name: true, email: true },
     orderBy: { name: "asc" },
   });
