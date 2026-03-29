@@ -7,6 +7,7 @@ vi.mock("@/lib/prisma", () => {
   return {
     prisma: {
       employee: {
+        findFirst: vi.fn(),
         findUnique: vi.fn(),
         update: vi.fn(),
       },
@@ -28,6 +29,7 @@ import { applyWalletTransactionByEmail } from "../wallet";
 
 const prismaMock = prisma as unknown as {
   employee: {
+    findFirst: MockFn;
     findUnique: MockFn;
     update: MockFn;
   };
@@ -39,7 +41,7 @@ const prismaMock = prisma as unknown as {
 
 describe("wallet (business rules)", () => {
   test("returns Employee not found when email does not match", async () => {
-    prismaMock.employee.findUnique.mockResolvedValueOnce(null);
+    prismaMock.employee.findFirst.mockResolvedValueOnce(null);
 
     const res = await applyWalletTransactionByEmail({
       email: "missing@example.com",
@@ -52,7 +54,7 @@ describe("wallet (business rules)", () => {
   });
 
   test("rejects debit that would make balance negative", async () => {
-    prismaMock.employee.findUnique.mockResolvedValueOnce({
+    prismaMock.employee.findFirst.mockResolvedValueOnce({
       id: "e1",
       walletBalance: 50,
       walletHold: 0,
@@ -69,7 +71,7 @@ describe("wallet (business rules)", () => {
   });
 
   test("rejects debit that would breach walletHold (available balance)", async () => {
-    prismaMock.employee.findUnique.mockResolvedValueOnce({
+    prismaMock.employee.findFirst.mockResolvedValueOnce({
       id: "e1",
       walletBalance: 100,
       walletHold: 90,
@@ -86,7 +88,7 @@ describe("wallet (business rules)", () => {
   });
 
   test("applies credit by increasing balance via transaction", async () => {
-    prismaMock.employee.findUnique.mockResolvedValueOnce({
+    prismaMock.employee.findFirst.mockResolvedValueOnce({
       id: "e1",
       walletBalance: 100,
       walletHold: 0,

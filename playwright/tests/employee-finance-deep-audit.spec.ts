@@ -58,10 +58,10 @@ async function readSelectOptions(select: Locator): Promise<OptionRow[]> {
 
 async function expectFinanceWorkspaceShell(page: Page) {
   await expect(page.getByRole("heading", { name: "Employee Finance Workspace" })).toBeVisible();
-  await expect(page.getByText("Issued In Interval")).toBeVisible();
-  await expect(page.getByText("Expense Approved")).toBeVisible();
-  await expect(page.getByText("Advance Outstanding")).toBeVisible();
-  await expect(page.getByText("Net Company Payable")).toBeVisible();
+  await expect(page.getByText("Issued In Interval").first()).toBeVisible();
+  await expect(page.getByText("Expense Approved").first()).toBeVisible();
+  await expect(page.getByText("Advance Outstanding").first()).toBeVisible();
+  await expect(page.getByText("Net Company Payable").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Category Breakdown" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Monthly Expense & Funding Trend" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Detailed Expense Rows" })).toBeVisible();
@@ -69,7 +69,7 @@ async function expectFinanceWorkspaceShell(page: Page) {
 
 async function expectExpenseAnalyticsShell(page: Page) {
   await expect(page.getByRole("heading", { name: "Employee Expense Analytics" })).toBeVisible();
-  await expect(page.getByText("Average Per Month")).toBeVisible();
+  await expect(page.getByText("Average Per Month").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Employee Summary" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Category Summary" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Monthly Summary" })).toBeVisible();
@@ -78,9 +78,9 @@ async function expectExpenseAnalyticsShell(page: Page) {
 
 async function expectWalletShell(page: Page) {
   await expect(page.getByRole("heading", { name: "Wallet Ledger" })).toBeVisible();
-  await expect(page.getByText("Credits")).toBeVisible();
-  await expect(page.getByText("Debits")).toBeVisible();
-  await expect(page.getByText("Net Movement")).toBeVisible();
+  await expect(page.getByText("Credits").first()).toBeVisible();
+  await expect(page.getByText("Debits").first()).toBeVisible();
+  await expect(page.getByText("Net Movement").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Source Summary" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Monthly Movement" })).toBeVisible();
 }
@@ -234,7 +234,6 @@ test.describe("Employee finance deep audit", () => {
     ownerResult.preferredEmployeeAvailable = preferredVisible;
 
     const chosenEmployeeEmail = preferredVisible ? PREFERRED_EMPLOYEE_EMAIL : analyticsFirstEmployee!.email;
-    const chosenEmployeeName = preferredVisible ? "Preferred employee" : analyticsFirstEmployee!.name;
     ownerResult.notes.push(
       preferredVisible
         ? `Used preferred employee ${PREFERRED_EMPLOYEE_EMAIL} for finance workflow verification.`
