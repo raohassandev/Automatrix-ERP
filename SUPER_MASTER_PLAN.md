@@ -1300,3 +1300,23 @@ Rules:
 - Evidence files:
   - `docs/IMPLEMENTATION_REPORT_2026-03-02.md`
   - `docs/STAGING_DEEP_AUDIT_2026-03-02.md`
+
+### 17.4 Follow-up verification batch (2026-03-29)
+
+- Added dedicated `/me` finance self-service Playwright audit:
+  - `playwright/tests/me-finance-self-service.spec.ts`
+- Hardened shared Playwright auth helper so local E2E runs target the correct login form when both `Email login` and `E2E login` are visible:
+  - `playwright/tests/helpers/auth.ts`
+- Fixed `/me` schema-compatibility issue for environments behind the latest variable-pay migration:
+  - explicit `select` on incentive/commission history queries
+  - fallback aggregate for pending payroll incentive when `scheduledPayrollMonth` is unavailable
+  - file: `src/app/me/page.tsx`
+- Verification status:
+  - Local regression pass:
+    - `PLAYWRIGHT_ALLOW_REAL_DB=1 ME_FINANCE_TEST_EMAIL=store1@automatrix.pk ME_FINANCE_TEST_PASSWORD=e2e E2E_TEST_PASSWORD=e2e pnpm exec playwright test playwright/tests/me-finance-self-service.spec.ts`
+  - `pnpm typecheck` passed
+  - Live staging verification remains temporarily blocked by environment outage:
+    - `curl -I https://erp-staging.automatrix.pk` returned `HTTP/1.1 502 Bad Gateway`
+- Acceptance note:
+  - Product-side `/me` self-service flow is now covered and locally verified.
+  - Final live staging rerun is pending only on staging recovery, not on an open known product defect from this batch.

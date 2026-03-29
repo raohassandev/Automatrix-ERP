@@ -2,6 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 export async function loginAs(page: Page, email: string, password = process.env.E2E_TEST_PASSWORD || "e2e") {
   const NAV_TIMEOUT_MS = 45_000;
+  const e2ePassword = process.env.E2E_TEST_PASSWORD || "e2e";
   for (let authAttempt = 0; authAttempt < 4; authAttempt += 1) {
     // Staging can briefly return 502 during PM2/nginx restart windows.
     for (let attempt = 0; attempt < 18; attempt += 1) {
@@ -29,12 +30,17 @@ export async function loginAs(page: Page, email: string, password = process.env.
       return;
     }
 
-    const emailInput = page.getByPlaceholder("Email").first();
+    const e2eButton = page.getByRole("button", { name: /E2E Sign in/i }).first();
+    const useE2EForm = (await e2eButton.isVisible().catch(() => false)) && password === e2ePassword;
+    const inputIndex = useE2EForm ? 1 : 0;
+    const emailInput = page.getByPlaceholder("Email").nth(inputIndex);
     const passwordInput = page
       .getByPlaceholder("Password")
-      .first()
-      .or(page.locator('input[type="password"]').first());
-    const credentialsButton = page.getByRole("button", { name: /Sign in with Email|E2E Sign in/i }).first();
+      .nth(inputIndex)
+      .or(page.locator('input[type="password"]').nth(inputIndex));
+    const credentialsButton = page
+      .getByRole("button", { name: useE2EForm ? /E2E Sign in/i : /Sign in with Email/i })
+      .first();
 
     await expect(emailInput).toBeVisible();
     const hasPasswordField = await passwordInput.isVisible().catch(() => false);

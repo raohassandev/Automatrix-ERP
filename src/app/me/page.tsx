@@ -8,6 +8,7 @@ import Link from "next/link";
 import { MobileCard } from "@/components/MobileCard";
 import { BellRing, CalendarCheck2, CreditCard, HandCoins } from "lucide-react";
 import { findEmployeeByEmailInsensitive } from "@/lib/identity";
+import { Prisma } from "@prisma/client";
 
 function resolveExpenseAmount(expense: { status: string; amount: number | { toString(): string }; approvedAmount: number | { toString(): string } | null }) {
   if ((expense.status === "APPROVED" || expense.status === "PARTIALLY_APPROVED" || expense.status === "PAID") && expense.approvedAmount) {
@@ -41,6 +42,36 @@ function financeNoticeTone(severity: "high" | "medium" | "info") {
   if (severity === "high") return "border-rose-500/25 bg-rose-500/10";
   if (severity === "medium") return "border-amber-500/25 bg-amber-500/10";
   return "border-sky-500/25 bg-sky-500/10";
+}
+
+async function getPendingPayrollIncentiveAmount(employeeId: string, currentMonthKey: string) {
+  try {
+    const result = await prisma.incentiveEntry.aggregate({
+      where: {
+        employeeId,
+        status: "APPROVED",
+        payoutMode: "PAYROLL",
+        settlementStatus: "UNSETTLED",
+        OR: [{ scheduledPayrollMonth: null }, { scheduledPayrollMonth: { lte: currentMonthKey } }],
+      },
+      _sum: { amount: true },
+    });
+    return Number(result._sum.amount || 0);
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2022") {
+      throw error;
+    }
+    const fallback = await prisma.incentiveEntry.aggregate({
+      where: {
+        employeeId,
+        status: "APPROVED",
+        payoutMode: "PAYROLL",
+        settlementStatus: "UNSETTLED",
+      },
+      _sum: { amount: true },
+    });
+    return Number(fallback._sum.amount || 0);
+  }
 }
 
 export default async function MyDashboardPage() {
@@ -104,7 +135,7 @@ export default async function MyDashboardPage() {
   const monthStartStr = monthStart.toISOString().slice(0, 10);
   const monthEndStr = monthEnd.toISOString().slice(0, 10);
 
-  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, commissionEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentiveAgg, advanceIssueAgg, advanceSettlementAgg, pocketPayableRows, advanceUsedThisMonthAgg, reimbursementPaidThisMonthRows] = await Promise.all([
+  const [assignments, walletEntries, expenses, expenseCounts, payrollEntries, incentiveEntries, commissionEntries, salaryAdvances, attendanceCounts, leaveRequests, pendingPayrollIncentive, advanceIssueAgg, advanceSettlementAgg, pocketPayableRows, advanceUsedThisMonthAgg, reimbursementPaidThisMonthRows] = await Promise.all([
     prisma.projectAssignment.findMany({
       where: { userId: session.user.id },
       select: { project: { select: { id: true, projectId: true, name: true, status: true } } },
@@ -147,11 +178,29 @@ export default async function MyDashboardPage() {
       where: { employeeId: employee.id },
       orderBy: { createdAt: "desc" },
       take: 10,
+      select: {
+        id: true,
+        createdAt: true,
+        amount: true,
+        status: true,
+        settlementStatus: true,
+        payoutMode: true,
+        projectRef: true,
+      },
     }),
     prisma.commissionEntry.findMany({
       where: { employeeId: employee.id, payeeType: "EMPLOYEE" },
       orderBy: { createdAt: "desc" },
       take: 10,
+      select: {
+        id: true,
+        createdAt: true,
+        amount: true,
+        status: true,
+        settlementStatus: true,
+        payoutMode: true,
+        projectRef: true,
+      },
     }),
     prisma.salaryAdvance.findMany({
       where: { employeeId: employee.id },
@@ -168,16 +217,7 @@ export default async function MyDashboardPage() {
       orderBy: { createdAt: "desc" },
       take: 8,
     }),
-    prisma.incentiveEntry.aggregate({
-      where: {
-        employeeId: employee.id,
-        status: "APPROVED",
-        payoutMode: "PAYROLL",
-        settlementStatus: "UNSETTLED",
-        OR: [{ scheduledPayrollMonth: null }, { scheduledPayrollMonth: { lte: currentMonthKey } }],
-      },
-      _sum: { amount: true },
-    }),
+    getPendingPayrollIncentiveAmount(employee.id, currentMonthKey),
     prisma.walletLedger.aggregate({
       where: { employeeId: employee.id, type: "CREDIT", sourceType: "COMPANY_ADVANCE_ISSUE" },
       _sum: { amount: true },
@@ -217,7 +257,6 @@ export default async function MyDashboardPage() {
   const walletBalance = Number(employee.walletBalance || 0);
   const walletHold = Number(employee.walletHold || 0);
   const walletAvailable = walletBalance - walletHold;
-  const pendingPayrollIncentive = Number(pendingPayrollIncentiveAgg._sum.amount || 0);
   const advanceIssued = Number(advanceIssueAgg._sum.amount || 0);
   const advanceSettled = Number(advanceSettlementAgg._sum.amount || 0);
   const advanceOutstanding = Math.max(0, advanceIssued - advanceSettled);
