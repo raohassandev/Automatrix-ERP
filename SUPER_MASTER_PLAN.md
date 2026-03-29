@@ -727,16 +727,18 @@ Reason: implemented-module program baseline is complete and validated with deplo
   - unauthorized access fails cleanly with explicit RBAC response
   - Playwright role audit passes for provided test accounts or explicitly documented mapped replacements
 - Current execution status:
-  - `R1` started on `2026-03-29`
-  - provided-account staging audit completed
-  - Playwright recovery audit result:
-    - `israrulhaq5@gmail.com` resolves as `Owner`, can load `/employees` and `/reports/employee-expenses`, but still fails `/employees/finance-workspace` with `Employee not found`
-    - the other four supplied accounts are self-scope employee paths: `/me` works and cross-employee finance/report routes are correctly blocked
-    - accountant-grade objective coverage is still absent from the supplied accounts
-  - engineering remediation started:
+  - `R1` started on `2026-03-29` and is now complete
+  - `R2` is complete on staging verification
+  - final verified staging state:
+    - `israrulhaq5@gmail.com` passes as `Owner`
+    - `raoabdulkhaliq786@gmail.com` was normalized to built-in `Accountant` and passes as accountant
+    - remaining supplied accounts remain self-scope employees with correct cross-employee finance/report blocks
+  - engineering completion actions executed:
     - introduced case-insensitive session-email identity lookup helper for employee/user linkage
     - applied linkage hardening across employees, finance workspace, wallets, salary advances, incentives, commissions, tasks, and wallet export/task API paths
-  - next action: ship and verify the linkage fix on staging, then rerun the same objective audit and add a real accountant credential to the audit set.
+    - deployed commit `ef5d57a` to staging through `dev` auto-deploy
+    - reran Playwright role-objective recovery audit after deploy and verified pass state for owner/accountant/employee objectives
+  - recovery objective status: complete
 
 ---
 

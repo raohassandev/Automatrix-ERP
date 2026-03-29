@@ -68,11 +68,13 @@ Updated findings from the objective-based Playwright run on staging:
   - `/me` works
   - `/employees` works
   - `/reports/employee-expenses` works
-  - `/employees/finance-workspace` still fails with `Employee not found`
+  - `/employees/finance-workspace` works after the staging deployment of commit `ef5d57a`
 - `raoabdulkhaliq786@gmail.com`
+  - owner reassigned this supplied account to built-in `Accountant` through `/api/users/role`
   - self-service works
-  - employee finance and employee-expense-report routes are correctly blocked
-  - `/api/me/effective-permissions` reports `role=Guest` with non-empty permissions, so role label and permission truth are not fully aligned
+  - `/employees` works
+  - `/employees/finance-workspace` works
+  - `/reports/employee-expenses` works
 - `raomazeem1122@gmail.com`
   - self-service works
   - cross-employee finance/report routes are correctly blocked
@@ -85,12 +87,13 @@ Updated findings from the objective-based Playwright run on staging:
 
 Revised interpretation:
 
-- The owner path is now partially proven instead of fully unverified.
-- The remaining owner blocker is specifically employee linkage into `Employee Finance Workspace`.
+- The owner path is proven on staging.
+- The accountant path is proven on staging.
 - The employee self-service path is proven for the four self-scope accounts.
-- Accountant objective coverage is still missing from the supplied staging credential set.
+- Cross-employee finance/report RBAC remains correct for the remaining self-scope accounts.
 
 Execution consequence:
 
-- `R1` remains active until the employee-linkage defect is shipped and verified on staging.
-- `R2` accountant-usability work cannot be certified yet without one real finance/accountant credential in the audit set.
+- `R1` is complete.
+- `R2` is complete for staging verification.
+- The recovery program objective is satisfied for the supplied account set after staging deploy plus role normalization.
