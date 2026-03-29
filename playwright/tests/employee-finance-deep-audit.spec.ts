@@ -36,6 +36,7 @@ type DeepAuditResult = {
   analyticsMonthlyRows?: number;
   analyticsDetailRows?: number;
   employeeBlocked?: boolean;
+  destinationCount?: number;
   notes: string[];
 };
 
@@ -182,6 +183,7 @@ function renderSection(title: string, result: DeepAuditResult) {
   if (typeof result.analyticsMonthlyRows === "number") lines.push(`- Analytics monthly rows: ${result.analyticsMonthlyRows}`);
   if (typeof result.analyticsDetailRows === "number") lines.push(`- Analytics detail rows: ${result.analyticsDetailRows}`);
   if (typeof result.employeeBlocked === "boolean") lines.push(`- Cross-employee routes blocked: ${result.employeeBlocked ? "Yes" : "No"}`);
+  if (typeof result.destinationCount === "number") lines.push(`- Unique destinations used: ${result.destinationCount}`);
   lines.push("- Notes:");
   if (result.notes.length === 0) {
     lines.push("  - None");
@@ -222,10 +224,13 @@ test.describe("Employee finance deep audit", () => {
       ignoreHTTPSErrors: true,
     });
     const ownerPage = await ownerContext.newPage();
+    const ownerDestinations = new Set<string>();
+    const rememberOwnerPath = () => ownerDestinations.add(new URL(ownerPage.url()).pathname);
     await loginAs(ownerPage, OWNER_EMAIL, PASSWORD);
 
     const analyticsUrl = hrefWithQuery("/reports/employee-expenses", { from: WIDE_FROM, to: WIDE_TO });
     await ownerPage.goto(analyticsUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+    rememberOwnerPath();
     await expectExpenseAnalyticsShell(ownerPage);
 
     const analyticsFirstEmployee = await getFirstExpenseEmployeeEmail(ownerPage);
@@ -249,6 +254,7 @@ test.describe("Employee finance deep audit", () => {
     ownerResult.notes.push("Owner can reach employee/category/month/detail analytics in one report destination.");
 
     const ownerWorkspace = await openFinanceWorkspaceForEmployee(ownerPage, chosenEmployeeEmail);
+    rememberOwnerPath();
     ownerResult.financeWorkspaceUrl = ownerPage.url();
     ownerResult.selectedEmployeeId = ownerWorkspace.selectedValue;
     ownerResult.chosenEmployee = `${ownerWorkspace.option.label}`;
@@ -274,11 +280,13 @@ test.describe("Employee finance deep audit", () => {
 
     await ownerPage.getByRole("link", { name: "Wallet Credits", exact: true }).first().click();
     await ownerPage.waitForURL(/\/wallets/, { timeout: 20_000 });
+    rememberOwnerPath();
     await expectWalletShell(ownerPage);
     ownerResult.walletUrl = ownerPage.url();
     ownerResult.notes.push("Exact wallet credit/debit evidence is one click from the workspace.");
 
     await ownerPage.goto(ownerWorkspace.financeUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+    rememberOwnerPath();
     await expectFinanceWorkspaceShell(ownerPage);
     if (categoryState.selectedCategory) {
       const categorySelect = ownerPage.locator("select").nth(2);
@@ -291,8 +299,11 @@ test.describe("Employee finance deep audit", () => {
     }
     await ownerPage.getByRole("link", { name: "Employee expense analytics", exact: true }).first().click();
     await ownerPage.waitForURL(/\/reports\/employee-expenses/, { timeout: 20_000 });
+    rememberOwnerPath();
     await expectExpenseAnalyticsShell(ownerPage);
     ownerResult.notes.push("Category/month/average analysis remains one click away from the workspace via Employee expense analytics.");
+    ownerResult.destinationCount = ownerDestinations.size;
+    expect(ownerDestinations.size).toBeLessThanOrEqual(3);
     await ownerContext.close();
 
     const accountantContext = await browser.newContext({
@@ -301,8 +312,11 @@ test.describe("Employee finance deep audit", () => {
       ignoreHTTPSErrors: true,
     });
     const accountantPage = await accountantContext.newPage();
+    const accountantDestinations = new Set<string>();
+    const rememberAccountantPath = () => accountantDestinations.add(new URL(accountantPage.url()).pathname);
     await loginAs(accountantPage, ACCOUNTANT_EMAIL, PASSWORD);
     const accountantWorkspace = await openFinanceWorkspaceForEmployee(accountantPage, chosenEmployeeEmail);
+    rememberAccountantPath();
     accountantResult.financeWorkspaceUrl = accountantPage.url();
     accountantResult.selectedEmployeeId = accountantWorkspace.selectedValue;
     accountantResult.chosenEmployee = accountantWorkspace.option.label;
@@ -319,6 +333,7 @@ test.describe("Employee finance deep audit", () => {
 
     await accountantPage.getByRole("link", { name: "Employee expense analytics", exact: true }).first().click();
     await accountantPage.waitForURL(/\/reports\/employee-expenses/, { timeout: 20_000 });
+    rememberAccountantPath();
     await expectExpenseAnalyticsShell(accountantPage);
     accountantResult.analyticsUrl = accountantPage.url();
     accountantResult.analyticsEmployeeRows = await accountantPage.locator("table").nth(0).locator("tbody tr").count();
@@ -326,6 +341,8 @@ test.describe("Employee finance deep audit", () => {
     accountantResult.analyticsMonthlyRows = await accountantPage.locator("table").nth(2).locator("tbody tr").count();
     accountantResult.analyticsDetailRows = await accountantPage.locator("table").nth(3).locator("tbody tr").count();
     accountantResult.notes.push("Accountant can reach category/month/detail analytics in one drill from the workspace.");
+    accountantResult.destinationCount = accountantDestinations.size;
+    expect(accountantDestinations.size).toBeLessThanOrEqual(2);
     await accountantContext.close();
 
     const employeeContext = await browser.newContext({
@@ -334,10 +351,14 @@ test.describe("Employee finance deep audit", () => {
       ignoreHTTPSErrors: true,
     });
     const employeePage = await employeeContext.newPage();
+    const employeeDestinations = new Set<string>();
+    const rememberEmployeePath = () => employeeDestinations.add(new URL(employeePage.url()).pathname);
     await loginAs(employeePage, EMPLOYEE_EMAIL, PASSWORD);
     await employeePage.goto("/me", { waitUntil: "domcontentloaded", timeout: 45_000 });
+    rememberEmployeePath();
     await expect(employeePage).not.toHaveURL(/\/login/);
     await employeePage.goto("/employees/finance-workspace", { waitUntil: "domcontentloaded", timeout: 45_000 });
+    rememberEmployeePath();
     const employeeBody = ((await employeePage.locator("body").innerText()) || "").toLowerCase();
     employeeResult.employeeBlocked =
       employeePage.url().includes("/forbidden") ||
@@ -345,6 +366,8 @@ test.describe("Employee finance deep audit", () => {
       employeeBody.includes("you do not have access");
     expect(employeeResult.employeeBlocked).toBeTruthy();
     employeeResult.notes.push("Employee self-scope login is correctly blocked from cross-employee finance investigation pages.");
+    employeeResult.destinationCount = employeeDestinations.size;
+    expect(employeeDestinations.size).toBeLessThanOrEqual(2);
     await employeeContext.close();
 
     const reportLines: string[] = [];
@@ -360,6 +383,7 @@ test.describe("Employee finance deep audit", () => {
     reportLines.push("- Owner and Accountant can answer issued amount, expense breakdown, monthly trend, averages, and exact expense rows using one primary finance workspace and one-click drills.");
     reportLines.push("- Wallet credits and debits are one click from the workspace, so issued amount evidence does not require a manual multi-page search.");
     reportLines.push("- Employee self-scope remains blocked from cross-employee finance investigation routes.");
+    reportLines.push("- Navigation-cost gate: Owner <= 3 destinations, Accountant <= 2 destinations, Employee self-service + RBAC check <= 2 destinations.");
     reportLines.push("");
     reportLines.push(renderSection("Owner", ownerResult));
     reportLines.push(renderSection("Accountant", accountantResult));

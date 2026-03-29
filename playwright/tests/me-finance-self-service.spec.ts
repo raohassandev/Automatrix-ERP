@@ -11,9 +11,18 @@ const PASSWORD =
 test.describe("My finance self-service", () => {
   test("shows finance summary, notices, and one-click drills for employee", async ({ page }) => {
     test.setTimeout(5 * 60 * 1000);
+    const visitedPathnames = new Set<string>();
+    const rememberPath = () => {
+      try {
+        visitedPathnames.add(new URL(page.url()).pathname);
+      } catch {
+        // Ignore non-URL states during startup.
+      }
+    };
 
     await loginAs(page, EMPLOYEE_EMAIL, PASSWORD);
     await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 45_000 });
+    rememberPath();
 
     await expect(page.getByRole("heading", { name: "My Dashboard" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "My Finance Summary" })).toBeVisible();
@@ -33,6 +42,14 @@ test.describe("My finance self-service", () => {
     const reimburseLink = page.getByRole("link", { name: "Due Claims", exact: true }).first();
     await expect(reimburseLink).toHaveAttribute("href", /paymentSource=EMPLOYEE_POCKET/);
     await expect(reimburseLink).toHaveAttribute("href", /status=APPROVED/);
+    await reimburseLink.click();
+    await page.waitForURL(/\/expenses\?/, { timeout: 20_000 });
+    rememberPath();
+    await expect(page).toHaveURL(/paymentSource=EMPLOYEE_POCKET/);
+    await expect(page).toHaveURL(/status=APPROVED/);
+    await page.goto("/me", { waitUntil: "domcontentloaded", timeout: 45_000 });
+    rememberPath();
+    await expect(page.getByRole("heading", { name: "My Dashboard" })).toBeVisible();
 
     const advanceLink = page.getByRole("link", { name: "Advance History", exact: true }).first();
     await expect(advanceLink).toHaveAttribute("href", /\/salary-advances\?employeeId=/);
@@ -47,5 +64,7 @@ test.describe("My finance self-service", () => {
 
     const commissionsLink = variablePayCard.getByRole("link", { name: "Commissions", exact: true }).first();
     await expect(commissionsLink).toHaveAttribute("href", /\/commissions\?search=/);
+
+    expect(visitedPathnames.size).toBeLessThanOrEqual(2);
   });
 });

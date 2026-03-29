@@ -1320,3 +1320,23 @@ Rules:
 - Acceptance note:
   - Product-side `/me` self-service flow is now covered and locally verified.
   - Final live staging rerun is pending only on staging recovery, not on an open known product defect from this batch.
+
+### 17.5 Navigation-cost enforcement batch (2026-03-29)
+
+- Live staging was rechecked before continuing and remained unavailable:
+  - `curl -I https://erp-staging.automatrix.pk` -> `HTTP/1.1 502 Bad Gateway`
+- Added explicit destination-count gates to employee-finance Playwright coverage:
+  - `playwright/tests/me-finance-self-service.spec.ts`
+    - employee self-service due-claims workflow must stay within `<= 2` unique destinations
+  - `playwright/tests/employee-finance-deep-audit.spec.ts`
+    - owner workflow must stay within `<= 3` unique destinations
+    - accountant workflow must stay within `<= 2` unique destinations
+    - employee self-service + RBAC block check must stay within `<= 2` unique destinations
+- Local verification:
+  - `PLAYWRIGHT_ALLOW_REAL_DB=1 ME_FINANCE_TEST_EMAIL=store1@automatrix.pk ME_FINANCE_TEST_PASSWORD=e2e E2E_TEST_PASSWORD=e2e pnpm exec playwright test playwright/tests/me-finance-self-service.spec.ts`
+  - Result: `1 passed`
+- Coverage validity check:
+  - `pnpm exec playwright test --config=playwright.config.staging.ts --list playwright/tests/employee-finance-deep-audit.spec.ts playwright/tests/me-finance-self-service.spec.ts`
+  - Result: both finance audit specs discovered successfully
+- Acceptance note:
+  - Finance workflow ease is now enforced as a measurable regression contract, not just documented as a narrative goal.
