@@ -9,6 +9,7 @@ import QuerySelect from "@/components/QuerySelect";
 import SearchInput from "@/components/SearchInput";
 import { findEmployeeByEmailInsensitive, findUserByEmailInsensitive } from "@/lib/identity";
 import { getEmployeeFinanceWorkspaceData } from "@/lib/employee-finance";
+import { resolveFinanceWorkspaceEmployeeId } from "@/lib/employee-finance-workspace";
 
 function hrefWithQuery(path: string, query: Record<string, string | null | undefined>) {
   const params = new URLSearchParams();
@@ -140,9 +141,59 @@ export default async function EmployeeFinanceWorkspacePage({
     );
   }
 
-  const selectedEmployeeId = employeeOptionsRaw.some((row) => row.id === (params.employeeId || "").trim())
-    ? (params.employeeId || "").trim()
-    : employeeOptionsRaw[0].id;
+  const selectedEmployeeId = resolveFinanceWorkspaceEmployeeId({
+    requestedEmployeeId: params.employeeId,
+    currentEmployeeId: currentEmployee?.id || null,
+    canViewAll,
+    canViewTeam,
+    employeeOptions: employeeOptionsRaw,
+  });
+
+  if (!selectedEmployeeId) {
+    return (
+      <div className="grid gap-6">
+        <div className="rounded-xl border bg-card p-8 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold">Employee Finance Workspace</h1>
+              <p className="mt-2 max-w-3xl text-muted-foreground">
+                Select an employee to open finance investigation. Broad-access roles should not default into an arbitrary employee record.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <DateRangePicker />
+            <QuerySelect
+              param="employeeId"
+              placeholder="Select employee"
+              options={employeeOptionsRaw.map((row) => ({ value: row.id, label: `${row.name} (${row.email})` }))}
+              className="min-w-[280px] rounded-md border px-3 py-2 text-sm"
+            />
+            <QuerySelect
+              param="event"
+              placeholder="All modules"
+              options={[
+                { label: "Wallet", value: "WALLET" },
+                { label: "Expense", value: "EXPENSE" },
+                { label: "Advance", value: "ADVANCE" },
+                { label: "Payroll", value: "PAYROLL" },
+                { label: "Incentive", value: "INCENTIVE" },
+                { label: "Commission", value: "COMMISSION" },
+              ]}
+            />
+            <div className="min-w-[240px]">
+              <SearchInput placeholder="Search notes, category, project, reference..." />
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            No employee is selected yet. Choose an employee first so the workspace opens with an intentional finance context.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const workspace = await getEmployeeFinanceWorkspaceData({
     employeeId: selectedEmployeeId,
